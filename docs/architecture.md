@@ -28,8 +28,8 @@ static/*.html
 
 | 能力 | 当前承载模块 |
 | --- | --- |
-| ASR pipeline | `app/api/audio.py`、`app/services/asr/` |
-| SSE streaming | `app/api/tasks.py`、`static/doctor.js`、`static/main.js` |
+| ASR pipeline | `app/api/audio.py`、`app/api/asr_sessions.py`、`app/services/asr/` |
+| SSE streaming | `app/api/asr_sessions.py`、`app/api/tasks.py`、`static/doctor.js`、`static/main.js` |
 | 医学对话结构化 | `app/agents/`、`app/schemas/medical_record.py` |
 | 角色分离 | `app/services/asr/role_strategy.py` |
 | 医学知识推理 | `app/services/mock_llm.py`、`app/prompts/` |
@@ -60,6 +60,18 @@ audio file
   -> optional evaluate
   -> POST /api/audio/{audio_id}/generate-record
   -> text record workflow
+```
+
+ASR 文件流链路：
+
+```text
+mp3/wav file
+  -> POST /api/asr/sessions
+  -> POST /api/asr/sessions/{session_id}/audio
+  -> GET /api/asr/sessions/{session_id}/events
+  -> segment events in doctor workbench
+  -> completed ASRResult
+  -> optional /api/audio/{audio_id}/generate-record
 ```
 
 ## 前端入口

@@ -3,6 +3,9 @@ from app.schemas.asr import (
     ASREvaluationResult,
     ASRResult,
     ASRSegment,
+    ASRSessionEvent,
+    ASRSessionRecord,
+    ASRSessionUploadResponse,
     AudioRecord,
 )
 from app.schemas.medical_record import (
@@ -24,6 +27,9 @@ __all__ = [
     "ASREvaluationResult",
     "ASRResult",
     "ASRSegment",
+    "ASRSessionEvent",
+    "ASRSessionRecord",
+    "ASRSessionUploadResponse",
     "AgentTaskResponse",
     "AgentTaskStepResponse",
     "AudioRecord",

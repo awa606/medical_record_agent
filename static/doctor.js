@@ -1,7 +1,9 @@
 const appState = {
   currentTaskId: null,
   currentAudioId: null,
+  currentAsrSessionId: null,
   currentAsrResult: null,
+  liveTranscriptSegments: [],
   currentEvaluation: null,
   currentTask: null,
   currentSteps: [],
@@ -20,6 +22,8 @@ const appState = {
   taskStatus: "CREATED",
   busy: false,
   eventSource: null,
+  asrEventSource: null,
+  asrStreamProgress: 0,
 };
 
 const FIELD_DEFS = [
@@ -43,6 +47,7 @@ const WORKFLOW_STEPS = [
 
 const STATUS_TO_STEP = {
   CREATED: "CREATED",
+  TRANSCRIBING: "TRANSCRIBED",
   TRANSCRIBED: "TRANSCRIBED",
   EXTRACTING_FIELDS: "GENERATING_DRAFT",
   GENERATING_DRAFT: "GENERATING_DRAFT",
@@ -57,6 +62,7 @@ const STATUS_TO_STEP = {
 
 const STATUS_LABELS = {
   CREATED: "任务已创建",
+  TRANSCRIBING: "实时转写中",
   TRANSCRIBED: "转写完成",
   EXTRACTING_FIELDS: "字段抽取中",
   GENERATING_DRAFT: "草稿生成中",
@@ -151,7 +157,9 @@ function hasActiveSession() {
   return Boolean(
     appState.currentTaskId
       || appState.currentAudioId
+      || appState.currentAsrSessionId
       || appState.currentAsrResult
+      || appState.liveTranscriptSegments.length
       || appState.currentRecordFields
       || appState.currentDraft
       || appState.currentInputText,
@@ -254,9 +262,11 @@ function renderPatientBar() {
   $("patientProfile").textContent = "女 / 32岁";
   $("sessionId").textContent = appState.currentTaskId
     ? `T-${appState.currentTaskId}`
-    : appState.currentAudioId
-      ? `A-${appState.currentAudioId}`
-      : "未创建";
+    : appState.currentAsrSessionId
+      ? `S-${appState.currentAsrSessionId.slice(0, 8)}`
+      : appState.currentAudioId
+        ? `A-${appState.currentAudioId}`
+        : "未创建";
   $("recordingStatus").textContent = appState.uploadedFilename || "未上传";
   $("asrEngine").textContent = ENGINE_LABELS[appState.selectedEngine] || appState.selectedEngine;
   $("llmProvider").textContent = llm.provider;
@@ -398,6 +408,17 @@ function transcriptRowsFromText(text) {
 }
 
 function transcriptRows() {
+  if (appState.liveTranscriptSegments.length) {
+    return appState.liveTranscriptSegments.map((segment, index) => {
+      const speaker = classifySpeaker(segment.text || "", segment);
+      return {
+        time: segment.start_time != null ? `${Number(segment.start_time).toFixed(1)}s` : `00:${String(index * 8).padStart(2, "0")}`,
+        speaker,
+        label: speaker === "doctor" ? "医生" : "患者",
+        text: segment.text || "",
+      };
+    });
+  }
   const asr = appState.currentAsrResult;
   if (asr?.segments?.length > 1) {
     return asr.segments.map((segment, index) => {
@@ -418,12 +439,13 @@ function renderTranscript() {
   const asr = appState.currentAsrResult;
   const rows = transcriptRows();
   const warningBlocks = [];
+  const isStreaming = appState.currentAsrSessionId && appState.taskStatus === "TRANSCRIBING" && !asr;
   if (asr?.role_strategy === "single_segment_needs_review") {
     warningBlocks.push("当前 ASR 返回单段长文本，医生/患者角色需人工校正。");
   }
   (asr?.warnings || []).forEach((warning) => warningBlocks.push(warning));
 
-  if (!rows.length && !asr) {
+  if (!rows.length && !asr && !appState.currentAsrSessionId) {
     $("transcriptBadge").textContent = "待转写";
     $("transcriptList").innerHTML = `<div class="empty-state">暂无对话转写。可导入文本或上传音频。</div>`;
     return;
@@ -431,8 +453,13 @@ function renderTranscript() {
 
   $("transcriptBadge").textContent = asr
     ? `${asr.engine || appState.selectedEngine} · ${asr.segments?.length || 0}段`
-    : `${rows.length}条`;
+    : isStreaming
+      ? `SSE · ${rows.length}段 · ${Math.round(appState.asrStreamProgress * 100)}%`
+      : `${rows.length}条`;
 
+  const streamBlock = appState.currentAsrSessionId
+    ? `<div class="safety-strip ${asr ? "success" : "warning"}"><strong>SSE 实时转写</strong><br>会话 ${escapeHtml(appState.currentAsrSessionId)} · ${asr ? "已完成" : `进行中 ${Math.round(appState.asrStreamProgress * 100)}%`}</div>`
+    : "";
   const asrTextBlock = asr?.text
     ? `<div class="safety-strip"><strong>ASRResult.text</strong><br>${escapeHtml(asr.text)}</div>`
     : "";
@@ -442,6 +469,7 @@ function renderTranscript() {
 
   $("transcriptList").innerHTML = `
     ${warningBlocks.map((item) => `<div class="conversation-warning">${escapeHtml(item)}</div>`).join("")}
+    ${streamBlock}
     ${asrTextBlock}
     ${conversationBlock}
     ${rows.map((item, index) => `
@@ -829,6 +857,13 @@ function renderAll() {
   renderFooter();
 }
 
+function closeAsrStream() {
+  if (appState.asrEventSource) {
+    appState.asrEventSource.close();
+    appState.asrEventSource = null;
+  }
+}
+
 function resetTaskState({ keepAsr = false } = {}) {
   appState.currentEvaluation = null;
   appState.currentTask = null;
@@ -839,8 +874,12 @@ function resetTaskState({ keepAsr = false } = {}) {
   appState.currentAgentTrace = null;
   appState.currentInputText = "";
   if (!keepAsr) {
+    closeAsrStream();
     appState.currentAsrResult = null;
     appState.currentAudioId = null;
+    appState.currentAsrSessionId = null;
+    appState.liveTranscriptSegments = [];
+    appState.asrStreamProgress = 0;
     appState.uploadedFilename = "";
   }
 }
@@ -910,6 +949,93 @@ function listenForEvents(taskId, eventsUrl) {
   };
 }
 
+function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
+  closeAsrStream();
+  const separator = eventsUrl.includes("?") ? "&" : "?";
+  const source = new EventSource(`${eventsUrl}${separator}delay_ms=220`);
+  appState.asrEventSource = source;
+  let terminalReceived = false;
+
+  source.addEventListener("session_created", (event) => {
+    const data = JSON.parse(event.data);
+    appState.currentAsrSessionId = data.session_id || appState.currentAsrSessionId;
+    appState.taskStatus = "CREATED";
+    appState.asrStreamProgress = 0;
+    renderAll();
+  });
+
+  source.addEventListener("audio_uploaded", (event) => {
+    const data = JSON.parse(event.data);
+    appState.currentAudioId = data.audio_id || appState.currentAudioId;
+    appState.uploadedFilename = data.filename || appState.uploadedFilename;
+    appState.taskStatus = "TRANSCRIBING";
+    renderAll();
+  });
+
+  source.addEventListener("transcribing", (event) => {
+    const data = JSON.parse(event.data);
+    appState.currentAudioId = data.audio_id || appState.currentAudioId;
+    appState.taskStatus = "TRANSCRIBING";
+    setBusy(true, "正在实时转写音频...");
+    renderAll();
+  });
+
+  source.addEventListener("segment", (event) => {
+    const data = JSON.parse(event.data);
+    appState.currentAudioId = data.audio_id || appState.currentAudioId;
+    appState.selectedEngine = data.engine || appState.selectedEngine;
+    appState.taskStatus = "TRANSCRIBING";
+    appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
+    if (data.segment) {
+      appState.liveTranscriptSegments = [
+        ...appState.liveTranscriptSegments,
+        data.segment,
+      ];
+    }
+    renderAll();
+  });
+
+  source.addEventListener("completed", (event) => {
+    const data = JSON.parse(event.data);
+    terminalReceived = true;
+    appState.currentAudioId = data.audio_id || appState.currentAudioId;
+    appState.selectedEngine = data.engine || appState.selectedEngine;
+    appState.currentAsrResult = data.asr_result;
+    appState.taskStatus = "TRANSCRIBED";
+    appState.asrStreamProgress = 1;
+    appState.currentEvaluation = null;
+    closeAsrStream();
+    setBusy(false);
+    renderAll();
+    showToast("音频实时转写完成");
+    resolve?.({ audio_id: data.audio_id, asr_result: data.asr_result });
+  });
+
+  source.addEventListener("failed", (event) => {
+    const data = JSON.parse(event.data);
+    terminalReceived = true;
+    appState.taskStatus = "FAILED";
+    closeAsrStream();
+    setBusy(false);
+    renderAll();
+    const error = new Error(data.error || "ASR 实时转写失败");
+    showToast(error.message);
+    reject?.(error);
+  });
+
+  source.onerror = () => {
+    if (!terminalReceived) {
+      appState.taskStatus = "FAILED";
+      const error = new Error("ASR SSE 连接异常，请检查服务日志");
+      showToast(error.message);
+      reject?.(error);
+    }
+    closeAsrStream();
+    setBusy(false);
+    renderAll();
+  };
+}
+
 async function createRecordTask(conversationText) {
   resetTaskState();
   appState.currentInputText = conversationText;
@@ -943,25 +1069,29 @@ async function uploadAndTranscribe(file, engine) {
   appState.selectedEngine = engine;
   appState.uploadedFilename = "上传中";
   appState.taskStatus = "CREATED";
+  appState.currentAsrResult = null;
+  appState.liveTranscriptSegments = [];
+  appState.asrStreamProgress = 0;
+  renderAll();
+
+  setBusy(true, "正在创建 ASR 实时转写会话...");
+  const session = await api(`/api/asr/sessions?engine=${encodeURIComponent(engine)}`, { method: "POST" });
+  appState.currentAsrSessionId = session.session_id;
   renderAll();
 
   const form = new FormData();
   form.append("file", file);
   setBusy(true, "正在上传音频...");
-  const uploaded = await api("/api/audio/upload", { method: "POST", body: form });
+  const uploaded = await api(`/api/asr/sessions/${session.session_id}/audio`, { method: "POST", body: form });
   appState.currentAudioId = uploaded.audio_id;
   appState.uploadedFilename = uploaded.filename || uploaded.audio_id;
+  appState.taskStatus = "TRANSCRIBING";
   renderAll();
 
-  setBusy(true, `正在使用 ${ENGINE_LABELS[engine] || engine} 转写...`);
-  const transcribed = await api(`/api/audio/${uploaded.audio_id}/transcribe?engine=${engine}`, { method: "POST" });
-  appState.currentAsrResult = transcribed.asr_result;
-  appState.currentAudioId = transcribed.audio_id;
-  appState.taskStatus = "TRANSCRIBED";
-  appState.currentEvaluation = null;
-  renderAll();
-  showToast("音频转写完成");
-  return transcribed;
+  setBusy(true, `正在使用 ${ENGINE_LABELS[engine] || engine} 实时转写...`);
+  return new Promise((resolve, reject) => {
+    listenForAsrEvents(uploaded.events_url, { resolve, reject });
+  });
 }
 
 async function submitTextImport() {
@@ -1091,16 +1221,16 @@ function openTextImport() {
 
 function openAudioTranscribe() {
   appState.audioMode = "transcribe";
-  $("audioPanelHint").textContent = "上传预录音频，仅测试 ASR 转写。医生端默认使用 FunASR。";
-  $("submitAudioButton").textContent = "上传并转写";
-  openDrawer("audioPanel", "上传音频测试转写");
+  $("audioPanelHint").textContent = "上传 MP3/WAV 预录音频，系统创建 ASR 会话并通过 SSE 实时显示分段转写。";
+  $("submitAudioButton").textContent = "上传并实时转写";
+  openDrawer("audioPanel", "MP3/WAV 实时转写");
 }
 
 function openAudioGenerate() {
   appState.audioMode = "generate";
-  $("audioPanelHint").textContent = "上传预录音频，先由 FunASR 转写，再生成病历。";
-  $("submitAudioButton").textContent = "上传并生成病历";
-  openDrawer("audioPanel", "上传音频生成病历");
+  $("audioPanelHint").textContent = "上传 MP3/WAV 预录音频，先完成 SSE 实时转写，再进入病历生成流程。";
+  $("submitAudioButton").textContent = "实时转写并生成病历";
+  openDrawer("audioPanel", "MP3/WAV 生成病历");
 }
 
 function openEvaluation() {

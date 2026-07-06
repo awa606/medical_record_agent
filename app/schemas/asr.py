@@ -51,3 +51,33 @@ class ASREvaluationResult(BaseModel):
     edit_distance: int
     keyword_recall: float
     medical_keywords: dict[str, list[str]]
+
+
+class ASRSessionRecord(BaseModel):
+    session_id: str
+    engine: str = "mock"
+    status: str = "created"
+    audio_id: str | None = None
+    filename: str | None = None
+    events_url: str | None = None
+    result_url: str | None = None
+    error: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class ASRSessionEvent(BaseModel):
+    id: int
+    event: str
+    data: dict[str, object] = Field(default_factory=dict)
+    created_at: str | None = None
+
+
+class ASRSessionUploadResponse(BaseModel):
+    session_id: str
+    audio_id: str
+    status: str
+    filename: str
+    engine: str
+    events_url: str
+    result_url: str

@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.api import audio_router, llm_router, records_router, tasks_router
+from app.api import asr_sessions_router, audio_router, llm_router, records_router, tasks_router
 from app.db import init_db
 
 
@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Medical Record Agent", lifespan=lifespan)
+app.include_router(asr_sessions_router, prefix="/api")
 app.include_router(audio_router, prefix="/api")
 app.include_router(llm_router, prefix="/api")
 app.include_router(records_router, prefix="/api")

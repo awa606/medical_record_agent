@@ -189,8 +189,8 @@
       </section>
 
       <section id="audioPanel" class="drawer-panel">
-        <p id="audioPanelHint" class="form-help">选择音频与 ASR 引擎。医生端默认使用 FunASR。</p>
-        <input id="audioFileInput" type="file" accept=".wav,.mp3,.m4a,.flac,.ogg,audio/*" />
+        <p id="audioPanelHint" class="form-help">选择 MP3/WAV 音频与 ASR 引擎，系统将通过 SSE 在中间转写栏显示分段结果。</p>
+        <input id="audioFileInput" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" />
         <select id="audioEngineSelect">
           <option value="funasr" selected>FunASR</option>
           <option value="mock">Mock ASR</option>

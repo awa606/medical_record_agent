@@ -8,13 +8,14 @@
 | --- | --- | --- |
 | v0.1 | Basic ASR pipeline | 建立音频上传、ASR 转写、ASRResult 结构和音频到病历入口。 | `versions/v0.1_basic_asr_pipeline/` |
 | v0.2 | SSE streaming | 建立任务状态、步骤记录和 SSE 事件流，支持前端实时追踪。 | `versions/v0.2_sse_streaming/` |
+| v0.2.1 | ASR session SSE | 新增 MP3/WAV ASR 会话接口，支持前端中间转写栏按 segment 实时显示。 | `versions/v0.2_sse_streaming/` |
 | v0.3 | Role separation | 建立医生/患者角色分离、ASR 角色策略和人工校正提示。 | `versions/v0.3_role_separation/` |
 | v0.4 | Medical reasoning | 建立病历字段抽取、草稿生成、安全校验、候选诊断和医生审核边界。 | `versions/v0.4_medical_reasoning/` |
 | v1.0 | Deployable system | 建立可本地运行、可选本地模型、日志、版本、Issue 和 PR 工作流的可交接系统。 | `versions/v1.0_deployable_system/` |
 
 ## 当前状态
 
-当前代码已覆盖 `v0.1` 到 `v0.4` 的主要工程能力，`v1.0` 的重点是部署说明、版本证据、日志纪律和协作流程。本次文档重构不修改业务逻辑。
+当前代码已覆盖 `v0.1` 到 `v0.4` 的主要工程能力，并在 `v0.2.1` 增加 ASR 会话级 SSE 文件流转写。`v1.0` 的重点是部署说明、版本证据、日志纪律、模型评测和协作流程。
 
 ## 版本管理规则
 

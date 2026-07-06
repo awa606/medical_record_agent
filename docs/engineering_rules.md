@@ -26,6 +26,7 @@
 
 - `v0.1`：basic ASR pipeline。
 - `v0.2`：SSE streaming。
+- `v0.2.1`：ASR session SSE file streaming。
 - `v0.3`：role separation。
 - `v0.4`：medical reasoning。
 - `v1.0`：deployable system。

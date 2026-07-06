@@ -21,6 +21,8 @@ from app.api.audio import (
 from app.schemas import (
     ASRResult,
     ASRSegment,
+    ASRSessionCorrectionRequest,
+    ASRSessionCorrectionResponse,
     ASRSessionEvent,
     ASRSessionRecord,
     ASRSessionUploadResponse,
@@ -32,6 +34,15 @@ from app.services.asr import apply_manifest_role_strategy, create_asr_engine
 router = APIRouter(prefix="/asr/sessions", tags=["asr-sessions"])
 
 SUPPORTED_ASR_ENGINES = {"mock", "funasr", "qwen3", "online"}
+ROLE_LABELS = {
+    "doctor": "医生",
+    "医生": "医生",
+    "patient": "患者",
+    "患者": "患者",
+    "unknown": "待确认",
+    "待确认": "待确认",
+    "待校正": "待确认",
+}
 
 
 def _now() -> str:
@@ -96,6 +107,16 @@ def _write_events(session_id: str, events: list[ASRSessionEvent]) -> None:
     _write_json(_events_path(session_id), [event.model_dump() for event in events])
 
 
+def _append_events(session_id: str, events: list[ASRSessionEvent]) -> None:
+    existing = _read_events(session_id)
+    last_id = existing[-1].id if existing else 0
+    next_events = [
+        event.model_copy(update={"id": last_id + index + 1})
+        for index, event in enumerate(events)
+    ]
+    _write_events(session_id, [*existing, *next_events])
+
+
 def _read_events(session_id: str) -> list[ASRSessionEvent]:
     path = _events_path(session_id)
     if not path.exists():
@@ -106,6 +127,85 @@ def _read_events(session_id: str) -> list[ASRSessionEvent]:
 
 def _write_session_result(session_id: str, result: ASRResult) -> None:
     _write_json(_result_path(session_id), result.model_dump())
+
+
+def _normalize_role(role: str | None) -> str | None:
+    if role is None:
+        return None
+    normalized = ROLE_LABELS.get(role.strip())
+    if normalized is None:
+        raise HTTPException(status_code=400, detail=f"Unsupported segment role: {role}")
+    return normalized
+
+
+def _conversation_from_segments(segments: list[ASRSegment]) -> str:
+    lines = []
+    for segment in segments:
+        label = segment.role or segment.speaker or "待确认"
+        lines.append(f"[{label}] {segment.text}")
+    return "\n".join(lines)
+
+
+def _plain_text_from_segments(segments: list[ASRSegment]) -> str:
+    return "\n".join(segment.text for segment in segments if segment.text.strip())
+
+
+def _reviewed_event(
+    *,
+    session: ASRSessionRecord,
+    result: ASRResult,
+    reviewer: str | None,
+    note: str | None,
+) -> ASRSessionEvent:
+    return ASRSessionEvent(
+        id=1,
+        event="role_reviewed",
+        data={
+            "session_id": session.session_id,
+            "audio_id": result.audio_id,
+            "engine": result.engine,
+            "status": "reviewed",
+            "reviewer": reviewer,
+            "note": note,
+            "segments": len(result.segments),
+            "asr_result": result.model_dump(),
+        },
+        created_at=_now(),
+    )
+
+
+def _apply_segment_corrections(
+    result: ASRResult,
+    payload: ASRSessionCorrectionRequest,
+) -> ASRResult:
+    updated = result.model_copy(deep=True)
+    if not updated.segments:
+        updated.segments = [ASRSegment(speaker="asr", role="待确认", text=updated.text)]
+
+    for correction in payload.segments:
+        if correction.index >= len(updated.segments):
+            raise HTTPException(status_code=400, detail=f"Segment index out of range: {correction.index}")
+        segment = updated.segments[correction.index]
+        if correction.role is not None:
+            segment.role = _normalize_role(correction.role)
+        if correction.text is not None:
+            next_text = correction.text.strip()
+            if not next_text:
+                raise HTTPException(status_code=400, detail=f"Segment text cannot be empty: {correction.index}")
+            if next_text != segment.text and not segment.original_text:
+                segment.original_text = segment.text
+            segment.text = next_text
+        segment.reviewed_by_doctor = correction.reviewed_by_doctor
+        segment.needs_review = not correction.reviewed_by_doctor or segment.role == "待确认"
+
+    updated.text = _plain_text_from_segments(updated.segments)
+    updated.conversation_text = _conversation_from_segments(updated.segments)
+    updated.role_strategy = "manual_reviewed"
+    updated.reviewed_by_doctor = all(segment.reviewed_by_doctor for segment in updated.segments)
+    updated.needs_review = any(segment.needs_review for segment in updated.segments)
+    if updated.reviewed_by_doctor and "ASR segments were manually reviewed by doctor." not in updated.warnings:
+        updated.warnings.append("ASR segments were manually reviewed by doctor.")
+    return updated
 
 
 def _segment_progress(segment: ASRSegment, index: int, total: int, duration: float | None) -> float:
@@ -346,6 +446,44 @@ def upload_asr_session_audio(
         engine=result.engine,
         events_url=ready_session.events_url or f"/api/asr/sessions/{session_id}/events",
         result_url=ready_session.result_url or f"/api/asr/sessions/{session_id}/result",
+    )
+
+
+@router.patch("/{session_id}/result")
+def update_asr_session_result(
+    session_id: str,
+    payload: ASRSessionCorrectionRequest,
+) -> ASRSessionCorrectionResponse:
+    session = _read_session(session_id)
+    path = _result_path(session_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="ASR session result not found")
+
+    result = ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
+    updated_result = _apply_segment_corrections(result, payload)
+    updated_at = _now()
+    reviewed_session = session.model_copy(update={"status": "reviewed", "updated_at": updated_at})
+
+    _write_session_result(session_id, updated_result)
+    _write_transcript(updated_result)
+    _write_session(reviewed_session)
+    _append_events(
+        session_id,
+        [
+            _reviewed_event(
+                session=reviewed_session,
+                result=updated_result,
+                reviewer=payload.reviewer,
+                note=payload.note,
+            )
+        ],
+    )
+    return ASRSessionCorrectionResponse(
+        session_id=session_id,
+        audio_id=updated_result.audio_id,
+        status="reviewed",
+        asr_result=updated_result,
+        updated_at=updated_at,
     )
 
 

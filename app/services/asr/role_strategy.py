@@ -108,6 +108,22 @@ def apply_manifest_role_strategy(
     updated.evaluate_diarization = bool(sample.get("evaluate_diarization", False))
     if not updated.role_strategy:
         updated.role_strategy = strategy
+    return mark_role_review_state(updated)
+
+
+def mark_role_review_state(result: ASRResult) -> ASRResult:
+    updated = result.model_copy(deep=True)
+    needs_review = updated.role_strategy == "single_segment_needs_review"
+    if not updated.segments and updated.text:
+        needs_review = True
+    for segment in updated.segments:
+        if not segment.role:
+            needs_review = True
+        if updated.role_strategy == "single_segment_needs_review":
+            segment.needs_review = True
+        elif not segment.role:
+            segment.needs_review = True
+    updated.needs_review = needs_review
     return updated
 
 

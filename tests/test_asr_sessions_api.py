@@ -8,10 +8,12 @@ from app.api.asr_sessions import (
     _read_events,
     create_asr_session,
     read_asr_session_result,
+    update_asr_session_result,
     upload_asr_session_audio,
 )
 from app.api.audio import read_audio_transcript
 from app.main import app
+from app.schemas import ASRSegmentCorrection, ASRSessionCorrectionRequest
 
 
 class FakeUploadFile:
@@ -99,6 +101,78 @@ class ASRSessionApiTests(unittest.TestCase):
         stream = collect_sse_chunks(session.session_id)
         self.assertIn("event: segment", stream)
         self.assertIn("event: completed", stream)
+
+    def test_role_review_updates_segments_result_and_legacy_transcript(self):
+        session = create_asr_session(engine="mock")
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+        try:
+            uploaded = upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+        original = read_asr_session_result(session.session_id)
+        corrections = [
+            ASRSegmentCorrection(
+                index=index,
+                role="医生" if index % 2 == 0 else "患者",
+                text=segment.text,
+            )
+            for index, segment in enumerate(original.segments)
+        ]
+        corrections[0].text = "您好，请问哪里不舒服？"
+        corrections[1].text = "左手被咬伤后肿痛两个小时。"
+
+        response = update_asr_session_result(
+            session.session_id,
+            ASRSessionCorrectionRequest(
+                reviewer="doctor",
+                segments=corrections,
+            ),
+        )
+
+        self.assertEqual(response.status, "reviewed")
+        self.assertEqual(response.audio_id, uploaded.audio_id)
+        self.assertEqual(response.asr_result.role_strategy, "manual_reviewed")
+        self.assertTrue(response.asr_result.reviewed_by_doctor)
+        self.assertFalse(response.asr_result.needs_review)
+        self.assertEqual(response.asr_result.segments[0].role, "医生")
+        self.assertEqual(response.asr_result.segments[1].role, "患者")
+        self.assertIn("[医生] 您好，请问哪里不舒服？", response.asr_result.conversation_text)
+        self.assertIn("[患者] 左手被咬伤后肿痛两个小时。", response.asr_result.conversation_text)
+
+        result = read_asr_session_result(session.session_id)
+        self.assertEqual(result.conversation_text, response.asr_result.conversation_text)
+
+        legacy_transcript = read_audio_transcript(uploaded.audio_id)
+        self.assertEqual(legacy_transcript.conversation_text, response.asr_result.conversation_text)
+
+        event_names = [event.event for event in _read_events(session.session_id)]
+        self.assertEqual(event_names[-1], "role_reviewed")
+
+    def test_role_review_allows_pending_review_role(self):
+        session = create_asr_session(engine="mock")
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+        try:
+            upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+
+        response = update_asr_session_result(
+            session.session_id,
+            ASRSessionCorrectionRequest(
+                segments=[
+                    ASRSegmentCorrection(
+                        index=0,
+                        role="待确认",
+                        text="这一句还不能确认是谁说的。",
+                        reviewed_by_doctor=False,
+                    )
+                ],
+            ),
+        )
+
+        self.assertTrue(response.asr_result.needs_review)
+        self.assertTrue(response.asr_result.segments[0].needs_review)
+        self.assertEqual(response.asr_result.segments[0].role, "待确认")
 
     def test_sse_reconnect_skips_sent_events(self):
         session = create_asr_session(engine="mock")

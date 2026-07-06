@@ -694,6 +694,39 @@ body.screenshot-mode .debug-tools {
   background: var(--primary-soft);
 }
 
+.chat-card.needs-review {
+  border-left: 4px solid var(--yellow);
+}
+
+.chat-card.reviewed {
+  border-left: 4px solid var(--green);
+}
+
+.chat-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.chat-tools select {
+  width: auto;
+  min-width: 96px;
+  min-height: 32px;
+  border-radius: 9px;
+  padding: 5px 8px;
+  font-weight: 900;
+}
+
+.chat-card textarea {
+  min-height: 72px;
+  border-radius: 10px;
+  padding: 9px 10px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
 .speaker-tag {
   display: inline-flex;
   align-items: center;
@@ -713,6 +746,50 @@ body.screenshot-mode .debug-tools {
 .speaker-tag.patient {
   background: #f3f4f6;
   color: #374151;
+}
+
+.speaker-tag.unknown {
+  background: var(--yellow-soft);
+  color: #92400e;
+}
+
+.role-review-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: #fff;
+}
+
+.role-review-bar.pending {
+  border-left-color: var(--yellow);
+  background: var(--yellow-soft);
+}
+
+.role-review-bar strong,
+.role-review-bar span {
+  display: block;
+}
+
+.role-review-bar span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.role-review-bar button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 10px;
+  padding: 7px 12px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .assist-block {

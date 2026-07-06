@@ -60,6 +60,8 @@ class ASRRoleStrategyTests(unittest.TestCase):
         mapped = apply_manifest_role_strategy(result, "fever_01")
 
         self.assertEqual(mapped.role_strategy, "single_segment_needs_review")
+        self.assertTrue(mapped.needs_review)
+        self.assertTrue(mapped.segments[0].needs_review)
         self.assertIn("[待校正]", mapped.conversation_text)
         self.assertNotIn("[患者]", mapped.conversation_text)
         self.assertTrue(mapped.warnings)
@@ -81,6 +83,8 @@ class ASRRoleStrategyTests(unittest.TestCase):
         mapped = apply_manifest_role_strategy(result, "fever_01")
 
         self.assertEqual(mapped.role_strategy, "single_segment_needs_review")
+        self.assertTrue(mapped.needs_review)
+        self.assertTrue(mapped.segments[0].needs_review)
         self.assertEqual(mapped.conversation_text, "[待校正] patient has fever for three days")
         self.assertEqual(
             mapped.warnings,

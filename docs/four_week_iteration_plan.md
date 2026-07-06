@@ -5,7 +5,7 @@
 ## 总目标
 
 - `v0.2.1`：MP3/WAV 上传后通过 ASR 会话和 SSE 分段显示实时转写。
-- `v0.3`：增强医生/患者角色区分、置信度提示和人工校正入口。
+- `v0.3`：增强医生/患者角色区分、置信度提示、逐段人工校正和校正后病历生成。
 - `v0.4`：扩展症状、疾病、检查、用药和关联规则知识库。
 - `v0.5`：完成本地模型和边缘端配置评测。
 - `v1.0`：完成前端产品化、文档、测试记录、Debug 记录和版本封版。
@@ -26,7 +26,7 @@
 | 类型 | 标题 | 验收标准 |
 | --- | --- | --- |
 | feature | `feat: ASR session SSE file streaming` | MP3/WAV 上传后中间转写栏按 segment 实时追加；`pytest` 覆盖会话、事件和结果。 |
-| feature | `feat: doctor/patient role correction` | 每段转写显示医生/患者角色、置信度和人工校正状态。 |
+| feature | `feat: doctor/patient role correction` | 每段转写显示医生/患者角色、置信度和人工校正状态；保存后用于病历生成。 |
 | feature | `feat: medical knowledge association rules` | 知识库覆盖症状、疾病、检查、用药、规则和提示模板，并能触发候选诊断提示。 |
 | research | `research: local ASR and LLM benchmark on hospital PC` | 输出准确率、延迟、CPU/内存/GPU 占用和适用模型建议。 |
 | research | `research: edge deployment requirement` | 输出 CPU-only、GPU workstation、edge device 三档配置建议。 |

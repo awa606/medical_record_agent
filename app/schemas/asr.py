@@ -10,6 +10,9 @@ class ASRSegment(BaseModel):
     start_time: float | None = None
     end_time: float | None = None
     confidence: float | None = None
+    needs_review: bool = False
+    reviewed_by_doctor: bool = False
+    original_text: str | None = None
 
 
 class ASRResult(BaseModel):
@@ -25,6 +28,8 @@ class ASRResult(BaseModel):
     speaker_mode: str | None = None
     evaluate_diarization: bool = False
     role_strategy: str | None = None
+    needs_review: bool = False
+    reviewed_by_doctor: bool = False
     warnings: list[str] = Field(default_factory=list)
 
 
@@ -81,3 +86,24 @@ class ASRSessionUploadResponse(BaseModel):
     engine: str
     events_url: str
     result_url: str
+
+
+class ASRSegmentCorrection(BaseModel):
+    index: int = Field(ge=0)
+    role: str | None = None
+    text: str | None = None
+    reviewed_by_doctor: bool = True
+
+
+class ASRSessionCorrectionRequest(BaseModel):
+    segments: list[ASRSegmentCorrection] = Field(min_length=1)
+    reviewer: str | None = None
+    note: str | None = None
+
+
+class ASRSessionCorrectionResponse(BaseModel):
+    session_id: str
+    audio_id: str
+    status: str
+    asr_result: ASRResult
+    updated_at: str

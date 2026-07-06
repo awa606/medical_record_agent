@@ -8,6 +8,7 @@
 - 所有 Bug 修复必须在 `/logs/debug/` 新增或更新调试报告。
 - 每个工作日必须在 `/logs/daily/YYYY-MM-DD.md` 记录当天变更、验证和风险。
 - 每个功能必须对应一个 Issue；没有 Issue 的功能不得直接合并。
+- 每个调试报告必须包含 cause、reproduction steps、fix、verification。
 - 调试记录不得包含真实患者数据、真实 API Key、医院系统凭据或模型权重。
 
 ## 调试报告命名

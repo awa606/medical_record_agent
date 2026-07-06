@@ -1,26 +1,25 @@
 # 版本演进记录
 
-本文记录 Medical Record Agent 从课程原型到生产级学术工程项目的版本演进。
+本文记录 Medical Record Agent 从课程原型到研究级 AI 工程系统的标准版本线。版本线以能力里程碑为准，每个里程碑必须能追溯到 Issue、日志和验证结果。
 
 ## 版本时间线
 
-| 版本 | 阶段 | 说明 |
+| 版本 | 阶段 | 说明 | 归档目录 |
 | --- | --- | --- |
-| v0.1 | POC | 建立文本版 Agent 骨架，验证问诊文本到病历草稿的基本流程。 |
-| v0.2 | MVP | 引入 Mock ASR 和三入口流程，支持文本、音频转写、音频生成病历。 |
-| v0.3 | Evaluation | 接入 FunASR 可选引擎，增加 CER、关键词召回和 ASR 角色策略评测。 |
-| v0.3.1 | Rule tuning | 补充 fever 场景字段抽取规则，提升课程样例稳定性。 |
-| v0.4 | Workflow | 拆分医生端、调试台和入口页，增强任务状态、SSE 和审计链路。 |
-| v0.4.5 | Documentation | 补齐 README、目录说明、GitHub 上传边界和课程材料。 |
-| v1.0 | Academic engineering | 建立 Issue、PR、日志、版本和调试记录规范，形成可交接的工程管理体系。 |
+| v0.1 | Basic ASR pipeline | 建立音频上传、ASR 转写、ASRResult 结构和音频到病历入口。 | `versions/v0.1_basic_asr_pipeline/` |
+| v0.2 | SSE streaming | 建立任务状态、步骤记录和 SSE 事件流，支持前端实时追踪。 | `versions/v0.2_sse_streaming/` |
+| v0.3 | Role separation | 建立医生/患者角色分离、ASR 角色策略和人工校正提示。 | `versions/v0.3_role_separation/` |
+| v0.4 | Medical reasoning | 建立病历字段抽取、草稿生成、安全校验、候选诊断和医生审核边界。 | `versions/v0.4_medical_reasoning/` |
+| v1.0 | Deployable system | 建立可本地运行、可选本地模型、日志、版本、Issue 和 PR 工作流的可交接系统。 | `versions/v1.0_deployable_system/` |
 
 ## 当前状态
 
-当前代码功能停留在 `v0.4.5`，本次重构只补充工程管理和文档体系，不修改业务逻辑。
+当前代码已覆盖 `v0.1` 到 `v0.4` 的主要工程能力，`v1.0` 的重点是部署说明、版本证据、日志纪律和协作流程。本次文档重构不修改业务逻辑。
 
 ## 版本管理规则
 
 - 每个功能、修复、研究或重构任务必须先有 GitHub Issue。
 - 每天至少维护一个 `/logs/daily/YYYY-MM-DD.md` 工作日志。
 - Bug 修复必须在 `/logs/debug/` 下记录问题、根因、修复和验证。
-- 版本目录 `versions/` 用于后续归档关键阶段材料，不存放大体积数据、模型权重或隐私数据。
+- 每个里程碑必须在 `versions/` 下维护目录和 README。
+- 版本目录 `versions/` 只归档关键阶段材料和证据索引，不存放大体积数据、模型权重或隐私数据。

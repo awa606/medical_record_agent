@@ -4,7 +4,7 @@
 
 ## 架构概览
 
-Medical Record Agent 是一个面向医学问诊场景的 AI 生成式电子病历辅助系统。系统以 FastAPI 为后端入口，提供文本病历生成、音频上传、ASR 转写、ASR 评测、医生审核和导出能力；前端通过静态页面调用 API；运行数据默认落在本地 SQLite 与 `data/` 目录。
+Medical Record Agent 是一个面向医学问诊场景的 AI 生成式电子病历辅助系统。系统以 FastAPI 为后端入口，提供 ASR、SSE、医学对话结构化、医生/患者角色分离、医学知识推理、可选本地模型接入、医生审核和导出能力；前端通过静态页面调用 API；运行数据默认落在本地 SQLite 与 `data/` 目录。
 
 ```text
 static/*.html
@@ -23,6 +23,17 @@ static/*.html
 - `app/services/`：业务服务层，包含 ASR 引擎、LLM 适配、病历导出、Mock 规则和重试工具。
 - `app/db/`：SQLite 访问层，保存任务、步骤和审计记录。
 - `app/schemas/`：Pydantic 数据结构，约束 API 输入输出和内部结果。
+
+## 能力边界
+
+| 能力 | 当前承载模块 |
+| --- | --- |
+| ASR pipeline | `app/api/audio.py`、`app/services/asr/` |
+| SSE streaming | `app/api/tasks.py`、`static/doctor.js`、`static/main.js` |
+| 医学对话结构化 | `app/agents/`、`app/schemas/medical_record.py` |
+| 角色分离 | `app/services/asr/role_strategy.py` |
+| 医学知识推理 | `app/services/mock_llm.py`、`app/prompts/` |
+| 本地模型接入 | FunASR、Qwen3-ASR、Ollama provider |
 
 ## 核心数据流
 

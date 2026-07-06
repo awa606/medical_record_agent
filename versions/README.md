@@ -4,13 +4,13 @@
 
 ## 标准版本线
 
-| 版本 | 目标能力 | 目录 |
-| --- | --- | --- |
-| v0.1 | basic ASR pipeline | `versions/v0.1_basic_asr_pipeline/` |
-| v0.2 | SSE streaming | `versions/v0.2_sse_streaming/` |
-| v0.3 | role separation | `versions/v0.3_role_separation/` |
-| v0.4 | medical reasoning | `versions/v0.4_medical_reasoning/` |
-| v1.0 | deployable system | `versions/v1.0_deployable_system/` |
+| 版本 | 目标能力 | GitHub Issue | 目录 |
+| --- | --- | --- | --- |
+| v0.1 | basic ASR pipeline | [#1](https://github.com/awa606/medical_record_agent/issues/1) | `versions/v0.1_basic_asr_pipeline/` |
+| v0.2 | SSE streaming | [#2](https://github.com/awa606/medical_record_agent/issues/2) | `versions/v0.2_sse_streaming/` |
+| v0.3 | role separation | [#3](https://github.com/awa606/medical_record_agent/issues/3) | `versions/v0.3_role_separation/` |
+| v0.4 | medical reasoning | [#4](https://github.com/awa606/medical_record_agent/issues/4) | `versions/v0.4_medical_reasoning/` |
+| v1.0 | deployable system | [#5](https://github.com/awa606/medical_record_agent/issues/5) | `versions/v1.0_deployable_system/` |
 
 ## 归档规则
 

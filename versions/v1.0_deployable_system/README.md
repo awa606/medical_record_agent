@@ -4,6 +4,8 @@
 
 形成可部署、可追踪、可交接的医学 AI 工程系统，覆盖本地服务启动、可选本地模型、日志、版本和 PR 工作流。
 
+GitHub Issue：[#5](https://github.com/awa606/medical_record_agent/issues/5)
+
 ## 验收证据
 
 - 启动命令：`python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000`

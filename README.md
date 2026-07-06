@@ -82,7 +82,7 @@ medical_record_agent/
   data/                        本地运行数据和样例占位目录
 ```
 
-详细架构见 [`docs/architecture.md`](docs/architecture.md)，工程规则见 [`docs/engineering_rules.md`](docs/engineering_rules.md)。
+详细架构见 [`docs/architecture.md`](docs/architecture.md)，工程规则见 [`docs/engineering_rules.md`](docs/engineering_rules.md)，能力证据见 [`docs/traceability_matrix.md`](docs/traceability_matrix.md)。
 
 ## How to Run
 
@@ -236,6 +236,7 @@ pytest -q
 
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/engineering_rules.md`](docs/engineering_rules.md)
+- [`docs/traceability_matrix.md`](docs/traceability_matrix.md)
 - [`docs/version_log.md`](docs/version_log.md)
 - [`docs/debug_guide.md`](docs/debug_guide.md)
 - [`versions/`](versions/)

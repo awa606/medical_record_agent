@@ -26,6 +26,9 @@ video/*.mp3
 Chinese-medical-dialogue-data/
 Medical-Dialogue-Dataset-Chinese/
 
+# Local course handbooks and source reference material
+report/
+
 # Raw external medical QA data must stay local
 data/raw_external/*
 !data/raw_external/.gitkeep

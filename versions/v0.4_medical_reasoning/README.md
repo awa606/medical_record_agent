@@ -4,6 +4,8 @@
 
 将医学对话结构化为病历字段、草稿、安全校验和候选诊断，保留医生最终审核边界。
 
+GitHub Issue：[#4](https://github.com/awa606/medical_record_agent/issues/4)
+
 ## 验收证据
 
 - Agent：`app/agents/medical_record_orchestrator.py`

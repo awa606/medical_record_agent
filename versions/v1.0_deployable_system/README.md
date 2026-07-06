@@ -15,4 +15,4 @@ GitHub Issue：[#5](https://github.com/awa606/medical_record_agent/issues/5)
 
 ## 状态
 
-进行中。当前重点是补齐工程管理、部署说明和版本追踪证据。
+工程管理基线和本地可运行链路已建立。后续生产化增强继续通过 GitHub Issue #5 追踪。

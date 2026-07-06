@@ -1,0 +1,20 @@
+[
+  {
+    "disease_id": "D_COMMON_COLD",
+    "disease_name": "感冒",
+    "category": "中医内科",
+    "aliases": [
+      "伤风",
+      "冒风"
+    ],
+    "description": "外感风邪或时行病毒引起，以发热、恶寒、鼻塞、流涕、咳嗽等为常见表现的外感病。",
+    "common_symptoms": [
+      "SYM_FEVER",
+      "SYM_CHILLS",
+      "SYM_HEADACHE",
+      "SYM_NASAL_DISCHARGE",
+      "SYM_COUGH"
+    ],
+    "safety_note": "仅课程模拟，不含真实患者身份信息"
+  }
+]

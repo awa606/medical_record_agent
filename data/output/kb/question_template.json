@@ -1,0 +1,155 @@
+[
+  {
+    "question_id": "Q_CHIEF",
+    "question_order": 1,
+    "target_field": "主诉",
+    "question_text": "这次主要哪里不舒服？大概持续多久了？",
+    "followup_when_positive": "症状是突然出现还是逐渐加重？",
+    "maps_to_symptom_ids": [
+      "SYM_FEVER",
+      "SYM_CHILLS",
+      "SYM_COUGH"
+    ],
+    "required": "是",
+    "notes": "获取主诉和病程。"
+  },
+  {
+    "question_id": "Q_FEVER",
+    "question_order": 10,
+    "target_field": "发热",
+    "question_text": "有没有发热？最高体温大概多少？",
+    "followup_when_positive": "发热是持续的还是一阵一阵的？",
+    "maps_to_symptom_ids": [
+      "SYM_FEVER",
+      "SYM_MILD_FEVER",
+      "SYM_HIGHER_FEVER"
+    ],
+    "required": "是",
+    "notes": "区分发热轻重。"
+  },
+  {
+    "question_id": "Q_CHILLS",
+    "question_order": 20,
+    "target_field": "恶寒/怕风",
+    "question_text": "怕冷或怕风明显吗？",
+    "followup_when_positive": "是怕冷明显，还是只是有点怕风？",
+    "maps_to_symptom_ids": [
+      "SYM_CHILLS",
+      "SYM_SLIGHT_CHILLS"
+    ],
+    "required": "是",
+    "notes": "辅助区分风寒与风热。"
+  },
+  {
+    "question_id": "Q_SWEAT",
+    "question_order": 30,
+    "target_field": "出汗",
+    "question_text": "这几天出汗情况怎么样？",
+    "followup_when_positive": "是没有汗，还是容易自己出汗？",
+    "maps_to_symptom_ids": [
+      "SYM_NO_SWEAT",
+      "SYM_SPONTANEOUS_SWEAT"
+    ],
+    "required": "是",
+    "notes": "关注无汗或自汗。"
+  },
+  {
+    "question_id": "Q_THROAT",
+    "question_order": 40,
+    "target_field": "咽喉",
+    "question_text": "咽喉疼不疼？有没有口干口渴？",
+    "followup_when_positive": "咽痛是轻微还是比较明显？",
+    "maps_to_symptom_ids": [
+      "SYM_SORE_THROAT"
+    ],
+    "required": "是",
+    "notes": "风热常见咽痛。"
+  },
+  {
+    "question_id": "Q_NOSE",
+    "question_order": 50,
+    "target_field": "鼻部症状",
+    "question_text": "有没有鼻塞、流鼻涕？鼻涕是清的还是黄的？",
+    "followup_when_positive": "鼻涕量多不多？是否黏稠？",
+    "maps_to_symptom_ids": [
+      "SYM_NASAL_DISCHARGE",
+      "SYM_CLEAR_NASAL_DISCHARGE",
+      "SYM_YELLOW_NASAL_DISCHARGE"
+    ],
+    "required": "是",
+    "notes": "鼻涕颜色辅助辨证。"
+  },
+  {
+    "question_id": "Q_COUGH",
+    "question_order": 60,
+    "target_field": "咳嗽咳痰",
+    "question_text": "有没有咳嗽、咳痰？痰是什么颜色？",
+    "followup_when_positive": "痰量多不多？是否黏稠？",
+    "maps_to_symptom_ids": [
+      "SYM_COUGH",
+      "SYM_YELLOW_SPUTUM"
+    ],
+    "required": "是",
+    "notes": "记录咳嗽和痰色。"
+  },
+  {
+    "question_id": "Q_BODY",
+    "question_order": 70,
+    "target_field": "头身不适",
+    "question_text": "有没有头痛、全身酸痛，或者头身困重？",
+    "followup_when_positive": "是酸痛明显，还是觉得头身沉重？",
+    "maps_to_symptom_ids": [
+      "SYM_HEADACHE",
+      "SYM_BODY_ACHE",
+      "SYM_HEAVY_HEAD"
+    ],
+    "required": "是",
+    "notes": "外感常见伴随症状。"
+  },
+  {
+    "question_id": "Q_DIGESTIVE",
+    "question_order": 80,
+    "target_field": "脘腹/恶心",
+    "question_text": "有没有胸闷、胃里不舒服或恶心想吐？",
+    "followup_when_positive": "有没有腹胀、食欲下降？",
+    "maps_to_symptom_ids": [
+      "SYM_CHEST_OPPRESSION",
+      "SYM_NAUSEA"
+    ],
+    "required": "否",
+    "notes": "暑湿证候重点追问。"
+  },
+  {
+    "question_id": "Q_HISTORY",
+    "question_order": 90,
+    "target_field": "既往易感",
+    "question_text": "平时是不是比较容易感冒，或者最近明显乏力气短？",
+    "followup_when_positive": "这种情况持续多久了？",
+    "maps_to_symptom_ids": [
+      "SYM_RECURRENT_COLD",
+      "SYM_FATIGUE",
+      "SYM_SHORT_BREATH"
+    ],
+    "required": "否",
+    "notes": "气虚感冒证重点追问。"
+  },
+  {
+    "question_id": "Q_TONGUE_PULSE",
+    "question_order": 100,
+    "target_field": "舌脉",
+    "question_text": "请医生查体时补充舌象、脉象。",
+    "followup_when_positive": "记录舌苔颜色厚薄和脉象。",
+    "maps_to_symptom_ids": [
+      "SYM_THIN_WHITE_COATING",
+      "SYM_THIN_YELLOW_COATING",
+      "SYM_GREASY_COATING",
+      "SYM_PALE_TONGUE",
+      "SYM_FLOAT_TIGHT_PULSE",
+      "SYM_FLOAT_RAPID_PULSE",
+      "SYM_SOFT_RAPID_PULSE",
+      "SYM_FLOAT_WEAK_PULSE"
+    ],
+    "required": "是",
+    "notes": "模拟数据不替代真实查体。"
+  }
+]

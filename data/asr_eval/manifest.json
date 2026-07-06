@@ -1,0 +1,96 @@
+{
+  "samples": [
+    {
+      "sample_id": "snakebite_01",
+      "scenario": "snakebite outpatient consultation",
+      "speaker_mode": "single_speaker_reading",
+      "evaluate_diarization": false,
+      "role_strategy": "single_speaker_script_split",
+      "speaker_role_map": {},
+      "expected_keywords": [
+        "蛇咬伤",
+        "左手",
+        "肿痛",
+        "两个小时",
+        "季德胜蛇药片",
+        "寒战",
+        "头晕",
+        "胸闷",
+        "心慌",
+        "牙龈出血"
+      ]
+    },
+    {
+      "sample_id": "chest_pain_01",
+      "scenario": "chest pain outpatient consultation",
+      "speaker_mode": "two_speaker_consultation",
+      "evaluate_diarization": true,
+      "role_strategy": "manual_speaker_role_map",
+      "speaker_role_map": {
+        "发言人1": "医生",
+        "发言人2": "患者",
+        "spk0": "医生",
+        "spk1": "患者"
+      },
+      "expected_keywords": [
+        "胸痛",
+        "胸闷",
+        "心慌",
+        "心电图",
+        "高血压",
+        "冠心病"
+      ]
+    },
+    {
+      "sample_id": "fever_01",
+      "scenario": "fever outpatient consultation",
+      "speaker_mode": "two_speaker_consultation",
+      "evaluate_diarization": true,
+      "role_strategy": "manual_speaker_role_map",
+      "speaker_role_map": {
+        "发言人1": "患者",
+        "发言人2": "医生",
+        "spk0": "患者",
+        "spk1": "医生"
+      },
+      "expected_keywords": [
+        {
+          "name": "发烧",
+          "aliases": ["发烧", "发热"]
+        },
+        {
+          "name": "三天",
+          "aliases": ["三天", "3天"]
+        },
+        {
+          "name": "淋雨",
+          "aliases": ["淋雨", "淋与"]
+        },
+        {
+          "name": "40度",
+          "aliases": ["40度", "四十度", "40摄氏度", "四十摄氏度"]
+        },
+        {
+          "name": "咳嗽",
+          "aliases": ["咳嗽"]
+        },
+        {
+          "name": "铁锈色痰",
+          "aliases": ["铁锈色痰", "铁锈色的痰", "铁锈色", "铁锈涩痰", "铁锈、涩痰"]
+        },
+        {
+          "name": "布洛芬",
+          "aliases": ["布洛芬"]
+        },
+        {
+          "name": "反复发热",
+          "aliases": ["反复发热", "又烧起来", "后面又烧起来"]
+        },
+        {
+          "name": "食欲不佳",
+          "aliases": ["食欲不佳", "食欲有些不佳", "胃口不好", "胃口不是很好"]
+        }
+      ]
+    }
+  ]
+}

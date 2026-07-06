@@ -1,0 +1,7 @@
+fastapi
+pydantic>=2
+uvicorn[standard]
+python-multipart
+python-docx
+openpyxl>=3.1
+tzdata

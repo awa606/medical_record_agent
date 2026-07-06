@@ -1,0 +1,80 @@
+# 项目进度与评分细则对照看板
+
+本文档用于期末汇报前快速说明：项目当前做到哪里、每个评分项能展示什么证据、还存在什么风险、下一步应如何补强。项目定位是课程 POC 原型，不是经过临床验证的真实医疗系统。
+
+## 当前主链路
+
+```text
+fever_01.wav
+  -> FunASR
+  -> ASRResult / conversation_text
+  -> Online LLM 或 MockLLM fallback
+  -> 字段抽取
+  -> 病历草稿
+  -> 安全校验
+  -> 医生审核
+  -> Agent Trace
+  -> 运行日志
+```
+
+核心边界：
+
+- ASR 负责把音频转成文字，FunASR 是当前最稳 baseline；Qwen3 / Online ASR 仅作为对比引擎。
+- LLM 负责字段抽取能力展示，`LLM_PROVIDER=online|ollama` 可选；失败、超时、JSON 无效或字段不完整时 fallback 到 MockLLM。
+- MockLLM / deterministic extractor 是课程演示稳定兜底，保证 fever clean 和 `fever_01.wav` 主线可复现。
+- AI 只生成病历草稿、候选诊断和安全提醒，最终字段确认和导出必须由医生审核。
+- Agent Trace 与运行日志用于展示感知、计划、执行、决策和反馈过程。
+
+## 功能完成度快照
+
+| 模块 | 当前状态 | 说明 | 主要证据 |
+| --- | --- | --- | --- |
+| 文本导入 | 已完成 | 粘贴 fever clean 文本，生成字段、草稿、安全校验、Agent Trace | `/static/doctor.html`、`POST /api/records/generate` |
+| 音频上传 | 已完成 | 上传预录音频，生成 `audio_id`，支持测试转写和生成病历 | `/api/audio/upload` |
+| FunASR | 已完成 | `fever_01.wav` baseline，可进入病历生成链路 | `app/services/asr/funasr_engine.py` |
+| Online LLM | 已接入 | OpenAI-compatible provider，只做字段抽取；不提交 API Key | `app/services/llm/online_provider.py`、`GET /api/llm/status` |
+| MockLLM fallback | 已完成 | 默认兜底；真实 LLM 异常时不破坏主流程 | `app/services/llm/mock_provider.py`、`LLMRecordGenerator` |
+| Agent Trace | 已完成 | 展示 `agent_mode`、`perception`、`plan`、`executed_steps`、`decision` | `app/services/agent_trace.py` |
+| doctor.html | 已完成 | 医生端三栏工作台，默认医生模式，调试信息可切换显示 | `static/doctor.html`、`static/doctor.js` |
+| debug.html | 已完成 | 保留完整 JSON、任务步骤、ASRResult、Agent Trace 调试 | `static/debug.html` |
+| 保存草稿 | 已明确 | 保存当前字段审核结果到 SQLite task `result_json`，不是生成最终导出文件 | doctor 页面说明、Tasks API |
+| 运行日志 | 已完成 | 根据 `task_id` 和 `audio_id` 生成 Markdown 演示日志 | `scripts/save_run_log.py`、`docs/dev_logs/runs/README.md` |
+
+## 评分细则对照
+
+| 评分项 | 分值 | 满分要求 | 当前完成内容 | 可展示证据 | 风险 | 下一步 |
+| --- | ---: | --- | --- | --- | --- | --- |
+| 智能体设计模式 | 10 | 能清楚说明系统不是简单 API 调用，而是具备感知、计划、执行、反馈和人类审核边界的 Agent；能结合代码展示 Plan-and-Execute 和 Human-in-the-loop | 已实现文本/音频输入感知；`MedicalRecordOrchestrator` 按字段抽取、草稿生成、安全校验、医生审核执行；SSE 和任务步骤提供反馈；医生审核前 `export_allowed=false` | `docs/scoring/agent_design.md`、`docs/scoring/agent_architecture_diagram.md`、`app/agents/medical_record_orchestrator.py`、`app/services/agent_trace.py`、doctor 右栏 Agent Trace | 如果汇报只演示页面，不主动解释 Orchestrator 和 Agent Trace，容易被认为是普通表单系统 | 汇报时先讲架构图，再打开 Orchestrator 和 Agent Trace JSON，明确 `Plan-and-Execute + Human-in-the-loop` |
+| 决策系统设计 | 10 | 能展示输入分流、模型/工具选择、风险判断、字段缺失处理、导出门禁和异常 fallback 等决策规则 | 已有文本/音频三入口；ASR engine 选择；ASR `role_strategy` 人工校正提醒；LLM provider 选择与 MockLLM fallback；字段 `missing/confidence/source_spans`；SafetyCheck 阻止自动导出 | `docs/scoring/decision_system.md`、`docs/scoring/prompt_chain_design.md`、`app/schemas/medical_record.py`、`app/services/llm/factory.py`、`app/services/asr/factory.py`、debug Task/Steps JSON | Online LLM 依赖网络和模型 JSON 稳定性，现场可能 fallback；如果不解释 fallback，可能被误解为真实 LLM 没跑通 | 演示前准备 `LLM_PROVIDER=mock` 稳定路线，同时说明 online / ollama 是可替换通道，失败 fallback 是工程设计 |
+| 伦理合规设计 | 5 | 能说明隐私保护、医疗安全边界、防 Prompt 注入、审计追踪、公平性和局限性；不把原型夸大为临床系统 | 文档明确只用模拟文本和课程样例音频；API Key 只读环境变量；AI 只生成草稿；候选诊断需医生确认；安全校验和审计日志可追踪 | `docs/scoring/ethics_compliance.md`、`docs/dev_logs/DEVELOPMENT_RULES.md`、README、`app/prompts/medical_record_prompts.py`、`app/db/sqlite.py` | 医疗场景敏感，如果口头表述成“自动诊断”会扣分 | 汇报中固定使用“辅助生成草稿”“候选诊断”“医生最终审核”，不要使用“自动诊断” |
+| 演示流畅度 | 10 | 能在规定时间内稳定展示主链路、关键页面、异常备用方案和结果证据 | 已有入口页、医生端、调试台；文本导入 fever clean 稳定；`fever_01.wav + FunASR` 可作为主线；ASR 评测和运行日志可展示 | `/static/index.html`、`/static/doctor.html`、`/static/debug.html`、`docs/scoring/demo_script.md`、`docs/scoring/demo_checklist.md` | FunASR 首次加载可能慢；Online LLM 可能网络失败；浏览器环境可能偶发异常 | 演示前预热 FunASR；准备 fever clean 文本、MockLLM 路线和已生成运行日志；doctor 异常时切 debug.html |
+| 表达与逻辑 | 10 | 汇报结构完整，能从背景、方案、Agent、决策、安全、演示、代码自然串联，不堆功能点 | 已有 12-15 分钟讲稿、评分计划、进度看板、代码讲解路线和验收清单 | `docs/scoring/demo_script.md`、`docs/scoring/course_scoring_plan.md`、`docs/scoring/code_walkthrough.md`、`docs/scoring/progress_dashboard.md` | 内容较多，现场容易超时或跳跃 | 严格按 2+3+3+2+3+2 分钟节奏；每段都回扣“课程 POC + 医生审核边界” |
+| 代码展示 | 5 | 能选出关键代码说明系统设计，而不是逐行读代码；能把代码与评分点对应 | 已整理 Orchestrator、Schema、Prompt、LLM Adapter、ASR Factory、Agent Trace、SQLite 审计和运行日志脚本 | `docs/scoring/code_walkthrough.md`、`app/agents/medical_record_orchestrator.py`、`app/schemas/medical_record.py`、`app/prompts/medical_record_prompts.py`、`app/services/llm/`、`app/services/asr/`、`scripts/save_run_log.py` | 代码文件较多，展示过散会影响表达 | 只展示 5 个文件：Orchestrator、Schema、Prompt、LLM factory、Agent Trace；ASR factory 作为补充 |
+
+## 最稳现场演示路线
+
+1. 打开 `/static/index.html`，进入医生端。
+2. 在 `/static/doctor.html` 使用“文本导入”，粘贴 fever clean 问诊文本。
+3. 展示左栏病历字段、中栏对话转写、右栏缺失项/候选诊断/安全校验。
+4. 切换调试模式，展示 Agent Trace：输入类型、感知结果、计划步骤、执行步骤、导出决策。
+5. 上传 `fever_01.wav`，ASR engine 选择 FunASR，展示 ASRResult 和病历生成链路。
+6. 打开 ASR 评测，展示 CER、keyword_recall、recognized、missing。
+7. 复制运行日志命令，说明可输出到 `docs/dev_logs/runs/`。
+
+## 现场备用方案
+
+| 风险场景 | 备用处理 | 现场话术 |
+| --- | --- | --- |
+| FunASR 卡顿或模型加载过慢 | 改用 fever clean 文本导入，或切 Mock ASR 展示完整工程链路 | “ASR 是感知层可替换工具，输出统一为 ASRResult；即使本地模型加载慢，病历 Agent 主流程不变。” |
+| Online LLM 失败 | 使用默认 MockLLM fallback | “真实 LLM 是可选 provider，失败时 fallback 到 MockLLM 是为了保证 POC 演示稳定和医疗边界可控。” |
+| doctor.html 异常 | 打开 `/static/debug.html` 展示 Task、Steps、Safety、Agent Trace JSON | “医生端是面向用户的工作台，调试台保留完整过程证据。” |
+| ASR 角色无法自动区分 | 展示 `single_segment_needs_review` 提醒 | “系统不会在医疗场景中强行猜医生/患者角色，而是显式要求人工校正。” |
+| 字段缺失或候选诊断未确认 | 展示缺失提醒和医生审核门禁 | “缺失不是失败，而是安全设计：系统提示医生补问或确认，不能自动导出。” |
+
+## 汇报前检查清单
+
+- 运行 `python -m pytest` 或至少运行核心 API/脚本测试。
+- 启动服务：`python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000`。
+- 访问 `/static/doctor.html`，确认默认医生模式、文本导入、调试模式、Agent Trace 可见。
+- 预热 FunASR，确认 `fever_01.wav` 可转写；若环境不稳，提前准备 Mock 路线和运行日志。
+- 确认没有提交真实 API Key、真实患者数据、SQLite 数据库、模型缓存、大体积音视频或数据集文件。

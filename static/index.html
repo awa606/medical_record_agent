@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI生成式电子病历辅助系统</title>
+    <style>
+      :root {
+        --primary: #3b82f6;
+        --primary-dark: #2563eb;
+        --primary-soft: #eff6ff;
+        --bg: #f3f4f6;
+        --surface: #ffffff;
+        --text: #111827;
+        --muted: #6b7280;
+        --line: #e5e7eb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Arial, "Microsoft YaHei", "PingFang SC", sans-serif;
+      }
+
+      main {
+        width: min(920px, calc(100vw - 32px));
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 36px;
+        background: var(--surface);
+        box-shadow: 0 14px 36px rgba(17, 24, 39, 0.08);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        border: 1px solid #bfdbfe;
+        border-radius: 999px;
+        padding: 4px 10px;
+        background: var(--primary-soft);
+        color: var(--primary-dark);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      h1 {
+        margin: 14px 0 0;
+        font-size: 30px;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 10px 0 18px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .project-summary {
+        max-width: 780px;
+      }
+
+      .evidence-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 0 0 24px;
+      }
+
+      .evidence-row span {
+        border-radius: 999px;
+        padding: 5px 10px;
+        background: #f9fafb;
+        color: #374151;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .entry-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      a {
+        display: grid;
+        gap: 8px;
+        min-height: 148px;
+        align-content: center;
+        border: 1px solid #bfdbfe;
+        border-radius: 14px;
+        padding: 22px;
+        background: var(--primary-soft);
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      a strong {
+        color: var(--primary-dark);
+        font-size: 20px;
+      }
+
+      a span {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      a:hover {
+        border-color: var(--primary);
+        box-shadow: 0 10px 22px rgba(59, 130, 246, 0.14);
+      }
+
+      .card-meta {
+        color: #1d4ed8;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 24px;
+        }
+
+        .entry-actions {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="eyebrow">课程 POC 原型 · 医生审核闭环</span>
+      <h1>AI生成式电子病历辅助系统</h1>
+      <p class="project-summary">
+        面向期末汇报的电子病历辅助系统原型，支持文本导入、音频转写、字段抽取、病历草稿、安全校验、医生审核和 Agent Trace。
+        本系统不接真实患者数据，AI 只生成草稿和候选诊断。
+      </p>
+      <div class="evidence-row" aria-label="项目能力摘要">
+        <span>Plan-and-Execute</span>
+        <span>Human-in-the-loop</span>
+        <span>FunASR baseline</span>
+        <span>MockLLM fallback</span>
+        <span>运行日志</span>
+      </div>
+      <div class="entry-actions">
+        <a href="./doctor.html">
+          <span class="card-meta">面向医生/评委截图</span>
+          <strong>医生端工作台</strong>
+          <span>三栏工作台，展示病历字段、对话转写、AI 辅助、安全校验和医生审核边界。</span>
+        </a>
+        <a href="./debug.html">
+          <span class="card-meta">评分证据与调试</span>
+          <strong>开发调试台</strong>
+          <span>保留 ASRResult、Task、Steps、Safety、Agent Trace JSON 和运行日志命令。</span>
+        </a>
+      </div>
+    </main>
+  </body>
+</html>

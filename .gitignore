@@ -1,0 +1,31 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.DS_Store
+~$*
+
+# Runtime data generated locally
+data/medical_record_agent.sqlite3
+data/uploads/*
+!data/uploads/
+!data/uploads/.gitkeep
+data/outputs/*
+!data/outputs/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/asr_eval/audio/*
+!data/asr_eval/audio/.gitkeep
+
+# Local demo media
+video/*.wav
+video/*.mp3
+
+# Local external datasets copied for exploration
+Chinese-medical-dialogue-data/
+Medical-Dialogue-Dataset-Chinese/
+
+# Raw external medical QA data must stay local
+data/raw_external/*
+!data/raw_external/.gitkeep

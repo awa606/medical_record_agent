@@ -1,0 +1,59 @@
+[
+  {
+    "case_id": "CASE_WIND_COLD_001",
+    "disease_id": "D_COMMON_COLD",
+    "expected_syndrome_id": "S_WIND_COLD",
+    "patient_profile_type": "成人模拟患者",
+    "chief_complaint": "发热怕冷、流清涕2天",
+    "dialogue_text": "医生：这次主要哪里不舒服？\n患者：这两天有点发热，怕冷明显，鼻涕是清的。\n医生：有没有出汗？\n患者：基本不出汗，还全身酸痛。\n医生：咽喉疼不疼？\n患者：咽喉不怎么疼。",
+    "expected_symptom_ids": [
+      "SYM_MILD_FEVER",
+      "SYM_CHILLS",
+      "SYM_CLEAR_NASAL_DISCHARGE",
+      "SYM_NO_SWEAT",
+      "SYM_BODY_ACHE"
+    ],
+    "expected_missing_fields": [
+      "舌象",
+      "脉象",
+      "过敏史"
+    ],
+    "expected_fields_json": {
+      "主诉": "发热怕冷、流清涕2天",
+      "发热": "发热较轻",
+      "恶寒": "怕冷明显",
+      "鼻涕": "清涕",
+      "出汗": "无汗"
+    },
+    "safety_note": "模拟对话，不包含真实个人身份信息"
+  },
+  {
+    "case_id": "CASE_WIND_HEAT_001",
+    "disease_id": "D_COMMON_COLD",
+    "expected_syndrome_id": "S_WIND_HEAT",
+    "patient_profile_type": "成人模拟患者",
+    "chief_complaint": "发热咽痛、黄涕1天",
+    "dialogue_text": "医生：这次主要哪里不舒服？\n患者：昨天开始发热比较明显，嗓子疼，鼻涕有点黄。\n医生：怕冷吗？\n患者：只是有点怕风，不算特别怕冷。\n医生：有没有咳嗽咳痰？\n患者：有点咳，痰偏黄。",
+    "expected_symptom_ids": [
+      "SYM_HIGHER_FEVER",
+      "SYM_SLIGHT_CHILLS",
+      "SYM_SORE_THROAT",
+      "SYM_YELLOW_NASAL_DISCHARGE",
+      "SYM_COUGH",
+      "SYM_YELLOW_SPUTUM"
+    ],
+    "expected_missing_fields": [
+      "舌象",
+      "脉象",
+      "过敏史"
+    ],
+    "expected_fields_json": {
+      "主诉": "发热咽痛、黄涕1天",
+      "发热": "发热较重",
+      "咽喉": "咽痛",
+      "鼻涕": "黄涕",
+      "咳痰": "黄痰"
+    },
+    "safety_note": "模拟对话，不包含真实个人身份信息"
+  }
+]

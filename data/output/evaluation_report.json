@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "gold_path": "C:\\Users\\AWA007\\Desktop\\Data\\school\\The second semester of the junior year in college\\Fundamentals of Artificial Intelligence\\medical_record_agent\\data\\output\\generated_dialogues.json",
+    "pred_path": null,
+    "demo_mode": true,
+    "note": "demo_mode=true 表示暂未接入真实抽取结果，使用标准答案演示评估流程。"
+  },
+  "aggregate": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "field_completeness": 1.0,
+    "case_count": 4
+  },
+  "cases": [
+    {
+      "case_id": "GEN_COLD_001",
+      "expected_syndrome_id": "S_WIND_COLD",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "field_completeness": 1.0,
+      "true_positive": 5,
+      "false_positive": 0,
+      "false_negative": 0
+    },
+    {
+      "case_id": "GEN_COLD_002",
+      "expected_syndrome_id": "S_WIND_HEAT",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "field_completeness": 1.0,
+      "true_positive": 5,
+      "false_positive": 0,
+      "false_negative": 0
+    },
+    {
+      "case_id": "GEN_COLD_003",
+      "expected_syndrome_id": "S_SUMMER_DAMP",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "field_completeness": 1.0,
+      "true_positive": 5,
+      "false_positive": 0,
+      "false_negative": 0
+    },
+    {
+      "case_id": "GEN_COLD_004",
+      "expected_syndrome_id": "S_QI_DEF_COLD",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "field_completeness": 1.0,
+      "true_positive": 5,
+      "false_positive": 0,
+      "false_negative": 0
+    }
+  ]
+}

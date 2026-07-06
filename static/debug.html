@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>开发调试页 - AI生成式电子病历辅助系统</title>
+    <link rel="stylesheet" href="./style.css?v=2026060602" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <h1>AI生成式电子病历辅助系统</h1>
+          <p>开发调试页 · 保留 API / ASR / SSE / JSON 验证能力</p>
+        </div>
+        <div class="top-meta">
+          <span>患者：<strong>模拟患者 / 女 / 32岁</strong></span>
+          <span>会话：<strong id="sessionId">未创建</strong></span>
+          <span>task_id：<strong id="debugTaskIdLabel">-</strong></span>
+          <span>audio_id：<strong id="debugAudioIdLabel">-</strong></span>
+          <span>ASR Engine：<strong id="currentEngineLabel">FunASR</strong></span>
+          <span>LLM Provider：<strong id="llmProviderLabel">-</strong></span>
+          <span>LLM Model：<strong id="llmModelLabel">-</strong></span>
+          <span>LLM Fallback：<strong id="llmFallbackLabel">-</strong></span>
+          <span>上传：<strong id="uploadStatus">未上传</strong></span>
+        </div>
+      </header>
+
+      <section
+        aria-label="调试页用途说明"
+        style="border: 1px solid #bfdbfe; border-radius: 14px; padding: 12px 16px; background: #eff6ff; color: #1e40af; font-weight: 800; line-height: 1.6;"
+      >
+        本页面用于课程调试与评分证据展示，不面向真实医生使用；正式医生端请使用 doctor.html 工作台。
+      </section>
+
+      <nav class="tool-strip" aria-label="工作台工具栏">
+        <button type="button" onclick="openTextInput()">文本导入</button>
+        <button type="button" onclick="uploadAudioTranscribe()">上传转写</button>
+        <button type="button" onclick="uploadAudioGenerateRecord()">上传生成病历</button>
+        <button type="button" onclick="openEvaluationDrawer()">ASR评测</button>
+        <button type="button" onclick="testLlmConnection()">LLM自检</button>
+        <button type="button" onclick="copyRunLogCommand()">复制运行日志命令</button>
+        <button type="button" onclick="openDebugDrawer()">调试详情</button>
+      </nav>
+
+      <section class="workflow" aria-label="流程步骤">
+        <ol id="workflowSteps" class="steps"></ol>
+      </section>
+
+      <section class="workspace" aria-label="医生工作台">
+        <aside class="left-pane">
+          <div class="pane-header">
+            <h2>病历字段</h2>
+            <span id="fieldSummary" class="status-badge neutral">待录入</span>
+          </div>
+          <div id="recordFields" class="field-list"></div>
+        </aside>
+
+        <section class="center-pane">
+          <div class="pane-header">
+            <h2>对话转写</h2>
+            <span id="transcriptSummary" class="muted">暂无转写</span>
+          </div>
+          <div id="transcriptView" class="transcript-list"></div>
+        </section>
+
+        <aside class="right-pane">
+          <section class="assist-section">
+            <h2>AI辅助与安全校验</h2>
+            <div id="missingPanel" class="assist-block"></div>
+            <div id="candidatePanel" class="assist-block"></div>
+            <div id="evidencePanel" class="assist-block"></div>
+            <div id="safetyPanel" class="assist-block"></div>
+          </section>
+
+          <section class="assist-actions">
+            <h2>操作区</h2>
+            <div class="action-grid">
+              <button type="button" onclick="regenerateRecord()">重新生成</button>
+              <button type="button" onclick="saveDraftReview()">保存草稿到SQLite</button>
+              <button type="button" onclick="confirmFields()">确认字段</button>
+              <button type="button" class="danger-button" onclick="exportRecord()">确认导出</button>
+            </div>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <div id="drawerBackdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
+    <aside id="drawer" class="drawer" aria-hidden="true">
+      <header class="drawer-header">
+        <h2 id="drawerTitle">抽屉</h2>
+        <button type="button" class="ghost-button" onclick="closeDrawer()">关闭</button>
+      </header>
+
+      <section id="textDrawer" class="drawer-section">
+        <p class="muted">粘贴 fever clean 文本或人工问诊文本后生成病历。</p>
+        <textarea id="conversationInput">[医生] 你好，哪里不舒服？
+[患者] 我发热三天了，最高到40度，还有咳嗽和铁锈色痰，吃了布洛芬后还是反复发热。
+[医生] 有没有胸痛、气促？以前有类似情况吗？
+[患者] 没有明显胸痛，稍微有点乏力，以前没有这样。</textarea>
+        <button type="button" class="primary-button" onclick="submitTextRecord()">确认生成</button>
+      </section>
+
+      <section id="audioDrawer" class="drawer-section">
+        <p id="audioModeHint" class="muted">上传预录音频。</p>
+        <input id="audioFileInput" type="file" accept=".wav,.mp3,.m4a,.flac,.ogg,audio/*" />
+        <select id="audioEngineSelect">
+          <option value="funasr" selected>FunASR</option>
+          <option value="mock">Mock ASR</option>
+          <option value="qwen3">Qwen3-ASR 0.6B</option>
+          <option value="online">Online ASR</option>
+        </select>
+        <button type="button" class="primary-button" id="audioSubmitButton">上传</button>
+      </section>
+
+      <section id="evaluationDrawer" class="drawer-section">
+        <p class="muted">ASR评测默认隐藏。关键词会从 ASRResult.medical_keywords.expected 自动填充。</p>
+        <textarea id="groundTruthInput" placeholder="人工标注文本"></textarea>
+        <textarea id="keywordsInput" placeholder="关键词，可用换行或逗号分隔"></textarea>
+        <button type="button" class="primary-button" onclick="runEvaluation()">运行 ASR 评测</button>
+        <div id="evaluationSummary" class="evaluation-summary"></div>
+      </section>
+
+      <section id="debugDrawer" class="drawer-section">
+        <details open>
+          <summary>运行日志命令</summary>
+          <pre id="debugRunLogCommand">python scripts/save_run_log.py --task-id xxx --audio-id xxx --title fever_01_demo</pre>
+        </details>
+        <details open>
+          <summary>草稿保存说明</summary>
+          <pre>保存草稿到SQLite：调用 POST /api/tasks/{task_id}/review，保存当前病历字段到 Task result_json 并记录审计日志。
+ASRResult：转写完成时保存到 data/uploads/{audio_id}.transcript.json，不由保存草稿按钮生成。
+Agent Trace：由 /api/tasks/{task_id}/trace 动态组装，可在本调试抽屉查看完整 JSON。
+文件导出：只有点击确认导出后才写入 data/outputs/。
+运行日志：复制命令后执行 scripts/save_run_log.py，输出到 docs/dev_logs/runs/。</pre>
+        </details>
+        <details open>
+          <summary>ASRResult JSON</summary>
+          <pre id="debugAsrJson">-</pre>
+        </details>
+        <details open>
+          <summary>Agent Trace JSON</summary>
+          <pre id="debugAgentTraceJson">-</pre>
+        </details>
+        <details open>
+          <summary>LLM Trace JSON</summary>
+          <pre id="debugLlmTraceJson">-</pre>
+        </details>
+        <details>
+          <summary>Task JSON</summary>
+          <pre id="debugTaskJson">-</pre>
+        </details>
+        <details>
+          <summary>Steps JSON</summary>
+          <pre id="debugStepsJson">-</pre>
+        </details>
+        <details>
+          <summary>Safety JSON</summary>
+          <pre id="debugSafetyJson">-</pre>
+        </details>
+      </section>
+    </aside>
+
+    <script src="./main.js?v=2026061103"></script>
+  </body>
+</html>

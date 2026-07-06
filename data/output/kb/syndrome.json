@@ -1,0 +1,78 @@
+[
+  {
+    "syndrome_id": "S_WIND_COLD",
+    "disease_id": "D_COMMON_COLD",
+    "syndrome_name": "风寒束表证",
+    "pathogenesis": "风寒外束，卫阳被郁，腠理闭塞。",
+    "key_symptoms": [
+      "SYM_CHILLS",
+      "SYM_MILD_FEVER",
+      "SYM_NO_SWEAT",
+      "SYM_HEADACHE",
+      "SYM_CLEAR_NASAL_DISCHARGE",
+      "SYM_BODY_ACHE",
+      "SYM_THIN_WHITE_COATING",
+      "SYM_FLOAT_TIGHT_PULSE"
+    ],
+    "tongue": "舌苔薄白",
+    "pulse": "脉浮紧",
+    "treatment_principle": "辛温解表",
+    "course_note": "仅模拟知识库，不用于真实诊疗"
+  },
+  {
+    "syndrome_id": "S_WIND_HEAT",
+    "disease_id": "D_COMMON_COLD",
+    "syndrome_name": "风热犯表证",
+    "pathogenesis": "风热犯表，肺卫失宣。",
+    "key_symptoms": [
+      "SYM_HIGHER_FEVER",
+      "SYM_SLIGHT_CHILLS",
+      "SYM_SORE_THROAT",
+      "SYM_YELLOW_NASAL_DISCHARGE",
+      "SYM_COUGH",
+      "SYM_YELLOW_SPUTUM",
+      "SYM_THIN_YELLOW_COATING",
+      "SYM_FLOAT_RAPID_PULSE"
+    ],
+    "tongue": "舌边尖红，苔薄黄",
+    "pulse": "脉浮数",
+    "treatment_principle": "辛凉解表",
+    "course_note": "仅模拟知识库，不用于真实诊疗"
+  },
+  {
+    "syndrome_id": "S_SUMMER_DAMP",
+    "disease_id": "D_COMMON_COLD",
+    "syndrome_name": "暑湿伤表证",
+    "pathogenesis": "暑湿郁表，清阳不展，中焦气机受阻。",
+    "key_symptoms": [
+      "SYM_FEVER",
+      "SYM_HEAVY_HEAD",
+      "SYM_CHEST_OPPRESSION",
+      "SYM_NAUSEA",
+      "SYM_GREASY_COATING",
+      "SYM_SOFT_RAPID_PULSE"
+    ],
+    "tongue": "舌苔白腻或黄腻",
+    "pulse": "脉濡数",
+    "treatment_principle": "清暑祛湿解表",
+    "course_note": "仅模拟知识库，不用于真实诊疗"
+  },
+  {
+    "syndrome_id": "S_QI_DEF_COLD",
+    "disease_id": "D_COMMON_COLD",
+    "syndrome_name": "气虚感冒证",
+    "pathogenesis": "正气不足，卫外不固，外邪乘虚而入。",
+    "key_symptoms": [
+      "SYM_RECURRENT_COLD",
+      "SYM_FATIGUE",
+      "SYM_SHORT_BREATH",
+      "SYM_SPONTANEOUS_SWEAT",
+      "SYM_PALE_TONGUE",
+      "SYM_FLOAT_WEAK_PULSE"
+    ],
+    "tongue": "舌淡，苔白",
+    "pulse": "脉浮无力",
+    "treatment_principle": "益气解表",
+    "course_note": "仅模拟知识库，不用于真实诊疗"
+  }
+]

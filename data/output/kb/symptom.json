@@ -1,0 +1,345 @@
+[
+  {
+    "symptom_id": "SYM_FEVER",
+    "symptom_name": "发热",
+    "symptom_type": "主症",
+    "normalized_value": "有发热",
+    "synonyms": [
+      "发烧",
+      "身热",
+      "体温高"
+    ],
+    "polarity": "阳性",
+    "description": "体温升高或患者自觉发热。"
+  },
+  {
+    "symptom_id": "SYM_MILD_FEVER",
+    "symptom_name": "发热较轻",
+    "symptom_type": "主症",
+    "normalized_value": "发热轻",
+    "synonyms": [
+      "低热",
+      "发热不重"
+    ],
+    "polarity": "阳性",
+    "description": "风寒束表证常见。"
+  },
+  {
+    "symptom_id": "SYM_HIGHER_FEVER",
+    "symptom_name": "发热较重",
+    "symptom_type": "主症",
+    "normalized_value": "发热重",
+    "synonyms": [
+      "明显发热",
+      "热得厉害"
+    ],
+    "polarity": "阳性",
+    "description": "风热犯表证常见。"
+  },
+  {
+    "symptom_id": "SYM_CHILLS",
+    "symptom_name": "恶寒",
+    "symptom_type": "主症",
+    "normalized_value": "怕冷",
+    "synonyms": [
+      "怕冷",
+      "畏寒",
+      "恶寒"
+    ],
+    "polarity": "阳性",
+    "description": "患者自觉寒冷。"
+  },
+  {
+    "symptom_id": "SYM_SLIGHT_CHILLS",
+    "symptom_name": "微恶风",
+    "symptom_type": "主症",
+    "normalized_value": "轻微怕风",
+    "synonyms": [
+      "微怕风",
+      "有点怕冷"
+    ],
+    "polarity": "阳性",
+    "description": "风热犯表证可见。"
+  },
+  {
+    "symptom_id": "SYM_NO_SWEAT",
+    "symptom_name": "无汗",
+    "symptom_type": "伴随症状",
+    "normalized_value": "没有出汗",
+    "synonyms": [
+      "不出汗",
+      "汗不出来"
+    ],
+    "polarity": "阳性",
+    "description": "腠理闭塞时常见。"
+  },
+  {
+    "symptom_id": "SYM_SPONTANEOUS_SWEAT",
+    "symptom_name": "自汗",
+    "symptom_type": "伴随症状",
+    "normalized_value": "自汗",
+    "synonyms": [
+      "容易出汗",
+      "动一下就出汗"
+    ],
+    "polarity": "阳性",
+    "description": "气虚感冒证常见。"
+  },
+  {
+    "symptom_id": "SYM_HEADACHE",
+    "symptom_name": "头痛",
+    "symptom_type": "伴随症状",
+    "normalized_value": "头痛",
+    "synonyms": [
+      "头疼",
+      "头胀"
+    ],
+    "polarity": "阳性",
+    "description": "外感常见症状。"
+  },
+  {
+    "symptom_id": "SYM_HEAVY_HEAD",
+    "symptom_name": "头身困重",
+    "symptom_type": "伴随症状",
+    "normalized_value": "头身困重",
+    "synonyms": [
+      "头昏沉",
+      "身体沉重"
+    ],
+    "polarity": "阳性",
+    "description": "暑湿伤表证常见。"
+  },
+  {
+    "symptom_id": "SYM_BODY_ACHE",
+    "symptom_name": "肢体酸痛",
+    "symptom_type": "伴随症状",
+    "normalized_value": "肢体酸痛",
+    "synonyms": [
+      "全身酸痛",
+      "身上酸"
+    ],
+    "polarity": "阳性",
+    "description": "风寒束表证常见。"
+  },
+  {
+    "symptom_id": "SYM_SORE_THROAT",
+    "symptom_name": "咽痛",
+    "symptom_type": "伴随症状",
+    "normalized_value": "咽喉疼痛",
+    "synonyms": [
+      "嗓子疼",
+      "咽喉痛"
+    ],
+    "polarity": "阳性",
+    "description": "风热犯表证常见。"
+  },
+  {
+    "symptom_id": "SYM_NASAL_DISCHARGE",
+    "symptom_name": "流涕",
+    "symptom_type": "伴随症状",
+    "normalized_value": "流鼻涕",
+    "synonyms": [
+      "流涕",
+      "鼻涕"
+    ],
+    "polarity": "阳性",
+    "description": "感冒常见症状。"
+  },
+  {
+    "symptom_id": "SYM_CLEAR_NASAL_DISCHARGE",
+    "symptom_name": "清涕",
+    "symptom_type": "伴随症状",
+    "normalized_value": "鼻涕清稀",
+    "synonyms": [
+      "清鼻涕",
+      "鼻涕清"
+    ],
+    "polarity": "阳性",
+    "description": "风寒束表证常见。"
+  },
+  {
+    "symptom_id": "SYM_YELLOW_NASAL_DISCHARGE",
+    "symptom_name": "黄涕",
+    "symptom_type": "伴随症状",
+    "normalized_value": "鼻涕黄稠",
+    "synonyms": [
+      "黄鼻涕",
+      "鼻涕黄"
+    ],
+    "polarity": "阳性",
+    "description": "风热犯表证常见。"
+  },
+  {
+    "symptom_id": "SYM_COUGH",
+    "symptom_name": "咳嗽",
+    "symptom_type": "伴随症状",
+    "normalized_value": "咳嗽",
+    "synonyms": [
+      "咳",
+      "咳嗽"
+    ],
+    "polarity": "阳性",
+    "description": "肺卫失宣可见。"
+  },
+  {
+    "symptom_id": "SYM_YELLOW_SPUTUM",
+    "symptom_name": "黄痰",
+    "symptom_type": "伴随症状",
+    "normalized_value": "痰黄",
+    "synonyms": [
+      "黄痰",
+      "痰色黄"
+    ],
+    "polarity": "阳性",
+    "description": "风热犯表证常见。"
+  },
+  {
+    "symptom_id": "SYM_FATIGUE",
+    "symptom_name": "乏力",
+    "symptom_type": "伴随症状",
+    "normalized_value": "乏力",
+    "synonyms": [
+      "没劲",
+      "疲乏"
+    ],
+    "polarity": "阳性",
+    "description": "气虚感冒证常见。"
+  },
+  {
+    "symptom_id": "SYM_SHORT_BREATH",
+    "symptom_name": "气短",
+    "symptom_type": "伴随症状",
+    "normalized_value": "气短",
+    "synonyms": [
+      "说话懒",
+      "气不够"
+    ],
+    "polarity": "阳性",
+    "description": "气虚表现之一。"
+  },
+  {
+    "symptom_id": "SYM_RECURRENT_COLD",
+    "symptom_name": "反复感冒",
+    "symptom_type": "病史",
+    "normalized_value": "反复感冒",
+    "synonyms": [
+      "容易感冒",
+      "经常感冒"
+    ],
+    "polarity": "阳性",
+    "description": "气虚感冒证重要线索。"
+  },
+  {
+    "symptom_id": "SYM_CHEST_OPPRESSION",
+    "symptom_name": "胸闷",
+    "symptom_type": "伴随症状",
+    "normalized_value": "胸闷",
+    "synonyms": [
+      "胸口闷",
+      "胸部发闷"
+    ],
+    "polarity": "阳性",
+    "description": "暑湿困阻可见。"
+  },
+  {
+    "symptom_id": "SYM_NAUSEA",
+    "symptom_name": "恶心",
+    "symptom_type": "伴随症状",
+    "normalized_value": "恶心",
+    "synonyms": [
+      "想吐",
+      "胃里不舒服"
+    ],
+    "polarity": "阳性",
+    "description": "暑湿伤表证常见。"
+  },
+  {
+    "symptom_id": "SYM_THIN_WHITE_COATING",
+    "symptom_name": "苔薄白",
+    "symptom_type": "舌象",
+    "normalized_value": "舌苔薄白",
+    "synonyms": [
+      "薄白苔"
+    ],
+    "polarity": "阳性",
+    "description": "风寒束表证舌象提示。"
+  },
+  {
+    "symptom_id": "SYM_THIN_YELLOW_COATING",
+    "symptom_name": "苔薄黄",
+    "symptom_type": "舌象",
+    "normalized_value": "舌苔薄黄",
+    "synonyms": [
+      "薄黄苔"
+    ],
+    "polarity": "阳性",
+    "description": "风热犯表证舌象提示。"
+  },
+  {
+    "symptom_id": "SYM_GREASY_COATING",
+    "symptom_name": "苔腻",
+    "symptom_type": "舌象",
+    "normalized_value": "舌苔腻",
+    "synonyms": [
+      "腻苔",
+      "白腻苔"
+    ],
+    "polarity": "阳性",
+    "description": "暑湿证候舌象提示。"
+  },
+  {
+    "symptom_id": "SYM_PALE_TONGUE",
+    "symptom_name": "舌淡",
+    "symptom_type": "舌象",
+    "normalized_value": "舌淡",
+    "synonyms": [
+      "舌质淡"
+    ],
+    "polarity": "阳性",
+    "description": "气虚证候舌象提示。"
+  },
+  {
+    "symptom_id": "SYM_FLOAT_TIGHT_PULSE",
+    "symptom_name": "脉浮紧",
+    "symptom_type": "脉象",
+    "normalized_value": "脉浮紧",
+    "synonyms": [
+      "浮紧脉"
+    ],
+    "polarity": "阳性",
+    "description": "风寒束表证脉象提示。"
+  },
+  {
+    "symptom_id": "SYM_FLOAT_RAPID_PULSE",
+    "symptom_name": "脉浮数",
+    "symptom_type": "脉象",
+    "normalized_value": "脉浮数",
+    "synonyms": [
+      "浮数脉"
+    ],
+    "polarity": "阳性",
+    "description": "风热犯表证脉象提示。"
+  },
+  {
+    "symptom_id": "SYM_SOFT_RAPID_PULSE",
+    "symptom_name": "脉濡数",
+    "symptom_type": "脉象",
+    "normalized_value": "脉濡数",
+    "synonyms": [
+      "濡数脉"
+    ],
+    "polarity": "阳性",
+    "description": "暑湿伤表证脉象提示。"
+  },
+  {
+    "symptom_id": "SYM_FLOAT_WEAK_PULSE",
+    "symptom_name": "脉浮无力",
+    "symptom_type": "脉象",
+    "normalized_value": "脉浮无力",
+    "synonyms": [
+      "浮弱脉"
+    ],
+    "polarity": "阳性",
+    "description": "气虚感冒证脉象提示。"
+  }
+]

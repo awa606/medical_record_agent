@@ -1,0 +1,4 @@
+qwen-asr
+torch
+torchaudio
+soundfile>=0.12.0

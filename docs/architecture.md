@@ -29,7 +29,7 @@ static/*.html
 | 能力 | 当前承载模块 |
 | --- | --- |
 | ASR pipeline | `app/api/audio.py`、`app/api/asr_sessions.py`、`app/services/asr/` |
-| SSE streaming | `app/api/asr_sessions.py`、`app/api/tasks.py`、`static/doctor.js`、`static/main.js` |
+| SSE 实时流式转写 | `app/api/asr_sessions.py`、`app/api/tasks.py`、`static/doctor.js`、`static/main.js` |
 | 医学对话结构化 | `app/agents/`、`app/schemas/medical_record.py` |
 | 角色分离与校正 | `app/services/asr/role_strategy.py`、`app/api/asr_sessions.py`、`static/doctor.js` |
 | 医学知识推理 | `app/services/mock_llm.py`、`app/prompts/` |

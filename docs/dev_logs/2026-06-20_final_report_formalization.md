@@ -11,13 +11,13 @@
 ## 修改前问题
 
 - 已有 `docs/scoring/final_report_draft.md` 是初稿，缺少封面、摘要、关键词、目录、截图占位、附录和提交说明。
-- 已有 `docs/scoring/progress_dashboard.md` 和运行日志，但还没有统一的 `docs/final_report/` 目录承载正式提交材料。
+- 已有 `docs/scoring/项目进度与评分证据看板.md` 和运行日志，但还没有统一的 `docs/final_report/` 目录承载正式提交材料。
 - 报告提交前需要明确哪些截图要插入、哪些材料不能提交，以及如何导出 Word。
 
 ## 输入
 
 - `docs/scoring/final_report_draft.md`
-- `docs/scoring/progress_dashboard.md`
+- `docs/scoring/项目进度与评分证据看板.md`
 - `docs/dev_logs/2026-06-20_scoring_final_report_materials.md`
 - `docs/dev_logs/runs/2026-06-20_fever_01_final_demo.md`
 - 当前医生端、调试台、Agent Trace、Task Steps 和运行日志机制

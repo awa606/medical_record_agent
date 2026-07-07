@@ -25,7 +25,7 @@
 ## 标准版本线
 
 - `v0.1`：basic ASR pipeline。
-- `v0.2`：SSE streaming。
+- `v0.2`：SSE 实时流式转写。
 - `v0.2.1`：ASR session SSE file streaming。
 - `v0.3`：role separation。
 - `v0.4`：medical reasoning。

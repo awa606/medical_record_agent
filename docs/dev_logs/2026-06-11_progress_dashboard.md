@@ -16,22 +16,22 @@
 
 ## 输入
 
-- 用户要求新增 `docs/scoring/progress_dashboard.md`。
+- 用户要求新增 `docs/scoring/项目进度与评分证据看板.md`。
 - 现有评分材料：`docs/scoring/course_scoring_plan.md`、`docs/scoring/demo_checklist.md`。
 - 当前主链路：`fever_01.wav -> FunASR -> Online LLM / MockLLM -> 字段抽取 -> 病历草稿 -> 安全校验 -> 医生审核 -> Agent Trace -> 运行日志`。
 
 ## 输出
 
-- 新增 `docs/scoring/progress_dashboard.md`。
+- 新增 `docs/scoring/项目进度与评分证据看板.md`。
 - 文档包含项目主链路、当前完成度表、评分细则对照表、最稳演示路线和现场备用方案。
 - 本开发日志记录本次文档补充。
 
 ## 修改文件
 
-- `docs/scoring/progress_dashboard.md`
+- `docs/scoring/项目进度与评分证据看板.md`
 - `docs/scoring/course_scoring_plan.md`
 - `docs/scoring/demo_checklist.md`
-- `docs/dev_logs/2026-06-11_progress_dashboard.md`
+- 本开发日志文件。
 
 ## 关键设计决策
 
@@ -44,12 +44,12 @@
 
 1. 检查 Markdown 文件是否存在。
 2. 检查文档是否覆盖用户要求的 6 个部分。
-3. 运行 `git diff --check -- docs/scoring/progress_dashboard.md docs/dev_logs/2026-06-11_progress_dashboard.md`。
+3. 运行 `git diff --check`，检查本次文档变更的 Markdown 空白问题。
 
 ## 验证结果
 
 - 文档已新增并覆盖主链路、完成度、评分对照、稳妥演示路线和备用方案。
-- `git diff --check -- docs/scoring/progress_dashboard.md docs/dev_logs/2026-06-11_progress_dashboard.md`：通过。
+- `git diff --check`：通过。
 - `rg` 检查确认文档包含 fever_01、FunASR、Online LLM、MockLLM fallback、评分项、最稳演示路线和现场备用方案。
 
 ## 未解决问题

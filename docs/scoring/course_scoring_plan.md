@@ -100,7 +100,7 @@ Issue #29/#30/#31
 
 ## 相关文档
 
-- 项目进度看板：`docs/scoring/progress_dashboard.md`
+- 项目进度看板：`docs/scoring/项目进度与评分证据看板.md`
 - 现场演示讲稿：`docs/scoring/demo_script.md`
 - 代码展示路线：`docs/scoring/code_walkthrough.md`
 - 演示验收清单：`docs/scoring/demo_checklist.md`

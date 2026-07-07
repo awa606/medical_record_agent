@@ -11,7 +11,7 @@
 ## 输入材料
 
 - `docs/final_report/AI生成式电子病历辅助系统_期末报告_正式版.md`
-- `docs/scoring/progress_dashboard.md`
+- `docs/scoring/项目进度与评分证据看板.md`
 - `docs/dev_logs/runs/2026-06-20_fever_01_final_demo.md`
 - `docs/final_report/截图清单.md`
 - 当前项目静态页面、Agent Trace、Task Steps、运行日志脚本和 Word 导出脚本

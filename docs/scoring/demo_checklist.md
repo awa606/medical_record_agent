@@ -75,7 +75,7 @@ python scripts/save_run_log.py --task-id 19 --audio-id xxx --title fever_01_demo
 
 ## 评分材料检查
 
-- [ ] `docs/scoring/progress_dashboard.md`
+- [ ] `docs/scoring/项目进度与评分证据看板.md`
 - [ ] `docs/scoring/course_scoring_plan.md`
 - [ ] `docs/scoring/agent_design.md`
 - [ ] `docs/scoring/agent_architecture_diagram.md`
@@ -97,7 +97,7 @@ python scripts/save_run_log.py --task-id 19 --audio-id xxx --title fever_01_demo
 
 ## 相关文档
 
-- 项目进度看板：`docs/scoring/progress_dashboard.md`
+- 项目进度看板：`docs/scoring/项目进度与评分证据看板.md`
 - 评分总表：`docs/scoring/course_scoring_plan.md`
 - 现场演示讲稿：`docs/scoring/demo_script.md`
 - 代码展示路线：`docs/scoring/code_walkthrough.md`

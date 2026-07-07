@@ -470,7 +470,7 @@ python -m pytest
 
 图 11：评分进度看板
 
-【截图待插入：打开 `docs/scoring/progress_dashboard.md`，展示评分细则与项目完成内容的对照表。】
+【截图待插入：打开 `docs/scoring/项目进度与评分证据看板.md`，展示评分细则与项目完成内容的对照表。】
 
 图 11 评分进度看板，将智能体设计、决策系统、伦理合规、演示和代码展示映射到证据文件。
 
@@ -495,7 +495,7 @@ python -m pytest
 
 - 本报告 Markdown 或导出的 Word 版本。
 - `docs/final_report/截图清单.md` 中列出的关键截图。
-- `docs/scoring/progress_dashboard.md` 作为评分细则对照材料。
+- `docs/scoring/项目进度与评分证据看板.md` 作为评分细则对照材料。
 - `docs/dev_logs/runs/2026-06-20_fever_01_final_demo.md` 作为演示运行日志证据。
 - `docs/dev_logs/` 中的关键开发日志。
 
@@ -521,7 +521,7 @@ python -m pytest
 | 表达与逻辑 | 汇报结构完整，能按背景、Agent、决策、安全、演示、代码展开 | demo_script、progress_dashboard、本报告 |
 | 代码展示 | 能选出关键代码并映射评分点 | code_walkthrough、Orchestrator、Schema、LLM/ASR factory |
 
-详细评分对照见 `docs/scoring/progress_dashboard.md`。
+详细评分对照见 `docs/scoring/项目进度与评分证据看板.md`。
 
 ## 附录 B：演示运行日志说明
 

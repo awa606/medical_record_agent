@@ -8,7 +8,7 @@
 
 根据当前项目代码、评分细则、开发日志和 `docs/scoring/` 已有文档，整理课程汇报最后阶段材料：
 
-- 更新 `docs/scoring/progress_dashboard.md`，形成评分细则与当前完成内容的对照看板。
+- 更新 `docs/scoring/项目进度与评分证据看板.md`，形成评分细则与当前完成内容的对照看板。
 - 新增 `docs/scoring/final_report_draft.md`，形成期末报告完整初稿。
 
 ## 修改前问题
@@ -19,7 +19,7 @@
 
 ## 输入
 
-- 用户指令：生成 `docs/scoring/progress_dashboard.md` 和 `docs/scoring/final_report_draft.md`。
+- 用户指令：生成 `docs/scoring/项目进度与评分证据看板.md` 和 `docs/scoring/final_report_draft.md`。
 - 现有评分文档：`course_scoring_plan.md`、`agent_design.md`、`decision_system.md`、`prompt_chain_design.md`、`ethics_compliance.md`、`code_walkthrough.md`、`demo_script.md`。
 - 现有开发日志：`docs/dev_logs/`。
 - 当前代码：Orchestrator、ASR factory、LLM provider、Agent Trace、Schema、医生端和调试台。
@@ -32,7 +32,7 @@
 
 ## 修改文件
 
-- `docs/scoring/progress_dashboard.md`
+- `docs/scoring/项目进度与评分证据看板.md`
 - `docs/scoring/final_report_draft.md`
 - `docs/dev_logs/2026-06-20_scoring_final_report_materials.md`
 
@@ -51,7 +51,7 @@
 
 ## 验证结果
 
-- `git diff --check -- docs/scoring/progress_dashboard.md docs/scoring/final_report_draft.md docs/dev_logs/2026-06-20_scoring_final_report_materials.md` 通过。
+- `git diff --check -- docs/scoring/项目进度与评分证据看板.md docs/scoring/final_report_draft.md docs/dev_logs/2026-06-20_scoring_final_report_materials.md` 通过。
 - 已确认三个文件均存在。
 - 已用 `rg` 检查评分项关键词：智能体设计模式、决策系统设计、伦理合规设计、演示流畅度、表达与逻辑、代码展示均已出现在进度看板中。
 - 已用 `rg` 检查报告章节：项目背景与目标、需求分析、系统总体架构、智能体设计模式、决策系统与 Prompt 链、ASR 与 LLM 模块、医生端工作台、安全伦理合规、核心代码实现、测试验证、开发日志、总结与后续计划均已覆盖。

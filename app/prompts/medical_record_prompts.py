@@ -41,6 +41,7 @@ FIELD_EXTRACTION_PROMPT = """
 3. 不能把未提及的过敏史、既往史、查体写成“无”或“正常”。
 4. 每个非缺失字段必须尽量给出 source_spans，便于医生核对证据。
 5. 候选诊断只允许作为 candidate_diagnoses，status 必须是“候选，待医生确认”。
+6. candidate_diagnoses 可输出 reason、rule_id、confidence、suggested_checks、medication_notes、risk_warnings、follow_up_questions；这些字段只作为医生复核线索，不得写成最终诊断或自动处方。
 
 输出 JSON Schema：
 {
@@ -52,7 +53,7 @@ FIELD_EXTRACTION_PROMPT = """
     "past_history": {"value": "string|null", "missing": "boolean", "hint": "string|null", "confidence": "number|null", "source_spans": [{"text": "string", "index": "number|null"}]},
     "allergy_history": {"value": "string|null", "missing": "boolean", "hint": "string|null", "confidence": "number|null", "source_spans": [{"text": "string", "index": "number|null"}]},
     "physical_exam": {"value": "string|null", "missing": "boolean", "hint": "string|null", "confidence": "number|null", "source_spans": [{"text": "string", "index": "number|null"}]},
-    "candidate_diagnoses": [{"name": "string", "status": "候选，待医生确认", "evidence": [{"text": "string", "index": "number|null"}], "confirmed_by_doctor": false}]
+    "candidate_diagnoses": [{"name": "string", "status": "候选，待医生确认", "evidence": [{"text": "string", "index": "number|null"}], "reason": "string|null", "rule_id": "string|null", "confidence": "number|null", "suggested_checks": ["string"], "medication_notes": ["string"], "risk_warnings": ["string"], "follow_up_questions": ["string"], "confirmed_by_doctor": false}]
   },
   "missing_items": ["string"],
   "warnings": ["string"]
@@ -72,7 +73,8 @@ DRAFT_GENERATION_PROMPT = """
 3. 查体未提及时写“待医生查体补充”，不得编造生命体征或阳性/阴性体征。
 4. 候选诊断必须保留“候选，待医生确认”，不能写成“确诊”或“最终诊断”。
 5. 处置建议只能作为建议草稿，不能自动开处方。
-6. 输出 JSON，包含 draft_text、field_warnings、export_allowed=false。
+6. suggested_checks、medication_notes、risk_warnings、follow_up_questions 只能作为医生复核提示。
+7. 输出 JSON，包含 draft_text、field_warnings、export_allowed=false。
 
 输出 JSON Schema：
 {

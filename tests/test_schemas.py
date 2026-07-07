@@ -52,6 +52,13 @@ class MedicalRecordSchemaTests(unittest.TestCase):
         self.assertEqual(diagnosis.status, "候选/待医生确认")
         self.assertFalse(diagnosis.confirmed_by_doctor)
         self.assertEqual(len(diagnosis.evidence), 2)
+        self.assertIsNone(diagnosis.reason)
+        self.assertIsNone(diagnosis.rule_id)
+        self.assertIsNone(diagnosis.confidence)
+        self.assertEqual(diagnosis.suggested_checks, [])
+        self.assertEqual(diagnosis.medication_notes, [])
+        self.assertEqual(diagnosis.risk_warnings, [])
+        self.assertEqual(diagnosis.follow_up_questions, [])
 
     def test_medical_record_fields_default_to_missing(self):
         record = MedicalRecordFields()

@@ -51,6 +51,13 @@ class CandidateDiagnosis(BaseModel):
     name: str
     status: Literal["候选/待医生确认"] = "候选/待医生确认"
     evidence: list[SourceSpan] = Field(default_factory=list)
+    reason: str | None = None
+    rule_id: str | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    suggested_checks: list[str] = Field(default_factory=list)
+    medication_notes: list[str] = Field(default_factory=list)
+    risk_warnings: list[str] = Field(default_factory=list)
+    follow_up_questions: list[str] = Field(default_factory=list)
     confirmed_by_doctor: bool = False
 
 

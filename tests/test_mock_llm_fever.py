@@ -45,6 +45,14 @@ class MockLLMFeverTests(unittest.TestCase):
             self.assertIn("候选", diagnosis.status)
             self.assertFalse(diagnosis.confirmed_by_doctor)
             self.assertGreater(len(diagnosis.evidence), 0)
+            self.assertTrue(diagnosis.reason)
+            self.assertGreater(len(diagnosis.suggested_checks), 0)
+            self.assertGreater(len(diagnosis.medication_notes), 0)
+            self.assertIn("医生确认", "；".join(diagnosis.medication_notes))
+
+        pulmonary = fields.candidate_diagnoses[1]
+        self.assertEqual(pulmonary.rule_id, "PULMONARY_INFECTION_001")
+        self.assertGreater(len(pulmonary.risk_warnings), 0)
 
     def test_fever_case_generates_nonempty_draft_without_final_diagnosis(self):
         fields = MockLLM().extract_fields(FEVER_01_CONVERSATION)
@@ -53,6 +61,8 @@ class MockLLMFeverTests(unittest.TestCase):
         self.assertIn("发热3天", draft)
         self.assertIn("肺部感染可能/肺炎待排", draft)
         self.assertIn("候选", draft)
+        self.assertIn("建议检查", draft)
+        self.assertIn("风险提醒", draft)
         self.assertNotIn("最终诊断", draft)
         self.assertGreater(len(draft.strip()), 0)
 

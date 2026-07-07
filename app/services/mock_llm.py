@@ -9,6 +9,7 @@ from app.schemas import (
     SafetyCheckResult,
     SourceSpan,
 )
+from app.services.knowledge_rules import infer_common_cold_candidates
 
 
 def _split_segments(conversation: str) -> list[str]:
@@ -60,7 +61,7 @@ def _required_spans(segments: list[str], keywords: list[str], conversation: str)
 
 
 def _is_fever_case(conversation: str) -> bool:
-    return _contains(conversation, ["发烧", "发热", "体温", "布洛芬", "铁锈色痰"])
+    return _contains(conversation, ["铁锈色痰", "布洛芬", "39", "40", "卫生院", "反复发热"])
 
 
 def _extract_fever_fields(conversation: str, segments: list[str]) -> MedicalRecordFields:
@@ -118,10 +119,31 @@ def _extract_fever_fields(conversation: str, segments: list[str]) -> MedicalReco
             CandidateDiagnosis(
                 name="发热待查",
                 evidence=diagnosis_spans,
+                reason="反复发热、体温最高约40℃，需医生结合查体和检查进一步明确原因。",
+                rule_id="FEVER_WORKUP_001",
+                confidence=0.72,
+                suggested_checks=[
+                    "复测体温并记录热型。",
+                    "由医生判断是否完善血常规、CRP 或病原学检查。",
+                ],
+                medication_notes=["退热和抗感染等处理需医生确认；系统不自动处方。"],
+                risk_warnings=["持续高热或反复发热需医生评估感染、脱水等风险。"],
+                follow_up_questions=["是否伴寒战、皮疹、胸痛或呼吸困难？"],
             ),
             CandidateDiagnosis(
                 name="肺部感染可能/肺炎待排",
                 evidence=diagnosis_spans,
+                reason="发热伴咳嗽、咳痰及铁锈色痰，提示需排查肺部感染可能。",
+                rule_id="PULMONARY_INFECTION_001",
+                confidence=0.82,
+                suggested_checks=[
+                    "肺部听诊并记录阳性/阴性体征。",
+                    "由医生判断是否完善胸部影像学检查。",
+                    "必要时完善血常规、CRP 或痰液病原学检查。",
+                ],
+                medication_notes=["抗感染、止咳化痰等治疗需医生确认；系统不自动处方。"],
+                risk_warnings=["如出现气促、胸痛、持续高热或精神差，应由医生进一步评估。"],
+                follow_up_questions=["是否有胸痛、气促、寒战或痰量增多？"],
             ),
         ],
     )
@@ -150,10 +172,43 @@ def _extract_symptoms(conversation: str) -> list[str]:
     return [name for name, keywords in symptom_rules if _contains(conversation, keywords)]
 
 
+def _extract_common_cold_fields(
+    conversation: str,
+    segments: list[str],
+    candidate_diagnoses: list[CandidateDiagnosis],
+) -> MedicalRecordFields:
+    evidence_spans = _merge_spans(*(diagnosis.evidence for diagnosis in candidate_diagnoses))
+    if not evidence_spans:
+        evidence_spans = [SourceSpan(index=0, text=segments[0] if segments else conversation)]
+
+    return MedicalRecordFields(
+        chief_complaint=_field("发热伴外感相关症状，证候待医生确认", evidence_spans, 0.78),
+        present_illness=_field(
+            "对话提示发热、怕冷或咽鼻咳痰等外感相关表现；知识库规则仅生成候选证候和补问建议，需医生确认。",
+            evidence_spans,
+            0.76,
+        ),
+        accompanying_symptoms=_field(
+            "外感相关症状见转写原文，需医生结合查体补充确认",
+            evidence_spans,
+            0.72,
+        ),
+        previous_treatment=MedicalField.missing_field(),
+        past_history=MedicalField.missing_field(),
+        allergy_history=MedicalField.missing_field(),
+        physical_exam=MedicalField.missing_field("待医生查体补充舌象、脉象、咽部和肺部情况"),
+        candidate_diagnoses=candidate_diagnoses,
+    )
+
+
 def mock_extract_fields(conversation: str) -> MedicalRecordFields:
     segments = _split_segments(conversation)
     if _is_fever_case(conversation):
         return _extract_fever_fields(conversation, segments)
+
+    knowledge_candidates = infer_common_cold_candidates(conversation, segments)
+    if knowledge_candidates:
+        return _extract_common_cold_fields(conversation, segments, knowledge_candidates)
 
     treatments = _extract_treatments(conversation)
     symptoms = _extract_symptoms(conversation)
@@ -204,6 +259,17 @@ def mock_extract_fields(conversation: str) -> MedicalRecordFields:
             CandidateDiagnosis(
                 name="毒蛇咬伤",
                 evidence=_merge_spans(bite_spans, symptom_spans),
+                reason="存在咬伤史、局部肿痛及全身不适，需医生进一步判断是否为毒蛇咬伤。",
+                rule_id="SNAKE_BITE_001",
+                confidence=0.84,
+                suggested_checks=[
+                    "检查伤口部位、肿胀范围和远端血运感觉。",
+                    "监测生命体征，并由医生评估神经毒、血循毒等表现。",
+                    "必要时完善血常规、凝血功能、肝肾功能等检查。",
+                ],
+                medication_notes=["抗蛇毒血清、止血或镇痛等治疗需医生确认；系统不自动处方。"],
+                risk_warnings=["蛇咬伤可能进展较快，需医生评估是否急诊处置或上级医院会诊。"],
+                follow_up_questions=["是否看清蛇的种类、颜色或咬伤环境？", "肿胀范围是否继续扩大？"],
             )
         )
     if _contains(conversation, ["牙龈", "出血"]):
@@ -211,6 +277,16 @@ def mock_extract_fields(conversation: str) -> MedicalRecordFields:
             CandidateDiagnosis(
                 name="凝血功能异常",
                 evidence=symptom_spans,
+                reason="牙龈出血提示需排查凝血功能异常或毒蛇咬伤相关出血风险。",
+                rule_id="COAGULATION_RISK_001",
+                confidence=0.7,
+                suggested_checks=[
+                    "完善凝血功能、血小板计数等检查由医生判断。",
+                    "观察皮下瘀斑、伤口渗血、尿色等出血表现。",
+                ],
+                medication_notes=["止血、抗凝相关处理需医生确认；系统不自动处方。"],
+                risk_warnings=["出现进行性出血、头晕乏力或生命体征异常时需医生立即评估。"],
+                follow_up_questions=["是否还有鼻出血、黑便、血尿或皮下瘀斑？"],
             )
         )
 
@@ -234,12 +310,31 @@ def _field_text(field: MedicalField, *, physical_exam: bool = False) -> str:
     return field.value or "未提及/待补充"
 
 
+def _items_text(items: list[str]) -> str:
+    return "；".join(item.rstrip("。") for item in items if item).strip()
+
+
 def mock_generate_draft(fields: MedicalRecordFields | dict) -> str:
     record = MedicalRecordFields.model_validate(fields)
     diagnosis_lines = []
     for diagnosis in record.candidate_diagnoses:
         evidence = "；".join(span.text for span in diagnosis.evidence[:3]) or "依据待医生核对"
-        diagnosis_lines.append(f"- {diagnosis.name}（{diagnosis.status}）依据：{evidence}")
+        line_parts = [f"- {diagnosis.name}（{diagnosis.status}）依据：{evidence}"]
+        if diagnosis.reason:
+            line_parts.append(f"  触发原因：{diagnosis.reason}")
+        suggested_checks = _items_text(diagnosis.suggested_checks)
+        if suggested_checks:
+            line_parts.append(f"  建议检查：{suggested_checks}")
+        medication_notes = _items_text(diagnosis.medication_notes)
+        if medication_notes:
+            line_parts.append(f"  用药提示：{medication_notes}")
+        risk_warnings = _items_text(diagnosis.risk_warnings)
+        if risk_warnings:
+            line_parts.append(f"  风险提醒：{risk_warnings}")
+        follow_up_questions = _items_text(diagnosis.follow_up_questions)
+        if follow_up_questions:
+            line_parts.append(f"  建议补问：{follow_up_questions}")
+        diagnosis_lines.append("\n".join(line_parts))
 
     candidate_text = "\n".join(diagnosis_lines) if diagnosis_lines else "未提及/待医生确认"
 
@@ -282,7 +377,7 @@ def mock_safety_check(
 
     for diagnosis in record.candidate_diagnoses:
         for line in draft_text.splitlines():
-            if diagnosis.name in line and diagnosis.status not in line:
+            if line.startswith("- ") and diagnosis.name in line and diagnosis.status not in line:
                 errors.append(f"候选诊断“{diagnosis.name}”未标记“候选/待医生确认”。")
                 break
 

@@ -51,6 +51,12 @@ class PromptAndMockLLMTests(unittest.TestCase):
         self.assertIn("过敏史：未提及/待补充", draft)
         self.assertIn("查体：待医生查体补充", draft)
         self.assertIn("毒蛇咬伤（候选/待医生确认）", draft)
+        self.assertIn("建议检查", draft)
+        self.assertIn("用药提示", draft)
+        self.assertIn("风险提醒", draft)
+        self.assertIn("医生确认", draft)
+        self.assertIn("不自动处方", draft)
+        self.assertNotIn("立即使用抗蛇毒血清", draft)
 
     def test_mock_safety_check_blocks_unsafe_export(self):
         fields = mock_extract_fields(SNAKE_BITE_CONVERSATION)

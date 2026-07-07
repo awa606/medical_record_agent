@@ -207,8 +207,24 @@ class LLMRecordGenerator:
             "name": item["name"],
             "status": status,
             "evidence": self._normalize_spans(item.get("evidence", [])),
+            "reason": item.get("reason"),
+            "rule_id": item.get("rule_id"),
+            "confidence": item.get("confidence"),
+            "suggested_checks": self._normalize_string_list(item.get("suggested_checks")),
+            "medication_notes": self._normalize_string_list(item.get("medication_notes")),
+            "risk_warnings": self._normalize_string_list(item.get("risk_warnings")),
+            "follow_up_questions": self._normalize_string_list(item.get("follow_up_questions")),
             "confirmed_by_doctor": bool(item.get("confirmed_by_doctor", False)),
         }
+
+    def _normalize_string_list(self, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value]
+        if not isinstance(value, list):
+            raise ValueError("candidate diagnosis suggestion fields must be lists")
+        return [str(item) for item in value if item]
 
     def _fallback_extract(
         self,

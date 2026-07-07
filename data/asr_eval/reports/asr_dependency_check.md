@@ -1,6 +1,6 @@
 # ASR 本地依赖检查报告
 
-> 本报告用于 v0.5.2 多模型 ASR 评测。它只检查依赖和环境变量，不下载模型，不调用真实患者数据。
+> 本报告用于 v0.5.3 多模型 ASR 评测。它只检查依赖和环境变量，不下载模型，不调用真实患者数据。
 
 ## Python 与 CUDA
 
@@ -22,7 +22,7 @@
 | qwen_asr | 不可用 | Could not read model from <PROJECT_ROOT>\.venv-asr\Lib\site-packages\nagisa/data/nagisa_v001.model |
 | whisper | 可用 | 20250625 |
 | soundfile | 可用 | 0.14.0 |
-| ffmpeg | 不可用 | - |
+| ffmpeg | 可用 | ffmpeg version 8.1.2-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers; source=project_portable |
 
 ## 模型环境变量
 

@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 .venv-asr/
+.venv-qwen-asr/
 venv/
 .pytest_cache/
 .DS_Store
@@ -20,6 +21,14 @@ data/asr_eval/audio/*
 !data/asr_eval/audio/.gitkeep
 data/asr_eval/model_cache/*
 !data/asr_eval/model_cache/.gitkeep
+data/asr_eval/public_smoke/audio/*
+!data/asr_eval/public_smoke/audio/.gitkeep
+data/asr_eval/public_smoke/cache/*
+!data/asr_eval/public_smoke/cache/.gitkeep
+data/asr_eval/public_smoke/ground_truth/*
+!data/asr_eval/public_smoke/ground_truth/.gitkeep
+tools/ffmpeg/*
+!tools/ffmpeg/.gitkeep
 
 # Local demo media
 video/*.wav

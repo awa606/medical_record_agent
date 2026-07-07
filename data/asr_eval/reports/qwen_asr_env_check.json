@@ -1,0 +1,33 @@
+{
+  "schema_version": "v0.5.3",
+  "generated_at": "2026-07-07T16:02:55+08:00",
+  "python": {
+    "version": "3.11.6",
+    "implementation": "CPython",
+    "executable_name": "python.exe",
+    "recommended_for_qwen": "3.12"
+  },
+  "environment": {
+    "QWEN3_ASR_MODEL_ID": "Qwen/Qwen3-ASR-0.6B",
+    "QWEN3_ASR_DEVICE": "cpu",
+    "HF_HOME_configured": false,
+    "MODELSCOPE_CACHE_configured": false
+  },
+  "modules": {
+    "nagisa": {
+      "available": false,
+      "version": null,
+      "error": "Could not read model from <PROJECT_ROOT>\\.venv-asr\\Lib\\site-packages\\nagisa/data/nagisa_v001.model"
+    },
+    "qwen_asr": {
+      "available": false,
+      "version": null,
+      "error": "Could not read model from <PROJECT_ROOT>\\.venv-asr\\Lib\\site-packages\\nagisa/data/nagisa_v001.model"
+    }
+  },
+  "model_init": {
+    "status": "skipped",
+    "message": "qwen_asr import failed or package is missing"
+  },
+  "recommendation": "当前是 `nagisa_v001.model` 读取失败，重装后若仍失败，应创建 `.venv-qwen-asr` Python 3.12 隔离环境再复测。"
+}

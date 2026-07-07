@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import os
-import shutil
 import time
 from pathlib import Path
 from typing import Any
 
 from app.schemas.asr import ASRResult, ASRSegment
 from app.services.asr.evaluator import ASREvaluator
+from app.services.asr.ffmpeg_utils import ensure_ffmpeg_on_path
 from app.services.asr.funasr_engine import DEFAULT_HOTWORD_PATH
 
 
@@ -39,7 +39,7 @@ class WhisperASREngine:
         self.device = device or os.environ.get("WHISPER_DEVICE") or "cpu"
         self.language = language or os.environ.get("WHISPER_LANGUAGE") or "zh"
         self.hotwords = self._load_hotwords(hotword_path)
-        if shutil.which("ffmpeg") is None and model_instance is None:
+        if ensure_ffmpeg_on_path() is None and model_instance is None:
             raise RuntimeError(FFMPEG_ERROR)
         started_at = time.perf_counter()
         self.model = model_instance if model_instance is not None else self._load_model()
@@ -52,7 +52,7 @@ class WhisperASREngine:
 
         raw_result = self.model.transcribe(
             str(audio_path),
-            language=self.language,
+            language=self._language_arg(),
             fp16=self.device.startswith("cuda"),
         )
         text = self._extract_text(raw_result)
@@ -80,6 +80,11 @@ class WhisperASREngine:
         except ImportError as exc:
             raise RuntimeError(DEPENDENCY_ERROR) from exc
         return whisper.load_model(self.model_name, device=self.device)
+
+    def _language_arg(self) -> str | None:
+        if self.language.strip().lower() in {"", "auto", "none", "null"}:
+            return None
+        return self.language
 
     def _load_hotwords(self, hotword_path: str | Path | None) -> list[str]:
         if hotword_path is None:

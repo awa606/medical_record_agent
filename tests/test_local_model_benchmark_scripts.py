@@ -6,6 +6,8 @@ from pathlib import Path
 
 from scripts.collect_hardware_profile import collect_hardware_profile
 from scripts.check_asr_dependencies import collect_asr_dependency_status, render_markdown
+from scripts.check_qwen_asr_env import render_markdown as render_qwen_markdown
+from scripts.prepare_public_asr_smoke_samples import render_markdown as render_public_samples_markdown
 from scripts.summarize_asr_benchmark import summarize_benchmark
 
 
@@ -13,7 +15,7 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
     def test_collect_hardware_profile_has_required_sections(self):
         profile = collect_hardware_profile()
 
-        self.assertEqual(profile["schema_version"], "v0.5.0")
+        self.assertEqual(profile["schema_version"], "v0.5.3")
         self.assertIn("system", profile)
         self.assertIn("python", profile)
         self.assertIn("gpu", profile)
@@ -29,7 +31,7 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
     def test_collect_asr_dependency_status_has_model_fields(self):
         report = collect_asr_dependency_status()
 
-        self.assertEqual(report["schema_version"], "v0.5.2")
+        self.assertEqual(report["schema_version"], "v0.5.3")
         self.assertIn("modules", report)
         self.assertIn("sensevoice", report["modules"])
         self.assertIn("whisper", report["modules"])
@@ -58,6 +60,8 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
                             "torch": {"available": True, "version": "test"},
                             "funasr": {"available": False, "version": None},
                             "qwen_asr": {"available": False, "version": None},
+                            "whisper": {"available": True, "version": "test"},
+                            "ffmpeg": {"available": True, "version": "test", "source": "project_portable"},
                             "ollama_cli": {"available": False},
                         },
                         "benchmark_status": {
@@ -80,6 +84,9 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
                         "duration",
                         "status",
                         "error",
+                        "ground_truth_available",
+                        "transcript_non_empty",
+                        "segments",
                         "model_load_time",
                         "inference_time",
                         "realtime_factor",
@@ -99,6 +106,9 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
                         "duration": "25.0",
                         "status": "measured",
                         "error": "",
+                        "ground_truth_available": "True",
+                        "transcript_non_empty": "True",
+                        "segments": "6",
                         "model_load_time": "0.01",
                         "inference_time": "0.2",
                         "realtime_factor": "0.008",
@@ -113,7 +123,8 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             (reports_dir / "local_asr_benchmark_run.json").write_text(
                 json.dumps(
                     {
-                        "schema_version": "v0.5.2",
+                        "schema_version": "v0.5.3",
+                        "mode": "smoke",
                         "sample_count": 1,
                         "engines": [
                             {
@@ -143,7 +154,7 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             summary = summarize_benchmark(reports_dir, output_path)
 
             self.assertEqual(summary["engines"][0]["engine"], "mock-asr-v0.2")
-            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.2")
+            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.3")
             self.assertEqual(summary["engines"][0]["sample_count"], 1)
             self.assertEqual(summary["engines"][0]["failed_count"], 0)
             self.assertEqual(summary["engines"][0]["avg_realtime_factor"], 0.008)
@@ -154,6 +165,46 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             self.assertIn("平均 RTF", markdown)
             self.assertIn("mock_report.csv", markdown)
             self.assertIn("whisper", markdown)
+            self.assertIn("project_portable", markdown)
+
+    def test_public_sample_manifest_markdown_marks_non_medical_boundary(self):
+        markdown = render_public_samples_markdown(
+            {
+                "samples": [
+                    {
+                        "sample_id": "qwen_asr_en",
+                        "language": "en",
+                        "has_ground_truth": False,
+                        "source": "Qwen3-ASR official repository sample",
+                        "license": "smoke-test reference only",
+                    }
+                ]
+            }
+        )
+
+        self.assertIn("非医疗公开 ASR 冒烟测试样本记录", markdown)
+        self.assertIn("不用于医学诊断", markdown)
+
+    def test_qwen_env_markdown_records_recommendation(self):
+        markdown = render_qwen_markdown(
+            {
+                "python": {
+                    "implementation": "CPython",
+                    "version": "3.11",
+                    "executable_name": "python.exe",
+                    "recommended_for_qwen": "3.12",
+                },
+                "modules": {
+                    "nagisa": {"available": False, "error": "nagisa missing"},
+                    "qwen_asr": {"available": False, "error": "qwen_asr missing"},
+                },
+                "model_init": {"status": "skipped", "message": "qwen_asr import failed"},
+                "recommendation": "创建 `.venv-qwen-asr` Python 3.12 隔离环境。",
+            }
+        )
+
+        self.assertIn("Qwen-ASR 环境检查报告", markdown)
+        self.assertIn("Python 3.12", markdown)
 
 
 if __name__ == "__main__":

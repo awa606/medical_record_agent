@@ -1,0 +1,56 @@
+{
+  "schema_version": "v0.5.3",
+  "generated_at": "2026-07-07T15:54:57+08:00",
+  "purpose": "non_medical_public_asr_smoke_test",
+  "note": "Audio files and ground-truth text are local-only and ignored by Git; reports are lightweight evidence.",
+  "samples": [
+    {
+      "sample_id": "qwen_asr_zh",
+      "filename": "qwen_asr_zh.wav",
+      "language": "zh",
+      "source": "Qwen3-ASR official repository sample",
+      "license": "Sample distributed by Qwen3-ASR project for model usage examples; use as smoke-test reference only.",
+      "has_ground_truth": false,
+      "url": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen3-ASR-Repo/asr_zh.wav"
+    },
+    {
+      "sample_id": "qwen_asr_en",
+      "filename": "qwen_asr_en.wav",
+      "language": "en",
+      "source": "Qwen3-ASR official repository sample",
+      "license": "Sample distributed by Qwen3-ASR project for model usage examples; use as smoke-test reference only.",
+      "has_ground_truth": false,
+      "url": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen3-ASR-Repo/asr_en.wav"
+    },
+    {
+      "sample_id": "mini_librispeech_5694-64038-0000",
+      "filename": "mini_librispeech_5694-64038-0000.flac",
+      "ground_truth_file": "mini_librispeech_5694-64038-0000.txt",
+      "language": "en",
+      "source": "Mini LibriSpeech dev-clean-2, OpenSLR SLR31",
+      "license": "CC BY 4.0",
+      "has_ground_truth": true,
+      "url": "https://www.openslr.org/resources/31/dev-clean-2.tar.gz"
+    },
+    {
+      "sample_id": "mini_librispeech_5694-64038-0001",
+      "filename": "mini_librispeech_5694-64038-0001.flac",
+      "ground_truth_file": "mini_librispeech_5694-64038-0001.txt",
+      "language": "en",
+      "source": "Mini LibriSpeech dev-clean-2, OpenSLR SLR31",
+      "license": "CC BY 4.0",
+      "has_ground_truth": true,
+      "url": "https://www.openslr.org/resources/31/dev-clean-2.tar.gz"
+    },
+    {
+      "sample_id": "mini_librispeech_5694-64038-0002",
+      "filename": "mini_librispeech_5694-64038-0002.flac",
+      "ground_truth_file": "mini_librispeech_5694-64038-0002.txt",
+      "language": "en",
+      "source": "Mini LibriSpeech dev-clean-2, OpenSLR SLR31",
+      "license": "CC BY 4.0",
+      "has_ground_truth": true,
+      "url": "https://www.openslr.org/resources/31/dev-clean-2.tar.gz"
+    }
+  ]
+}

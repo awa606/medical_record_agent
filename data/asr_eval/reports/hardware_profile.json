@@ -1,6 +1,6 @@
 {
-  "schema_version": "v0.5.0",
-  "generated_at": "2026-07-07T06:42:27+00:00",
+  "schema_version": "v0.5.3",
+  "generated_at": "2026-07-07T07:41:23+00:00",
   "purpose": "local_model_edge_benchmark_baseline",
   "privacy_note": "No local identity, API key, model weight path, or patient data is collected.",
   "system": {
@@ -45,9 +45,10 @@
       "version": "20250625"
     },
     "ffmpeg": {
-      "available": false,
+      "available": true,
       "version": null,
-      "path_detected": false
+      "path_detected": true,
+      "source": "project_portable"
     },
     "ollama_cli": {
       "available": true,

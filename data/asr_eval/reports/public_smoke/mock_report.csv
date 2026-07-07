@@ -1,0 +1,6 @@
+﻿filename,engine,duration,status,error,ground_truth_available,transcript_non_empty,segments,model_load_time,inference_time,realtime_factor,peak_memory_mb,gpu_memory_mb,cer,keyword_recall,recognized_keywords,missing_keywords
+mini_librispeech_5694-64038-0000.flac,mock-asr-v0.2,25.0,measured,,True,True,6,0.0,12.565,0.502591,57.82,,4.55,0.0,,
+mini_librispeech_5694-64038-0001.flac,mock-asr-v0.2,25.0,measured,,True,True,6,0.0,0.0,1.4e-05,0.0,,3.5,0.0,,
+mini_librispeech_5694-64038-0002.flac,mock-asr-v0.2,25.0,measured,,True,True,6,0.0,0.0,1.3e-05,0.0,,1.0,0.0,,
+qwen_asr_en.wav,mock-asr-v0.2,25.0,smoke_measured,,False,True,6,0.0,0.0,1.4e-05,0.0,,,,,
+qwen_asr_zh.wav,mock-asr-v0.2,25.0,smoke_measured,,False,True,6,0.0,0.0,1.7e-05,0.0,,,,,

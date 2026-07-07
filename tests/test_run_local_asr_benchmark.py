@@ -41,7 +41,7 @@ class RunLocalASRBenchmarkTests(unittest.TestCase):
                 )
 
             by_engine = {item["engine"]: item for item in summary["engines"]}
-            self.assertEqual(summary["schema_version"], "v0.5.2")
+            self.assertEqual(summary["schema_version"], "v0.5.3")
             self.assertEqual(by_engine["mock"]["status"], "measured")
             self.assertEqual(by_engine["mock"]["rows"], 1)
             self.assertEqual(by_engine["qwen3"]["status"], "skipped")
@@ -110,6 +110,41 @@ class RunLocalASRBenchmarkTests(unittest.TestCase):
             rows = list(csv.DictReader((reports_dir / "mock_report.csv").open("r", encoding="utf-8-sig")))
             self.assertEqual(rows[0]["status"], "failed")
             self.assertIn("missing ground truth", rows[0]["error"])
+
+    def test_smoke_mode_transcribes_without_ground_truth(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            audio_dir = root / "audio"
+            truth_dir = root / "truth"
+            reports_dir = root / "reports"
+            audio_dir.mkdir()
+            truth_dir.mkdir()
+            (audio_dir / "public_sample.wav").write_bytes(b"fake wav bytes")
+
+            with patch(
+                "scripts.run_local_asr_benchmark.create_asr_engine",
+                return_value=MockASREngine(),
+            ):
+                summary = run_local_asr_benchmark(
+                    engines=["mock"],
+                    audio_dir=audio_dir,
+                    truth_dir=truth_dir,
+                    reports_dir=reports_dir,
+                    mode="smoke",
+                )
+
+            engine = summary["engines"][0]
+            self.assertEqual(summary["schema_version"], "v0.5.3")
+            self.assertEqual(summary["mode"], "smoke")
+            self.assertEqual(engine["status"], "smoke_measured")
+            self.assertEqual(engine["rows"], 1)
+            rows = list(csv.DictReader((reports_dir / "mock_report.csv").open("r", encoding="utf-8-sig")))
+            self.assertEqual(rows[0]["status"], "smoke_measured")
+            self.assertEqual(rows[0]["ground_truth_available"], "False")
+            self.assertEqual(rows[0]["transcript_non_empty"], "True")
+            self.assertEqual(rows[0]["cer"], "")
+            benchmark = (reports_dir / "local_model_benchmark.md").read_text(encoding="utf-8")
+            self.assertIn("smoke", benchmark)
 
 
 if __name__ == "__main__":

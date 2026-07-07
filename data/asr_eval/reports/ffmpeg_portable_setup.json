@@ -1,0 +1,9 @@
+{
+  "schema_version": "v0.5.3",
+  "generated_at": "2026-07-07T15:40:54+08:00",
+  "status": "installed",
+  "source_url": "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
+  "tools_dir": "tools\\ffmpeg",
+  "ffmpeg_exe": "tools\\ffmpeg\\bin\\ffmpeg.exe",
+  "message": "extracted: ffmpeg.exe, ffplay.exe, ffprobe.exe"
+}

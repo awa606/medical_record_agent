@@ -10,7 +10,7 @@
 | v0.4 | 强化医学知识库、热词和后处理 | 医疗术语准确率不能只靠换模型。 |
 | v0.5 | 做本地模型和边缘端评测 | 用 CER、关键词召回、延迟和资源占用决定模型路线。 |
 
-## v0.5.0 / v0.5.2 当前结论
+## v0.5.0 / v0.5.3 当前结论
 
 `v0.5.0` 先完成评测框架和配置采集，不切换默认模型。
 
@@ -21,6 +21,8 @@
 - FunASR 和 SenseVoice 已在 `fever_01`、`chest_pain_01`、`snakebite_01` 三条课程样本上完成 CPU-only 实测。
 - Whisper Python 包已安装，但系统缺少 `ffmpeg`，本轮记录为 `skipped`。
 - Qwen-ASR 依赖安装后导入失败，错误为 `nagisa_v001.model` 读取失败，本轮记录为 `skipped`。
+- `v0.5.3` 安装项目本地便携 ffmpeg 后，Whisper 已在公开非医疗样本上完成 smoke 复测。
+- Qwen-ASR 在 `.venv-asr` 中重装 `nagisa/qwen-asr` 后仍失败；当前机器未检测到 Python 3.12，`.venv-qwen-asr` 暂未创建。
 - Ollama CLI 可检测到，但 LLM provider 所需环境变量尚未配置。
 - 模型选择仍以本地评测数据决定；当前不切换默认模型，FunASR/SenseVoice 先作为本地真实 baseline。
 
@@ -35,6 +37,17 @@
 | `qwen3` | `skipped` | - | - | - | 依赖导入失败，需修复环境后复测。 |
 
 证据文件见 `data/asr_eval/reports/local_model_benchmark.md` 和 `data/asr_eval/reports/local_asr_benchmark_run.md`。
+
+## v0.5.3 公开非医疗 smoke 结果
+
+| 引擎 | 状态 | 样本数 | 平均 RTF | 当前结论 |
+| --- | --- | ---: | ---: | --- |
+| `funasr` | `measured_with_smoke` | 5 | 0.7058 | 能完成公开样本转写，英文效果不作为医疗模型结论。 |
+| `sensevoice` | `measured_with_smoke` | 5 | 0.2142 | 能完成公开样本转写。 |
+| `whisper` | `measured_with_smoke` | 5 | 0.6754 | 便携 ffmpeg 已解阻塞，可继续用于多语种评测。 |
+| `qwen3` | `skipped` | 0 | - | 仍为 Qwen-ASR/nagisa 环境阻塞，需 Python 3.12 隔离环境后复测。 |
+
+公开非医疗样本只验证 ASR 可用性和通用转写，不替代医疗问诊样本，也不证明医生/患者角色自动区分正确。
 
 ## 候选模型
 

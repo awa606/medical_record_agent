@@ -20,13 +20,18 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.services.asr.ffmpeg_utils import find_ffmpeg_executable  # noqa: E402
+
 DEFAULT_OUTPUT = PROJECT_ROOT / "data" / "asr_eval" / "reports" / "hardware_profile.json"
 
 
 def collect_hardware_profile() -> dict[str, Any]:
     torch_info = _torch_info()
     return {
-        "schema_version": "v0.5.0",
+        "schema_version": "v0.5.3",
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "purpose": "local_model_edge_benchmark_baseline",
         "privacy_note": "No local identity, API key, model weight path, or patient data is collected.",
@@ -55,11 +60,7 @@ def collect_hardware_profile() -> dict[str, Any]:
             "funasr": _module_info("funasr"),
             "qwen_asr": _module_info("qwen_asr"),
             "whisper": _module_info("whisper"),
-            "ffmpeg": {
-                "available": shutil.which("ffmpeg") is not None,
-                "version": None,
-                "path_detected": shutil.which("ffmpeg") is not None,
-            },
+            "ffmpeg": _ffmpeg_info(),
             "ollama_cli": {
                 "available": shutil.which("ollama") is not None,
                 "path_detected": shutil.which("ollama") is not None,
@@ -129,6 +130,34 @@ def _torch_info() -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001 - dependency import failures are benchmark data.
         info["error"] = _sanitize_local_paths(str(exc))[:200]
     return info
+
+
+def _ffmpeg_info() -> dict[str, Any]:
+    executable = find_ffmpeg_executable()
+    return {
+        "available": executable is not None,
+        "version": None,
+        "path_detected": executable is not None,
+        "source": _ffmpeg_source(executable),
+    }
+
+
+def _ffmpeg_source(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    portable = PROJECT_ROOT / "tools" / "ffmpeg"
+    try:
+        path.relative_to(portable)
+        return "project_portable"
+    except ValueError:
+        pass
+    if os.environ.get("FFMPEG_BINARY") and Path(os.environ["FFMPEG_BINARY"]).resolve() == path:
+        return "FFMPEG_BINARY"
+    if os.environ.get("FFMPEG_DIR"):
+        return "FFMPEG_DIR"
+    if shutil.which("ffmpeg"):
+        return "system_path"
+    return "detected"
 
 
 def _sanitize_local_paths(value: str) -> str:

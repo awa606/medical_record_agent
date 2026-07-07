@@ -16,6 +16,11 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.services.asr.ffmpeg_utils import find_ffmpeg_executable  # noqa: E402
+
 DEFAULT_REPORTS_DIR = PROJECT_ROOT / "data" / "asr_eval" / "reports"
 DEFAULT_JSON = DEFAULT_REPORTS_DIR / "asr_dependency_check.json"
 DEFAULT_MD = DEFAULT_REPORTS_DIR / "asr_dependency_check.md"
@@ -37,7 +42,7 @@ def collect_asr_dependency_status() -> dict[str, Any]:
         "note": "SenseVoice uses funasr.AutoModel with FunAudioLLM/SenseVoiceSmall.",
     }
     return {
-        "schema_version": "v0.5.2",
+        "schema_version": "v0.5.3",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "python": {
             "version": platform.python_version(),
@@ -81,7 +86,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines = [
         "# ASR 本地依赖检查报告",
         "",
-        "> 本报告用于 v0.5.2 多模型 ASR 评测。它只检查依赖和环境变量，不下载模型，不调用真实患者数据。",
+        "> 本报告用于 v0.5.3 多模型 ASR 评测。它只检查依赖和环境变量，不下载模型，不调用真实患者数据。",
         "",
         "## Python 与 CUDA",
         "",
@@ -99,8 +104,11 @@ def render_markdown(report: dict[str, Any]) -> str:
     ]
     for name in ["torch", "torchaudio", "funasr", "sensevoice", "qwen_asr", "whisper", "soundfile", "ffmpeg"]:
         item = modules.get(name) or {}
+        detail = item.get("version") or item.get("note") or item.get("error")
+        if name == "ffmpeg" and item.get("source"):
+            detail = f"{detail or 'detected'}; source={item.get('source')}"
         lines.append(
-            f"| {name} | {_bool_cell(item.get('available'))} | {_cell(item.get('version') or item.get('note') or item.get('error'))} |"
+            f"| {name} | {_bool_cell(item.get('available'))} | {_cell(detail)} |"
         )
 
     lines.extend(
@@ -133,8 +141,14 @@ def _module_info(module_name: str) -> dict[str, Any]:
 
 
 def _ffmpeg_info() -> dict[str, Any]:
-    executable = shutil.which("ffmpeg")
-    info: dict[str, Any] = {"available": executable is not None, "version": None}
+    executable_path = find_ffmpeg_executable()
+    executable = str(executable_path) if executable_path else None
+    info: dict[str, Any] = {
+        "available": executable is not None,
+        "version": None,
+        "path_detected": executable is not None,
+        "source": _ffmpeg_source(executable_path),
+    }
     if executable is None:
         return info
     try:
@@ -150,6 +164,24 @@ def _ffmpeg_info() -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001 - keep dependency check non-fatal.
         info["error"] = _sanitize_local_paths(str(exc))[:200]
     return info
+
+
+def _ffmpeg_source(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    portable = PROJECT_ROOT / "tools" / "ffmpeg"
+    try:
+        path.relative_to(portable)
+        return "project_portable"
+    except ValueError:
+        pass
+    if os.environ.get("FFMPEG_BINARY") and Path(os.environ["FFMPEG_BINARY"]).resolve() == path:
+        return "FFMPEG_BINARY"
+    if os.environ.get("FFMPEG_DIR"):
+        return "FFMPEG_DIR"
+    if shutil.which("ffmpeg"):
+        return "system_path"
+    return "detected"
 
 
 def _cuda_info(torch_available: bool) -> dict[str, Any]:

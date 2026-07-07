@@ -1,6 +1,6 @@
 {
-  "schema_version": "v0.5.2",
-  "generated_at": "2026-07-07T14:42:22+08:00",
+  "schema_version": "v0.5.3",
+  "generated_at": "2026-07-07T15:41:55+08:00",
   "python": {
     "version": "3.11.6",
     "implementation": "CPython",
@@ -38,8 +38,10 @@
       "version": "0.14.0"
     },
     "ffmpeg": {
-      "available": false,
-      "version": null
+      "available": true,
+      "version": "ffmpeg version 8.1.2-essentials_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+      "path_detected": true,
+      "source": "project_portable"
     },
     "sensevoice": {
       "available": true,

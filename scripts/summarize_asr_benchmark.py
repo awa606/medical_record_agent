@@ -20,7 +20,7 @@ def summarize_benchmark(
     reports_dir: Path = DEFAULT_REPORTS_DIR,
     output_path: Path = DEFAULT_OUTPUT,
 ) -> dict[str, Any]:
-    hardware_path = reports_dir / "hardware_profile.json"
+    hardware_path = _report_input_path(reports_dir, "hardware_profile.json")
     run_status_path = reports_dir / RUN_STATUS_FILE
     hardware = _load_json(hardware_path) if hardware_path.exists() else {}
     run_status = _load_json(run_status_path) if run_status_path.exists() else {}
@@ -38,6 +38,14 @@ def summarize_benchmark(
     return summary
 
 
+def _report_input_path(reports_dir: Path, filename: str) -> Path:
+    local_path = reports_dir / filename
+    if local_path.exists():
+        return local_path
+    parent_path = reports_dir.parent / filename
+    return parent_path if parent_path.exists() else local_path
+
+
 def render_markdown(summary: dict[str, Any]) -> str:
     hardware = summary.get("hardware_profile") or {}
     system = hardware.get("system") or {}
@@ -49,7 +57,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines = [
         "# 本地模型与边缘端评测基线报告",
         "",
-        "> 本报告用于 v0.5.2 评测框架验收。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。",
+        "> 本报告用于 v0.5.3 评测框架验收。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。",
         "",
         "## 硬件配置",
         "",
@@ -74,6 +82,8 @@ def render_markdown(summary: dict[str, Any]) -> str:
         f"| Ollama CLI | {_bool_cell((dependencies.get('ollama_cli') or {}).get('available'))} | 只检查命令是否存在，不调用服务 |",
         "",
         "## 多引擎运行状态",
+        "",
+        f"- 运行模式：`{run_status.get('mode', 'strict')}`",
         "",
         "| 引擎 | 状态 | 报告 | 样本数 | 失败样本 | 说明 |",
         "| --- | --- | --- | ---: | ---: | --- |",
@@ -100,18 +110,19 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "",
             "## ASR 评测结果",
             "",
-            "| 报告 | 引擎 | 成功样本 | 失败样本 | 平均 CER | 平均关键词召回 | 平均耗时秒 | 平均 RTF | 状态 |",
-            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+            "| 报告 | 引擎 | 成功样本 | Smoke 样本 | 失败样本 | 平均 CER | 平均关键词召回 | 平均耗时秒 | 平均 RTF | 状态 |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
         ]
     )
     engines = summary.get("engines") or []
     if engines:
         for item in engines:
             lines.append(
-                "| {report} | {engine} | {samples} | {failed} | {cer} | {recall} | {time} | {rtf} | {status} |".format(
+                "| {report} | {engine} | {samples} | {smoke} | {failed} | {cer} | {recall} | {time} | {rtf} | {status} |".format(
                     report=item["report_file"],
                     engine=item["engine"],
                     samples=item["sample_count"],
+                    smoke=item["smoke_count"],
                     failed=item["failed_count"],
                     cer=_number_cell(item["avg_cer"]),
                     recall=_number_cell(item["avg_keyword_recall"]),
@@ -121,7 +132,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
                 )
             )
     else:
-        lines.append("| 无 | 待评测 | 0 | 0 | - | - | - | - | no_csv_reports |")
+        lines.append("| 无 | 待评测 | 0 | 0 | 0 | - | - | - | - | no_csv_reports |")
 
     lines.extend(
         [
@@ -151,6 +162,7 @@ def _summarize_csv(path: Path) -> dict[str, Any]:
             "report_file": path.name,
             "engine": "unknown",
             "sample_count": 0,
+            "smoke_count": 0,
             "failed_count": 0,
             "avg_cer": None,
             "avg_keyword_recall": None,
@@ -161,18 +173,22 @@ def _summarize_csv(path: Path) -> dict[str, Any]:
     measured_rows = [
         row for row in rows if (row.get("status") or "measured") == "measured"
     ]
+    smoke_rows = [row for row in rows if row.get("status") == "smoke_measured"]
+    success_rows = measured_rows + smoke_rows
     failed_rows = [row for row in rows if row.get("status") == "failed"]
-    metric_rows = measured_rows or rows
+    metric_rows = success_rows or rows
+    measured_metric_rows = measured_rows or []
     return {
         "report_file": path.name,
-        "engine": (measured_rows[0] if measured_rows else rows[0]).get("engine") or "unknown",
-        "sample_count": len(measured_rows),
+        "engine": (success_rows[0] if success_rows else rows[0]).get("engine") or "unknown",
+        "sample_count": len(success_rows),
+        "smoke_count": len(smoke_rows),
         "failed_count": len(failed_rows),
-        "avg_cer": _average(metric_rows, "cer"),
-        "avg_keyword_recall": _average(metric_rows, "keyword_recall"),
+        "avg_cer": _average(measured_metric_rows, "cer"),
+        "avg_keyword_recall": _average(measured_metric_rows, "keyword_recall"),
         "avg_inference_time": _average(metric_rows, "inference_time"),
         "avg_realtime_factor": _average(metric_rows, "realtime_factor"),
-        "status": _csv_status(measured_rows, failed_rows),
+        "status": _csv_status(measured_rows, smoke_rows, failed_rows),
     }
 
 
@@ -188,12 +204,21 @@ def _average(rows: list[dict[str, str]], key: str) -> float | None:
 
 def _csv_status(
     measured_rows: list[dict[str, str]],
+    smoke_rows: list[dict[str, str]],
     failed_rows: list[dict[str, str]],
 ) -> str:
+    if measured_rows and smoke_rows and failed_rows:
+        return "measured_with_smoke_and_failed_samples"
+    if measured_rows and smoke_rows:
+        return "measured_with_smoke"
+    if smoke_rows and failed_rows:
+        return "smoke_measured_with_failed_samples"
     if measured_rows and failed_rows:
         return "measured_with_failed_samples"
     if measured_rows:
         return "measured"
+    if smoke_rows:
+        return "smoke_measured"
     if failed_rows:
         return "failed"
     return "no_rows"
@@ -205,6 +230,7 @@ def _benchmark_status(
     run_status: dict[str, Any] | None = None,
 ) -> str:
     measured = [item for item in engines if item.get("sample_count", 0) > 0]
+    smoke_only = measured and all(item.get("status") == "smoke_measured" for item in measured)
     dependencies = hardware.get("dependencies") or {}
     run_engines = (run_status or {}).get("engines") or []
     skipped = [item for item in run_engines if item.get("status") == "skipped"]
@@ -220,6 +246,8 @@ def _benchmark_status(
     missing_real_asr = not (dependencies.get("funasr") or {}).get("available") and not (
         dependencies.get("qwen_asr") or {}
     ).get("available")
+    if smoke_only:
+        return "smoke_measured"
     if measured and (missing_real_asr or run_real_asr_skipped):
         return "mock_measured_real_asr_dependency_missing"
     if measured and skipped:
@@ -241,6 +269,8 @@ def _dependency_row(name: str, data: dict[str, Any] | None) -> str:
     data = data or {}
     status = _bool_cell(data.get("available"))
     version = data.get("version") or data.get("error") or "未检测到版本"
+    if data.get("source"):
+        version = f"{version}; source={data.get('source')}"
     return f"| {name} | {status} | {_cell(version)} |"
 
 

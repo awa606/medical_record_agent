@@ -91,6 +91,21 @@ class ASRRoleStrategyTests(unittest.TestCase):
             ["Qwen3-ASR did not provide reliable speaker roles; please manually review roles."],
         )
 
+    def test_unknown_public_sample_does_not_apply_doctor_patient_roles(self):
+        result = ASRResult(
+            audio_id="qwen_asr_en",
+            engine="whisper-base",
+            text="this is a public non medical sample",
+            conversation_text="[whisper] this is a public non medical sample",
+            segments=[ASRSegment(speaker="whisper", text="this is a public non medical sample")],
+        )
+
+        mapped = apply_manifest_role_strategy(result, "qwen_asr_en")
+
+        self.assertIsNone(mapped.segments[0].role)
+        self.assertIsNone(mapped.role_strategy)
+        self.assertEqual(mapped.conversation_text, "[whisper] this is a public non medical sample")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,6 @@
+﻿filename,engine,duration,status,error,ground_truth_available,transcript_non_empty,segments,model_load_time,inference_time,realtime_factor,peak_memory_mb,gpu_memory_mb,cer,keyword_recall,recognized_keywords,missing_keywords
+mini_librispeech_5694-64038-0000.flac,funasr-paraformer-zh,2.595,measured,,True,True,1,86.829,5.299,2.042154,69.61,,0.95,0.0,,
+mini_librispeech_5694-64038-0001.flac,funasr-paraformer-zh,3.65,measured,,True,True,1,86.829,1.155,0.31649,1.91,,1.0,0.0,,
+mini_librispeech_5694-64038-0002.flac,funasr-paraformer-zh,8.77,measured,,True,True,1,86.829,2.131,0.243012,4.57,,0.992,0.0,,
+qwen_asr_en.wav,funasr-paraformer-zh,15.051,smoke_measured,,False,True,1,86.829,2.881,0.191406,6.91,,,,,
+qwen_asr_zh.wav,funasr-paraformer-zh,4.204,smoke_measured,,False,True,1,86.829,3.094,0.735952,2.19,,,,,

@@ -49,6 +49,9 @@ CSV_FIELDS = [
     "duration",
     "status",
     "error",
+    "ground_truth_available",
+    "transcript_non_empty",
+    "segments",
     "model_load_time",
     "inference_time",
     "realtime_factor",
@@ -73,6 +76,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--truth-dir", type=Path, default=DEFAULT_TRUTH_DIR)
     parser.add_argument("--reports-dir", type=Path, default=DEFAULT_REPORTS_DIR)
     parser.add_argument("--keyword-file", type=Path, default=DEFAULT_KEYWORD_FILE)
+    parser.add_argument(
+        "--mode",
+        choices=["strict", "smoke"],
+        default="strict",
+        help="strict requires ground truth; smoke allows transcription-only samples.",
+    )
     return parser.parse_args()
 
 
@@ -83,6 +92,7 @@ def run_local_asr_benchmark(
     truth_dir: Path,
     reports_dir: Path,
     keyword_file: Path = DEFAULT_KEYWORD_FILE,
+    mode: str = "strict",
 ) -> dict[str, Any]:
     reports_dir.mkdir(parents=True, exist_ok=True)
     normalized_engines = _normalize_engines(engines)
@@ -98,13 +108,15 @@ def run_local_asr_benchmark(
             reports_dir=reports_dir,
             keywords=keywords,
             manifest=manifest,
+            mode=mode,
         )
         for engine_name in normalized_engines
     ]
 
     run_summary = {
-        "schema_version": "v0.5.2",
+        "schema_version": "v0.5.3",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "mode": mode,
         "audio_dir": _relative_or_name(audio_dir),
         "truth_dir": _relative_or_name(truth_dir),
         "reports_dir": _relative_or_name(reports_dir),
@@ -130,13 +142,14 @@ def render_run_markdown(run_summary: dict[str, Any]) -> str:
     lines = [
         "# 本地 ASR 多引擎评测运行记录",
         "",
-        "> 本记录用于 v0.5.2。它只说明哪些引擎在当前环境完成评测、哪些因依赖或配置缺失被跳过，不代表最终模型优劣。",
+        "> 本记录用于 v0.5.3。它只说明哪些引擎在当前环境完成评测、哪些因依赖或配置缺失被跳过，不代表最终模型优劣。",
         "",
         "## 运行信息",
         "",
         f"- 生成时间：{run_summary.get('generated_at')}",
         f"- 音频目录：`{run_summary.get('audio_dir')}`",
         f"- 标注目录：`{run_summary.get('truth_dir')}`",
+        f"- 模式：`{run_summary.get('mode', 'strict')}`",
         f"- 样本数量：{run_summary.get('sample_count')}",
         "",
         "## 引擎状态",
@@ -162,6 +175,7 @@ def render_run_markdown(run_summary: dict[str, Any]) -> str:
             "## 结论",
             "",
             "- `measured` 表示当前环境完成了该引擎评测并生成 CSV。",
+            "- `smoke_measured` 表示无标注样本完成转写，只用于可用性冒烟测试。",
             "- `skipped` 表示依赖、模型或配置缺失，本轮不评价该模型效果。",
             "- `failed` 表示引擎已创建，但样本转写全部失败，需要进入 Debug Log 分析。",
             "",
@@ -178,6 +192,7 @@ def _run_one_engine(
     reports_dir: Path,
     keywords: list[str],
     manifest: dict[str, Any],
+    mode: str,
 ) -> dict[str, Any]:
     started_at = time.perf_counter()
     try:
@@ -207,10 +222,11 @@ def _run_one_engine(
 
     for audio_path in audio_files:
         truth_path = truth_dir / f"{audio_path.stem}.txt"
-        if not truth_path.exists():
+        truth_exists = truth_path.exists()
+        if not truth_exists and mode == "strict":
             reason = f"missing ground truth: {truth_path.name}"
             sample_errors.append({"filename": audio_path.name, "reason": reason})
-            rows.append(_failed_row(audio_path.name, getattr(engine, "name", engine_name), reason, model_load_time))
+            rows.append(_failed_row(audio_path.name, getattr(engine, "name", engine_name), reason, model_load_time, False))
             continue
 
         peak_memory_mb: float | None = None
@@ -227,17 +243,19 @@ def _run_one_engine(
             gpu_memory_mb = _gpu_peak_memory_mb()
             sample = manifest.get(audio_path.stem) or {}
             expected_keywords = sample.get("expected_keywords") or keywords
-            evaluation = evaluator.evaluate(
-                audio_id=audio_path.stem,
-                engine=result.engine,
-                ground_truth_text=truth_path.read_text(encoding="utf-8"),
-                recognized_text=result.text,
-                expected_keywords=expected_keywords,
-            )
+            evaluation = None
+            if truth_exists:
+                evaluation = evaluator.evaluate(
+                    audio_id=audio_path.stem,
+                    engine=result.engine,
+                    ground_truth_text=truth_path.read_text(encoding="utf-8"),
+                    recognized_text=result.text,
+                    expected_keywords=expected_keywords if mode == "strict" else [],
+                )
         except Exception as exc:  # noqa: BLE001 - keep remaining engines/samples runnable.
             reason = _compact_error(exc)
             sample_errors.append({"filename": audio_path.name, "reason": reason})
-            rows.append(_failed_row(audio_path.name, getattr(engine, "name", engine_name), reason, model_load_time))
+            rows.append(_failed_row(audio_path.name, getattr(engine, "name", engine_name), reason, model_load_time, truth_exists))
             if tracemalloc.is_tracing():
                 tracemalloc.stop()
             continue
@@ -250,22 +268,25 @@ def _run_one_engine(
                 "filename": audio_path.name,
                 "engine": result.engine,
                 "duration": duration,
-                "status": "measured",
+                "status": "measured" if truth_exists else "smoke_measured",
                 "error": "",
+                "ground_truth_available": truth_exists,
+                "transcript_non_empty": bool(result.text.strip()),
+                "segments": len(result.segments),
                 "model_load_time": model_load_time,
                 "inference_time": round(inference_time, 3),
                 "realtime_factor": _realtime_factor(inference_time, duration),
                 "peak_memory_mb": peak_memory_mb,
                 "gpu_memory_mb": gpu_memory_mb,
-                "cer": round(evaluation.cer, 6),
-                "keyword_recall": round(evaluation.keyword_recall, 6),
-                "recognized_keywords": "|".join(evaluation.medical_keywords["recognized"]),
-                "missing_keywords": "|".join(evaluation.medical_keywords["missing"]),
+                "cer": round(evaluation.cer, 6) if evaluation else "",
+                "keyword_recall": round(evaluation.keyword_recall, 6) if evaluation else "",
+                "recognized_keywords": "|".join(evaluation.medical_keywords["recognized"]) if evaluation else "",
+                "missing_keywords": "|".join(evaluation.medical_keywords["missing"]) if evaluation else "",
             }
         )
 
     _write_csv(report_path, rows)
-    measured_rows = [row for row in rows if row.get("status") == "measured"]
+    measured_rows = [row for row in rows if _is_success_status(row.get("status"))]
     status = _engine_status(rows, sample_errors, audio_files)
     return {
         "engine": engine_name,
@@ -300,8 +321,12 @@ def _engine_status(
     sample_errors: list[dict[str, str]],
     audio_files: list[Path],
 ) -> str:
-    measured_rows = [row for row in rows if row.get("status") == "measured"]
+    measured_rows = [row for row in rows if _is_success_status(row.get("status"))]
     if measured_rows:
+        if all(row.get("status") == "smoke_measured" for row in measured_rows):
+            return "smoke_measured_with_warnings" if sample_errors else "smoke_measured"
+        if any(row.get("status") == "smoke_measured" for row in measured_rows):
+            return "measured_with_smoke_and_warnings" if sample_errors else "measured_with_smoke"
         return "measured_with_warnings" if sample_errors else "measured"
     if not audio_files:
         return "no_samples"
@@ -318,13 +343,21 @@ def _engine_reason(
 ) -> str:
     if status == "measured":
         return "completed"
+    if status == "smoke_measured":
+        return "completed smoke transcription without ground truth"
+    if status == "measured_with_smoke":
+        return "completed with measured and smoke-only samples"
+    if status == "smoke_measured_with_warnings":
+        return "completed smoke transcription with skipped or failed samples"
+    if status == "measured_with_smoke_and_warnings":
+        return "completed with measured, smoke-only, and failed samples"
     if status == "measured_with_warnings":
         return "completed with skipped or failed samples"
     if status == "no_samples":
         return "no audio files found"
     if status == "failed" and sample_errors:
         return sample_errors[0]["reason"]
-    measured_rows = [row for row in rows if row.get("status") == "measured"]
+    measured_rows = [row for row in rows if _is_success_status(row.get("status"))]
     if not measured_rows and audio_files:
         return "no successful rows"
     return status
@@ -335,6 +368,7 @@ def _failed_row(
     engine: str,
     error: str,
     model_load_time: float | None,
+    ground_truth_available: bool,
 ) -> dict[str, object]:
     return {
         "filename": filename,
@@ -342,6 +376,9 @@ def _failed_row(
         "duration": "",
         "status": "failed",
         "error": error,
+        "ground_truth_available": ground_truth_available,
+        "transcript_non_empty": "",
+        "segments": "",
         "model_load_time": model_load_time,
         "inference_time": "",
         "realtime_factor": "",
@@ -352,6 +389,10 @@ def _failed_row(
         "recognized_keywords": "",
         "missing_keywords": "",
     }
+
+
+def _is_success_status(status: object) -> bool:
+    return status in {"measured", "smoke_measured"}
 
 
 def _realtime_factor(inference_time: float, duration: float | None) -> float | str:
@@ -457,6 +498,7 @@ def main() -> int:
         truth_dir=args.truth_dir,
         reports_dir=args.reports_dir,
         keyword_file=args.keyword_file,
+        mode=args.mode,
     )
     print("本地 ASR 多引擎评测完成：")
     for item in summary["engines"]:

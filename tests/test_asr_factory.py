@@ -164,7 +164,7 @@ class ASRFactoryTests(unittest.TestCase):
                 raise ImportError("missing whisper")
             return original_import(name, *args, **kwargs)
 
-        with patch("shutil.which", return_value="ffmpeg"):
+        with patch("app.services.asr.whisper_engine.ensure_ffmpeg_on_path", return_value=Path("ffmpeg.exe")):
             with patch("builtins.__import__", side_effect=fake_import):
                 with self.assertRaises(RuntimeError) as context:
                     create_asr_engine("whisper")
@@ -198,6 +198,26 @@ class ASRFactoryTests(unittest.TestCase):
         self.assertEqual(result.text, "患者发热三天")
         self.assertEqual(result.segments[0].speaker, "whisper")
         self.assertEqual(result.duration, 1.5)
+
+    def test_whisper_engine_auto_language_passes_none_to_model(self):
+        class FakeModel:
+            language_arg = "not-called"
+
+            def transcribe(self, *_args, **kwargs):
+                self.language_arg = kwargs.get("language")
+                return {"text": "hello", "segments": [{"text": "hello", "start": 0.0, "end": 1.0}]}
+
+        model = FakeModel()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audio_path = Path(temp_dir) / "public.wav"
+            audio_path.write_bytes(b"RIFF....WAVEfmt ")
+            WhisperASREngine(
+                model_instance=model,
+                hotword_path=None,
+                language="auto",
+            ).transcribe("audio-whisper-auto", audio_path)
+
+        self.assertIsNone(model.language_arg)
 
     def test_online_engine_requires_environment(self):
         with patch.dict("os.environ", {}, clear=True):

@@ -112,6 +112,43 @@
 - 不能把 Whisper 和 Qwen3 判为“效果差”，因为本轮分别是系统依赖和 Python 包导入阻塞。
 - 下一轮应优先补 `ffmpeg`、修复 Qwen-ASR 依赖问题，并在普通医院 Windows PC 上复跑同一组命令。
 
+## v0.5.3 非医疗公开音频 ASR 冒烟测试
+
+本轮新增公开非医疗音频 smoke 测试，用于验证 ASR 引擎可用性、Whisper/ffmpeg 解阻塞和通用转写稳定性。该结果不替代医疗问诊样本，也不用于证明医生/患者角色区分正确。
+
+环境与样本：
+
+| 项目 | 结果 |
+| --- | --- |
+| 便携 ffmpeg | 已安装到 `tools/ffmpeg/bin/ffmpeg.exe`，来源标记为 `project_portable` |
+| Qwen-ASR | `nagisa_v001.model` 读取失败；`.venv-asr` 重装命令超时后复查仍阻塞 |
+| Python 3.12 | 当前机器未检测到，`.venv-qwen-asr` 暂未创建 |
+| 公开样本 | Qwen 官方 `asr_zh.wav`、`asr_en.wav`；Mini LibriSpeech 3 条英文有标注样本 |
+
+公开 smoke 运行摘要：
+
+| 引擎 | 状态 | 样本数 | Smoke 样本 | 失败样本 | 平均耗时 | 平均 RTF | 结论 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `mock` | `measured_with_smoke` | 5 | 2 | 0 | 2.5130s | 0.1005 | 仅工程链路参考，非真实 ASR。 |
+| `funasr` | `measured_with_smoke` | 5 | 2 | 0 | 2.9120s | 0.7058 | 能完成公开样本转写，英文质量不作为模型结论。 |
+| `sensevoice` | `measured_with_smoke` | 5 | 2 | 0 | 1.2128s | 0.2142 | 能完成公开样本转写。 |
+| `whisper` | `measured_with_smoke` | 5 | 2 | 0 | 2.8428s | 0.6754 | 已通过便携 ffmpeg 解阻塞并完成 smoke 转写。 |
+| `qwen3` | `skipped` | 0 | 0 | 0 | - | - | 仍为 Qwen-ASR/nagisa 环境阻塞，不评价模型效果。 |
+
+证据文件：
+
+- `data/asr_eval/reports/ffmpeg_portable_setup.md`
+- `data/asr_eval/reports/qwen_asr_env_check.md`
+- `data/asr_eval/reports/public_smoke/public_samples_manifest.md`
+- `data/asr_eval/reports/public_smoke/local_asr_benchmark_run.md`
+- `data/asr_eval/reports/public_smoke/local_model_benchmark.md`
+
+角色边界：
+
+- 非医疗样本不进入医学关键词召回或诊断结论。
+- 未在 `data/asr_eval/manifest.json` 注册的公开样本不会应用医生/患者角色映射。
+- 自动多说话人分离仍需后续 FunASR speaker pipeline 或 pyannote diarization 评测。
+
 ## 医院 PC 配置采集表
 
 | 字段 | 采集值 |
@@ -149,8 +186,12 @@
 $env:PYTHONPATH = (Get-Location).Path
 python scripts/collect_hardware_profile.py --output data/asr_eval/reports/hardware_profile.json
 python scripts/check_funasr_env.py
+python scripts/setup_ffmpeg_portable.py
 python scripts/check_asr_dependencies.py --json-output data/asr_eval/reports/asr_dependency_check.json --md-output data/asr_eval/reports/asr_dependency_check.md
+python scripts/check_qwen_asr_env.py
 python scripts/run_local_asr_benchmark.py --engines mock funasr sensevoice whisper qwen3 --audio-dir video --truth-dir data/asr_eval/ground_truth --reports-dir data/asr_eval/reports
+python scripts/prepare_public_asr_smoke_samples.py --limit 5
+python scripts/run_local_asr_benchmark.py --engines mock funasr sensevoice whisper qwen3 --audio-dir data/asr_eval/public_smoke/audio --truth-dir data/asr_eval/public_smoke/ground_truth --reports-dir data/asr_eval/reports/public_smoke --mode smoke
 python scripts/evaluate_asr.py --engine mock --audio-dir data/asr_eval/audio --truth-dir data/asr_eval/ground_truth --output data/asr_eval/reports/mock_report.csv
 python scripts/summarize_asr_benchmark.py --reports-dir data/asr_eval/reports --output data/asr_eval/reports/local_model_benchmark.md
 pytest -q tests/test_asr_evaluator.py tests/test_asr_factory.py

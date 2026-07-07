@@ -82,16 +82,47 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
                         "missing_keywords": "咳嗽",
                     }
                 )
+            (reports_dir / "local_asr_benchmark_run.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "v0.5.1",
+                        "sample_count": 1,
+                        "engines": [
+                            {
+                                "engine": "mock",
+                                "status": "measured",
+                                "report_file": "mock_report.csv",
+                                "rows": 1,
+                                "failed_samples": 0,
+                                "reason": "completed",
+                            },
+                            {
+                                "engine": "qwen3",
+                                "status": "skipped",
+                                "report_file": None,
+                                "rows": 0,
+                                "failed_samples": 0,
+                                "reason": "missing dependency",
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
 
             output_path = reports_dir / "local_model_benchmark.md"
             summary = summarize_benchmark(reports_dir, output_path)
 
             self.assertEqual(summary["engines"][0]["engine"], "mock-asr-v0.2")
+            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.1")
             self.assertEqual(summary["engines"][0]["sample_count"], 1)
             self.assertTrue(output_path.exists())
             markdown = output_path.read_text(encoding="utf-8")
             self.assertIn("本地模型与边缘端评测基线报告", markdown)
+            self.assertIn("多引擎运行状态", markdown)
             self.assertIn("mock_report.csv", markdown)
+            self.assertIn("qwen3", markdown)
 
 
 if __name__ == "__main__":

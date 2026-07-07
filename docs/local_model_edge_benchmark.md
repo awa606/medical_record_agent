@@ -45,6 +45,24 @@
 - `data/asr_eval/reports/mock_report.csv`
 - `data/asr_eval/reports/local_model_benchmark.md`
 
+## v0.5.1 多引擎运行状态
+
+本轮新增统一评测入口 `scripts/run_local_asr_benchmark.py`。它会逐个尝试创建 ASR 引擎，能运行的生成 CSV，依赖缺失的记录为 `skipped`，不把依赖问题写成模型效果差。
+
+当前实测结果：
+
+| 引擎 | 当前状态 | 说明 |
+| --- | --- | --- |
+| `mock` | `measured` | 已完成 1 条 `fever_01.wav` 样本评测，只证明评测链路可跑。 |
+| `funasr` | `skipped` | 当前环境缺少 `funasr` Python 依赖，待安装 `requirements-asr.txt` 后复测。 |
+| `qwen3` | `skipped` | 当前环境缺少 Qwen3-ASR 依赖，待安装 `requirements-qwen3-asr.txt` 后复测。 |
+
+新增证据文件：
+
+- `data/asr_eval/reports/local_asr_benchmark_run.json`
+- `data/asr_eval/reports/local_asr_benchmark_run.md`
+- `data/asr_eval/reports/local_model_benchmark.md`
+
 ## 医院 PC 配置采集表
 
 | 字段 | 采集值 |
@@ -82,6 +100,7 @@
 $env:PYTHONPATH = (Get-Location).Path
 python scripts/collect_hardware_profile.py --output data/asr_eval/reports/hardware_profile.json
 python scripts/check_funasr_env.py
+python scripts/run_local_asr_benchmark.py --engines mock funasr qwen3 --audio-dir data/asr_eval/audio --truth-dir data/asr_eval/ground_truth --reports-dir data/asr_eval/reports
 python scripts/evaluate_asr.py --engine mock --audio-dir data/asr_eval/audio --truth-dir data/asr_eval/ground_truth --output data/asr_eval/reports/mock_report.csv
 python scripts/summarize_asr_benchmark.py --reports-dir data/asr_eval/reports --output data/asr_eval/reports/local_model_benchmark.md
 pytest -q tests/test_asr_evaluator.py tests/test_asr_factory.py

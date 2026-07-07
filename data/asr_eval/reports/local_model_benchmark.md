@@ -1,6 +1,6 @@
 # 本地模型与边缘端评测基线报告
 
-> 本报告用于 v0.5.0 评测框架验收。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。
+> 本报告用于 v0.5.1 评测框架验收。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。
 
 ## 硬件配置
 
@@ -22,6 +22,14 @@
 | Qwen-ASR | 不可用 | 未检测到版本 |
 | Ollama CLI | 可用 | 只检查命令是否存在，不调用服务 |
 
+## 多引擎运行状态
+
+| 引擎 | 状态 | 报告 | 样本数 | 失败样本 | 说明 |
+| --- | --- | --- | ---: | ---: | --- |
+| mock | measured | `mock_report.csv` | 1 | 0 | completed |
+| funasr | skipped | - | 0 | 0 | FunASR import failed. Please check ASR dependencies with `python scripts/check_funasr_env.py` and install optional dependencies with `pip install -r requirements-asr.txt`. Original error: ModuleNotFoundError("No module named 'funasr'") |
+| qwen3 | skipped | - | 0 | 0 | Qwen3-ASR dependencies are not installed. Please install requirements-qwen3-asr.txt |
+
 ## ASR 评测结果
 
 | 报告 | 引擎 | 样本数 | 平均 CER | 平均关键词召回 | 平均耗时秒 | 状态 |
@@ -39,4 +47,4 @@
 
 - 在普通医院 Windows 办公 PC 上运行同一组命令，补充真实基线。
 - 安装 FunASR 或 Qwen3-ASR 后复跑对应引擎，不把依赖缺失写成模型效果差。
-- 进入 v0.5.1 后再比较 SenseVoice、Whisper 或多说话人分离路线。
+- 进入 v0.5.2 后再比较 SenseVoice、Whisper 或多说话人分离路线。

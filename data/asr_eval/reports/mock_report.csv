@@ -1,0 +1,2 @@
+﻿filename,engine,duration,inference_time,cer,keyword_recall,recognized_keywords,missing_keywords
+fever_01.wav,mock-asr-v0.2,25.0,0.001,0.968548,0.0,,发烧|三天|淋雨|40度|咳嗽|铁锈色痰|布洛芬|反复发热|食欲不佳

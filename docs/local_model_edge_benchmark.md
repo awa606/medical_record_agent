@@ -22,7 +22,52 @@
 
 | 样本 | 模型 | 硬件 | 输入时长 | 总耗时 | CER | 关键词召回 | 峰值内存 | GPU/CPU 占用 | 结论 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 |
+| `fever_01.wav` | `mock-asr-v0.2` | 本机开发基线 | 25.0s | 0.001s | 0.968548 | 0.0 | 31.43 GB 总内存 | CUDA 可用，1 张 GPU | 仅证明评测链路跑通；mock 固定输出蛇咬伤脚本，不代表真实 ASR 效果。 |
+
+## v0.5.0 本机基线
+
+本轮已建立评测框架和配置采集，不强制下载或安装大模型。
+
+| 项目 | 当前结果 |
+| --- | --- |
+| OS | Windows 11 |
+| CPU | 24 逻辑核心 |
+| 内存 | 31.43 GB |
+| GPU/CUDA | `torch.cuda.is_available() = True`，检测到 1 张 GPU |
+| FunASR | 当前环境未安装，待安装后复测 |
+| Qwen-ASR | 当前环境未安装，待安装后复测 |
+| Ollama CLI | 已检测到命令，但 `OLLAMA_BASE_URL` / `OLLAMA_MODEL` 未配置 |
+| 评测状态 | `mock_measured_real_asr_dependency_missing` |
+
+生成的证据文件：
+
+- `data/asr_eval/reports/hardware_profile.json`
+- `data/asr_eval/reports/mock_report.csv`
+- `data/asr_eval/reports/local_model_benchmark.md`
+
+## 医院 PC 配置采集表
+
+| 字段 | 采集值 |
+| --- | --- |
+| 医院电脑类型 | 待填写：门诊普通办公 PC / 护士站 PC / 工作站 |
+| OS | 待填写 |
+| CPU 型号与核心数 | 待填写 |
+| 内存 | 待填写 |
+| 是否有独显 | 待填写 |
+| GPU 型号与显存 | 待填写 |
+| 是否允许安装 Python/模型依赖 | 待填写 |
+| 是否允许离线模型缓存 | 待填写 |
+| 是否允许连接外网下载模型 | 待填写 |
+| 麦克风/音频输入方式 | 待填写 |
+| 本地部署限制 | 待填写 |
+
+## 边缘端配置建议初稿
+
+| 档位 | 建议配置 | 适用结论 |
+| --- | --- | --- |
+| CPU-only 最低档 | 4-8 核 CPU，16 GB 内存，Windows 10/11 | 适合 mock、轻量规则、短音频离线流程；真实 ASR 需实测延迟。 |
+| 门诊工作站档 | 8-16 核 CPU，32 GB 内存，8-12 GB VRAM | 适合本地 ASR + 小型 LLM 或 Qwen3-ASR 轻量评测。 |
+| 边缘 GPU/NPU 档 | 16-32 GB 内存，边缘 GPU/NPU，离线模型缓存 | 适合隐私隔离、门诊端本地转写和稳定运行试点。 |
 
 ## 验收标准
 
@@ -35,7 +80,9 @@
 
 ```powershell
 $env:PYTHONPATH = (Get-Location).Path
+python scripts/collect_hardware_profile.py --output data/asr_eval/reports/hardware_profile.json
 python scripts/check_funasr_env.py
-python scripts/evaluate_asr.py --engine mock
+python scripts/evaluate_asr.py --engine mock --audio-dir data/asr_eval/audio --truth-dir data/asr_eval/ground_truth --output data/asr_eval/reports/mock_report.csv
+python scripts/summarize_asr_benchmark.py --reports-dir data/asr_eval/reports --output data/asr_eval/reports/local_model_benchmark.md
 pytest -q tests/test_asr_evaluator.py tests/test_asr_factory.py
 ```

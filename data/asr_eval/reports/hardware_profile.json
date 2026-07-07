@@ -1,11 +1,11 @@
 {
   "schema_version": "v0.5.0",
-  "generated_at": "2026-07-07T04:44:07+00:00",
+  "generated_at": "2026-07-07T06:42:27+00:00",
   "purpose": "local_model_edge_benchmark_baseline",
   "privacy_note": "No local identity, API key, model weight path, or patient data is collected.",
   "system": {
     "os": "Windows",
-    "os_release": "11",
+    "os_release": "10",
     "os_version": "10.0.26200",
     "machine": "AMD64",
     "processor": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
@@ -13,35 +13,41 @@
     "memory_total_gb": 31.43
   },
   "python": {
-    "version": "3.13.5",
+    "version": "3.11.6",
     "implementation": "CPython",
     "executable_name": "python.exe"
   },
   "gpu": {
-    "torch_cuda_available": true,
-    "cuda_device_count": 1,
-    "cuda_devices": [
-      "NVIDIA GeForce RTX 5070 Laptop GPU"
-    ],
+    "torch_cuda_available": false,
+    "cuda_device_count": 0,
+    "cuda_devices": [],
     "nvidia_smi_available": true
   },
   "dependencies": {
     "torch": {
       "available": true,
-      "version": "2.10.0",
-      "cuda_available": true,
-      "cuda_device_count": 1,
-      "cuda_devices": [
-        "NVIDIA GeForce RTX 5070 Laptop GPU"
-      ]
+      "version": "2.12.1+cpu",
+      "cuda_available": false,
+      "cuda_device_count": 0,
+      "cuda_devices": []
     },
     "funasr": {
-      "available": false,
-      "version": null
+      "available": true,
+      "version": "1.3.14"
     },
     "qwen_asr": {
       "available": false,
-      "version": null
+      "version": null,
+      "error": "Could not read model from <PROJECT_ROOT>\\.venv-asr\\Lib\\site-packages\\nagisa/data/nagisa_v001.model"
+    },
+    "whisper": {
+      "available": true,
+      "version": "20250625"
+    },
+    "ffmpeg": {
+      "available": false,
+      "version": null,
+      "path_detected": false
     },
     "ollama_cli": {
       "available": true,

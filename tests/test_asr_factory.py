@@ -10,10 +10,14 @@ from app.services.asr import (
     MockASREngine,
     OnlineASREngine,
     Qwen3ASREngine,
+    SenseVoiceASREngine,
+    WhisperASREngine,
     create_asr_engine,
     normalize_online_asr_response,
 )
 from app.services.asr.qwen3_engine import DEPENDENCY_ERROR, ROLE_REVIEW_WARNING
+from app.services.asr.sensevoice_engine import DEPENDENCY_ERROR as SENSEVOICE_DEPENDENCY_ERROR
+from app.services.asr.whisper_engine import DEPENDENCY_ERROR as WHISPER_DEPENDENCY_ERROR
 
 
 class ASRFactoryTests(unittest.TestCase):
@@ -35,6 +39,8 @@ class ASRFactoryTests(unittest.TestCase):
         self.assertIn("Unsupported ASR engine", str(context.exception))
         self.assertIn("mock", str(context.exception))
         self.assertIn("funasr", str(context.exception))
+        self.assertIn("sensevoice", str(context.exception))
+        self.assertIn("whisper", str(context.exception))
         self.assertIn("qwen3", str(context.exception))
         self.assertIn("online", str(context.exception))
 
@@ -103,6 +109,95 @@ class ASRFactoryTests(unittest.TestCase):
         self.assertEqual(result.duration, 1.4)
         self.assertEqual(result.medical_keywords["missing"], [])
         self.assertEqual(result.warnings, [ROLE_REVIEW_WARNING])
+
+    def test_sensevoice_engine_requires_optional_dependencies(self):
+        original_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "funasr":
+                raise ImportError("missing funasr")
+            return original_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=fake_import):
+            with self.assertRaises(RuntimeError) as context:
+                create_asr_engine("sensevoice")
+
+        self.assertEqual(str(context.exception), SENSEVOICE_DEPENDENCY_ERROR)
+
+    def test_sensevoice_engine_response_maps_to_asr_result(self):
+        class FakeModel:
+            def generate(self, **_kwargs):
+                return [
+                    {
+                        "sentence_info": [
+                            {
+                                "spk": "speaker-0",
+                                "sentence": "患者发热三天",
+                                "start": 0,
+                                "end": 1200,
+                            }
+                        ]
+                    }
+                ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audio_path = Path(temp_dir) / "fever_01.wav"
+            audio_path.write_bytes(b"RIFF....WAVEfmt ")
+            result = SenseVoiceASREngine(
+                model_instance=FakeModel(),
+                hotword_path=None,
+                postprocess=lambda value: value,
+            ).transcribe("audio-sensevoice", audio_path)
+
+        self.assertEqual(result.audio_id, "audio-sensevoice")
+        self.assertEqual(result.engine, "sensevoice-small")
+        self.assertEqual(result.text, "患者发热三天")
+        self.assertEqual(result.segments[0].speaker, "speaker-0")
+        self.assertEqual(result.segments[0].end_time, 1.2)
+        self.assertTrue(result.segments[0].needs_review)
+
+    def test_whisper_engine_requires_optional_dependencies(self):
+        original_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "whisper":
+                raise ImportError("missing whisper")
+            return original_import(name, *args, **kwargs)
+
+        with patch("shutil.which", return_value="ffmpeg"):
+            with patch("builtins.__import__", side_effect=fake_import):
+                with self.assertRaises(RuntimeError) as context:
+                    create_asr_engine("whisper")
+
+        self.assertEqual(str(context.exception), WHISPER_DEPENDENCY_ERROR)
+
+    def test_whisper_engine_response_maps_to_asr_result(self):
+        class FakeModel:
+            def transcribe(self, *_args, **_kwargs):
+                return {
+                    "text": "患者发热三天",
+                    "segments": [
+                        {
+                            "text": "患者发热三天",
+                            "start": 0.0,
+                            "end": 1.5,
+                        }
+                    ],
+                }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audio_path = Path(temp_dir) / "fever_01.wav"
+            audio_path.write_bytes(b"RIFF....WAVEfmt ")
+            result = WhisperASREngine(
+                model_instance=FakeModel(),
+                hotword_path=None,
+            ).transcribe("audio-whisper", audio_path)
+
+        self.assertEqual(result.audio_id, "audio-whisper")
+        self.assertEqual(result.engine, "whisper-base")
+        self.assertEqual(result.text, "患者发热三天")
+        self.assertEqual(result.segments[0].speaker, "whisper")
+        self.assertEqual(result.duration, 1.5)
 
     def test_online_engine_requires_environment(self):
         with patch.dict("os.environ", {}, clear=True):

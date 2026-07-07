@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from scripts.collect_hardware_profile import collect_hardware_profile
+from scripts.check_asr_dependencies import collect_asr_dependency_status, render_markdown
 from scripts.summarize_asr_benchmark import summarize_benchmark
 
 
@@ -21,7 +22,22 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
         self.assertIn("memory_total_gb", profile["system"])
         self.assertIn("funasr", profile["dependencies"])
         self.assertIn("qwen_asr", profile["dependencies"])
+        self.assertIn("whisper", profile["dependencies"])
+        self.assertIn("ffmpeg", profile["dependencies"])
         self.assertNotIn("hostname", json.dumps(profile, ensure_ascii=False).lower())
+
+    def test_collect_asr_dependency_status_has_model_fields(self):
+        report = collect_asr_dependency_status()
+
+        self.assertEqual(report["schema_version"], "v0.5.2")
+        self.assertIn("modules", report)
+        self.assertIn("sensevoice", report["modules"])
+        self.assertIn("whisper", report["modules"])
+        self.assertIn("ffmpeg", report["modules"])
+        self.assertIn("SENSEVOICE_MODEL_ID", report["environment"])
+        markdown = render_markdown(report)
+        self.assertIn("ASR 本地依赖检查报告", markdown)
+        self.assertIn("whisper", markdown)
 
     def test_summarize_benchmark_reads_csv_and_hardware_profile(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -62,7 +78,13 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
                         "filename",
                         "engine",
                         "duration",
+                        "status",
+                        "error",
+                        "model_load_time",
                         "inference_time",
+                        "realtime_factor",
+                        "peak_memory_mb",
+                        "gpu_memory_mb",
                         "cer",
                         "keyword_recall",
                         "recognized_keywords",
@@ -75,7 +97,13 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
                         "filename": "fever_01.wav",
                         "engine": "mock-asr-v0.2",
                         "duration": "25.0",
+                        "status": "measured",
+                        "error": "",
+                        "model_load_time": "0.01",
                         "inference_time": "0.2",
+                        "realtime_factor": "0.008",
+                        "peak_memory_mb": "1.5",
+                        "gpu_memory_mb": "",
                         "cer": "0.5",
                         "keyword_recall": "0.25",
                         "recognized_keywords": "发热",
@@ -85,7 +113,7 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             (reports_dir / "local_asr_benchmark_run.json").write_text(
                 json.dumps(
                     {
-                        "schema_version": "v0.5.1",
+                        "schema_version": "v0.5.2",
                         "sample_count": 1,
                         "engines": [
                             {
@@ -97,7 +125,7 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
                                 "reason": "completed",
                             },
                             {
-                                "engine": "qwen3",
+                                "engine": "whisper",
                                 "status": "skipped",
                                 "report_file": None,
                                 "rows": 0,
@@ -115,14 +143,17 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             summary = summarize_benchmark(reports_dir, output_path)
 
             self.assertEqual(summary["engines"][0]["engine"], "mock-asr-v0.2")
-            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.1")
+            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.2")
             self.assertEqual(summary["engines"][0]["sample_count"], 1)
+            self.assertEqual(summary["engines"][0]["failed_count"], 0)
+            self.assertEqual(summary["engines"][0]["avg_realtime_factor"], 0.008)
             self.assertTrue(output_path.exists())
             markdown = output_path.read_text(encoding="utf-8")
             self.assertIn("本地模型与边缘端评测基线报告", markdown)
             self.assertIn("多引擎运行状态", markdown)
+            self.assertIn("平均 RTF", markdown)
             self.assertIn("mock_report.csv", markdown)
-            self.assertIn("qwen3", markdown)
+            self.assertIn("whisper", markdown)
 
 
 if __name__ == "__main__":

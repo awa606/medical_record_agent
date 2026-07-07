@@ -5,6 +5,8 @@ from app.services.asr.mock_engine import MockASREngine
 from app.services.asr.online_engine import OnlineASREngine, normalize_online_asr_response
 from app.services.asr.qwen3_engine import Qwen3ASREngine
 from app.services.asr.role_strategy import apply_manifest_role_strategy, load_asr_manifest
+from app.services.asr.sensevoice_engine import SenseVoiceASREngine
+from app.services.asr.whisper_engine import WhisperASREngine
 
 __all__ = [
     "ASREngine",
@@ -12,6 +14,8 @@ __all__ = [
     "MockASREngine",
     "OnlineASREngine",
     "Qwen3ASREngine",
+    "SenseVoiceASREngine",
+    "WhisperASREngine",
     "apply_manifest_role_strategy",
     "create_asr_engine",
     "load_asr_manifest",

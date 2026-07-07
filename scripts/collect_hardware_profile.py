@@ -54,6 +54,12 @@ def collect_hardware_profile() -> dict[str, Any]:
             "torch": torch_info,
             "funasr": _module_info("funasr"),
             "qwen_asr": _module_info("qwen_asr"),
+            "whisper": _module_info("whisper"),
+            "ffmpeg": {
+                "available": shutil.which("ffmpeg") is not None,
+                "version": None,
+                "path_detected": shutil.which("ffmpeg") is not None,
+            },
             "ollama_cli": {
                 "available": shutil.which("ollama") is not None,
                 "path_detected": shutil.which("ollama") is not None,
@@ -88,7 +94,7 @@ def _module_info(module_name: str) -> dict[str, Any]:
         info["version"] = getattr(module, "__version__", None)
     except Exception as exc:  # noqa: BLE001 - dependency import failures are benchmark data.
         info["available"] = False
-        info["error"] = str(exc)[:200]
+        info["error"] = _sanitize_local_paths(str(exc))[:200]
     return info
 
 
@@ -121,8 +127,13 @@ def _torch_info() -> dict[str, Any]:
             }
         )
     except Exception as exc:  # noqa: BLE001 - dependency import failures are benchmark data.
-        info["error"] = str(exc)[:200]
+        info["error"] = _sanitize_local_paths(str(exc))[:200]
     return info
+
+
+def _sanitize_local_paths(value: str) -> str:
+    root = str(PROJECT_ROOT)
+    return value.replace(root, "<PROJECT_ROOT>").replace(root.replace("\\", "/"), "<PROJECT_ROOT>")
 
 
 def _total_memory_gb() -> float | None:
@@ -174,6 +185,8 @@ def main() -> int:
     print(f"- torch cuda available: {profile['gpu']['torch_cuda_available']}")
     print(f"- FunASR available: {profile['dependencies']['funasr']['available']}")
     print(f"- Qwen-ASR available: {profile['dependencies']['qwen_asr']['available']}")
+    print(f"- Whisper available: {profile['dependencies']['whisper']['available']}")
+    print(f"- ffmpeg available: {profile['dependencies']['ffmpeg']['available']}")
     print(f"- Output: {args.output}")
     return 0
 

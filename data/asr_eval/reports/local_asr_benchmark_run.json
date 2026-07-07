@@ -1,10 +1,10 @@
-{
-  "schema_version": "v0.5.1",
-  "generated_at": "2026-07-07T13:26:21+08:00",
-  "audio_dir": "data\\asr_eval\\audio",
+﻿{
+  "schema_version": "v0.5.2",
+  "generated_at": "2026-07-07T14:29:41+08:00",
+  "audio_dir": "video",
   "truth_dir": "data\\asr_eval\\ground_truth",
   "reports_dir": "data\\asr_eval\\reports",
-  "sample_count": 1,
+  "sample_count": 3,
   "engines": [
     {
       "engine": "mock",
@@ -12,28 +12,55 @@
       "status": "measured",
       "reason": "completed",
       "report_file": "mock_report.csv",
-      "rows": 1,
+      "rows": 3,
       "failed_samples": 0,
       "sample_errors": [],
-      "elapsed_seconds": 0.041
+      "model_load_time": 0.0,
+      "elapsed_seconds": 11.866
     },
     {
       "engine": "funasr",
+      "engine_output": "funasr-paraformer-zh",
+      "status": "measured",
+      "reason": "completed",
+      "report_file": "funasr_report.csv",
+      "rows": 3,
+      "failed_samples": 0,
+      "sample_errors": [],
+      "model_load_time": 712.786,
+      "elapsed_seconds": 1056.688
+    },
+    {
+      "engine": "sensevoice",
+      "engine_output": "sensevoice-small",
+      "status": "measured",
+      "reason": "completed",
+      "report_file": "sensevoice_report.csv",
+      "rows": 3,
+      "failed_samples": 0,
+      "sample_errors": [],
+      "model_load_time": 67.032,
+      "elapsed_seconds": 285.598
+    },
+    {
+      "engine": "whisper",
       "status": "skipped",
-      "reason": "FunASR import failed. Please check ASR dependencies with `python scripts/check_funasr_env.py` and install optional dependencies with `pip install -r requirements-asr.txt`. Original error: ModuleNotFoundError(\"No module named 'funasr'\")",
+      "reason": "Whisper requires a system ffmpeg executable. Install ffmpeg or choose another ASR engine.",
       "report_file": null,
       "rows": 0,
       "failed_samples": 0,
-      "elapsed_seconds": 0.001
+      "model_load_time": null,
+      "elapsed_seconds": 0.032
     },
     {
       "engine": "qwen3",
       "status": "skipped",
-      "reason": "Qwen3-ASR dependencies are not installed. Please install requirements-qwen3-asr.txt",
+      "reason": "Could not read model from <PROJECT_ROOT>\\.venv-asr\\Lib\\site-packages\\nagisa/data/nagisa_v001.model",
       "report_file": null,
       "rows": 0,
       "failed_samples": 0,
-      "elapsed_seconds": 0.002
+      "model_load_time": null,
+      "elapsed_seconds": 2.01
     }
   ]
 }

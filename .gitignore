@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .venv/
+.venv-asr/
 venv/
 .pytest_cache/
 .DS_Store
@@ -17,6 +18,8 @@ data/processed/*
 !data/processed/.gitkeep
 data/asr_eval/audio/*
 !data/asr_eval/audio/.gitkeep
+data/asr_eval/model_cache/*
+!data/asr_eval/model_cache/.gitkeep
 
 # Local demo media
 video/*.wav

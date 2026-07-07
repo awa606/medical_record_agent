@@ -33,7 +33,7 @@ from app.services.asr import apply_manifest_role_strategy, create_asr_engine
 
 router = APIRouter(prefix="/asr/sessions", tags=["asr-sessions"])
 
-SUPPORTED_ASR_ENGINES = {"mock", "funasr", "qwen3", "online"}
+SUPPORTED_ASR_ENGINES = {"mock", "funasr", "sensevoice", "whisper", "qwen3", "online"}
 ROLE_LABELS = {
     "doctor": "医生",
     "医生": "医生",
@@ -87,7 +87,7 @@ def _normalize_engine_name(engine: str) -> str:
     if normalized not in SUPPORTED_ASR_ENGINES:
         raise HTTPException(
             status_code=400,
-            detail="Unsupported ASR engine. Expected mock, funasr, qwen3, or online.",
+            detail="Unsupported ASR engine. Expected mock, funasr, sensevoice, whisper, qwen3, or online.",
         )
     return normalized
 

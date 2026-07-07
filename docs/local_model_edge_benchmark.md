@@ -14,7 +14,7 @@
 
 | 类型 | 候选 | 评测指标 |
 | --- | --- | --- |
-| ASR | `mock`、FunASR、Qwen3-ASR、online baseline | CER、关键词召回、单段延迟、总耗时、CPU/内存/GPU 占用。 |
+| ASR | `mock`、FunASR、SenseVoice、Whisper、Qwen3-ASR、online baseline | CER、关键词召回、单段延迟、总耗时、RTF、CPU/内存/GPU 占用。 |
 | LLM | `mock`、Ollama 本地模型、online baseline | 字段完整率、候选诊断合理性、生成耗时、资源占用。 |
 | 知识库 | 规则模板、症状-疾病关联、检查/用药提示 | 命中率、误触发、医生复核成本。 |
 
@@ -63,6 +63,55 @@
 - `data/asr_eval/reports/local_asr_benchmark_run.md`
 - `data/asr_eval/reports/local_model_benchmark.md`
 
+## v0.5.2 本地多模型 ASR 实测
+
+本轮在隔离环境 `.venv-asr` 中完成多模型依赖安装与同样本评测。当前结果只代表本机开发环境，不代表医院 PC 或边缘端最终性能。
+
+环境事实：
+
+| 项目 | 当前值 |
+| --- | --- |
+| Python | CPython 3.11.6 |
+| torch | 2.12.1+cpu |
+| CUDA | `.venv-asr` 中不可用，本轮按 CPU-only 基线记录 |
+| FunASR | 可用，已实测 |
+| SenseVoice | 可用，已实测 |
+| Whisper | Python 包可用，但系统缺少 `ffmpeg`，本轮跳过 |
+| Qwen-ASR | 依赖安装后导入失败，错误为 `nagisa_v001.model` 读取失败，本轮跳过 |
+
+样本说明：
+
+| 样本 | 时长 | 说明 |
+| --- | ---: | --- |
+| `fever_01.wav` | 309.94s | 发热肺炎方向课程样本 |
+| `chest_pain_01.wav` | 496.30s | 胸痛方向课程样本 |
+| `snakebite_01.wav` | 111.93s | 文件扩展名为 `.wav`，实际容器为 MP3；脚本用 `soundfile` 探测时长 |
+
+同样本实测摘要：
+
+| 引擎 | 状态 | 成功样本 | 平均 CER | 平均关键词召回 | 平均耗时 | 平均 RTF | 结论 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `mock` | `measured` | 3 | 0.8786 | 0.3778 | 3.3160s | 0.1326 | 只证明工程链路可跑，不代表真实 ASR 效果。 |
+| `funasr` | `measured` | 3 | 0.1952 | 0.7667 | 88.1020s | 0.2605 | 当前 CPU-only 下可作为普通话本地 baseline。 |
+| `sensevoice` | `measured` | 3 | 0.1669 | 0.7333 | 50.2437s | 0.1614 | 当前 CPU-only 下速度优于 FunASR，需继续扩展方言/多语种样本。 |
+| `whisper` | `skipped` | 0 | - | - | - | - | 缺少系统 `ffmpeg`，不评价模型效果。 |
+| `qwen3` | `skipped` | 0 | - | - | - | - | `qwen_asr` 依赖导入失败，需单独修复环境后复测。 |
+
+证据文件：
+
+- `data/asr_eval/reports/asr_dependency_check.md`
+- `data/asr_eval/reports/hardware_profile.json`
+- `data/asr_eval/reports/funasr_report.csv`
+- `data/asr_eval/reports/sensevoice_report.csv`
+- `data/asr_eval/reports/local_asr_benchmark_run.md`
+- `data/asr_eval/reports/local_model_benchmark.md`
+
+阶段结论：
+
+- 当前可以把 FunASR 和 SenseVoice 作为 `v0.5.2` 本地 ASR 真实 baseline。
+- 不能把 Whisper 和 Qwen3 判为“效果差”，因为本轮分别是系统依赖和 Python 包导入阻塞。
+- 下一轮应优先补 `ffmpeg`、修复 Qwen-ASR 依赖问题，并在普通医院 Windows PC 上复跑同一组命令。
+
 ## 医院 PC 配置采集表
 
 | 字段 | 采集值 |
@@ -100,7 +149,8 @@
 $env:PYTHONPATH = (Get-Location).Path
 python scripts/collect_hardware_profile.py --output data/asr_eval/reports/hardware_profile.json
 python scripts/check_funasr_env.py
-python scripts/run_local_asr_benchmark.py --engines mock funasr qwen3 --audio-dir data/asr_eval/audio --truth-dir data/asr_eval/ground_truth --reports-dir data/asr_eval/reports
+python scripts/check_asr_dependencies.py --json-output data/asr_eval/reports/asr_dependency_check.json --md-output data/asr_eval/reports/asr_dependency_check.md
+python scripts/run_local_asr_benchmark.py --engines mock funasr sensevoice whisper qwen3 --audio-dir video --truth-dir data/asr_eval/ground_truth --reports-dir data/asr_eval/reports
 python scripts/evaluate_asr.py --engine mock --audio-dir data/asr_eval/audio --truth-dir data/asr_eval/ground_truth --output data/asr_eval/reports/mock_report.csv
 python scripts/summarize_asr_benchmark.py --reports-dir data/asr_eval/reports --output data/asr_eval/reports/local_model_benchmark.md
 pytest -q tests/test_asr_evaluator.py tests/test_asr_factory.py

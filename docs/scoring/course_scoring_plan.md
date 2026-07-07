@@ -82,7 +82,7 @@
 2. `app/schemas/medical_record.py`：字段、候选诊断、安全校验结构。
 3. `app/prompts/medical_record_prompts.py`：Prompt 链和 JSON 输出约束示例。
 4. `app/services/llm/factory.py`：Mock/Online/Ollama LLM provider 选择与兜底。
-5. `app/services/asr/factory.py`：Mock/FunASR/Qwen3/Online ASR 对比引擎。
+5. `app/services/asr/factory.py`：Mock/FunASR/SenseVoice/Whisper/Qwen3/Online ASR 对比引擎。
 6. `app/services/agent_trace.py`：Agent 决策轨迹组装。
 7. `app/db/sqlite.py`：任务表、步骤表、审计日志。
 

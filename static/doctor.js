@@ -79,10 +79,14 @@ const STATUS_LABELS = {
 
 const ENGINE_LABELS = {
   funasr: "FunASR",
+  sensevoice: "SenseVoice Small",
+  whisper: "Whisper Base",
   mock: "Mock ASR",
   qwen3: "Qwen3-ASR 0.6B",
   online: "Online ASR",
   "funasr-local": "FunASR",
+  "sensevoice-small": "SenseVoice Small",
+  "whisper-base": "Whisper Base",
   "mock-asr-v0.2": "Mock ASR",
   "qwen3-asr-0.6b": "Qwen3-ASR 0.6B",
 };

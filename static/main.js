@@ -42,8 +42,12 @@ const STATUS_TO_STEP = {
 const ENGINE_LABELS = {
   mock: "Mock ASR",
   funasr: "FunASR",
+  sensevoice: "SenseVoice Small",
+  whisper: "Whisper Base",
   qwen3: "Qwen3-ASR 0.6B",
   online: "Online ASR",
+  "sensevoice-small": "SenseVoice Small",
+  "whisper-base": "Whisper Base",
 };
 
 const FIELD_DEFS = [

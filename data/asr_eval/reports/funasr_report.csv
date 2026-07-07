@@ -1,0 +1,4 @@
+﻿filename,engine,duration,status,error,model_load_time,inference_time,realtime_factor,peak_memory_mb,gpu_memory_mb,cer,keyword_recall,recognized_keywords,missing_keywords
+chest_pain_01.wav,funasr-paraformer-zh,496.303,measured,,712.786,158.157,0.31867,167.03,,0.207265,0.5,胸痛|高血压|冠心病,胸闷|心慌|心电图
+fever_01.wav,funasr-paraformer-zh,309.94,measured,,712.786,85.082,0.274511,104.31,,0.183164,1.0,发烧|三天|淋雨|40度|咳嗽|铁锈色痰|布洛芬|反复发热|食欲不佳,
+snakebite_01.wav,funasr-paraformer-zh,111.93,measured,,712.786,21.067,0.188216,34.35,,0.195312,0.8,左手|肿痛|两个小时|季德胜蛇药片|寒战|头晕|胸闷|心慌,蛇咬伤|牙龈出血

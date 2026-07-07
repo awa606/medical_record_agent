@@ -10,16 +10,31 @@
 | v0.4 | 强化医学知识库、热词和后处理 | 医疗术语准确率不能只靠换模型。 |
 | v0.5 | 做本地模型和边缘端评测 | 用 CER、关键词召回、延迟和资源占用决定模型路线。 |
 
-## v0.5.0 / v0.5.1 当前结论
+## v0.5.0 / v0.5.2 当前结论
 
 `v0.5.0` 先完成评测框架和配置采集，不切换默认模型。
 
-- 当前机器已完成硬件 profile：Windows 11、24 逻辑核心、31.43 GB 内存、CUDA 可用。
+- 当前机器已完成硬件 profile：24 逻辑核心、31.43 GB 内存；早前主环境检测到 CUDA 可用，但本轮 `.venv-asr` 安装的是 CPU 版 torch，因此 v0.5.2 实测按 CPU-only 基线解释。
 - `mock` 基线已跑通，但当前样本是 `fever_01.wav`，mock 引擎固定输出蛇咬伤脚本，因此只证明评测链路可用，不代表 ASR 模型效果。
 - `v0.5.1` 新增 `scripts/run_local_asr_benchmark.py`，统一记录 `mock/funasr/qwen3` 的 `measured/skipped/failed` 状态。
-- FunASR 和 Qwen-ASR 当前环境未安装，本轮被记录为 `skipped`；进入 `v0.5.2` 前应先完成依赖安装和同样本复测。
+- `v0.5.2` 在 `.venv-asr` 中完成 `mock/funasr/sensevoice/whisper/qwen3` 同样本运行记录。
+- FunASR 和 SenseVoice 已在 `fever_01`、`chest_pain_01`、`snakebite_01` 三条课程样本上完成 CPU-only 实测。
+- Whisper Python 包已安装，但系统缺少 `ffmpeg`，本轮记录为 `skipped`。
+- Qwen-ASR 依赖安装后导入失败，错误为 `nagisa_v001.model` 读取失败，本轮记录为 `skipped`。
 - Ollama CLI 可检测到，但 LLM provider 所需环境变量尚未配置。
-- 模型选择仍以本地评测数据决定，不能根据宣传指标直接替换默认路线。
+- 模型选择仍以本地评测数据决定；当前不切换默认模型，FunASR/SenseVoice 先作为本地真实 baseline。
+
+## v0.5.2 实测结果摘要
+
+| 引擎 | 状态 | 平均 CER | 平均关键词召回 | 平均 RTF | 当前结论 |
+| --- | --- | ---: | ---: | ---: | --- |
+| `mock` | `measured` | 0.8786 | 0.3778 | 0.1326 | 只用于工程链路验证。 |
+| `funasr` | `measured` | 0.1952 | 0.7667 | 0.2605 | 可作为普通话本地 baseline，需医院 PC 复测。 |
+| `sensevoice` | `measured` | 0.1669 | 0.7333 | 0.1614 | 当前本机 CPU-only 下速度较好，需补方言/多语种样本。 |
+| `whisper` | `skipped` | - | - | - | 缺少系统 `ffmpeg`，不评价效果。 |
+| `qwen3` | `skipped` | - | - | - | 依赖导入失败，需修复环境后复测。 |
+
+证据文件见 `data/asr_eval/reports/local_model_benchmark.md` 和 `data/asr_eval/reports/local_asr_benchmark_run.md`。
 
 ## 候选模型
 

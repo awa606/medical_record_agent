@@ -105,11 +105,13 @@
       <section id="audioDrawer" class="drawer-section">
         <p id="audioModeHint" class="muted">上传预录音频。</p>
         <input id="audioFileInput" type="file" accept=".wav,.mp3,.m4a,.flac,.ogg,audio/*" />
-        <select id="audioEngineSelect">
-          <option value="funasr" selected>FunASR</option>
-          <option value="mock">Mock ASR</option>
-          <option value="qwen3">Qwen3-ASR 0.6B</option>
-          <option value="online">Online ASR</option>
+          <select id="audioEngineSelect">
+            <option value="funasr" selected>FunASR</option>
+            <option value="sensevoice">SenseVoice Small</option>
+            <option value="whisper">Whisper Base</option>
+            <option value="mock">Mock ASR</option>
+            <option value="qwen3">Qwen3-ASR 0.6B</option>
+            <option value="online">Online ASR</option>
         </select>
         <button type="button" class="primary-button" id="audioSubmitButton">上传</button>
       </section>

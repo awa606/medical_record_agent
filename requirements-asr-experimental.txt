@@ -1,0 +1,4 @@
+# Optional ASR engines for v0.5.2 local benchmark.
+# Whisper still requires a system ffmpeg executable.
+openai-whisper>=20250625
+huggingface-hub>=0.23

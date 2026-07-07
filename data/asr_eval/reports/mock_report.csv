@@ -1,2 +1,4 @@
-﻿filename,engine,duration,inference_time,cer,keyword_recall,recognized_keywords,missing_keywords
-fever_01.wav,mock-asr-v0.2,25.0,0.001,0.968548,0.0,,发烧|三天|淋雨|40度|咳嗽|铁锈色痰|布洛芬|反复发热|食欲不佳
+﻿filename,engine,duration,status,error,model_load_time,inference_time,realtime_factor,peak_memory_mb,gpu_memory_mb,cer,keyword_recall,recognized_keywords,missing_keywords
+chest_pain_01.wav,mock-asr-v0.2,25.0,measured,,0.0,9.936,0.39745,57.81,,0.979701,0.333333,胸闷|心慌,胸痛|心电图|高血压|冠心病
+fever_01.wav,mock-asr-v0.2,25.0,measured,,0.0,0.002,6.2e-05,0.02,,0.968548,0.0,,发烧|三天|淋雨|40度|咳嗽|铁锈色痰|布洛芬|反复发热|食欲不佳
+snakebite_01.wav,mock-asr-v0.2,25.0,measured,,0.0,0.01,0.000384,0.14,,0.6875,0.8,蛇咬伤|左手|肿痛|两个小时|季德胜蛇药片|头晕|胸闷|心慌,寒战|牙龈出血

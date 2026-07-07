@@ -1,0 +1,62 @@
+{
+  "schema_version": "v0.5.2",
+  "generated_at": "2026-07-07T14:42:22+08:00",
+  "python": {
+    "version": "3.11.6",
+    "implementation": "CPython",
+    "executable_name": "python.exe"
+  },
+  "cuda": {
+    "available": false,
+    "device_count": 0,
+    "devices": []
+  },
+  "modules": {
+    "torch": {
+      "available": true,
+      "version": "2.12.1+cpu"
+    },
+    "torchaudio": {
+      "available": true,
+      "version": "2.11.0+cpu"
+    },
+    "funasr": {
+      "available": true,
+      "version": "1.3.14"
+    },
+    "qwen_asr": {
+      "available": false,
+      "version": null,
+      "error": "Could not read model from <PROJECT_ROOT>\\.venv-asr\\Lib\\site-packages\\nagisa/data/nagisa_v001.model"
+    },
+    "whisper": {
+      "available": true,
+      "version": "20250625"
+    },
+    "soundfile": {
+      "available": true,
+      "version": "0.14.0"
+    },
+    "ffmpeg": {
+      "available": false,
+      "version": null
+    },
+    "sensevoice": {
+      "available": true,
+      "version": "1.3.14",
+      "note": "SenseVoice uses funasr.AutoModel with FunAudioLLM/SenseVoiceSmall."
+    }
+  },
+  "environment": {
+    "SENSEVOICE_MODEL_ID": "FunAudioLLM/SenseVoiceSmall",
+    "SENSEVOICE_DEVICE": "cpu",
+    "SENSEVOICE_LANGUAGE": "zh",
+    "WHISPER_MODEL": "base",
+    "WHISPER_DEVICE": "cpu",
+    "WHISPER_LANGUAGE": "zh",
+    "QWEN3_ASR_MODEL_ID": "Qwen/Qwen3-ASR-0.6B",
+    "QWEN3_ASR_DEVICE": "cpu",
+    "HF_HOME_configured": false,
+    "MODELSCOPE_CACHE_configured": false
+  }
+}

@@ -12,6 +12,14 @@ def create_asr_engine(engine_name: str = "mock") -> ASREngine:
         from app.services.asr.funasr_engine import FunASREngine
 
         return FunASREngine()
+    if normalized_name == "sensevoice":
+        from app.services.asr.sensevoice_engine import SenseVoiceASREngine
+
+        return SenseVoiceASREngine()
+    if normalized_name == "whisper":
+        from app.services.asr.whisper_engine import WhisperASREngine
+
+        return WhisperASREngine()
     if normalized_name == "qwen3":
         from app.services.asr.qwen3_engine import Qwen3ASREngine
 
@@ -21,5 +29,6 @@ def create_asr_engine(engine_name: str = "mock") -> ASREngine:
 
         return OnlineASREngine()
     raise ValueError(
-        f"Unsupported ASR engine: {engine_name}. Expected 'mock', 'funasr', 'qwen3', or 'online'."
+        "Unsupported ASR engine: "
+        f"{engine_name}. Expected 'mock', 'funasr', 'sensevoice', 'whisper', 'qwen3', or 'online'."
     )

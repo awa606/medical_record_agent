@@ -12,6 +12,8 @@ import csv
 import json
 import sys
 import time
+import tracemalloc
+import wave
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -31,7 +33,7 @@ from scripts.evaluate_asr import iter_audio_files, load_keywords  # noqa: E402
 from scripts.summarize_asr_benchmark import summarize_benchmark  # noqa: E402
 
 
-DEFAULT_ENGINES = ["mock", "funasr", "qwen3"]
+DEFAULT_ENGINES = ["mock", "funasr", "sensevoice", "whisper", "qwen3"]
 DEFAULT_AUDIO_DIR = PROJECT_ROOT / "data" / "asr_eval" / "audio"
 DEFAULT_TRUTH_DIR = PROJECT_ROOT / "data" / "asr_eval" / "ground_truth"
 DEFAULT_REPORTS_DIR = PROJECT_ROOT / "data" / "asr_eval" / "reports"
@@ -39,12 +41,19 @@ DEFAULT_KEYWORD_FILE = PROJECT_ROOT / "config" / "hotwords_medical.txt"
 RUN_JSON_NAME = "local_asr_benchmark_run.json"
 RUN_MD_NAME = "local_asr_benchmark_run.md"
 SUMMARY_MD_NAME = "local_model_benchmark.md"
+SUFFIX_PRIORITY = {".wav": 0, ".mp3": 1, ".flac": 2, ".m4a": 3, ".ogg": 4}
 
 CSV_FIELDS = [
     "filename",
     "engine",
     "duration",
+    "status",
+    "error",
+    "model_load_time",
     "inference_time",
+    "realtime_factor",
+    "peak_memory_mb",
+    "gpu_memory_mb",
     "cer",
     "keyword_recall",
     "recognized_keywords",
@@ -77,7 +86,7 @@ def run_local_asr_benchmark(
 ) -> dict[str, Any]:
     reports_dir.mkdir(parents=True, exist_ok=True)
     normalized_engines = _normalize_engines(engines)
-    audio_files = iter_audio_files(audio_dir) if audio_dir.exists() else []
+    audio_files = benchmark_audio_files(audio_dir) if audio_dir.exists() else []
     keywords = load_keywords(keyword_file)
     manifest = load_asr_manifest()
 
@@ -94,7 +103,7 @@ def run_local_asr_benchmark(
     ]
 
     run_summary = {
-        "schema_version": "v0.5.1",
+        "schema_version": "v0.5.2",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "audio_dir": _relative_or_name(audio_dir),
         "truth_dir": _relative_or_name(truth_dir),
@@ -108,11 +117,20 @@ def run_local_asr_benchmark(
     return run_summary
 
 
+def benchmark_audio_files(audio_dir: Path) -> list[Path]:
+    by_stem: dict[str, Path] = {}
+    for path in iter_audio_files(audio_dir):
+        existing = by_stem.get(path.stem)
+        if existing is None or _suffix_rank(path) < _suffix_rank(existing):
+            by_stem[path.stem] = path
+    return sorted(by_stem.values(), key=lambda item: item.stem)
+
+
 def render_run_markdown(run_summary: dict[str, Any]) -> str:
     lines = [
         "# 本地 ASR 多引擎评测运行记录",
         "",
-        "> 本记录用于 v0.5.1。它只说明哪些引擎在当前环境完成评测、哪些因依赖或配置缺失被跳过，不代表最终模型优劣。",
+        "> 本记录用于 v0.5.2。它只说明哪些引擎在当前环境完成评测、哪些因依赖或配置缺失被跳过，不代表最终模型优劣。",
         "",
         "## 运行信息",
         "",
@@ -163,7 +181,13 @@ def _run_one_engine(
 ) -> dict[str, Any]:
     started_at = time.perf_counter()
     try:
+        create_started_at = time.perf_counter()
         engine = create_asr_engine(engine_name)
+        model_load_time = getattr(
+            engine,
+            "model_load_time_seconds",
+            round(time.perf_counter() - create_started_at, 3),
+        )
     except Exception as exc:  # noqa: BLE001 - optional engines fail through imports/config.
         return {
             "engine": engine_name,
@@ -172,6 +196,7 @@ def _run_one_engine(
             "report_file": None,
             "rows": 0,
             "failed_samples": 0,
+            "model_load_time": None,
             "elapsed_seconds": round(time.perf_counter() - started_at, 3),
         }
 
@@ -183,19 +208,23 @@ def _run_one_engine(
     for audio_path in audio_files:
         truth_path = truth_dir / f"{audio_path.stem}.txt"
         if not truth_path.exists():
-            sample_errors.append(
-                {
-                    "filename": audio_path.name,
-                    "reason": f"missing ground truth: {truth_path.name}",
-                }
-            )
+            reason = f"missing ground truth: {truth_path.name}"
+            sample_errors.append({"filename": audio_path.name, "reason": reason})
+            rows.append(_failed_row(audio_path.name, getattr(engine, "name", engine_name), reason, model_load_time))
             continue
 
+        peak_memory_mb: float | None = None
+        gpu_memory_mb: float | None = None
         try:
             sample_started_at = time.perf_counter()
+            tracemalloc.start()
+            _reset_gpu_peak_memory()
             result = engine.transcribe(audio_path.stem, audio_path)
             result = apply_manifest_role_strategy(result, audio_path.stem, manifest)
             inference_time = time.perf_counter() - sample_started_at
+            duration = _result_or_file_duration(result.duration, audio_path)
+            peak_memory_mb = _current_peak_memory_mb()
+            gpu_memory_mb = _gpu_peak_memory_mb()
             sample = manifest.get(audio_path.stem) or {}
             expected_keywords = sample.get("expected_keywords") or keywords
             evaluation = evaluator.evaluate(
@@ -206,15 +235,28 @@ def _run_one_engine(
                 expected_keywords=expected_keywords,
             )
         except Exception as exc:  # noqa: BLE001 - keep remaining engines/samples runnable.
-            sample_errors.append({"filename": audio_path.name, "reason": _compact_error(exc)})
+            reason = _compact_error(exc)
+            sample_errors.append({"filename": audio_path.name, "reason": reason})
+            rows.append(_failed_row(audio_path.name, getattr(engine, "name", engine_name), reason, model_load_time))
+            if tracemalloc.is_tracing():
+                tracemalloc.stop()
             continue
+        finally:
+            if tracemalloc.is_tracing():
+                tracemalloc.stop()
 
         rows.append(
             {
                 "filename": audio_path.name,
                 "engine": result.engine,
-                "duration": result.duration,
+                "duration": duration,
+                "status": "measured",
+                "error": "",
+                "model_load_time": model_load_time,
                 "inference_time": round(inference_time, 3),
+                "realtime_factor": _realtime_factor(inference_time, duration),
+                "peak_memory_mb": peak_memory_mb,
+                "gpu_memory_mb": gpu_memory_mb,
                 "cer": round(evaluation.cer, 6),
                 "keyword_recall": round(evaluation.keyword_recall, 6),
                 "recognized_keywords": "|".join(evaluation.medical_keywords["recognized"]),
@@ -223,16 +265,18 @@ def _run_one_engine(
         )
 
     _write_csv(report_path, rows)
+    measured_rows = [row for row in rows if row.get("status") == "measured"]
     status = _engine_status(rows, sample_errors, audio_files)
     return {
         "engine": engine_name,
-        "engine_output": rows[0]["engine"] if rows else getattr(engine, "name", engine_name),
+        "engine_output": measured_rows[0]["engine"] if measured_rows else getattr(engine, "name", engine_name),
         "status": status,
         "reason": _engine_reason(status, rows, sample_errors, audio_files),
         "report_file": report_path.name,
-        "rows": len(rows),
+        "rows": len(measured_rows),
         "failed_samples": len(sample_errors),
         "sample_errors": sample_errors,
+        "model_load_time": model_load_time,
         "elapsed_seconds": round(time.perf_counter() - started_at, 3),
     }
 
@@ -247,12 +291,17 @@ def _normalize_engines(values: list[str]) -> list[str]:
     return engines or list(DEFAULT_ENGINES)
 
 
+def _suffix_rank(path: Path) -> int:
+    return SUFFIX_PRIORITY.get(path.suffix.lower(), 100)
+
+
 def _engine_status(
     rows: list[dict[str, object]],
     sample_errors: list[dict[str, str]],
     audio_files: list[Path],
 ) -> str:
-    if rows:
+    measured_rows = [row for row in rows if row.get("status") == "measured"]
+    if measured_rows:
         return "measured_with_warnings" if sample_errors else "measured"
     if not audio_files:
         return "no_samples"
@@ -275,9 +324,95 @@ def _engine_reason(
         return "no audio files found"
     if status == "failed" and sample_errors:
         return sample_errors[0]["reason"]
-    if not rows and audio_files:
+    measured_rows = [row for row in rows if row.get("status") == "measured"]
+    if not measured_rows and audio_files:
         return "no successful rows"
     return status
+
+
+def _failed_row(
+    filename: str,
+    engine: str,
+    error: str,
+    model_load_time: float | None,
+) -> dict[str, object]:
+    return {
+        "filename": filename,
+        "engine": engine,
+        "duration": "",
+        "status": "failed",
+        "error": error,
+        "model_load_time": model_load_time,
+        "inference_time": "",
+        "realtime_factor": "",
+        "peak_memory_mb": "",
+        "gpu_memory_mb": "",
+        "cer": "",
+        "keyword_recall": "",
+        "recognized_keywords": "",
+        "missing_keywords": "",
+    }
+
+
+def _realtime_factor(inference_time: float, duration: float | None) -> float | str:
+    if not duration or duration <= 0:
+        return ""
+    return round(inference_time / duration, 6)
+
+
+def _result_or_file_duration(result_duration: float | None, audio_path: Path) -> float | None:
+    if result_duration and result_duration > 0:
+        return result_duration
+    return _audio_duration_seconds(audio_path)
+
+
+def _audio_duration_seconds(audio_path: Path) -> float | None:
+    try:
+        import soundfile as sf
+
+        info = sf.info(str(audio_path))
+        if info.duration and info.duration > 0:
+            return round(float(info.duration), 3)
+    except Exception:
+        pass
+
+    try:
+        with wave.open(str(audio_path), "rb") as wav_file:
+            frames = wav_file.getnframes()
+            sample_rate = wav_file.getframerate()
+        if sample_rate > 0:
+            return round(frames / float(sample_rate), 3)
+    except Exception:
+        return None
+    return None
+
+
+def _current_peak_memory_mb() -> float | None:
+    if not tracemalloc.is_tracing():
+        return None
+    _current, peak = tracemalloc.get_traced_memory()
+    return round(peak / (1024 * 1024), 2)
+
+
+def _reset_gpu_peak_memory() -> None:
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+    except Exception:
+        return
+
+
+def _gpu_peak_memory_mb() -> float | None:
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return round(torch.cuda.max_memory_allocated() / (1024 * 1024), 2)
+    except Exception:
+        return None
+    return None
 
 
 def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
@@ -299,8 +434,13 @@ def _relative_or_name(path: Path) -> str:
 
 
 def _compact_error(exc: Exception) -> str:
-    message = str(exc).replace("\n", " ").strip()
+    message = _sanitize_local_paths(str(exc)).replace("\n", " ").strip()
     return message or exc.__class__.__name__
+
+
+def _sanitize_local_paths(value: str) -> str:
+    root = str(PROJECT_ROOT)
+    return value.replace(root, "<PROJECT_ROOT>").replace(root.replace("\\", "/"), "<PROJECT_ROOT>")
 
 
 def _cell(value: Any) -> str:

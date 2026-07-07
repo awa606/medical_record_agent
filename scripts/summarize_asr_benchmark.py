@@ -49,7 +49,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines = [
         "# 本地模型与边缘端评测基线报告",
         "",
-        "> 本报告用于 v0.5.1 评测框架验收。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。",
+        "> 本报告用于 v0.5.2 评测框架验收。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。",
         "",
         "## 硬件配置",
         "",
@@ -69,6 +69,8 @@ def render_markdown(summary: dict[str, Any]) -> str:
         _dependency_row("torch", dependencies.get("torch")),
         _dependency_row("FunASR", dependencies.get("funasr")),
         _dependency_row("Qwen-ASR", dependencies.get("qwen_asr")),
+        _dependency_row("Whisper", dependencies.get("whisper")),
+        _dependency_row("ffmpeg", dependencies.get("ffmpeg")),
         f"| Ollama CLI | {_bool_cell((dependencies.get('ollama_cli') or {}).get('available'))} | 只检查命令是否存在，不调用服务 |",
         "",
         "## 多引擎运行状态",
@@ -98,26 +100,28 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "",
             "## ASR 评测结果",
             "",
-            "| 报告 | 引擎 | 样本数 | 平均 CER | 平均关键词召回 | 平均耗时秒 | 状态 |",
-            "| --- | --- | ---: | ---: | ---: | ---: | --- |",
+            "| 报告 | 引擎 | 成功样本 | 失败样本 | 平均 CER | 平均关键词召回 | 平均耗时秒 | 平均 RTF | 状态 |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
         ]
     )
     engines = summary.get("engines") or []
     if engines:
         for item in engines:
             lines.append(
-                "| {report} | {engine} | {samples} | {cer} | {recall} | {time} | {status} |".format(
+                "| {report} | {engine} | {samples} | {failed} | {cer} | {recall} | {time} | {rtf} | {status} |".format(
                     report=item["report_file"],
                     engine=item["engine"],
                     samples=item["sample_count"],
+                    failed=item["failed_count"],
                     cer=_number_cell(item["avg_cer"]),
                     recall=_number_cell(item["avg_keyword_recall"]),
                     time=_number_cell(item["avg_inference_time"]),
+                    rtf=_number_cell(item["avg_realtime_factor"]),
                     status=item["status"],
                 )
             )
     else:
-        lines.append("| 无 | 待评测 | 0 | - | - | - | no_csv_reports |")
+        lines.append("| 无 | 待评测 | 0 | 0 | - | - | - | - | no_csv_reports |")
 
     lines.extend(
         [
@@ -132,8 +136,8 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "## 后续动作",
             "",
             "- 在普通医院 Windows 办公 PC 上运行同一组命令，补充真实基线。",
-            "- 安装 FunASR 或 Qwen3-ASR 后复跑对应引擎，不把依赖缺失写成模型效果差。",
-            "- 进入 v0.5.2 后再比较 SenseVoice、Whisper 或多说话人分离路线。",
+            "- 修复 `skipped` 引擎的系统依赖、Python 包导入、模型下载或资源问题后复跑，不把环境阻塞写成模型效果差。",
+            "- 当前已实测引擎继续作为本机开发 baseline，最终选型必须等待医院 PC 或边缘端复测。",
             "",
         ]
     )
@@ -147,19 +151,28 @@ def _summarize_csv(path: Path) -> dict[str, Any]:
             "report_file": path.name,
             "engine": "unknown",
             "sample_count": 0,
+            "failed_count": 0,
             "avg_cer": None,
             "avg_keyword_recall": None,
             "avg_inference_time": None,
+            "avg_realtime_factor": None,
             "status": "no_rows",
         }
+    measured_rows = [
+        row for row in rows if (row.get("status") or "measured") == "measured"
+    ]
+    failed_rows = [row for row in rows if row.get("status") == "failed"]
+    metric_rows = measured_rows or rows
     return {
         "report_file": path.name,
-        "engine": rows[0].get("engine") or "unknown",
-        "sample_count": len(rows),
-        "avg_cer": _average(rows, "cer"),
-        "avg_keyword_recall": _average(rows, "keyword_recall"),
-        "avg_inference_time": _average(rows, "inference_time"),
-        "status": "measured",
+        "engine": (measured_rows[0] if measured_rows else rows[0]).get("engine") or "unknown",
+        "sample_count": len(measured_rows),
+        "failed_count": len(failed_rows),
+        "avg_cer": _average(metric_rows, "cer"),
+        "avg_keyword_recall": _average(metric_rows, "keyword_recall"),
+        "avg_inference_time": _average(metric_rows, "inference_time"),
+        "avg_realtime_factor": _average(metric_rows, "realtime_factor"),
+        "status": _csv_status(measured_rows, failed_rows),
     }
 
 
@@ -171,6 +184,19 @@ def _average(rows: list[dict[str, str]], key: str) -> float | None:
         except ValueError:
             continue
     return round(mean(values), 6) if values else None
+
+
+def _csv_status(
+    measured_rows: list[dict[str, str]],
+    failed_rows: list[dict[str, str]],
+) -> str:
+    if measured_rows and failed_rows:
+        return "measured_with_failed_samples"
+    if measured_rows:
+        return "measured"
+    if failed_rows:
+        return "failed"
+    return "no_rows"
 
 
 def _benchmark_status(
@@ -208,7 +234,7 @@ def _benchmark_status(
 
 
 def _load_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
 def _dependency_row(name: str, data: dict[str, Any] | None) -> str:

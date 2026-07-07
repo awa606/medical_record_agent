@@ -10,7 +10,7 @@
 | v0.4 | 强化医学知识库、热词和后处理 | 医疗术语准确率不能只靠换模型。 |
 | v0.5 | 做本地模型和边缘端评测 | 用 CER、关键词召回、延迟和资源占用决定模型路线。 |
 
-## v0.5.0 / v0.5.4 当前结论
+## v0.5.0 / v0.5.5 当前结论
 
 `v0.5.0` 先完成评测框架和配置采集，不切换默认模型。
 
@@ -26,8 +26,10 @@
 - `v0.5.4` 明确中文医患样本是主评测，英文公开样本只保留为可选多语种 smoke，不进入中文医患模型结论。
 - `v0.5.4` 开始按 Qwen 官方建议准备 Python 3.12 独立环境 `.venv-qwen-asr`，复测结果必须区分依赖、模型下载、资源和真实转写效果。
 - 普通医院 Windows PC 基线按 16GB 内存、512GB SSD、集成显卡的办公电脑假设处理；更高阶边缘端配置单独评测。
+- `v0.5.5` 已定位 Qwen-ASR 阻塞为 Windows 中文路径下 `nagisa/DyNet` 读取模型失败；迁移到 `C:\mra_qwen_runtime` ASCII 运行区后，`nagisa/qwen_asr` 导入成功。
+- Qwen3-ASR 已完成公开 smoke 和 `snakebite_01.wav` 课程中文短样本实测，进入可对比评测阶段。
 - Ollama CLI 可检测到，但 LLM provider 所需环境变量尚未配置。
-- 模型选择仍以本地评测数据决定；当前不切换默认模型，FunASR/SenseVoice 先作为本地真实 baseline。
+- 模型选择仍以本地评测数据决定；当前不切换默认模型，FunASR/SenseVoice 先作为稳定 baseline，Qwen3-ASR 进入 `v0.5.6` 对比评测。
 
 ## v0.5.2 实测结果摘要
 
@@ -67,6 +69,24 @@
 - `data/asr_eval/reports/v0_5_4_chinese_priority_asr_report.md`
 - `docs/普通医院Windows电脑配置基线.md`
 - `data/asr_eval/reports/qwen_asr_py312_check.md`
+
+## v0.5.5 Qwen-ASR 阻塞修复结果
+
+| 项目 | 结果 |
+| --- | --- |
+| 原始阻塞 | 原仓库中文路径下 `nagisa_v001.model` 文件存在但 DyNet 读取失败。 |
+| 修复方式 | 新建 `C:\mra_qwen_runtime` ASCII 运行区，不移动仓库、不改第三方包源码。 |
+| 导入验证 | `import nagisa; import qwen_asr` 成功。 |
+| 公开 smoke | `qwen3=measured_with_smoke`，Qwen 官方中文样本完成转写。 |
+| 课程短样本 | `snakebite_01.wav` 完成实测：CER `0.144531`，关键词召回 `0.6`，RTF `0.591740`。 |
+| 当前结论 | Qwen-ASR 依赖阻塞已解除，但是否适合作为默认模型仍需 `v0.5.6` 与 FunASR/SenseVoice 全样本对比。 |
+
+证据文件：
+
+- `data/asr_eval/reports/qwen_ascii_runtime_setup.md`
+- `data/asr_eval/reports/qwen_ascii_runtime_check.md`
+- `data/asr_eval/reports/qwen_ascii_runtime/local_model_benchmark.md`
+- `data/asr_eval/reports/qwen_ascii_runtime_course_sample/local_model_benchmark.md`
 
 ## 候选模型
 

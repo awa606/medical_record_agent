@@ -122,7 +122,7 @@ def run_local_asr_benchmark(
     ]
 
     run_summary = {
-        "schema_version": "v0.5.4",
+        "schema_version": "v0.5.5",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "mode": mode,
         "evaluation_profile": resolved_profile["profile"],
@@ -152,7 +152,7 @@ def render_run_markdown(run_summary: dict[str, Any]) -> str:
     lines = [
         "# 本地 ASR 多引擎评测运行记录",
         "",
-        "> 本记录用于 v0.5.4。它只说明哪些引擎在当前环境完成评测、哪些因依赖或配置缺失被跳过，不代表最终模型优劣。",
+        "> 本记录用于 v0.5.5。它只说明哪些引擎在当前环境完成评测、哪些因依赖或配置缺失被跳过，不代表最终模型优劣。",
         "",
         "## 运行信息",
         "",

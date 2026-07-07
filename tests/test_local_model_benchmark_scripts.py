@@ -123,7 +123,7 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             (reports_dir / "local_asr_benchmark_run.json").write_text(
                 json.dumps(
                     {
-                        "schema_version": "v0.5.4",
+                        "schema_version": "v0.5.5",
                         "mode": "smoke",
                         "evaluation_profile": "mixed_public_smoke",
                         "evaluation_policy": "公开 smoke 混合集",
@@ -156,7 +156,7 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             summary = summarize_benchmark(reports_dir, output_path)
 
             self.assertEqual(summary["engines"][0]["engine"], "mock-asr-v0.2")
-            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.4")
+            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.5")
             self.assertEqual(summary["engines"][0]["sample_count"], 1)
             self.assertEqual(summary["engines"][0]["failed_count"], 0)
             self.assertEqual(summary["engines"][0]["avg_realtime_factor"], 0.008)
@@ -201,6 +201,8 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
                     "recommended_for_qwen": "3.12",
                     "matches_recommended_version": False,
                     "inside_qwen_venv": False,
+                    "path_contains_non_ascii": True,
+                    "ascii_runtime_dir": "C:\\mra_qwen_runtime",
                 },
                 "modules": {
                     "nagisa": {"available": False, "error": "nagisa missing"},
@@ -213,6 +215,8 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
 
         self.assertIn("Qwen-ASR 环境检查报告", markdown)
         self.assertIn("Python 3.12", markdown)
+        self.assertIn("路径是否含非 ASCII 字符", markdown)
+        self.assertIn("C:\\mra_qwen_runtime", markdown)
 
 
 if __name__ == "__main__":

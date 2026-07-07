@@ -1,0 +1,6 @@
+﻿filename,engine,duration,status,error,ground_truth_available,transcript_non_empty,segments,model_load_time,inference_time,realtime_factor,peak_memory_mb,gpu_memory_mb,cer,keyword_recall,recognized_keywords,missing_keywords
+mini_librispeech_5694-64038-0000.flac,qwen3-asr-0.6b,2.595,measured,,True,True,1,28.778,6.297,2.426409,32.29,,0.9,0.0,,
+mini_librispeech_5694-64038-0001.flac,qwen3-asr-0.6b,3.65,measured,,True,True,1,28.778,2.74,0.750599,1.12,,1.0,0.0,,
+mini_librispeech_5694-64038-0002.flac,qwen3-asr-0.6b,8.77,measured,,True,True,1,28.778,6.486,0.739612,2.68,,0.96,0.0,,
+qwen_asr_en.wav,qwen3-asr-0.6b,15.051,smoke_measured,,False,True,1,28.778,13.154,0.873934,5.71,,,,,
+qwen_asr_zh.wav,qwen3-asr-0.6b,4.204,smoke_measured,,False,True,1,28.778,2.203,0.523965,1.29,,,,,

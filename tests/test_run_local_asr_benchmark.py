@@ -41,7 +41,7 @@ class RunLocalASRBenchmarkTests(unittest.TestCase):
                 )
 
             by_engine = {item["engine"]: item for item in summary["engines"]}
-            self.assertEqual(summary["schema_version"], "v0.5.4")
+            self.assertEqual(summary["schema_version"], "v0.5.5")
             self.assertEqual(summary["evaluation_profile"], "course_medical_cn")
             self.assertEqual(by_engine["mock"]["status"], "measured")
             self.assertEqual(by_engine["mock"]["rows"], 1)
@@ -135,7 +135,7 @@ class RunLocalASRBenchmarkTests(unittest.TestCase):
                 )
 
             engine = summary["engines"][0]
-            self.assertEqual(summary["schema_version"], "v0.5.4")
+            self.assertEqual(summary["schema_version"], "v0.5.5")
             self.assertEqual(summary["mode"], "smoke")
             self.assertEqual(summary["evaluation_profile"], "course_medical_cn")
             self.assertEqual(engine["status"], "smoke_measured")

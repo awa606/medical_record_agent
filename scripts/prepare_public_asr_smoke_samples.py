@@ -85,7 +85,7 @@ def prepare_public_smoke_samples(
         )
 
     manifest = {
-        "schema_version": "v0.5.4",
+        "schema_version": "v0.5.5",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "purpose": "non_medical_public_asr_smoke_test",
         "evaluation_policy": {
@@ -110,7 +110,7 @@ def render_markdown(manifest: dict[str, Any]) -> str:
     lines = [
         "# 中文优先公开 ASR 冒烟测试样本记录",
         "",
-        "> 本记录用于 v0.5.4。音频和标注文本只保存在本地忽略目录，不提交 GitHub。",
+        "> 本记录用于 v0.5.5。音频和标注文本只保存在本地忽略目录，不提交 GitHub。",
         "",
         "## 评测分层",
         "",

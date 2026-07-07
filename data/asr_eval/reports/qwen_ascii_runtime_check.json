@@ -1,0 +1,37 @@
+{
+  "schema_version": "v0.5.5",
+  "generated_at": "2026-07-07T17:40:33+08:00",
+  "python": {
+    "version": "3.12.10",
+    "implementation": "CPython",
+    "executable_name": "python.exe",
+    "executable_path": "C:\\mra_qwen_runtime\\.venv-qwen-asr\\Scripts\\python.exe",
+    "prefix": "C:\\mra_qwen_runtime\\.venv-qwen-asr",
+    "recommended_for_qwen": "3.12",
+    "matches_recommended_version": true,
+    "inside_qwen_venv": true,
+    "path_contains_non_ascii": false,
+    "ascii_runtime_dir": "C:\\mra_qwen_runtime"
+  },
+  "environment": {
+    "QWEN3_ASR_MODEL_ID": "Qwen/Qwen3-ASR-0.6B",
+    "QWEN3_ASR_DEVICE": "cpu",
+    "HF_HOME_configured": true,
+    "MODELSCOPE_CACHE_configured": true
+  },
+  "modules": {
+    "nagisa": {
+      "available": true,
+      "version": "0.2.11"
+    },
+    "qwen_asr": {
+      "available": true,
+      "version": null
+    }
+  },
+  "model_init": {
+    "status": "import_ok",
+    "message": "Qwen3ASRModel import ok; model loading not attempted for Qwen/Qwen3-ASR-0.6B"
+  },
+  "recommendation": "Qwen-ASR 基础导入已通过，可进入模型下载和真实转写复测。"
+}

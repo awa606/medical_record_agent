@@ -177,6 +177,31 @@
 - `data/asr_eval/reports/qwen_asr_py312_check.md`（Python 3.12 复测后生成）
 - `data/asr_eval/reports/qwen_py312/local_model_benchmark.md`（Qwen3 smoke 复测后生成）
 
+## v0.5.5 Qwen-ASR ASCII 运行区修复
+
+本轮没有移动仓库，也没有修改第三方包源码。修复方式是把 Qwen-ASR 的 Python 3.12 虚拟环境、音频副本和模型缓存放到 ASCII 路径 `C:\mra_qwen_runtime`，避开 Windows 中文路径下 `nagisa/DyNet` 读取 `nagisa_v001.model` 失败的问题。
+
+| 项目 | 结果 |
+| --- | --- |
+| ASCII 运行区 | `C:\mra_qwen_runtime` |
+| Python | CPython 3.12.10 |
+| Qwen-ASR 导入 | `nagisa=True`、`qwen_asr=True`、`model_init=import_ok` |
+| 公开 smoke | `qwen3=measured_with_smoke`，5 条公开样本完成运行 |
+| 课程中文短样本 | `snakebite_01.wav` 完成实测 |
+
+课程中文短样本结果：
+
+| 样本 | 引擎 | CER | 关键词召回 | 耗时 | RTF | 结论 |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `snakebite_01.wav` | `qwen3-asr-0.6b` | 0.144531 | 0.6 | 66.233s | 0.591740 | Qwen-ASR 依赖阻塞已解除，但仍需全样本对比。 |
+
+证据文件：
+
+- `data/asr_eval/reports/qwen_ascii_runtime_setup.md`
+- `data/asr_eval/reports/qwen_ascii_runtime_check.md`
+- `data/asr_eval/reports/qwen_ascii_runtime/local_asr_benchmark_run.md`
+- `data/asr_eval/reports/qwen_ascii_runtime_course_sample/local_model_benchmark.md`
+
 ## 医院 PC 配置采集表
 
 | 字段 | 采集值 |
@@ -225,6 +250,8 @@ py -3.12 -m venv .venv-qwen-asr
 .\.venv-qwen-asr\Scripts\python -m pip install -r requirements-qwen3-asr.txt
 .\.venv-qwen-asr\Scripts\python scripts\check_qwen_asr_env.py --json-output data\asr_eval\reports\qwen_asr_py312_check.json --markdown-output data\asr_eval\reports\qwen_asr_py312_check.md
 .\.venv-qwen-asr\Scripts\python scripts\run_local_asr_benchmark.py --engines qwen3 --audio-dir data\asr_eval\public_smoke\audio --truth-dir data\asr_eval\public_smoke\ground_truth --reports-dir data\asr_eval\reports\qwen_py312 --mode smoke --evaluation-profile public_cn_smoke
+C:\mra_qwen_runtime\.venv-qwen-asr\Scripts\python.exe scripts\check_qwen_asr_env.py --json-output data\asr_eval\reports\qwen_ascii_runtime_check.json --markdown-output data\asr_eval\reports\qwen_ascii_runtime_check.md
+C:\mra_qwen_runtime\.venv-qwen-asr\Scripts\python.exe scripts\run_local_asr_benchmark.py --engines qwen3 --mode strict --evaluation-profile course_medical_cn --audio-dir C:\mra_qwen_runtime\course_medical_cn\audio --truth-dir C:\mra_qwen_runtime\course_medical_cn\ground_truth --reports-dir data\asr_eval\reports\qwen_ascii_runtime_course_sample
 python scripts/evaluate_asr.py --engine mock --audio-dir data/asr_eval/audio --truth-dir data/asr_eval/ground_truth --output data/asr_eval/reports/mock_report.csv
 python scripts/summarize_asr_benchmark.py --reports-dir data/asr_eval/reports --output data/asr_eval/reports/local_model_benchmark.md
 pytest -q tests/test_asr_evaluator.py tests/test_asr_factory.py

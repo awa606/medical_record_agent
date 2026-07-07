@@ -24,18 +24,22 @@ def collect_qwen_asr_env_status() -> dict[str, Any]:
     qwen_asr = _module_info("qwen_asr")
     model_init = _check_qwen_model_init(qwen_asr.get("available", False))
     python_version = platform.python_version()
+    executable_path = str(Path(sys.executable))
+    prefix_path = str(Path(sys.prefix))
     python_info = {
         "version": python_version,
         "implementation": platform.python_implementation(),
         "executable_name": Path(sys.executable).name,
-        "executable_path": _sanitize_local_paths(sys.executable),
-        "prefix": _sanitize_local_paths(sys.prefix),
+        "executable_path": _sanitize_local_paths(executable_path),
+        "prefix": _sanitize_local_paths(prefix_path),
         "recommended_for_qwen": "3.12",
         "matches_recommended_version": python_version.startswith("3.12."),
-        "inside_qwen_venv": ".venv-qwen-asr" in _sanitize_local_paths(sys.prefix).replace("\\", "/"),
+        "inside_qwen_venv": ".venv-qwen-asr" in _sanitize_local_paths(prefix_path).replace("\\", "/"),
+        "path_contains_non_ascii": _has_non_ascii(executable_path) or _has_non_ascii(prefix_path),
+        "ascii_runtime_dir": os.environ.get("QWEN_ASCII_RUNTIME_DIR", ""),
     }
     return {
-        "schema_version": "v0.5.4",
+        "schema_version": "v0.5.5",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "python": python_info,
         "environment": {
@@ -68,7 +72,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines = [
         "# Qwen-ASR 环境检查报告",
         "",
-        "> 本报告用于 v0.5.4。它只记录 Qwen-ASR 依赖和初始化状态，不评价模型效果。",
+        "> 本报告用于 v0.5.5。它只记录 Qwen-ASR 依赖、路径和初始化状态，不评价模型效果。",
         "",
         "## Python",
         "",
@@ -81,6 +85,8 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"| Qwen 建议隔离环境 | Python {_cell(python.get('recommended_for_qwen'))} |",
         f"| 是否 Python 3.12 | {_bool_cell(python.get('matches_recommended_version'))} |",
         f"| 是否 `.venv-qwen-asr` | {_bool_cell(python.get('inside_qwen_venv'))} |",
+        f"| 路径是否含非 ASCII 字符 | {_yes_no_cell(python.get('path_contains_non_ascii'))} |",
+        f"| ASCII 运行区 | `{_cell(python.get('ascii_runtime_dir'))}` |",
         "",
         "## 依赖状态",
         "",
@@ -148,6 +154,8 @@ def _recommendation(
         for item in [nagisa, qwen_asr, model_init]
     )
     if "nagisa_v001.model" in combined_error:
+        if python_info.get("path_contains_non_ascii"):
+            return "当前 Python 或虚拟环境路径包含非 ASCII 字符，`nagisa/DyNet` 可能无法读取包内模型文件；建议在 `C:\\mra_qwen_runtime` 这类 ASCII 路径中创建 `.venv-qwen-asr` 后复测。"
         if python_info.get("matches_recommended_version") and python_info.get("inside_qwen_venv"):
             return "已在 `.venv-qwen-asr` Python 3.12 中复现 `nagisa_v001.model` 读取失败；下一步应定位 `nagisa/qwen-asr` 包兼容性、模型文件权限或上游包缺陷，不再把问题归因于 Python 版本。"
         return "当前是 `nagisa_v001.model` 读取失败，重装后若仍失败，应创建 `.venv-qwen-asr` Python 3.12 隔离环境再复测。"
@@ -165,6 +173,10 @@ def _sanitize_local_paths(value: str) -> str:
     return value.replace(root, "<PROJECT_ROOT>").replace(root.replace("\\", "/"), "<PROJECT_ROOT>")
 
 
+def _has_non_ascii(value: str) -> bool:
+    return any(ord(char) > 127 for char in value)
+
+
 def _cell(value: Any) -> str:
     if value is None or value == "":
         return "-"
@@ -173,6 +185,10 @@ def _cell(value: Any) -> str:
 
 def _bool_cell(value: Any) -> str:
     return "可用" if bool(value) else "不可用"
+
+
+def _yes_no_cell(value: Any) -> str:
+    return "是" if bool(value) else "否"
 
 
 def main() -> int:

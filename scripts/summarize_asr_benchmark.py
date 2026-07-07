@@ -57,7 +57,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines = [
         "# 本地模型与边缘端评测基线报告",
         "",
-        "> 本报告用于 v0.5.3 评测框架验收。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。",
+        "> 本报告用于 v0.5.4 评测框架验收。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。",
         "",
         "## 硬件配置",
         "",
@@ -84,6 +84,8 @@ def render_markdown(summary: dict[str, Any]) -> str:
         "## 多引擎运行状态",
         "",
         f"- 运行模式：`{run_status.get('mode', 'strict')}`",
+        f"- 评测分层：`{run_status.get('evaluation_profile', '未记录')}`",
+        f"- 分层说明：{_cell(run_status.get('evaluation_policy'))}",
         "",
         "| 引擎 | 状态 | 报告 | 样本数 | 失败样本 | 说明 |",
         "| --- | --- | --- | ---: | ---: | --- |",

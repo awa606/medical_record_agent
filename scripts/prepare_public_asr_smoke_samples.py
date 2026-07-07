@@ -27,6 +27,11 @@ QWEN_SAMPLES = [
         "url": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen3-ASR-Repo/asr_zh.wav",
         "filename": "qwen_asr_zh.wav",
         "language": "zh",
+        "evaluation_group": "public_cn_smoke",
+        "evaluation_priority": "中文公开冒烟样本",
+        "scene": "non_medical_public",
+        "medical_relevance": "none",
+        "role_conclusion_policy": "不用于医生/患者角色正确性结论",
         "source": "Qwen3-ASR official repository sample",
         "license": "Sample distributed by Qwen3-ASR project for model usage examples; use as smoke-test reference only.",
         "ground_truth": None,
@@ -36,6 +41,11 @@ QWEN_SAMPLES = [
         "url": "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen3-ASR-Repo/asr_en.wav",
         "filename": "qwen_asr_en.wav",
         "language": "en",
+        "evaluation_group": "public_en_smoke",
+        "evaluation_priority": "可选多语种冒烟样本",
+        "scene": "non_medical_public",
+        "medical_relevance": "none",
+        "role_conclusion_policy": "不进入中文医患主结论",
         "source": "Qwen3-ASR official repository sample",
         "license": "Sample distributed by Qwen3-ASR project for model usage examples; use as smoke-test reference only.",
         "ground_truth": None,
@@ -75,9 +85,15 @@ def prepare_public_smoke_samples(
         )
 
     manifest = {
-        "schema_version": "v0.5.3",
+        "schema_version": "v0.5.4",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "purpose": "non_medical_public_asr_smoke_test",
+        "evaluation_policy": {
+            "primary_group": "course_medical_cn",
+            "public_chinese_group": "public_cn_smoke",
+            "optional_multilingual_group": "public_en_smoke",
+            "note": "v0.5.4 以后中文医患课程样本是主评测；英文公开样本只保留为可选多语种 smoke。",
+        },
         "note": "Audio files and ground-truth text are local-only and ignored by Git; reports are lightweight evidence.",
         "samples": samples,
     }
@@ -92,19 +108,33 @@ def write_manifest(manifest: dict[str, Any], json_output: Path, markdown_output:
 
 def render_markdown(manifest: dict[str, Any]) -> str:
     lines = [
-        "# 非医疗公开 ASR 冒烟测试样本记录",
+        "# 中文优先公开 ASR 冒烟测试样本记录",
         "",
-        "> 本记录用于 v0.5.3。音频和标注文本只保存在本地忽略目录，不提交 GitHub。",
+        "> 本记录用于 v0.5.4。音频和标注文本只保存在本地忽略目录，不提交 GitHub。",
         "",
-        "| 样本 | 语言 | 是否有标注 | 来源 | 许可证/说明 |",
-        "| --- | --- | --- | --- | --- |",
+        "## 评测分层",
+        "",
+        "| 分层 | 用途 | 是否进入中文医患主结论 |",
+        "| --- | --- | --- |",
+        "| `course_medical_cn` | 三条课程中文医患样本，作为本项目 ASR 主评测。 | 是 |",
+        "| `public_cn_smoke` | 中文公开样本，只验证中文 ASR 可用性。 | 只作为辅助证据 |",
+        "| `public_en_smoke` | 英文公开样本，只验证多语种/Whisper/ffmpeg 冒烟链路。 | 否 |",
+        "",
+        "## 样本清单",
+        "",
+        "| 样本 | 语言 | 分层 | 优先级 | 是否有标注 | 是否医疗 | 角色结论 | 来源 | 许可证/说明 |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for sample in manifest.get("samples", []):
         lines.append(
-            "| {sample_id} | {language} | {truth} | {source} | {license} |".format(
+            "| {sample_id} | {language} | {group} | {priority} | {truth} | {medical} | {role_policy} | {source} | {license} |".format(
                 sample_id=_cell(sample.get("sample_id")),
                 language=_cell(sample.get("language")),
+                group=_cell(sample.get("evaluation_group")),
+                priority=_cell(sample.get("evaluation_priority")),
                 truth="是" if sample.get("has_ground_truth") else "否",
+                medical=_cell(sample.get("medical_relevance")),
+                role_policy=_cell(sample.get("role_conclusion_policy")),
                 source=_cell(sample.get("source")),
                 license=_cell(sample.get("license")),
             )
@@ -114,7 +144,9 @@ def render_markdown(manifest: dict[str, Any]) -> str:
             "",
             "## 边界",
             "",
-            "- 非医疗样本只用于 ASR 可用性、耗时和通用转写冒烟测试。",
+            "- 中文医患课程样本才是本项目 ASR 主评测对象。",
+            "- 非医疗公开样本只用于 ASR 可用性、耗时和通用转写冒烟测试。",
+            "- 英文公开样本只保留为可选多语种 smoke，不进入中文医患效果结论。",
             "- 非医疗样本不用于医学诊断、医学关键词召回或医生/患者角色正确性结论。",
             "",
         ]
@@ -157,6 +189,11 @@ def _prepare_mini_librispeech(
                     "filename": audio_path.name,
                     "ground_truth_file": truth_path.name,
                     "language": "en",
+                    "evaluation_group": "public_en_smoke",
+                    "evaluation_priority": "可选多语种冒烟样本",
+                    "scene": "non_medical_public",
+                    "medical_relevance": "none",
+                    "role_conclusion_policy": "不进入中文医患主结论",
                     "source": "Mini LibriSpeech dev-clean-2, OpenSLR SLR31",
                     "license": "CC BY 4.0",
                     "has_ground_truth": True,
@@ -200,6 +237,11 @@ def _sample_record(item: dict[str, Any], destination: Path, *, has_ground_truth:
         "sample_id": item["sample_id"],
         "filename": destination.name,
         "language": item["language"],
+        "evaluation_group": item.get("evaluation_group"),
+        "evaluation_priority": item.get("evaluation_priority"),
+        "scene": item.get("scene"),
+        "medical_relevance": item.get("medical_relevance"),
+        "role_conclusion_policy": item.get("role_conclusion_policy"),
         "source": item["source"],
         "license": item["license"],
         "has_ground_truth": has_ground_truth,
@@ -232,7 +274,7 @@ def main() -> int:
         include_mini_librispeech=not args.skip_mini_librispeech,
     )
     write_manifest(manifest, args.json_output, args.markdown_output)
-    print("非医疗公开 ASR 冒烟样本准备完成：")
+    print("中文优先公开 ASR 冒烟样本准备完成：")
     print(f"- samples: {len(manifest['samples'])}")
     print(f"- audio dir: {args.audio_dir}")
     print(f"- report: {args.markdown_output}")

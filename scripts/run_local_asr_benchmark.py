@@ -82,6 +82,12 @@ def parse_args() -> argparse.Namespace:
         default="strict",
         help="strict requires ground truth; smoke allows transcription-only samples.",
     )
+    parser.add_argument(
+        "--evaluation-profile",
+        choices=["auto", "course_medical_cn", "public_cn_smoke", "public_en_smoke", "mixed_public_smoke"],
+        default="auto",
+        help="Evaluation profile used in reports. auto infers from the audio directory.",
+    )
     return parser.parse_args()
 
 
@@ -93,12 +99,14 @@ def run_local_asr_benchmark(
     reports_dir: Path,
     keyword_file: Path = DEFAULT_KEYWORD_FILE,
     mode: str = "strict",
+    evaluation_profile: str = "auto",
 ) -> dict[str, Any]:
     reports_dir.mkdir(parents=True, exist_ok=True)
     normalized_engines = _normalize_engines(engines)
     audio_files = benchmark_audio_files(audio_dir) if audio_dir.exists() else []
     keywords = load_keywords(keyword_file)
     manifest = load_asr_manifest()
+    resolved_profile = _resolve_evaluation_profile(evaluation_profile, audio_dir)
 
     engine_results = [
         _run_one_engine(
@@ -114,9 +122,11 @@ def run_local_asr_benchmark(
     ]
 
     run_summary = {
-        "schema_version": "v0.5.3",
+        "schema_version": "v0.5.4",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "mode": mode,
+        "evaluation_profile": resolved_profile["profile"],
+        "evaluation_policy": resolved_profile["policy"],
         "audio_dir": _relative_or_name(audio_dir),
         "truth_dir": _relative_or_name(truth_dir),
         "reports_dir": _relative_or_name(reports_dir),
@@ -142,7 +152,7 @@ def render_run_markdown(run_summary: dict[str, Any]) -> str:
     lines = [
         "# 本地 ASR 多引擎评测运行记录",
         "",
-        "> 本记录用于 v0.5.3。它只说明哪些引擎在当前环境完成评测、哪些因依赖或配置缺失被跳过，不代表最终模型优劣。",
+        "> 本记录用于 v0.5.4。它只说明哪些引擎在当前环境完成评测、哪些因依赖或配置缺失被跳过，不代表最终模型优劣。",
         "",
         "## 运行信息",
         "",
@@ -150,6 +160,8 @@ def render_run_markdown(run_summary: dict[str, Any]) -> str:
         f"- 音频目录：`{run_summary.get('audio_dir')}`",
         f"- 标注目录：`{run_summary.get('truth_dir')}`",
         f"- 模式：`{run_summary.get('mode', 'strict')}`",
+        f"- 评测分层：`{run_summary.get('evaluation_profile', 'auto')}`",
+        f"- 分层说明：{run_summary.get('evaluation_policy', '-')}",
         f"- 样本数量：{run_summary.get('sample_count')}",
         "",
         "## 引擎状态",
@@ -178,6 +190,7 @@ def render_run_markdown(run_summary: dict[str, Any]) -> str:
             "- `smoke_measured` 表示无标注样本完成转写，只用于可用性冒烟测试。",
             "- `skipped` 表示依赖、模型或配置缺失，本轮不评价该模型效果。",
             "- `failed` 表示引擎已创建，但样本转写全部失败，需要进入 Debug Log 分析。",
+            "- `course_medical_cn` 是中文医患主评测；`public_en_smoke` 只用于可选多语种冒烟验证。",
             "",
         ]
     )
@@ -310,6 +323,26 @@ def _normalize_engines(values: list[str]) -> list[str]:
             if engine and engine not in engines:
                 engines.append(engine)
     return engines or list(DEFAULT_ENGINES)
+
+
+def _resolve_evaluation_profile(profile: str, audio_dir: Path) -> dict[str, str]:
+    normalized = (profile or "auto").strip().lower()
+    if normalized == "auto":
+        normalized_path = str(audio_dir).replace("\\", "/").lower()
+        if "/video" in normalized_path or normalized_path.endswith("video"):
+            normalized = "course_medical_cn"
+        elif "public_smoke" in normalized_path:
+            normalized = "mixed_public_smoke"
+        else:
+            normalized = "course_medical_cn"
+
+    policies = {
+        "course_medical_cn": "三条课程中文医患样本，是本项目 ASR 主评测，可用于医学关键词和流程效果分析。",
+        "public_cn_smoke": "中文公开非医疗样本，只验证中文 ASR 可用性，不用于医学结论。",
+        "public_en_smoke": "英文公开非医疗样本，只验证多语种/Whisper/ffmpeg 冒烟链路，不进入中文医患主结论。",
+        "mixed_public_smoke": "公开 smoke 混合集；中文样本只作可用性辅助，英文样本只作可选多语种冒烟。",
+    }
+    return {"profile": normalized, "policy": policies.get(normalized, "未定义评测分层")}
 
 
 def _suffix_rank(path: Path) -> int:
@@ -499,6 +532,7 @@ def main() -> int:
         reports_dir=args.reports_dir,
         keyword_file=args.keyword_file,
         mode=args.mode,
+        evaluation_profile=args.evaluation_profile,
     )
     print("本地 ASR 多引擎评测完成：")
     for item in summary["engines"]:

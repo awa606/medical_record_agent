@@ -23,15 +23,21 @@ def collect_qwen_asr_env_status() -> dict[str, Any]:
     nagisa = _module_info("nagisa")
     qwen_asr = _module_info("qwen_asr")
     model_init = _check_qwen_model_init(qwen_asr.get("available", False))
+    python_version = platform.python_version()
+    python_info = {
+        "version": python_version,
+        "implementation": platform.python_implementation(),
+        "executable_name": Path(sys.executable).name,
+        "executable_path": _sanitize_local_paths(sys.executable),
+        "prefix": _sanitize_local_paths(sys.prefix),
+        "recommended_for_qwen": "3.12",
+        "matches_recommended_version": python_version.startswith("3.12."),
+        "inside_qwen_venv": ".venv-qwen-asr" in _sanitize_local_paths(sys.prefix).replace("\\", "/"),
+    }
     return {
-        "schema_version": "v0.5.3",
+        "schema_version": "v0.5.4",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-        "python": {
-            "version": platform.python_version(),
-            "implementation": platform.python_implementation(),
-            "executable_name": Path(sys.executable).name,
-            "recommended_for_qwen": "3.12",
-        },
+        "python": python_info,
         "environment": {
             "QWEN3_ASR_MODEL_ID": os.environ.get("QWEN3_ASR_MODEL_ID", "Qwen/Qwen3-ASR-0.6B"),
             "QWEN3_ASR_DEVICE": os.environ.get("QWEN3_ASR_DEVICE", "cpu"),
@@ -43,7 +49,7 @@ def collect_qwen_asr_env_status() -> dict[str, Any]:
             "qwen_asr": qwen_asr,
         },
         "model_init": model_init,
-        "recommendation": _recommendation(nagisa, qwen_asr, model_init),
+        "recommendation": _recommendation(nagisa, qwen_asr, model_init, python_info),
     }
 
 
@@ -62,7 +68,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines = [
         "# Qwen-ASR 环境检查报告",
         "",
-        "> 本报告用于 v0.5.3。它只记录 Qwen-ASR 依赖和初始化状态，不评价模型效果。",
+        "> 本报告用于 v0.5.4。它只记录 Qwen-ASR 依赖和初始化状态，不评价模型效果。",
         "",
         "## Python",
         "",
@@ -70,7 +76,11 @@ def render_markdown(report: dict[str, Any]) -> str:
         "| --- | --- |",
         f"| 当前 Python | {_cell(python.get('implementation'))} {_cell(python.get('version'))} |",
         f"| 可执行文件 | {_cell(python.get('executable_name'))} |",
+        f"| 执行路径 | `{_cell(python.get('executable_path'))}` |",
+        f"| 环境前缀 | `{_cell(python.get('prefix'))}` |",
         f"| Qwen 建议隔离环境 | Python {_cell(python.get('recommended_for_qwen'))} |",
+        f"| 是否 Python 3.12 | {_bool_cell(python.get('matches_recommended_version'))} |",
+        f"| 是否 `.venv-qwen-asr` | {_bool_cell(python.get('inside_qwen_venv'))} |",
         "",
         "## 依赖状态",
         "",
@@ -131,12 +141,15 @@ def _recommendation(
     nagisa: dict[str, Any],
     qwen_asr: dict[str, Any],
     model_init: dict[str, str],
+    python_info: dict[str, Any],
 ) -> str:
     combined_error = " ".join(
         str(item.get("error") or item.get("message") or "")
         for item in [nagisa, qwen_asr, model_init]
     )
     if "nagisa_v001.model" in combined_error:
+        if python_info.get("matches_recommended_version") and python_info.get("inside_qwen_venv"):
+            return "已在 `.venv-qwen-asr` Python 3.12 中复现 `nagisa_v001.model` 读取失败；下一步应定位 `nagisa/qwen-asr` 包兼容性、模型文件权限或上游包缺陷，不再把问题归因于 Python 版本。"
         return "当前是 `nagisa_v001.model` 读取失败，重装后若仍失败，应创建 `.venv-qwen-asr` Python 3.12 隔离环境再复测。"
     if not nagisa.get("available"):
         return "优先在 `.venv-asr` 中重装 `nagisa`，若仍失败则创建 `.venv-qwen-asr` Python 3.12 隔离环境。"

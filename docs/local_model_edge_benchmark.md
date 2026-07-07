@@ -149,6 +149,34 @@
 - 未在 `data/asr_eval/manifest.json` 注册的公开样本不会应用医生/患者角色映射。
 - 自动多说话人分离仍需后续 FunASR speaker pipeline 或 pyannote diarization 评测。
 
+## v0.5.4 中文优先评测与医院 PC 配置基线
+
+本轮将评测口径从“公开非医疗 smoke”收束回中文医患主场景。英文公开样本继续保留，但只用于可选多语种冒烟测试，不进入中文医患效果结论。
+
+评测分层：
+
+| 分层 | 样本 | 用途 | 是否进入主结论 |
+| --- | --- | --- | --- |
+| `course_medical_cn` | `fever_01`、`chest_pain_01`、`snakebite_01` | 中文医患场景主评测，计算 CER、医学关键词召回、耗时和 RTF。 | 是 |
+| `public_cn_smoke` | Qwen 官方 `asr_zh.wav` | 中文公开非医疗 smoke，只验证中文 ASR 可用性。 | 辅助证据 |
+| `public_en_smoke` | Qwen 官方 `asr_en.wav`、Mini LibriSpeech 英文样本 | 可选多语种 smoke，验证 Whisper/ffmpeg 和多语种链路。 | 否 |
+
+普通医院 Windows PC 配置基线：
+
+| 档位 | 建议配置 | 说明 |
+| --- | --- | --- |
+| 最低可验证档 | Windows 10/11，Intel i3/i5 或 Ryzen 3/5，8-16 GB 内存，256-512 GB SSD，集成显卡 | 只保证工程流程可跑，真实 ASR 延迟需实测。 |
+| 普通医院办公 PC 基线 | Windows 10/11，Intel i5-12500 / Ryzen5 5600G 或近似 6 核以上 CPU，16 GB 内存，512 GB SSD，集成显卡 | 作为本项目最低交付假设，优先评测 FunASR、SenseVoice、Whisper CPU-only。 |
+| 推荐门诊工作站 | 8-16 核 CPU，32 GB 内存，1 TB SSD，NVIDIA 8-12 GB VRAM | 用于本地 ASR、长音频、Qwen3-ASR 和小型 LLM 试点。 |
+| 边缘端/高配试点 | 8-16 核 CPU，32-64 GB 内存，1 TB NVMe，NVIDIA 12-16 GB 以上 VRAM 或边缘 GPU/NPU | 用于方言、多语种、多人物分离和隐私隔离部署验证。 |
+
+证据文件：
+
+- `docs/普通医院Windows电脑配置基线.md`
+- `data/asr_eval/reports/v0_5_4_chinese_priority_asr_report.md`
+- `data/asr_eval/reports/qwen_asr_py312_check.md`（Python 3.12 复测后生成）
+- `data/asr_eval/reports/qwen_py312/local_model_benchmark.md`（Qwen3 smoke 复测后生成）
+
 ## 医院 PC 配置采集表
 
 | 字段 | 采集值 |
@@ -191,7 +219,12 @@ python scripts/check_asr_dependencies.py --json-output data/asr_eval/reports/asr
 python scripts/check_qwen_asr_env.py
 python scripts/run_local_asr_benchmark.py --engines mock funasr sensevoice whisper qwen3 --audio-dir video --truth-dir data/asr_eval/ground_truth --reports-dir data/asr_eval/reports
 python scripts/prepare_public_asr_smoke_samples.py --limit 5
-python scripts/run_local_asr_benchmark.py --engines mock funasr sensevoice whisper qwen3 --audio-dir data/asr_eval/public_smoke/audio --truth-dir data/asr_eval/public_smoke/ground_truth --reports-dir data/asr_eval/reports/public_smoke --mode smoke
+python scripts/run_local_asr_benchmark.py --engines mock funasr sensevoice whisper qwen3 --audio-dir data/asr_eval/public_smoke/audio --truth-dir data/asr_eval/public_smoke/ground_truth --reports-dir data/asr_eval/reports/public_smoke --mode smoke --evaluation-profile mixed_public_smoke
+py -3.12 -m venv .venv-qwen-asr
+.\.venv-qwen-asr\Scripts\python -m pip install --upgrade pip setuptools wheel
+.\.venv-qwen-asr\Scripts\python -m pip install -r requirements-qwen3-asr.txt
+.\.venv-qwen-asr\Scripts\python scripts\check_qwen_asr_env.py --json-output data\asr_eval\reports\qwen_asr_py312_check.json --markdown-output data\asr_eval\reports\qwen_asr_py312_check.md
+.\.venv-qwen-asr\Scripts\python scripts\run_local_asr_benchmark.py --engines qwen3 --audio-dir data\asr_eval\public_smoke\audio --truth-dir data\asr_eval\public_smoke\ground_truth --reports-dir data\asr_eval\reports\qwen_py312 --mode smoke --evaluation-profile public_cn_smoke
 python scripts/evaluate_asr.py --engine mock --audio-dir data/asr_eval/audio --truth-dir data/asr_eval/ground_truth --output data/asr_eval/reports/mock_report.csv
 python scripts/summarize_asr_benchmark.py --reports-dir data/asr_eval/reports --output data/asr_eval/reports/local_model_benchmark.md
 pytest -q tests/test_asr_evaluator.py tests/test_asr_factory.py

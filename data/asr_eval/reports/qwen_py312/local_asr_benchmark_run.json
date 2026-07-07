@@ -1,0 +1,23 @@
+{
+  "schema_version": "v0.5.4",
+  "generated_at": "2026-07-07T16:56:26+08:00",
+  "mode": "smoke",
+  "evaluation_profile": "public_cn_smoke",
+  "evaluation_policy": "中文公开非医疗样本，只验证中文 ASR 可用性，不用于医学结论。",
+  "audio_dir": "data\\asr_eval\\public_smoke\\audio",
+  "truth_dir": "data\\asr_eval\\public_smoke\\ground_truth",
+  "reports_dir": "data\\asr_eval\\reports\\qwen_py312",
+  "sample_count": 5,
+  "engines": [
+    {
+      "engine": "qwen3",
+      "status": "skipped",
+      "reason": "Could not read model from <PROJECT_ROOT>\\.venv-qwen-asr\\Lib\\site-packages\\nagisa/data/nagisa_v001.model",
+      "report_file": null,
+      "rows": 0,
+      "failed_samples": 0,
+      "model_load_time": null,
+      "elapsed_seconds": 16.057
+    }
+  ]
+}

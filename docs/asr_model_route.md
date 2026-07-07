@@ -10,7 +10,7 @@
 | v0.4 | 强化医学知识库、热词和后处理 | 医疗术语准确率不能只靠换模型。 |
 | v0.5 | 做本地模型和边缘端评测 | 用 CER、关键词召回、延迟和资源占用决定模型路线。 |
 
-## v0.5.0 / v0.5.3 当前结论
+## v0.5.0 / v0.5.4 当前结论
 
 `v0.5.0` 先完成评测框架和配置采集，不切换默认模型。
 
@@ -23,6 +23,9 @@
 - Qwen-ASR 依赖安装后导入失败，错误为 `nagisa_v001.model` 读取失败，本轮记录为 `skipped`。
 - `v0.5.3` 安装项目本地便携 ffmpeg 后，Whisper 已在公开非医疗样本上完成 smoke 复测。
 - Qwen-ASR 在 `.venv-asr` 中重装 `nagisa/qwen-asr` 后仍失败；当前机器未检测到 Python 3.12，`.venv-qwen-asr` 暂未创建。
+- `v0.5.4` 明确中文医患样本是主评测，英文公开样本只保留为可选多语种 smoke，不进入中文医患模型结论。
+- `v0.5.4` 开始按 Qwen 官方建议准备 Python 3.12 独立环境 `.venv-qwen-asr`，复测结果必须区分依赖、模型下载、资源和真实转写效果。
+- 普通医院 Windows PC 基线按 16GB 内存、512GB SSD、集成显卡的办公电脑假设处理；更高阶边缘端配置单独评测。
 - Ollama CLI 可检测到，但 LLM provider 所需环境变量尚未配置。
 - 模型选择仍以本地评测数据决定；当前不切换默认模型，FunASR/SenseVoice 先作为本地真实 baseline。
 
@@ -48,6 +51,22 @@
 | `qwen3` | `skipped` | 0 | - | 仍为 Qwen-ASR/nagisa 环境阻塞，需 Python 3.12 隔离环境后复测。 |
 
 公开非医疗样本只验证 ASR 可用性和通用转写，不替代医疗问诊样本，也不证明医生/患者角色自动区分正确。
+
+## v0.5.4 中文优先与 Qwen-ASR 复测路线
+
+| 项目 | 决策 |
+| --- | --- |
+| 主评测样本 | `video/fever_01.wav`、`video/chest_pain_01.wav`、`video/snakebite_01.wav`。 |
+| 中文公开 smoke | Qwen 官方 `asr_zh.wav`，只验证中文 ASR 可用性。 |
+| 英文公开 smoke | Qwen 官方 `asr_en.wav`、Mini LibriSpeech，只验证多语种/ffmpeg/Whisper 链路。 |
+| Qwen 环境 | 安装 Python 3.12，创建 `.venv-qwen-asr`，不污染 `.venv-asr`。 |
+| 医院 PC 基线 | 普通 Windows 办公 PC：i5/Ryzen5 级 CPU、16GB 内存、512GB SSD、集成显卡；最终以实机采集为准。 |
+
+证据文件：
+
+- `data/asr_eval/reports/v0_5_4_chinese_priority_asr_report.md`
+- `docs/普通医院Windows电脑配置基线.md`
+- `data/asr_eval/reports/qwen_asr_py312_check.md`
 
 ## 候选模型
 

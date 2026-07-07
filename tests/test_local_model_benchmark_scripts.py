@@ -123,8 +123,10 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             (reports_dir / "local_asr_benchmark_run.json").write_text(
                 json.dumps(
                     {
-                        "schema_version": "v0.5.3",
+                        "schema_version": "v0.5.4",
                         "mode": "smoke",
+                        "evaluation_profile": "mixed_public_smoke",
+                        "evaluation_policy": "公开 smoke 混合集",
                         "sample_count": 1,
                         "engines": [
                             {
@@ -154,7 +156,7 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             summary = summarize_benchmark(reports_dir, output_path)
 
             self.assertEqual(summary["engines"][0]["engine"], "mock-asr-v0.2")
-            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.3")
+            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.4")
             self.assertEqual(summary["engines"][0]["sample_count"], 1)
             self.assertEqual(summary["engines"][0]["failed_count"], 0)
             self.assertEqual(summary["engines"][0]["avg_realtime_factor"], 0.008)
@@ -162,6 +164,7 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             markdown = output_path.read_text(encoding="utf-8")
             self.assertIn("本地模型与边缘端评测基线报告", markdown)
             self.assertIn("多引擎运行状态", markdown)
+            self.assertIn("评测分层", markdown)
             self.assertIn("平均 RTF", markdown)
             self.assertIn("mock_report.csv", markdown)
             self.assertIn("whisper", markdown)
@@ -182,7 +185,8 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             }
         )
 
-        self.assertIn("非医疗公开 ASR 冒烟测试样本记录", markdown)
+        self.assertIn("中文优先公开 ASR 冒烟测试样本记录", markdown)
+        self.assertIn("public_en_smoke", markdown)
         self.assertIn("不用于医学诊断", markdown)
 
     def test_qwen_env_markdown_records_recommendation(self):
@@ -192,7 +196,11 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
                     "implementation": "CPython",
                     "version": "3.11",
                     "executable_name": "python.exe",
+                    "executable_path": "python.exe",
+                    "prefix": ".venv-asr",
                     "recommended_for_qwen": "3.12",
+                    "matches_recommended_version": False,
+                    "inside_qwen_venv": False,
                 },
                 "modules": {
                     "nagisa": {"available": False, "error": "nagisa missing"},

@@ -55,7 +55,7 @@ class PromptAndMockLLMTests(unittest.TestCase):
         self.assertIn("用药提示", draft)
         self.assertIn("风险提醒", draft)
         self.assertIn("医生确认", draft)
-        self.assertIn("不自动处方", draft)
+        self.assertIn("不生成处方", draft)
         self.assertNotIn("立即使用抗蛇毒血清", draft)
 
     def test_mock_safety_check_blocks_unsafe_export(self):

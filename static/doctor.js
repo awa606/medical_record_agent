@@ -341,6 +341,45 @@ function fieldEvidence(field, key) {
   return spans.length ? spans.map((span) => span.text).filter(Boolean).join("\n") : "暂无证据片段，需结合原始转写复核。";
 }
 
+function diagnosisList(items) {
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => String(item || "").trim()).filter(Boolean);
+}
+
+function diagnosisConfidence(diagnosis = {}) {
+  if (diagnosis.confidence == null) return "规则置信度待评估";
+  return `规则置信度 ${Math.round(Number(diagnosis.confidence) * 100)}%`;
+}
+
+function renderDiagnosisDetailLine(label, value) {
+  if (!value) return "";
+  return `
+    <div class="diagnosis-detail">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>
+  `;
+}
+
+function renderDiagnosisDetailList(label, items) {
+  const values = diagnosisList(items);
+  if (!values.length) return "";
+  return renderDiagnosisDetailLine(label, values.join("；"));
+}
+
+function renderDiagnosisDetails(diagnosis = {}) {
+  const ruleText = [diagnosis.rule_id, diagnosisConfidence(diagnosis)].filter(Boolean).join(" · ");
+  const details = [
+    renderDiagnosisDetailLine("规则", ruleText),
+    renderDiagnosisDetailLine("触发原因", diagnosis.reason),
+    renderDiagnosisDetailList("建议检查", diagnosis.suggested_checks),
+    renderDiagnosisDetailList("用药提示", diagnosis.medication_notes),
+    renderDiagnosisDetailList("风险提醒", diagnosis.risk_warnings),
+    renderDiagnosisDetailList("建议补问", diagnosis.follow_up_questions),
+  ].join("");
+  return details || `<div class="diagnosis-detail"><span>规则说明</span><strong>暂无扩展说明，需医生结合原始转写复核。</strong></div>`;
+}
+
 function renderFields() {
   const fields = appState.currentRecordFields;
   if (!fields) {
@@ -380,9 +419,10 @@ function renderFields() {
       </div>
       <div class="field-value">${escapeHtml(diagnosis.name || "未命名诊断")}</div>
       <div class="field-meta">
-        <span class="confidence">${escapeHtml(diagnosis.status || "候选/待医生确认")}</span>
+        <span class="confidence">${escapeHtml(diagnosis.status || "候选/待医生确认")} · ${escapeHtml(diagnosisConfidence(diagnosis))}</span>
         <button type="button" data-evidence-toggle>证据</button>
       </div>
+      <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
       <div class="field-evidence">${escapeHtml((diagnosis.evidence || []).map((item) => item.text).join("\n") || "暂无候选诊断证据。")}</div>
     </article>
   `).join("");
@@ -848,7 +888,8 @@ function renderAssist() {
       body: diagnoses.length ? diagnoses.map((diagnosis) => `
           <div class="diagnosis-card">
             <strong>${escapeHtml(diagnosis.name || "未命名诊断")}</strong>
-            ${escapeHtml(diagnosis.status || "候选/待医生确认")}
+            <div class="diagnosis-status">${escapeHtml(diagnosis.status || "候选/待医生确认")} · ${escapeHtml(diagnosisConfidence(diagnosis))}</div>
+            <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
           </div>
         `).join("") : `<div class="safety-strip success">暂无候选诊断。</div>`,
     })}

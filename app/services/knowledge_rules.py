@@ -242,8 +242,8 @@ def _suggested_checks(syndrome: dict[str, Any]) -> list[str]:
 def _medication_notes(syndrome: dict[str, Any]) -> list[str]:
     principle = syndrome.get("treatment_principle")
     if principle:
-        return [f"规则提示治法方向为“{principle}”，具体治疗和用药需医生确认；系统不自动处方。"]
-    return ["具体治疗和用药需医生确认；系统不自动处方。"]
+        return [f"规则提示治法方向为“{principle}”，具体治疗和用药需医生确认；系统不生成处方。"]
+    return ["具体治疗和用药需医生确认；系统不生成处方。"]
 
 
 def _risk_warnings(

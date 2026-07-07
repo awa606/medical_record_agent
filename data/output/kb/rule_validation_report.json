@@ -1,0 +1,166 @@
+{
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "clinical_validity": "not_claimed",
+    "purpose": "engineering_rule_traceability"
+  },
+  "results": [
+    {
+      "case_id": "KB_VAL_WIND_COLD_001",
+      "title": "风寒束表证典型样例",
+      "passed": true,
+      "expected_rule_ids": [
+        "R_WIND_COLD_001"
+      ],
+      "matched_rule_ids": [
+        "R_WIND_COLD_001"
+      ],
+      "missing_expected": [],
+      "unexpected_forbidden": [],
+      "unsafe_terms": [],
+      "missing_warning_terms": [],
+      "bad_status": [],
+      "candidates": [
+        {
+          "name": "感冒（风寒束表证）",
+          "status": "候选/待医生确认",
+          "rule_id": "R_WIND_COLD_001",
+          "confidence": 0.86,
+          "reason": "恶寒明显、无汗、清涕、身痛支持风寒束表。 命中症状：恶寒、发热较轻、无汗、清涕、肢体酸痛。",
+          "risk_warnings": [
+            "仅模拟知识库，不用于真实诊疗"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "KB_VAL_WIND_HEAT_001",
+      "title": "风热犯表证典型样例",
+      "passed": true,
+      "expected_rule_ids": [
+        "R_WIND_HEAT_001"
+      ],
+      "matched_rule_ids": [
+        "R_WIND_HEAT_001"
+      ],
+      "missing_expected": [],
+      "unexpected_forbidden": [],
+      "unsafe_terms": [],
+      "missing_warning_terms": [],
+      "bad_status": [],
+      "candidates": [
+        {
+          "name": "感冒（风热犯表证）",
+          "status": "候选/待医生确认",
+          "rule_id": "R_WIND_HEAT_001",
+          "confidence": 0.88,
+          "reason": "发热较重、咽痛、黄涕或黄痰支持风热犯表。 命中症状：发热较重、微恶风、咽痛、黄涕、黄痰。",
+          "risk_warnings": [
+            "仅模拟知识库，不用于真实诊疗"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "KB_VAL_SUMMER_DAMP_001",
+      "title": "暑湿伤表证典型样例",
+      "passed": true,
+      "expected_rule_ids": [
+        "R_SUMMER_DAMP_001"
+      ],
+      "matched_rule_ids": [
+        "R_SUMMER_DAMP_001"
+      ],
+      "missing_expected": [],
+      "unexpected_forbidden": [],
+      "unsafe_terms": [],
+      "missing_warning_terms": [],
+      "bad_status": [],
+      "candidates": [
+        {
+          "name": "感冒（暑湿伤表证）",
+          "status": "候选/待医生确认",
+          "rule_id": "R_SUMMER_DAMP_001",
+          "confidence": 0.8,
+          "reason": "头身困重、胸闷恶心、苔腻提示暑湿。 命中症状：发热、头身困重、胸闷、恶心、苔腻。",
+          "risk_warnings": [
+            "仅模拟知识库，不用于真实诊疗"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "KB_VAL_QI_DEF_001",
+      "title": "气虚感冒证典型样例",
+      "passed": true,
+      "expected_rule_ids": [
+        "R_QI_DEF_001"
+      ],
+      "matched_rule_ids": [
+        "R_QI_DEF_001"
+      ],
+      "missing_expected": [],
+      "unexpected_forbidden": [],
+      "unsafe_terms": [],
+      "missing_warning_terms": [],
+      "bad_status": [],
+      "candidates": [
+        {
+          "name": "感冒（气虚感冒证）",
+          "status": "候选/待医生确认",
+          "rule_id": "R_QI_DEF_001",
+          "confidence": 0.78,
+          "reason": "反复感冒、乏力气短、自汗支持气虚。 命中症状：反复感冒、乏力、气短、自汗、舌淡。",
+          "risk_warnings": [
+            "仅模拟知识库，不用于真实诊疗"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "KB_VAL_NEGATIVE_TRAUMA_001",
+      "title": "非感冒负例",
+      "passed": true,
+      "expected_rule_ids": [],
+      "matched_rule_ids": [],
+      "missing_expected": [],
+      "unexpected_forbidden": [],
+      "unsafe_terms": [],
+      "missing_warning_terms": [],
+      "bad_status": [],
+      "candidates": []
+    },
+    {
+      "case_id": "KB_VAL_SAFETY_WARNING_001",
+      "title": "风险提醒样例",
+      "passed": true,
+      "expected_rule_ids": [
+        "R_WIND_HEAT_001"
+      ],
+      "matched_rule_ids": [
+        "R_WIND_HEAT_001"
+      ],
+      "missing_expected": [],
+      "unexpected_forbidden": [],
+      "unsafe_terms": [],
+      "missing_warning_terms": [],
+      "bad_status": [],
+      "candidates": [
+        {
+          "name": "感冒（风热犯表证）",
+          "status": "候选/待医生确认",
+          "rule_id": "R_WIND_HEAT_001",
+          "confidence": 0.7,
+          "reason": "发热较重、咽痛、黄涕或黄痰支持风热犯表。 命中症状：发热较重、咽痛、黄涕、黄痰。",
+          "risk_warnings": [
+            "仅模拟知识库，不用于真实诊疗",
+            "如持续高热、气促、胸痛、意识异常等，应由医生进一步评估。"
+          ]
+        }
+      ]
+    }
+  ]
+}

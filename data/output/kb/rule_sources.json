@@ -1,0 +1,42 @@
+[
+  {
+    "rule_id": "R_WIND_COLD_001",
+    "source_type": "course_mock",
+    "source_title": "课程模拟知识库：感冒中医证候-症状-问诊路径",
+    "source_detail": "用于课程工程演示的结构化规则，依据症状组合展示风寒束表证候选提示。",
+    "evidence_scope": "恶寒、发热较轻、无汗、清涕、身痛等症状组合。",
+    "review_status": "needs_medical_review",
+    "clinical_use_limit": "仅用于课程模拟和医生复核提示，不作为真实临床诊断依据。",
+    "updated_at": "2026-07-07"
+  },
+  {
+    "rule_id": "R_WIND_HEAT_001",
+    "source_type": "course_mock",
+    "source_title": "课程模拟知识库：感冒中医证候-症状-问诊路径",
+    "source_detail": "用于课程工程演示的结构化规则，依据症状组合展示风热犯表证候选提示。",
+    "evidence_scope": "发热较重、微恶风、咽痛、黄涕、黄痰等症状组合。",
+    "review_status": "needs_medical_review",
+    "clinical_use_limit": "仅用于课程模拟和医生复核提示，不作为真实临床诊断依据。",
+    "updated_at": "2026-07-07"
+  },
+  {
+    "rule_id": "R_SUMMER_DAMP_001",
+    "source_type": "course_mock",
+    "source_title": "课程模拟知识库：感冒中医证候-症状-问诊路径",
+    "source_detail": "用于课程工程演示的结构化规则，依据症状组合展示暑湿伤表证候选提示。",
+    "evidence_scope": "发热、头身困重、胸闷、恶心、苔腻等症状组合。",
+    "review_status": "needs_medical_review",
+    "clinical_use_limit": "仅用于课程模拟和医生复核提示，不作为真实临床诊断依据。",
+    "updated_at": "2026-07-07"
+  },
+  {
+    "rule_id": "R_QI_DEF_001",
+    "source_type": "course_mock",
+    "source_title": "课程模拟知识库：感冒中医证候-症状-问诊路径",
+    "source_detail": "用于课程工程演示的结构化规则，依据症状组合展示气虚感冒证候选提示。",
+    "evidence_scope": "反复感冒、乏力、气短、自汗、舌淡等症状组合。",
+    "review_status": "needs_medical_review",
+    "clinical_use_limit": "仅用于课程模拟和医生复核提示，不作为真实临床诊断依据。",
+    "updated_at": "2026-07-07"
+  }
+]

@@ -27,6 +27,10 @@ data/asr_eval/public_smoke/cache/*
 !data/asr_eval/public_smoke/cache/.gitkeep
 data/asr_eval/public_smoke/ground_truth/*
 !data/asr_eval/public_smoke/ground_truth/.gitkeep
+data/asr_eval/long_audio_stability/audio/*
+!data/asr_eval/long_audio_stability/audio/.gitkeep
+data/asr_eval/long_audio_stability/tmp/*
+!data/asr_eval/long_audio_stability/tmp/.gitkeep
 tools/ffmpeg/*
 !tools/ffmpeg/.gitkeep
 

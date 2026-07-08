@@ -225,6 +225,27 @@
 - `data/asr_eval/reports/v0_5_6_cn_medical_compare/qwen3/qwen3_split_run.md`
 - `data/asr_eval/reports/v0_5_7_long_audio_stability/long_audio_stability.md`
 
+## v0.5.8 16/30 分钟长音频稳定性
+
+本轮补齐 16 分钟和 30 分钟拼接长音频样本。样本来自课程中文医患音频拼接和静音补齐，仅用于稳定性和资源压力测试，不代表中国门诊平均问诊时长。
+
+| 模型 | 16 分钟 | 30 分钟 | RTF / RSS 重点 | 当前判断 |
+| --- | --- | --- | --- | --- |
+| FunASR | 完成 | 完成 | 30 分钟 RTF `0.231400`，RSS `4819.74 MB` | 长音频最稳，适合作为普通医院 PC fallback。 |
+| SenseVoice | 完成 | 失败 | 16 分钟 RTF `0.175227`，RSS `2712.36 MB`；30 分钟 `[Errno 22] Invalid argument` | 短中音频资源占用低，但 30 分钟需要切片/Debug。 |
+| Qwen3-ASR | 完成 | 完成 | 30 分钟 RTF `0.955827`，RSS `18909.36 MB` | 可跑完但接近实时且内存高，不适合 16GB 普通办公 PC 默认部署。 |
+
+配置建议更新：
+- 16GB 普通医院 PC：优先 FunASR/SenseVoice，先限制单次音频长度或采用切片。
+- 32GB 本地开发/门诊工作站：可做长音频和多模型对比。
+- Qwen3-ASR、本地 LLM、说话人分离：建议边缘端或独显工作站复测，当前本机 CPU-only 结果只作为研究基线。
+
+证据文件：
+- `data/asr_eval/reports/v0_5_8_long_audio_stability/long_audio_samples_manifest.md`
+- `data/asr_eval/reports/v0_5_8_long_audio_stability/long_audio_stability_summary.md`
+- `data/asr_eval/reports/v0_5_8_long_audio_stability/long_audio_stability.md`
+- `logs/debug/2026-07-08_sensevoice_30min_long_audio_errno22.md`
+
 ## 医院 PC 配置采集表
 
 | 字段 | 采集值 |

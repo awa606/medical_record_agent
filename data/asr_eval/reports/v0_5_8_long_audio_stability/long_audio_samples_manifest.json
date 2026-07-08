@@ -1,0 +1,99 @@
+{
+  "schema_version": "v0.5.8",
+  "generated_at": "2026-07-08T10:25:07+08:00",
+  "purpose": "synthetic course-sample long-audio stability test",
+  "policy": "The samples are concatenated from course demo audio and optional silence. They test ASR throughput, memory, CPU, and failure handling; they do not represent real consultation duration or clinical correctness.",
+  "source_audio_dir": "video",
+  "source_truth_dir": "data/asr_eval/ground_truth",
+  "sources": [
+    {
+      "sample_id": "fever_01",
+      "audio_file": "video/fever_01.wav",
+      "truth_file": "data/asr_eval/ground_truth/fever_01.txt",
+      "duration_seconds": 309.94
+    },
+    {
+      "sample_id": "chest_pain_01",
+      "audio_file": "video/chest_pain_01.wav",
+      "truth_file": "data/asr_eval/ground_truth/chest_pain_01.txt",
+      "duration_seconds": 496.303
+    },
+    {
+      "sample_id": "snakebite_01",
+      "audio_file": "video/snakebite_01.wav",
+      "truth_file": "data/asr_eval/ground_truth/snakebite_01.txt",
+      "duration_seconds": 111.924
+    }
+  ],
+  "samples": [
+    {
+      "sample_id": "long_16min_course_cn",
+      "target_seconds": 960,
+      "actual_seconds": 960.0,
+      "audio_file": "data/asr_eval/long_audio_stability/audio/long_16min_course_cn.wav",
+      "ground_truth_file": "data/asr_eval/long_audio_stability/ground_truth/long_16min_course_cn.txt",
+      "segments": [
+        {
+          "type": "source",
+          "source_id": "fever_01",
+          "duration_seconds": 309.94
+        },
+        {
+          "type": "source",
+          "source_id": "chest_pain_01",
+          "duration_seconds": 496.303
+        },
+        {
+          "type": "source",
+          "source_id": "snakebite_01",
+          "duration_seconds": 111.924
+        },
+        {
+          "type": "silence",
+          "source_id": "",
+          "duration_seconds": 41.833
+        }
+      ]
+    },
+    {
+      "sample_id": "long_30min_course_cn",
+      "target_seconds": 1800,
+      "actual_seconds": 1799.999,
+      "audio_file": "data/asr_eval/long_audio_stability/audio/long_30min_course_cn.wav",
+      "ground_truth_file": "data/asr_eval/long_audio_stability/ground_truth/long_30min_course_cn.txt",
+      "segments": [
+        {
+          "type": "source",
+          "source_id": "fever_01",
+          "duration_seconds": 309.94
+        },
+        {
+          "type": "source",
+          "source_id": "chest_pain_01",
+          "duration_seconds": 496.303
+        },
+        {
+          "type": "source",
+          "source_id": "snakebite_01",
+          "duration_seconds": 111.924
+        },
+        {
+          "type": "source",
+          "source_id": "fever_01",
+          "duration_seconds": 309.94
+        },
+        {
+          "type": "source",
+          "source_id": "chest_pain_01",
+          "duration_seconds": 496.303
+        },
+        {
+          "type": "silence",
+          "source_id": "",
+          "duration_seconds": 75.589
+        }
+      ]
+    }
+  ],
+  "qwen_runtime_dir": "C:\\mra_qwen_runtime\\long_audio_stability"
+}

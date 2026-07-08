@@ -1,0 +1,35 @@
+{
+  "schema_version": "v0.5.7",
+  "generated_at": "2026-07-08T11:37:22+08:00",
+  "engine": "qwen3",
+  "mode": "strict",
+  "evaluation_profile": "course_medical_cn",
+  "audio_dir": "C:\\mra_qwen_runtime\\long_audio_stability\\audio",
+  "truth_dir": "C:\\mra_qwen_runtime\\long_audio_stability\\ground_truth",
+  "reports_dir": "data\\asr_eval\\reports\\v0_5_8_long_audio_stability\\qwen3",
+  "sample_count": 2,
+  "samples": [
+    {
+      "sample_id": "long_16min_course_cn",
+      "status": "measured",
+      "returncode": 0,
+      "elapsed_seconds": 597.921,
+      "report_file": "samples/long_16min_course_cn/long_16min_course_cn_qwen3_sample.csv",
+      "stdout_file": "samples/long_16min_course_cn/stdout.txt",
+      "stderr_file": "samples/long_16min_course_cn/stderr.txt",
+      "error": ""
+    },
+    {
+      "sample_id": "long_30min_course_cn",
+      "status": "measured",
+      "returncode": 0,
+      "elapsed_seconds": 1879.603,
+      "report_file": "samples/long_30min_course_cn/long_30min_course_cn_qwen3_sample.csv",
+      "stdout_file": "samples/long_30min_course_cn/stdout.txt",
+      "stderr_file": "samples/long_30min_course_cn/stderr.txt",
+      "error": ""
+    }
+  ],
+  "rows": 2,
+  "failed_samples": 0
+}

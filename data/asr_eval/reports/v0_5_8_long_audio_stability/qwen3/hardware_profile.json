@@ -1,0 +1,66 @@
+{
+  "schema_version": "v0.5.3",
+  "generated_at": "2026-07-08T03:38:20+00:00",
+  "purpose": "local_model_edge_benchmark_baseline",
+  "privacy_note": "No local identity, API key, model weight path, or patient data is collected.",
+  "system": {
+    "os": "Windows",
+    "os_release": "11",
+    "os_version": "10.0.26200",
+    "machine": "AMD64",
+    "processor": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
+    "cpu_logical_cores": 24,
+    "memory_total_gb": 31.43
+  },
+  "python": {
+    "version": "3.12.10",
+    "implementation": "CPython",
+    "executable_name": "python.exe"
+  },
+  "gpu": {
+    "torch_cuda_available": false,
+    "cuda_device_count": 0,
+    "cuda_devices": [],
+    "nvidia_smi_available": true
+  },
+  "dependencies": {
+    "torch": {
+      "available": true,
+      "version": "2.12.1+cpu",
+      "cuda_available": false,
+      "cuda_device_count": 0,
+      "cuda_devices": []
+    },
+    "funasr": {
+      "available": false,
+      "version": null
+    },
+    "qwen_asr": {
+      "available": true,
+      "version": null
+    },
+    "whisper": {
+      "available": false,
+      "version": null
+    },
+    "ffmpeg": {
+      "available": true,
+      "version": null,
+      "path_detected": true,
+      "source": "project_portable"
+    },
+    "ollama_cli": {
+      "available": true,
+      "path_detected": true
+    },
+    "ollama_env": {
+      "OLLAMA_BASE_URL_configured": false,
+      "OLLAMA_MODEL_configured": false
+    }
+  },
+  "benchmark_status": {
+    "current_machine_role": "developer_baseline",
+    "hospital_pc_profile": "pending_collection",
+    "edge_device_profile": "pending_collection"
+  }
+}

@@ -10,7 +10,7 @@
 | v0.4 | 强化医学知识库、热词和后处理 | 医疗术语准确率不能只靠换模型。 |
 | v0.5 | 做本地模型和边缘端评测 | 用 CER、关键词召回、延迟和资源占用决定模型路线。 |
 
-## v0.5.0 / v0.5.7 当前结论
+## v0.5.0 / v0.5.8 当前结论
 
 `v0.5.0` 先完成评测框架和配置采集，不切换默认模型。
 
@@ -29,7 +29,8 @@
 - `v0.5.5` 已定位 Qwen-ASR 阻塞为 Windows 中文路径下 `nagisa/DyNet` 读取模型失败；迁移到 `C:\mra_qwen_runtime` ASCII 运行区后，`nagisa/qwen_asr` 导入成功。
 - Qwen3-ASR 已完成公开 smoke 和 `snakebite_01.wav` 课程中文短样本实测，进入可对比评测阶段。
 - `v0.5.7` 已通过分样本子进程补齐 Qwen3-ASR 三条中文医患样本同口径主评测；Qwen3 能跑完，但长音频 CER 和资源占用明显高于 FunASR/SenseVoice。
-- 当前 v0.6 默认建议：SenseVoice 作为优先候选，FunASR 作为稳定 fallback，Qwen3-ASR 保留为研究路线和边缘端/GPU 复测候选。
+- `v0.5.8` 已补 16 分钟和 30 分钟拼接长音频稳定性测试：FunASR 两条均完成，SenseVoice 完成 16 分钟但 30 分钟失败，Qwen3 两条均完成但 CER 高、RSS 峰值接近 19GB。
+- 当前 v0.6 默认建议：FunASR 作为长音频稳定 fallback，SenseVoice 作为短中音频优先候选但需修复 30 分钟失败，Qwen3-ASR 保留为研究路线和边缘端/GPU 复测候选。
 - Ollama CLI 可检测到，但 LLM provider 所需环境变量尚未配置。
 - 模型选择仍以本地评测数据决定；当前不切换默认模型，FunASR/SenseVoice 先作为稳定 baseline，Qwen3-ASR 进入 `v0.5.6` 对比评测。
 
@@ -104,6 +105,22 @@
 - `data/asr_eval/reports/v0_5_6_cn_medical_compare/local_model_benchmark.md`
 - `data/asr_eval/reports/v0_5_6_cn_medical_compare/qwen3/qwen3_split_run.md`
 - `data/asr_eval/reports/v0_5_7_long_audio_stability/long_audio_stability.md`
+
+## v0.5.8 16/30 分钟长音频稳定性
+
+本轮使用课程中文医患音频拼接生成 16 分钟和 30 分钟样本，并补少量静音到目标时长。该样本只用于工程稳定性和资源压力测试，不代表中国门诊平均问诊时长。
+
+| 引擎 | 16 分钟状态 | 30 分钟状态 | 关键结果 | 当前结论 |
+| --- | --- | --- | --- | --- |
+| `funasr-paraformer-zh` | measured | measured | 30 分钟 RTF `0.231400`，RSS `4819.74 MB`，CER `0.197014` | 长音频最稳，适合作为 v0.6 fallback。 |
+| `sensevoice-small` | measured | failed | 16 分钟 RTF `0.175227`，RSS `2712.36 MB`；30 分钟失败 `[Errno 22] Invalid argument` | 短中音频表现好，但 30 分钟需切片或 Debug 后再作为默认。 |
+| `qwen3-asr-0.6b` | measured | measured | 30 分钟 RTF `0.955827`，RSS `18909.36 MB`，CER `0.907498` | 能跑完但资源和准确率不适合普通医院 PC 默认路线。 |
+
+证据文件：
+- `data/asr_eval/reports/v0_5_8_long_audio_stability/long_audio_stability_summary.md`
+- `data/asr_eval/reports/v0_5_8_long_audio_stability/long_audio_stability.md`
+- `data/asr_eval/reports/v0_5_8_long_audio_stability/qwen3/qwen3_split_run.md`
+- `logs/debug/2026-07-08_sensevoice_30min_long_audio_errno22.md`
 
 ## 候选模型
 

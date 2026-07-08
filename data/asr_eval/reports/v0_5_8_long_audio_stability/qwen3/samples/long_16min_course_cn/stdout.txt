@@ -1,0 +1,4 @@
+���� ASR ������������ɣ�
+- qwen3: measured (completed)
+- run report: data\asr_eval\reports\v0_5_8_long_audio_stability\qwen3\samples\long_16min_course_cn\local_asr_benchmark_run.md
+- summary: data\asr_eval\reports\v0_5_8_long_audio_stability\qwen3\samples\long_16min_course_cn\local_model_benchmark.md

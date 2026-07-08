@@ -1,0 +1,42 @@
+{
+  "schema_version": "v0.5.6",
+  "generated_at": "2026-07-08T10:55:19+08:00",
+  "mode": "strict",
+  "evaluation_profile": "course_medical_cn",
+  "evaluation_policy": "三条课程中文医患样本，是本项目 ASR 主评测，可用于医学关键词和流程效果分析。",
+  "audio_dir": "data\\asr_eval\\long_audio_stability\\audio",
+  "truth_dir": "data\\asr_eval\\long_audio_stability\\ground_truth",
+  "reports_dir": "data\\asr_eval\\reports\\v0_5_8_long_audio_stability",
+  "sample_count": 2,
+  "engines": [
+    {
+      "engine": "funasr",
+      "engine_output": "funasr-paraformer-zh",
+      "status": "measured",
+      "reason": "completed",
+      "report_file": "funasr_report.csv",
+      "rows": 2,
+      "failed_samples": 0,
+      "sample_errors": [],
+      "model_load_time": 64.375,
+      "elapsed_seconds": 1450.472
+    },
+    {
+      "engine": "sensevoice",
+      "engine_output": "sensevoice-small",
+      "status": "measured_with_warnings",
+      "reason": "completed with skipped or failed samples",
+      "report_file": "sensevoice_report.csv",
+      "rows": 1,
+      "failed_samples": 1,
+      "sample_errors": [
+        {
+          "filename": "long_30min_course_cn.wav",
+          "reason": "[Errno 22] Invalid argument"
+        }
+      ],
+      "model_load_time": 6.697,
+      "elapsed_seconds": 347.219
+    }
+  ]
+}

@@ -96,7 +96,7 @@ medical_record_agent/
   data/                        本地运行数据和样例占位目录
 ```
 
-详细架构见 [`docs/architecture.md`](docs/architecture.md)，ASR 文件流说明见 [`docs/asr_sse_file_stream.md`](docs/asr_sse_file_stream.md)，角色校正说明见 [`docs/asr_role_correction.md`](docs/asr_role_correction.md)，模型路线见 [`docs/asr_model_route.md`](docs/asr_model_route.md)，四周迭代计划见 [`docs/四周迭代执行计划.md`](docs/四周迭代执行计划.md)，工程规则见 [`docs/engineering_rules.md`](docs/engineering_rules.md)，能力证据见 [`docs/能力证据追踪矩阵.md`](docs/能力证据追踪矩阵.md)。
+详细架构见 [`docs/architecture.md`](docs/architecture.md)，ASR 文件流说明见 [`docs/asr_sse_file_stream.md`](docs/asr_sse_file_stream.md)，角色校正说明见 [`docs/asr_role_correction.md`](docs/asr_role_correction.md)，模型路线见 [`docs/asr_model_route.md`](docs/asr_model_route.md)，医生端验收见 [`docs/doctor_workbench_acceptance.md`](docs/doctor_workbench_acceptance.md)，演示脚本见 [`docs/scoring/v0_6_3_demo_script.md`](docs/scoring/v0_6_3_demo_script.md)，四周迭代计划见 [`docs/四周迭代执行计划.md`](docs/四周迭代执行计划.md)，工程规则见 [`docs/engineering_rules.md`](docs/engineering_rules.md)，能力证据见 [`docs/能力证据追踪矩阵.md`](docs/能力证据追踪矩阵.md)。
 
 ## 本地运行指南
 

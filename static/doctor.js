@@ -48,27 +48,28 @@ const FIELD_DEFS = [
 ];
 
 const WORKFLOW_STEPS = [
-  { key: "CREATED", label: "1.输入/上传" },
-  { key: "TRANSCRIBED", label: "2.对话转写" },
-  { key: "GENERATING_DRAFT", label: "3.病历草稿" },
-  { key: "WAITING_DOCTOR_REVIEW", label: "4.医生审核" },
-  { key: "EXPORTED", label: "5.确认导出" },
+  { key: "INPUT", label: "1.输入" },
+  { key: "TRANSCRIBING", label: "2.实时转写" },
+  { key: "ROLE_REVIEW", label: "3.角色校正" },
+  { key: "GENERATE_RECORD", label: "4.生成病历" },
+  { key: "DOCTOR_REVIEW", label: "5.医生审核" },
+  { key: "EXPORT", label: "6.导出" },
 ];
 
 const STATUS_TO_STEP = {
-  CREATED: "CREATED",
-  TRANSCRIBING: "TRANSCRIBED",
-  TRANSCRIBED: "TRANSCRIBED",
-  EXTRACTING_FIELDS: "GENERATING_DRAFT",
-  GENERATING_DRAFT: "GENERATING_DRAFT",
-  SAFETY_CHECKING: "GENERATING_DRAFT",
-  WAITING_DOCTOR_REVIEW: "WAITING_DOCTOR_REVIEW",
-  doctor_review: "WAITING_DOCTOR_REVIEW",
-  FAILED: "WAITING_DOCTOR_REVIEW",
-  reviewed: "WAITING_DOCTOR_REVIEW",
-  approved: "WAITING_DOCTOR_REVIEW",
-  EXPORTED: "EXPORTED",
-  exported: "EXPORTED",
+  CREATED: "INPUT",
+  TRANSCRIBING: "TRANSCRIBING",
+  TRANSCRIBED: "ROLE_REVIEW",
+  EXTRACTING_FIELDS: "GENERATE_RECORD",
+  GENERATING_DRAFT: "GENERATE_RECORD",
+  SAFETY_CHECKING: "GENERATE_RECORD",
+  WAITING_DOCTOR_REVIEW: "DOCTOR_REVIEW",
+  doctor_review: "DOCTOR_REVIEW",
+  FAILED: "ROLE_REVIEW",
+  reviewed: "DOCTOR_REVIEW",
+  approved: "EXPORT",
+  EXPORTED: "EXPORT",
+  exported: "EXPORT",
 };
 
 const STATUS_LABELS = {
@@ -263,6 +264,159 @@ function renderStepPrompt() {
   prompt.className = `step-prompt ${tone}`.trim();
 }
 
+function workflowStepKey() {
+  if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") return "EXPORT";
+  if (isApprovedForExport()) return "EXPORT";
+  if (appState.currentRecordFields || appState.currentDraft) return "DOCTOR_REVIEW";
+  if (appState.currentTaskId) return "GENERATE_RECORD";
+  if (appState.currentAsrResult) {
+    return roleReviewRequired() || appState.roleReviewDirty ? "ROLE_REVIEW" : "GENERATE_RECORD";
+  }
+  if (appState.taskStatus === "TRANSCRIBING" || appState.currentAsrSessionId || appState.liveTranscriptSegments.length) {
+    return "TRANSCRIBING";
+  }
+  return STATUS_TO_STEP[appState.taskStatus] || "INPUT";
+}
+
+function workflowAction({ key, label, tone = "secondary", disabled = false }) {
+  return `<button type="button" class="${tone === "primary" ? "primary-action" : "secondary-action"}" data-workflow-action="${escapeHtml(key)}" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>`;
+}
+
+function nextActionState() {
+  const risk = riskSummary();
+  const rolePending = roleReviewRequired();
+
+  if (appState.busy) {
+    return {
+      tone: "active",
+      title: STATUS_LABELS[appState.taskStatus] || "处理中",
+      detail: appState.asrChunkStatus || "系统正在处理当前任务，请等待页面状态更新。",
+      actions: [],
+    };
+  }
+
+  if (appState.taskStatus === "FAILED" || appState.asrLastError) {
+    return {
+      tone: "danger",
+      title: "流程中断",
+      detail: appState.asrLastError || appState.asrChunkLastError || "当前流程失败，请重新上传音频或改用文本导入继续。",
+      actions: [
+        workflowAction({ key: "upload-audio", label: "重新上传音频", tone: "primary" }),
+        workflowAction({ key: "import-text", label: "改用文本导入" }),
+      ],
+    };
+  }
+
+  if (!hasActiveSession()) {
+    return {
+      tone: "neutral",
+      title: "开始一次病历生成",
+      detail: "优先上传中文问诊音频；演示兜底可选择 Mock ASR，文本导入可直接验证病历生成。",
+      actions: [
+        workflowAction({ key: "upload-audio", label: "上传问诊音频", tone: "primary" }),
+        workflowAction({ key: "import-text", label: "粘贴问诊文本" }),
+      ],
+    };
+  }
+
+  if (appState.taskStatus === "TRANSCRIBING" && !appState.currentAsrResult) {
+    const chunkText = appState.asrChunkTotal
+      ? `当前切片 ${appState.asrChunkCurrent || 0}/${appState.asrChunkTotal}`
+      : "短音频直接转写";
+    return {
+      tone: "active",
+      title: "实时转写中",
+      detail: `${chunkText}，请等待 SSE 分段文本追加到中间栏。`,
+      actions: [],
+    };
+  }
+
+  if (appState.currentAsrResult && (rolePending || appState.roleReviewDirty)) {
+    return {
+      tone: "warning",
+      title: rolePending ? "请完成医生/患者角色校正" : "请保存角色校正",
+      detail: "逐段确认角色和文本，保存后再使用校正文本生成病历。",
+      actions: [
+        workflowAction({
+          key: "save-role-review",
+          label: appState.roleReviewSaving ? "保存中" : "保存角色校正",
+          tone: "primary",
+          disabled: appState.roleReviewSaving,
+        }),
+      ],
+    };
+  }
+
+  if (appState.currentAsrResult && !appState.currentTaskId) {
+    return {
+      tone: "ready",
+      title: "转写已完成",
+      detail: "角色已确认，可以用当前对话生成病历草稿。",
+      actions: [
+        workflowAction({ key: "generate-record", label: "用校正文本生成病历", tone: "primary" }),
+      ],
+    };
+  }
+
+  if (appState.currentTaskId && !appState.currentRecordFields) {
+    return {
+      tone: "active",
+      title: "病历草稿生成中",
+      detail: "字段抽取、草稿生成和安全校验会依次完成。",
+      actions: [],
+    };
+  }
+
+  if (isApprovedForExport()) {
+    return {
+      tone: "ready",
+      title: "字段已确认，可以导出",
+      detail: "导出前请确认候选诊断和安全校验提示已由医生审核。",
+      actions: [
+        workflowAction({ key: "export-record", label: "确认导出", tone: "primary" }),
+      ],
+    };
+  }
+
+  if (appState.currentRecordFields) {
+    const missingText = risk.missing.length ? `缺失项：${risk.missing.join("、")}。` : "字段已生成。";
+    return {
+      tone: risk.hasError ? "danger" : risk.hasRisk ? "warning" : "ready",
+      title: "请审核病历字段",
+      detail: `${missingText} 保存草稿后确认字段，确认后才能导出。`,
+      actions: [
+        workflowAction({ key: "save-draft", label: "保存草稿" }),
+        workflowAction({ key: "confirm-fields", label: "确认字段", tone: "primary" }),
+      ],
+    };
+  }
+
+  return {
+    tone: "neutral",
+    title: "等待下一步",
+    detail: "可继续上传音频或粘贴文本开始新的病历生成流程。",
+    actions: [
+      workflowAction({ key: "upload-audio", label: "上传问诊音频", tone: "primary" }),
+      workflowAction({ key: "import-text", label: "粘贴问诊文本" }),
+    ],
+  };
+}
+
+function renderNextActionPanel() {
+  const state = nextActionState();
+  $("nextActionPanel").className = `next-action-panel ${state.tone}`.trim();
+  $("nextActionPanel").innerHTML = `
+    <div>
+      <span class="meta-label">下一步</span>
+      <strong>${escapeHtml(state.title)}</strong>
+      <p>${escapeHtml(state.detail)}</p>
+    </div>
+    <div class="next-action-buttons">
+      ${state.actions.join("")}
+    </div>
+  `;
+}
+
 function openDrawer(panelId, title) {
   $("drawerTitle").textContent = title;
   $("drawerBackdrop").classList.add("active");
@@ -321,7 +475,7 @@ function llmDisplayState() {
 }
 
 function renderWorkflow() {
-  const activeKey = STATUS_TO_STEP[appState.taskStatus] || "CREATED";
+  const activeKey = workflowStepKey();
   const activeIndex = WORKFLOW_STEPS.findIndex((step) => step.key === activeKey);
   $("workflowSteps").innerHTML = WORKFLOW_STEPS.map((step, index) => {
     const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "";
@@ -1072,6 +1226,7 @@ function renderAll() {
   renderStartGuide();
   renderStepPrompt();
   renderWorkflow();
+  renderNextActionPanel();
   renderFields();
   renderTranscript();
   renderAssist();
@@ -1610,6 +1765,36 @@ async function exportRecord() {
   }
 }
 
+async function handleWorkflowAction(action) {
+  if (action === "upload-audio") {
+    openAudioGenerate();
+    return;
+  }
+  if (action === "import-text") {
+    openTextImport();
+    return;
+  }
+  if (action === "save-role-review") {
+    await saveRoleReview();
+    return;
+  }
+  if (action === "generate-record") {
+    await regenerateRecord();
+    return;
+  }
+  if (action === "save-draft") {
+    await saveDraftReview();
+    return;
+  }
+  if (action === "confirm-fields") {
+    await confirmFields();
+    return;
+  }
+  if (action === "export-record") {
+    await exportRecord();
+  }
+}
+
 function openTextImport() {
   openDrawer("textImportPanel", "文本导入生成病历");
 }
@@ -1674,6 +1859,16 @@ function bindEvents() {
   $("submitTextButton").addEventListener("click", submitTextImport);
   $("submitAudioButton").addEventListener("click", submitAudio);
   $("submitEvaluationButton").addEventListener("click", runEvaluation);
+  $("nextActionPanel").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-workflow-action]");
+    if (!button) return;
+    try {
+      await handleWorkflowAction(button.dataset.workflowAction);
+    } catch (error) {
+      setBusy(false);
+      showToast(error.message);
+    }
+  });
   $("audioEngineSelect").addEventListener("change", () => {
     appState.selectedEngine = $("audioEngineSelect").value;
     renderPatientBar();

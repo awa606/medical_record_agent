@@ -1,0 +1,34 @@
+services:
+  medical-record-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: medical-record-agent:local-asr
+    container_name: medical-record-agent
+    ports:
+      - "8000:8000"
+    environment:
+      PYTHONPATH: /app
+      MEDICAL_RECORD_AGENT_DB: /app/runtime/medical_record_agent.sqlite3
+      MEDICAL_RECORD_AGENT_UPLOAD_DIR: /app/runtime/uploads
+      MEDICAL_RECORD_AGENT_OUTPUT_DIR: /app/runtime/outputs
+      ASR_SESSION_CHUNK_ENABLED: "1"
+      ASR_SESSION_CHUNK_SECONDS: "300"
+      ASR_SESSION_CHUNK_MIN_SECONDS: "900"
+      SENSEVOICE_DEVICE: cpu
+      SENSEVOICE_LANGUAGE: zh
+      SENSEVOICE_HUB: hf
+      HF_HOME: /app/model_cache/hf
+      MODELSCOPE_CACHE: /app/model_cache/modelscope
+      TORCH_HOME: /app/model_cache/torch
+      XDG_CACHE_HOME: /app/model_cache/xdg
+    volumes:
+      - ./data/docker_runtime:/app/runtime
+      - ./data/asr_model_cache:/app/model_cache
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped

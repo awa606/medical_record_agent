@@ -1,0 +1,140 @@
+# Docker 本地部署与局域网访问
+
+本文说明如何把 Medical Record Agent 部署到本机 Docker，并让同一局域网内的其他人访问医生端网页。
+
+## 适用范围
+
+- 适合本机演示、课程答辩、同一 Wi-Fi 或同一局域网内访问。
+- Docker 镜像包含基础 Web 服务、SQLite、Mock ASR、FunASR 和 SenseVoice CPU 依赖。
+- 不包含公网暴露、HTTPS、登录认证、GPU/CUDA 或医院生产部署。
+
+## 前置条件
+
+- 已安装 Docker Desktop。
+- Docker Desktop 正在运行。
+- 首次运行 FunASR / SenseVoice 时，电脑需要能访问模型下载源。
+
+检查 Docker：
+
+```powershell
+docker --version
+docker compose version
+```
+
+## 构建与启动
+
+在项目根目录运行：
+
+```powershell
+docker compose build
+docker compose up
+```
+
+启动后，本机访问：
+
+```text
+http://127.0.0.1:8000/static/doctor.html
+```
+
+健康检查：
+
+```powershell
+curl http://127.0.0.1:8000/health
+```
+
+预期返回：
+
+```json
+{"status":"ok"}
+```
+
+## 局域网访问
+
+查找本机 IPv4：
+
+```powershell
+ipconfig
+```
+
+找到当前网卡下的 IPv4，例如：
+
+```text
+192.168.1.23
+```
+
+同一局域网内其他电脑访问：
+
+```text
+http://192.168.1.23:8000/static/doctor.html
+```
+
+如果其他人无法访问，优先检查：
+
+- 你的电脑和对方是否在同一 Wi-Fi / 局域网。
+- Docker 容器是否正在运行。
+- 端口映射是否为 `8000:8000`。
+- Windows 防火墙是否允许 TCP 8000 入站。
+
+如需添加 Windows 防火墙规则，请用管理员 PowerShell 运行：
+
+```powershell
+New-NetFirewallRule -DisplayName "Medical Record Agent 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow
+```
+
+## 数据与缓存
+
+Docker Compose 使用两个宿主机目录：
+
+| 宿主机目录 | 容器目录 | 用途 |
+| --- | --- | --- |
+| `data/docker_runtime/` | `/app/runtime` | SQLite、上传音频、导出结果 |
+| `data/asr_model_cache/` | `/app/model_cache` | Hugging Face、ModelScope、Torch 模型缓存 |
+
+这些目录只保留在本机，不提交 GitHub。
+
+容器内关键环境变量：
+
+```text
+MEDICAL_RECORD_AGENT_DB=/app/runtime/medical_record_agent.sqlite3
+MEDICAL_RECORD_AGENT_UPLOAD_DIR=/app/runtime/uploads
+MEDICAL_RECORD_AGENT_OUTPUT_DIR=/app/runtime/outputs
+HF_HOME=/app/model_cache/hf
+MODELSCOPE_CACHE=/app/model_cache/modelscope
+```
+
+## 前端展示测试
+
+本轮不改医生端视觉布局。Docker 启动后，页面应与本地 Python 启动时一致。
+
+测试步骤：
+
+1. 打开 `http://127.0.0.1:8000/static/doctor.html`。
+2. 点击“粘贴问诊文本”，生成病历草稿。
+3. 检查病历字段区、对话转写区、AI 辅助与安全校验区是否正常显示。
+4. 上传短 MP3/WAV，选择 `Mock ASR`，确认 SSE 分段、角色校正和生成病历流程正常。
+5. 上传中文音频，选择 `FunASR` 或 `SenseVoice Small`。首次运行会下载模型，耗时较长。
+6. 上传长音频时，检查中间转写区是否显示“切片”指标和进度；失败时应显示失败原因和重试提示。
+
+## 常见问题
+
+### 1. 镜像构建很慢
+
+本镜像包含 CPU PyTorch、FunASR 和 SenseVoice 依赖，首次构建会下载较多 Python 包，耗时较长。
+
+### 2. FunASR / SenseVoice 首次运行慢
+
+首次使用真实 ASR 引擎会下载模型到 `data/asr_model_cache/`。后续复用缓存会快很多。
+
+### 3. 其他电脑打不开页面
+
+先在本机确认：
+
+```powershell
+curl http://127.0.0.1:8000/health
+```
+
+再确认对方访问的是你的局域网 IPv4，而不是 `127.0.0.1`。`127.0.0.1` 只代表访问者自己的电脑。
+
+### 4. 不建议公网直接访问
+
+当前系统没有登录认证、HTTPS、上传限流和公网安全加固。公网访问应另行设计认证、反向代理和 HTTPS。

@@ -31,6 +31,12 @@ data/asr_eval/long_audio_stability/audio/*
 !data/asr_eval/long_audio_stability/audio/.gitkeep
 data/asr_eval/long_audio_stability/tmp/*
 !data/asr_eval/long_audio_stability/tmp/.gitkeep
+data/docker_runtime/*
+!data/docker_runtime/
+!data/docker_runtime/.gitkeep
+data/asr_model_cache/*
+!data/asr_model_cache/
+!data/asr_model_cache/.gitkeep
 tools/ffmpeg/*
 !tools/ffmpeg/.gitkeep
 

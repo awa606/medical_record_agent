@@ -1,0 +1,77 @@
+{
+  "schema_version": "v0.5.9",
+  "audio_file": "long_30min_course_cn.wav",
+  "chunk_seconds": 300,
+  "chunk_count": 6,
+  "failed_chunks": 0,
+  "sample_status": "measured",
+  "sample_error": "",
+  "chunks": [
+    {
+      "index": 1,
+      "path": "long_30min_course_cn_chunk_001.wav",
+      "start_seconds": 0.0,
+      "duration_seconds": 300.0,
+      "status": "measured",
+      "engine": "funasr-paraformer-zh",
+      "segments": 1,
+      "text_length": 1341,
+      "elapsed_seconds": 56.357
+    },
+    {
+      "index": 2,
+      "path": "long_30min_course_cn_chunk_002.wav",
+      "start_seconds": 300.0,
+      "duration_seconds": 300.0,
+      "status": "measured",
+      "engine": "funasr-paraformer-zh",
+      "segments": 1,
+      "text_length": 1421,
+      "elapsed_seconds": 76.011
+    },
+    {
+      "index": 3,
+      "path": "long_30min_course_cn_chunk_003.wav",
+      "start_seconds": 600.0,
+      "duration_seconds": 300.0,
+      "status": "measured",
+      "engine": "funasr-paraformer-zh",
+      "segments": 1,
+      "text_length": 1263,
+      "elapsed_seconds": 67.939
+    },
+    {
+      "index": 4,
+      "path": "long_30min_course_cn_chunk_004.wav",
+      "start_seconds": 900.0,
+      "duration_seconds": 300.0,
+      "status": "measured",
+      "engine": "funasr-paraformer-zh",
+      "segments": 1,
+      "text_length": 1283,
+      "elapsed_seconds": 62.082
+    },
+    {
+      "index": 5,
+      "path": "long_30min_course_cn_chunk_005.wav",
+      "start_seconds": 1200.0,
+      "duration_seconds": 300.0,
+      "status": "measured",
+      "engine": "funasr-paraformer-zh",
+      "segments": 1,
+      "text_length": 1429,
+      "elapsed_seconds": 67.763
+    },
+    {
+      "index": 6,
+      "path": "long_30min_course_cn_chunk_006.wav",
+      "start_seconds": 1500.0,
+      "duration_seconds": 299.999,
+      "status": "measured",
+      "engine": "funasr-paraformer-zh",
+      "segments": 1,
+      "text_length": 1058,
+      "elapsed_seconds": 43.459
+    }
+  ]
+}

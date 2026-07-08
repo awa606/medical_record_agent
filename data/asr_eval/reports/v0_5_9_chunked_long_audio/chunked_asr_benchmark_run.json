@@ -1,0 +1,38 @@
+{
+  "schema_version": "v0.5.9",
+  "generated_at": "2026-07-08T13:38:16+08:00",
+  "mode": "strict",
+  "evaluation_profile": "course_medical_cn",
+  "evaluation_policy": "16/30 分钟课程中文医患拼接样本，仅用于长音频稳定性、资源占用和切片恢复验证。",
+  "audio_dir": "data\\asr_eval\\long_audio_stability\\audio",
+  "truth_dir": "data\\asr_eval\\long_audio_stability\\ground_truth",
+  "reports_dir": "data\\asr_eval\\reports\\v0_5_9_chunked_long_audio",
+  "chunk_seconds": 300,
+  "sample_count": 2,
+  "engines": [
+    {
+      "engine": "sensevoice",
+      "engine_output": "sensevoice-small-chunked",
+      "status": "measured",
+      "reason": "all chunked samples completed",
+      "report_file": "sensevoice_chunked_report.csv",
+      "rows": 2,
+      "failed_samples": 0,
+      "sample_errors": [],
+      "model_load_time": 7.182,
+      "elapsed_seconds": 532.192
+    },
+    {
+      "engine": "funasr",
+      "engine_output": "funasr-paraformer-zh-chunked",
+      "status": "measured",
+      "reason": "all chunked samples completed",
+      "report_file": "funasr_chunked_report.csv",
+      "rows": 2,
+      "failed_samples": 0,
+      "sample_errors": [],
+      "model_load_time": 57.84,
+      "elapsed_seconds": 637.375
+    }
+  ]
+}

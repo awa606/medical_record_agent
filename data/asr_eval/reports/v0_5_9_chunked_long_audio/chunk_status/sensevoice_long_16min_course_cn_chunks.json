@@ -1,0 +1,55 @@
+{
+  "schema_version": "v0.5.9",
+  "audio_file": "long_16min_course_cn.wav",
+  "chunk_seconds": 300,
+  "chunk_count": 4,
+  "failed_chunks": 0,
+  "sample_status": "measured",
+  "sample_error": "",
+  "chunks": [
+    {
+      "index": 1,
+      "path": "long_16min_course_cn_chunk_001.wav",
+      "start_seconds": 0.0,
+      "duration_seconds": 300.0,
+      "status": "measured",
+      "engine": "sensevoice-small",
+      "segments": 1,
+      "text_length": 1329,
+      "elapsed_seconds": 44.163
+    },
+    {
+      "index": 2,
+      "path": "long_16min_course_cn_chunk_002.wav",
+      "start_seconds": 300.0,
+      "duration_seconds": 300.0,
+      "status": "measured",
+      "engine": "sensevoice-small",
+      "segments": 1,
+      "text_length": 1442,
+      "elapsed_seconds": 60.475
+    },
+    {
+      "index": 3,
+      "path": "long_16min_course_cn_chunk_003.wav",
+      "start_seconds": 600.0,
+      "duration_seconds": 300.0,
+      "status": "measured",
+      "engine": "sensevoice-small",
+      "segments": 1,
+      "text_length": 1296,
+      "elapsed_seconds": 53.311
+    },
+    {
+      "index": 4,
+      "path": "long_16min_course_cn_chunk_004.wav",
+      "start_seconds": 900.0,
+      "duration_seconds": 60.0,
+      "status": "measured",
+      "engine": "sensevoice-small",
+      "segments": 1,
+      "text_length": 35,
+      "elapsed_seconds": 2.917
+    }
+  ]
+}

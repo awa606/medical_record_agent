@@ -10,7 +10,7 @@
 | v0.4 | 强化医学知识库、热词和后处理 | 医疗术语准确率不能只靠换模型。 |
 | v0.5 | 做本地模型和边缘端评测 | 用 CER、关键词召回、延迟和资源占用决定模型路线。 |
 
-## v0.5.0 / v0.5.8 当前结论
+## v0.5.0 / v0.5.9 当前结论
 
 `v0.5.0` 先完成评测框架和配置采集，不切换默认模型。
 
@@ -30,7 +30,8 @@
 - Qwen3-ASR 已完成公开 smoke 和 `snakebite_01.wav` 课程中文短样本实测，进入可对比评测阶段。
 - `v0.5.7` 已通过分样本子进程补齐 Qwen3-ASR 三条中文医患样本同口径主评测；Qwen3 能跑完，但长音频 CER 和资源占用明显高于 FunASR/SenseVoice。
 - `v0.5.8` 已补 16 分钟和 30 分钟拼接长音频稳定性测试：FunASR 两条均完成，SenseVoice 完成 16 分钟但 30 分钟失败，Qwen3 两条均完成但 CER 高、RSS 峰值接近 19GB。
-- 当前 v0.6 默认建议：FunASR 作为长音频稳定 fallback，SenseVoice 作为短中音频优先候选但需修复 30 分钟失败，Qwen3-ASR 保留为研究路线和边缘端/GPU 复测候选。
+- `v0.5.9` 已增加 5 分钟切片转写和合并评测：SenseVoice 30 分钟从整文件失败变为切片 `measured`，FunASR 切片模式也保持 `measured`。
+- 当前 v0.6 默认建议：SenseVoice/FunASR 作为交付候选；长音频开启切片策略，FunASR 继续作为稳定 fallback，Qwen3-ASR 保留为研究路线和边缘端/GPU 复测候选。
 - Ollama CLI 可检测到，但 LLM provider 所需环境变量尚未配置。
 - 模型选择仍以本地评测数据决定；当前不切换默认模型，FunASR/SenseVoice 先作为稳定 baseline，Qwen3-ASR 进入 `v0.5.6` 对比评测。
 
@@ -121,6 +122,20 @@
 - `data/asr_eval/reports/v0_5_8_long_audio_stability/long_audio_stability.md`
 - `data/asr_eval/reports/v0_5_8_long_audio_stability/qwen3/qwen3_split_run.md`
 - `logs/debug/2026-07-08_sensevoice_30min_long_audio_errno22.md`
+
+## v0.5.9 长音频切片修复结果
+
+本轮新增 5 分钟切片转写和结果合并逻辑，不改变 `ASREngine.transcribe()`、`ASRResult`、医生端 API 或默认模型。切片评测继续使用 `long_16min_course_cn.wav` 和 `long_30min_course_cn.wav`。
+
+| 引擎 | 16 分钟切片 | 30 分钟切片 | 关键结果 | 当前结论 |
+| --- | --- | --- | --- | --- |
+| `sensevoice-small-chunked` | measured，4 个切片，0 失败 | measured，6 个切片，0 失败 | 30 分钟 CER `0.170886`，RTF `0.173731`，RSS `3254.68 MB` | 5 分钟切片规避了 v0.5.8 的整文件失败，可进入 v0.6 默认候选。 |
+| `funasr-paraformer-zh-chunked` | measured，4 个切片，0 失败 | measured，6 个切片，0 失败 | 30 分钟 CER `0.203343`，RTF `0.208204`，RSS `5024.94 MB` | 继续作为长音频稳定 fallback。 |
+
+证据文件：
+- `data/asr_eval/reports/v0_5_9_chunked_long_audio/long_audio_chunked_stability_summary.md`
+- `data/asr_eval/reports/v0_5_9_chunked_long_audio/chunked_asr_benchmark_run.md`
+- `data/asr_eval/reports/v0_5_9_chunked_long_audio/local_model_benchmark.md`
 
 ## 候选模型
 

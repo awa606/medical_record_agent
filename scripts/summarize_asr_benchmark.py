@@ -14,6 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPORTS_DIR = PROJECT_ROOT / "data" / "asr_eval" / "reports"
 DEFAULT_OUTPUT = DEFAULT_REPORTS_DIR / "local_model_benchmark.md"
 RUN_STATUS_FILE = "local_asr_benchmark_run.json"
+CHUNKED_RUN_STATUS_FILE = "chunked_asr_benchmark_run.json"
 
 
 def summarize_benchmark(
@@ -21,7 +22,7 @@ def summarize_benchmark(
     output_path: Path = DEFAULT_OUTPUT,
 ) -> dict[str, Any]:
     hardware_path = _report_input_path(reports_dir, "hardware_profile.json")
-    run_status_path = reports_dir / RUN_STATUS_FILE
+    run_status_path = _run_status_path(reports_dir)
     hardware = _load_json(hardware_path) if hardware_path.exists() else {}
     runtime_profiles = _load_runtime_profiles(reports_dir, hardware_path)
     run_status = _load_json(run_status_path) if run_status_path.exists() else {}
@@ -48,6 +49,14 @@ def _report_input_path(reports_dir: Path, filename: str) -> Path:
     return parent_path if parent_path.exists() else local_path
 
 
+def _run_status_path(reports_dir: Path) -> Path:
+    for filename in [RUN_STATUS_FILE, CHUNKED_RUN_STATUS_FILE]:
+        path = reports_dir / filename
+        if path.exists():
+            return path
+    return reports_dir / RUN_STATUS_FILE
+
+
 def _load_runtime_profiles(reports_dir: Path, primary_hardware_path: Path) -> list[dict[str, Any]]:
     profiles: list[dict[str, Any]] = []
     primary = primary_hardware_path.resolve() if primary_hardware_path.exists() else None
@@ -67,11 +76,12 @@ def render_markdown(summary: dict[str, Any]) -> str:
     gpu = hardware.get("gpu") or {}
     dependencies = hardware.get("dependencies") or {}
     run_status = summary.get("run_status") or {}
+    report_version = run_status.get("schema_version") or "v0.5"
 
     lines = [
         "# 本地模型与边缘端评测基线报告",
         "",
-        "> 本报告用于 v0.5.8 本地 ASR 模型评测与长音频稳定性记录。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。",
+        f"> 本报告用于 {report_version} 本地 ASR 模型评测与长音频稳定性记录。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。",
         "",
         "## 硬件配置",
         "",

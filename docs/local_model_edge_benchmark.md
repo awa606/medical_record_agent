@@ -246,6 +246,27 @@
 - `data/asr_eval/reports/v0_5_8_long_audio_stability/long_audio_stability.md`
 - `logs/debug/2026-07-08_sensevoice_30min_long_audio_errno22.md`
 
+## v0.5.9 长音频切片稳定性修复
+
+本轮在不改变后端 API 和 ASR 统一输出结构的前提下，新增 5 分钟切片转写评测。目标是验证普通医院 PC 部署时的长音频降级策略：整文件转写失败时，先切片，再合并文本和时间戳。
+
+| 模型 | 16 分钟切片 | 30 分钟切片 | 30 分钟资源与速度 | 部署判断 |
+| --- | --- | --- | --- | --- |
+| SenseVoice | 完成，4 个切片，0 失败 | 完成，6 个切片，0 失败 | RTF `0.173731`，RSS `3254.68 MB` | 可以作为 v0.6 默认候选，但长音频必须启用切片。 |
+| FunASR | 完成，4 个切片，0 失败 | 完成，6 个切片，0 失败 | RTF `0.208204`，RSS `5024.94 MB` | 继续作为普通医院 PC 的长音频稳定 fallback。 |
+
+与 v0.5.8 对比，SenseVoice 30 分钟从整文件 `failed` 变为切片 `measured`，说明当前失败更像长音频整文件处理边界，而不是模型完全不可用。
+
+配置建议更新：
+- 16GB 普通医院 Windows PC：可优先使用 FunASR/SenseVoice，但 30 分钟级长音频必须切片，且需要限制并发。
+- 32GB 门诊工作站：更适合长音频切片、多模型评测和后续本地 LLM 联动。
+- Qwen3-ASR：当前仍建议在边缘端或独显工作站复测，不作为普通办公 PC 默认路线。
+
+证据文件：
+- `data/asr_eval/reports/v0_5_9_chunked_long_audio/long_audio_chunked_stability_summary.md`
+- `data/asr_eval/reports/v0_5_9_chunked_long_audio/local_model_benchmark.md`
+- `data/asr_eval/reports/v0_5_9_chunked_long_audio/chunk_status/`
+
 ## 医院 PC 配置采集表
 
 | 字段 | 采集值 |

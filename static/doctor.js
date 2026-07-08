@@ -24,6 +24,9 @@ const appState = {
   eventSource: null,
   asrEventSource: null,
   asrStreamProgress: 0,
+  asrStreamCurrentSegment: 0,
+  asrStreamTotalSegments: 0,
+  asrLastError: "",
   roleReviewDirty: false,
   roleReviewSaving: false,
 };
@@ -55,6 +58,7 @@ const STATUS_TO_STEP = {
   GENERATING_DRAFT: "GENERATING_DRAFT",
   SAFETY_CHECKING: "GENERATING_DRAFT",
   WAITING_DOCTOR_REVIEW: "WAITING_DOCTOR_REVIEW",
+  doctor_review: "WAITING_DOCTOR_REVIEW",
   FAILED: "WAITING_DOCTOR_REVIEW",
   reviewed: "WAITING_DOCTOR_REVIEW",
   approved: "WAITING_DOCTOR_REVIEW",
@@ -70,6 +74,7 @@ const STATUS_LABELS = {
   GENERATING_DRAFT: "草稿生成中",
   SAFETY_CHECKING: "安全校验中",
   WAITING_DOCTOR_REVIEW: "等待医生审核",
+  doctor_review: "等待医生审核",
   FAILED: "任务失败",
   reviewed: "草稿已保存",
   approved: "字段已确认",
@@ -546,6 +551,63 @@ function renderRoleOptions(selectedRole) {
   )).join("");
 }
 
+function asrProgressPercent() {
+  const progress = Math.max(0, Math.min(1, Number(appState.asrStreamProgress || 0)));
+  return Math.round(progress * 100);
+}
+
+function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unreviewedCount }) {
+  const progress = asrProgressPercent();
+  const total = appState.asrStreamTotalSegments || asr?.segments?.length || rows.length || 0;
+  const current = asr
+    ? total
+    : Math.min(appState.asrStreamCurrentSegment || rows.length || 0, total || rows.length || 0);
+  const statusText = appState.asrLastError
+    ? "转写异常"
+    : asr
+      ? "转写完成"
+      : isStreaming
+        ? "转写中"
+        : rows.length
+          ? "待校正"
+          : "等待输入";
+  const canGenerateFromTranscript = Boolean(asr && !appState.currentTaskId && !appState.currentRecordFields);
+  const actionButton = asr
+    ? roleReviewRequired()
+      ? `<button type="button" class="secondary-action" data-save-role-review ${appState.roleReviewSaving ? "disabled" : ""}>保存角色校正</button>`
+      : canGenerateFromTranscript
+        ? `<button type="button" class="primary-action" data-generate-from-transcript>用校正文本生成病历</button>`
+        : ""
+    : "";
+  const reviewText = reviewable
+    ? unreviewedCount
+      ? `${unreviewedCount} 段待确认`
+      : "角色已确认"
+    : "完成转写后校正";
+  return `
+    <section class="transcript-status-panel ${appState.asrLastError ? "danger" : isStreaming ? "active" : asr ? "done" : ""}" aria-label="转写状态">
+      <div class="transcript-status-head">
+        <div>
+          <span class="meta-label">当前状态</span>
+          <strong>${escapeHtml(statusText)}</strong>
+        </div>
+        <span class="status-badge ${appState.asrLastError ? "missing" : asr ? "confirmed" : isStreaming ? "info" : "neutral"}">${escapeHtml(asr?.engine || appState.selectedEngine || "ASR")}</span>
+      </div>
+      <div class="progress-track" aria-label="转写进度">
+        <span style="width: ${progress}%"></span>
+      </div>
+      <div class="status-metrics">
+        <div><span>进度</span><strong>${progress}%</strong></div>
+        <div><span>分段</span><strong>${current || 0}/${total || 0}</strong></div>
+        <div><span>文件</span><strong>${escapeHtml(appState.uploadedFilename || "未上传")}</strong></div>
+        <div><span>校正</span><strong>${escapeHtml(reviewText)}</strong></div>
+      </div>
+      ${appState.asrLastError ? `<div class="safety-strip danger">${escapeHtml(appState.asrLastError)}</div>` : ""}
+      ${actionButton ? `<div class="quick-action-row">${actionButton}</div>` : ""}
+    </section>
+  `;
+}
+
 function renderTranscript() {
   const asr = appState.currentAsrResult;
   const rows = transcriptRows();
@@ -565,17 +627,17 @@ function renderTranscript() {
   $("transcriptBadge").textContent = asr
     ? `${asr.engine || appState.selectedEngine} · ${asr.segments?.length || 0}段`
     : isStreaming
-      ? `SSE · ${rows.length}段 · ${Math.round(appState.asrStreamProgress * 100)}%`
+      ? `SSE · ${rows.length}段 · ${asrProgressPercent()}%`
       : `${rows.length}条`;
 
   const streamBlock = appState.currentAsrSessionId
-    ? `<div class="safety-strip ${asr ? "success" : "warning"}"><strong>SSE 实时转写</strong><br>会话 ${escapeHtml(appState.currentAsrSessionId)} · ${asr ? "已完成" : `进行中 ${Math.round(appState.asrStreamProgress * 100)}%`}</div>`
+    ? `<div class="safety-strip debug-only ${asr ? "success" : "warning"}"><strong>SSE 实时转写</strong><br>会话 ${escapeHtml(appState.currentAsrSessionId)} · ${asr ? "已完成" : `进行中 ${asrProgressPercent()}%`}</div>`
     : "";
   const asrTextBlock = asr?.text
-    ? `<div class="safety-strip"><strong>ASRResult.text</strong><br>${escapeHtml(asr.text)}</div>`
+    ? `<div class="safety-strip debug-only"><strong>ASRResult.text</strong><br>${escapeHtml(asr.text)}</div>`
     : "";
   const conversationBlock = asr?.conversation_text
-    ? `<div class="safety-strip"><strong>conversation_text</strong><br>${escapeHtml(asr.conversation_text)}</div>`
+    ? `<div class="safety-strip debug-only"><strong>conversation_text</strong><br>${escapeHtml(asr.conversation_text)}</div>`
     : "";
   const reviewable = Boolean(appState.currentAsrSessionId && asr?.segments?.length);
   const unreviewedCount = rows.filter((item) => item.needsReview || !item.reviewedByDoctor).length;
@@ -594,6 +656,7 @@ function renderTranscript() {
     : "";
 
   $("transcriptList").innerHTML = `
+    ${renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unreviewedCount })}
     ${warningBlocks.map((item) => `<div class="conversation-warning">${escapeHtml(item)}</div>`).join("")}
     ${streamBlock}
     ${roleReviewBlock}
@@ -977,6 +1040,14 @@ function renderFooter() {
   $("currentTaskHint").textContent = appState.currentTaskId
     ? `任务 ${appState.currentTaskId} · ${appState.currentAudioId ? `音频 ${appState.currentAudioId}` : "文本导入"}`
     : "可通过文本导入或上传音频生成病历。";
+  $("regenerateButton").disabled = appState.busy || !(appState.currentAsrResult || appState.currentInputText);
+  $("saveDraftButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
+  $("confirmFieldsButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
+  $("exportButton").disabled = appState.busy || !appState.currentTaskId || !isApprovedForExport();
+}
+
+function isApprovedForExport() {
+  return appState.taskStatus === "approved" || appState.currentTask?.current_stage === "approved";
 }
 
 function renderAll() {
@@ -1021,6 +1092,9 @@ function resetTaskState({ keepAsr = false } = {}) {
     appState.currentAsrSessionId = null;
     appState.liveTranscriptSegments = [];
     appState.asrStreamProgress = 0;
+    appState.asrStreamCurrentSegment = 0;
+    appState.asrStreamTotalSegments = 0;
+    appState.asrLastError = "";
     resetRoleReviewState();
     appState.uploadedFilename = "";
   }
@@ -1032,7 +1106,7 @@ async function refreshTask(taskId, taskFromEvent = null) {
   appState.currentTask = task;
   appState.currentSteps = steps;
   appState.currentTaskId = task.id || task.task_id || taskId;
-  appState.taskStatus = task.status || task.current_stage || appState.taskStatus;
+  appState.taskStatus = task.current_stage || task.status || appState.taskStatus;
   const result = task.result_json || {};
   appState.currentRecordFields = result.fields || appState.currentRecordFields;
   appState.currentDraft = result.draft || appState.currentDraft;
@@ -1103,6 +1177,9 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.currentAsrSessionId = data.session_id || appState.currentAsrSessionId;
     appState.taskStatus = "CREATED";
     appState.asrStreamProgress = 0;
+    appState.asrStreamCurrentSegment = 0;
+    appState.asrStreamTotalSegments = 0;
+    appState.asrLastError = "";
     renderAll();
   });
 
@@ -1128,6 +1205,8 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.selectedEngine = data.engine || appState.selectedEngine;
     appState.taskStatus = "TRANSCRIBING";
     appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
+    appState.asrStreamCurrentSegment = Number(data.index ?? appState.liveTranscriptSegments.length) + 1;
+    appState.asrStreamTotalSegments = Number(data.total || appState.asrStreamTotalSegments || 0);
     if (data.segment) {
       appState.liveTranscriptSegments = [
         ...appState.liveTranscriptSegments,
@@ -1146,6 +1225,9 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.liveTranscriptSegments = data.asr_result?.segments || appState.liveTranscriptSegments;
     appState.taskStatus = "TRANSCRIBED";
     appState.asrStreamProgress = 1;
+    appState.asrStreamTotalSegments = data.segments || data.asr_result?.segments?.length || appState.asrStreamTotalSegments || appState.liveTranscriptSegments.length;
+    appState.asrStreamCurrentSegment = appState.asrStreamTotalSegments;
+    appState.asrLastError = "";
     appState.currentEvaluation = null;
     resetRoleReviewState();
     closeAsrStream();
@@ -1159,6 +1241,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     const data = JSON.parse(event.data);
     terminalReceived = true;
     appState.taskStatus = "FAILED";
+    appState.asrLastError = data.error || "ASR 实时转写失败";
     closeAsrStream();
     setBusy(false);
     renderAll();
@@ -1171,6 +1254,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     if (!terminalReceived) {
       appState.taskStatus = "FAILED";
       const error = new Error("ASR SSE 连接异常，请检查服务日志");
+      appState.asrLastError = error.message;
       showToast(error.message);
       reject?.(error);
     }
@@ -1277,6 +1361,9 @@ async function uploadAndTranscribe(file, engine) {
   appState.currentAsrResult = null;
   appState.liveTranscriptSegments = [];
   appState.asrStreamProgress = 0;
+  appState.asrStreamCurrentSegment = 0;
+  appState.asrStreamTotalSegments = 0;
+  appState.asrLastError = "";
   renderAll();
 
   setBusy(true, "正在创建 ASR 实时转写会话...");
@@ -1518,6 +1605,11 @@ function bindEvents() {
     updateReviewSegment(Number(card.dataset.segmentIndex), { text: textInput.value });
   });
   $("transcriptList").addEventListener("click", async (event) => {
+    const generateButton = event.target.closest("[data-generate-from-transcript]");
+    if (generateButton) {
+      await regenerateRecord();
+      return;
+    }
     const saveButton = event.target.closest("[data-save-role-review]");
     if (!saveButton) return;
     try {

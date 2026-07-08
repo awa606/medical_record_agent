@@ -144,6 +144,10 @@ function setBusy(nextBusy, message = "") {
   if (message) {
     $("currentTaskHint").textContent = message;
   }
+  if (!nextBusy) {
+    renderFooter();
+    renderNextActionPanel();
+  }
 }
 
 function showToast(text) {
@@ -249,7 +253,9 @@ function renderStepPrompt() {
   let text = "请上传问诊音频或粘贴问诊文本开始。";
   let tone = "";
 
-  if (hasActiveSession() && risk.hasRisk) {
+  if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") {
+    text = "病历已导出，可归档或开始下一次任务。";
+  } else if (hasActiveSession() && risk.hasRisk) {
     text = "请优先处理红色/黄色提示。";
     tone = risk.hasError ? "danger" : "risk";
   } else if (appState.taskStatus === "WAITING_DOCTOR_REVIEW" || appState.taskStatus === "reviewed" || appState.taskStatus === "approved") {
@@ -364,6 +370,19 @@ function nextActionState() {
       title: "病历草稿生成中",
       detail: "字段抽取、草稿生成和安全校验会依次完成。",
       actions: [],
+    };
+  }
+
+  if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") {
+    return {
+      tone: "ready",
+      title: "导出已完成",
+      detail: "Markdown / Word 文件已生成，可重新导出或开始下一次输入。",
+      actions: [
+        workflowAction({ key: "export-record", label: "重新导出" }),
+        workflowAction({ key: "upload-audio", label: "上传新音频", tone: "primary" }),
+        workflowAction({ key: "import-text", label: "粘贴新文本" }),
+      ],
     };
   }
 
@@ -1247,6 +1266,7 @@ function resetRoleReviewState() {
 }
 
 function resetTaskState({ keepAsr = false } = {}) {
+  appState.currentTaskId = null;
   appState.currentEvaluation = null;
   appState.currentTask = null;
   appState.currentSteps = [];
@@ -1255,6 +1275,7 @@ function resetTaskState({ keepAsr = false } = {}) {
   appState.currentSafetyCheck = null;
   appState.currentAgentTrace = null;
   appState.currentInputText = "";
+  appState.taskStatus = "CREATED";
   if (!keepAsr) {
     closeAsrStream();
     appState.currentAsrResult = null;
@@ -1647,10 +1668,11 @@ async function submitTextImport() {
 
 async function submitAudio() {
   try {
+    const file = $("audioFileInput").files[0];
+    if (!file) throw new Error("请选择音频文件");
+    const engine = $("audioEngineSelect").value;
     closeDrawer();
     resetTaskState();
-    const file = $("audioFileInput").files[0];
-    const engine = $("audioEngineSelect").value;
     appState.selectedEngine = engine;
     const transcribed = await uploadAndTranscribe(file, engine);
     if (appState.audioMode === "generate") {

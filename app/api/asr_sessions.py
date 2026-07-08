@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import shutil
+import tempfile
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, File, Header, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.api.audio import (
@@ -28,12 +31,21 @@ from app.schemas import (
     ASRSessionUploadResponse,
     AudioRecord,
 )
-from app.services.asr import apply_manifest_role_strategy, create_asr_engine
+from app.services.asr import (
+    ChunkTranscription,
+    apply_manifest_role_strategy,
+    create_asr_engine,
+    merge_chunk_transcriptions,
+    split_audio_to_chunks,
+)
+from app.services.asr.chunking import probe_audio_duration
+from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 
 
 router = APIRouter(prefix="/asr/sessions", tags=["asr-sessions"])
 
 SUPPORTED_ASR_ENGINES = {"mock", "funasr", "sensevoice", "whisper", "qwen3", "online"}
+CHUNKABLE_ASR_ENGINES = {"funasr", "sensevoice"}
 ROLE_LABELS = {
     "doctor": "医生",
     "医生": "医生",
@@ -79,7 +91,9 @@ def _result_path(session_id: str) -> Path:
 
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path = path.with_name(f"{path.name}.tmp")
+    tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path.replace(path)
 
 
 def _normalize_engine_name(engine: str) -> str:
@@ -224,33 +238,73 @@ def _fallback_segments(result: ASRResult) -> list[ASRSegment]:
     return []
 
 
-def _build_asr_stream_events(
+def _initial_asr_stream_events(session: ASRSessionRecord) -> list[ASRSessionEvent]:
+    timestamp = _now()
+    base = {
+        "session_id": session.session_id,
+        "audio_id": session.audio_id,
+        "engine": session.engine,
+    }
+    return [
+        ASRSessionEvent(
+            id=1,
+            event="session_created",
+            data={**base, "status": "created"},
+            created_at=timestamp,
+        ),
+        ASRSessionEvent(
+            id=2,
+            event="audio_uploaded",
+            data={
+                **base,
+                "status": "uploaded",
+                "filename": session.filename,
+            },
+            created_at=timestamp,
+        ),
+        ASRSessionEvent(
+            id=3,
+            event="transcribing",
+            data={**base, "status": "transcribing"},
+            created_at=timestamp,
+        ),
+    ]
+
+
+def _session_event(
     *,
     session: ASRSessionRecord,
-    result: ASRResult,
-    filename: str,
-) -> list[ASRSessionEvent]:
-    timestamp = _now()
+    event: str,
+    data: dict[str, object],
+) -> ASRSessionEvent:
+    return ASRSessionEvent(
+        id=1,
+        event=event,
+        data={
+            "session_id": session.session_id,
+            "audio_id": session.audio_id,
+            "engine": session.engine,
+            **data,
+        },
+        created_at=_now(),
+    )
+
+
+def _append_session_event(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    event: str,
+    data: dict[str, object],
+) -> None:
+    _append_events(session_id, [_session_event(session=session, event=event, data=data)])
+
+
+def _append_result_events(session_id: str, *, session: ASRSessionRecord, result: ASRResult) -> None:
     events: list[ASRSessionEvent] = []
 
     def append(event: str, data: dict[str, object]) -> None:
-        events.append(
-            ASRSessionEvent(
-                id=len(events) + 1,
-                event=event,
-                data={
-                    "session_id": session.session_id,
-                    "audio_id": result.audio_id,
-                    "engine": result.engine,
-                    **data,
-                },
-                created_at=timestamp,
-            )
-        )
-
-    append("session_created", {"status": "created"})
-    append("audio_uploaded", {"status": "uploaded", "filename": filename})
-    append("transcribing", {"status": "transcribing"})
+        events.append(_session_event(session=session, event=event, data=data))
 
     segments = _fallback_segments(result)
     total = len(segments)
@@ -278,7 +332,7 @@ def _build_asr_stream_events(
             "asr_result": result.model_dump(),
         },
     )
-    return events
+    _append_events(session_id, events)
 
 
 def _failed_event(session: ASRSessionRecord, message: str) -> list[ASRSessionEvent]:
@@ -296,6 +350,55 @@ def _failed_event(session: ASRSessionRecord, message: str) -> list[ASRSessionEve
             created_at=_now(),
         )
     ]
+
+
+def _chunk_seconds() -> int:
+    return _env_int("ASR_SESSION_CHUNK_SECONDS", 300)
+
+
+def _chunk_min_seconds() -> int:
+    return _env_int("ASR_SESSION_CHUNK_MIN_SECONDS", 900)
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        value = int(str(os.environ.get(name, default)).strip())
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _chunking_enabled() -> bool:
+    value = str(os.environ.get("ASR_SESSION_CHUNK_ENABLED", "1")).strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+def _audio_duration_for_chunking(audio_path: Path) -> float | None:
+    ffprobe = find_ffprobe_executable()
+    if ffprobe is None:
+        return None
+    try:
+        return probe_audio_duration(audio_path, ffprobe)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _should_use_chunked_session(engine_name: str, audio_path: Path) -> tuple[bool, float | None]:
+    if not _chunking_enabled() or engine_name not in CHUNKABLE_ASR_ENGINES:
+        return False, None
+    duration = _audio_duration_for_chunking(audio_path)
+    if duration is None:
+        return False, None
+    return duration >= _chunk_min_seconds(), duration
+
+
+def _compact_error(exc: Exception) -> str:
+    return str(exc).replace("\r", " ").replace("\n", " ")[:500]
+
+
+def _retry_hint(engine_name: str) -> str:
+    fallback = "FunASR" if engine_name == "sensevoice" else "SenseVoice 或 mock"
+    return f"可重新上传重试；若同一切片再次失败，建议改用 {fallback} 或缩短 ASR_SESSION_CHUNK_SECONDS。"
 
 
 def _sse_message(event: ASRSessionEvent) -> str:
@@ -325,27 +428,57 @@ async def _asr_session_event_stream(
     last_event_id: int = 0,
     delay_ms: int = 250,
 ):
-    events = [event for event in _read_events(session_id) if event.id > last_event_id]
-    if not events:
-        session = _read_session(session_id)
-        events = [
-            ASRSessionEvent(
-                id=last_event_id + 1,
-                event="state",
-                data={
-                    "session_id": session.session_id,
-                    "audio_id": session.audio_id,
-                    "engine": session.engine,
-                    "status": session.status,
-                },
-                created_at=_now(),
-            )
-        ]
+    next_event_id = last_event_id
+    sent_any = False
+    while True:
+        events = [event for event in _read_events(session_id) if event.id > next_event_id]
+        for event in events:
+            sent_any = True
+            next_event_id = event.id
+            yield _sse_message(event)
+            if event.event in {"completed", "failed"}:
+                return
+            if delay_ms > 0:
+                await asyncio.sleep(delay_ms / 1000)
 
-    for event in events:
-        yield _sse_message(event)
-        if delay_ms > 0 and event.event not in {"completed", "failed"}:
-            await asyncio.sleep(delay_ms / 1000)
+        if events:
+            continue
+
+        session = _read_session(session_id)
+        if session.status in {"stream_ready", "failed"}:
+            if not sent_any:
+                state = ASRSessionEvent(
+                    id=next_event_id + 1,
+                    event="state",
+                    data={
+                        "session_id": session.session_id,
+                        "audio_id": session.audio_id,
+                        "engine": session.engine,
+                        "status": session.status,
+                        "error": session.error,
+                    },
+                    created_at=_now(),
+                )
+                yield _sse_message(state)
+            return
+
+        if delay_ms <= 0:
+            if not sent_any:
+                state = ASRSessionEvent(
+                    id=next_event_id + 1,
+                    event="state",
+                    data={
+                        "session_id": session.session_id,
+                        "audio_id": session.audio_id,
+                        "engine": session.engine,
+                        "status": session.status,
+                    },
+                    created_at=_now(),
+                )
+                yield _sse_message(state)
+            return
+
+        await asyncio.sleep(delay_ms / 1000)
 
 
 @router.post("")
@@ -373,10 +506,156 @@ def read_asr_session(session_id: str) -> ASRSessionRecord:
     return _read_session(session_id)
 
 
-@router.post("/{session_id}/audio")
+def _run_asr_session_transcription(
+    session_id: str,
+    *,
+    record: AudioRecord,
+    audio_path: Path,
+) -> None:
+    session = _read_session(session_id)
+    try:
+        asr_engine = create_asr_engine(session.engine)
+        use_chunked, original_duration = _should_use_chunked_session(session.engine, audio_path)
+        if use_chunked:
+            result = _transcribe_chunked_session(
+                session_id,
+                session=session,
+                engine=asr_engine,
+                record=record,
+                audio_path=audio_path,
+                original_duration=original_duration,
+            )
+        else:
+            result = asr_engine.transcribe(record.audio_id, audio_path)
+            result = apply_manifest_role_strategy(result, _sample_id_from_record(record))
+        _write_transcription_success(session_id, session=session, result=result)
+    except Exception as exc:  # noqa: BLE001
+        message = _compact_error(exc)
+        failed = session.model_copy(
+            update={
+                "status": "failed",
+                "error": message,
+                "updated_at": _now(),
+            }
+        )
+        _write_session(failed)
+        _append_events(session_id, _failed_event(failed, message))
+
+
+def _transcribe_chunked_session(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    engine: Any,
+    record: AudioRecord,
+    audio_path: Path,
+    original_duration: float | None,
+) -> ASRResult:
+    chunk_seconds = _chunk_seconds()
+    with tempfile.TemporaryDirectory(prefix=f"{record.audio_id}_chunks_") as temp_dir_name:
+        temp_dir = Path(temp_dir_name)
+        chunks = split_audio_to_chunks(audio_path, temp_dir, chunk_seconds=chunk_seconds)
+        total_chunks = len(chunks)
+        _append_session_event(
+            session_id,
+            session=session,
+            event="chunk_plan",
+            data={
+                "status": "chunk_plan",
+                "chunk_seconds": chunk_seconds,
+                "chunk_count": total_chunks,
+                "total_chunks": total_chunks,
+                "duration": original_duration,
+                "progress": 0,
+            },
+        )
+
+        transcriptions: list[ChunkTranscription] = []
+        for chunk in chunks:
+            started_at = time.perf_counter()
+            common = {
+                "chunk_index": chunk.index,
+                "total_chunks": total_chunks,
+                "chunk_start_seconds": chunk.start_seconds,
+                "chunk_duration_seconds": chunk.duration_seconds,
+            }
+            _append_session_event(
+                session_id,
+                session=session,
+                event="chunk_started",
+                data={
+                    **common,
+                    "status": "chunk_transcribing",
+                    "progress": round((chunk.index - 1) / total_chunks, 4) if total_chunks else 0,
+                    "retryable": False,
+                },
+            )
+            try:
+                chunk_result = engine.transcribe(f"{record.audio_id}_chunk_{chunk.index:03d}", chunk.path)
+            except Exception as exc:  # noqa: BLE001
+                error = _compact_error(exc)
+                _append_session_event(
+                    session_id,
+                    session=session,
+                    event="chunk_failed",
+                    data={
+                        **common,
+                        "status": "chunk_failed",
+                        "progress": round((chunk.index - 1) / total_chunks, 4) if total_chunks else 0,
+                        "error": error,
+                        "retryable": True,
+                        "retry_hint": _retry_hint(session.engine),
+                        "elapsed_seconds": round(time.perf_counter() - started_at, 3),
+                    },
+                )
+                raise RuntimeError(f"ASR chunk {chunk.index}/{total_chunks} failed: {error}") from exc
+
+            transcriptions.append(ChunkTranscription(chunk=chunk, result=chunk_result))
+            _append_session_event(
+                session_id,
+                session=session,
+                event="chunk_completed",
+                data={
+                    **common,
+                    "status": "chunk_completed",
+                    "progress": round(chunk.index / total_chunks, 4) if total_chunks else 1,
+                    "segments": len(chunk_result.segments),
+                    "text_length": len(chunk_result.text),
+                    "elapsed_seconds": round(time.perf_counter() - started_at, 3),
+                },
+            )
+
+        merged = merge_chunk_transcriptions(
+            record.audio_id,
+            transcriptions,
+            original_duration=original_duration,
+            engine_name=f"{getattr(engine, 'name', session.engine)}-chunked",
+        )
+        return apply_manifest_role_strategy(merged, _sample_id_from_record(record))
+
+
+def _write_transcription_success(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    result: ASRResult,
+) -> None:
+    _write_transcript(result)
+    _write_session_result(session_id, result)
+    ready_session = session.model_copy(
+        update={
+            "status": "stream_ready",
+            "updated_at": _now(),
+        }
+    )
+    _write_session(ready_session)
+    _append_result_events(session_id, session=ready_session, result=result)
+
+
 def upload_asr_session_audio(
     session_id: str,
     file: UploadFile = File(...),
+    background_tasks: BackgroundTasks | None = None,
 ) -> ASRSessionUploadResponse:
     session = _read_session(session_id)
     extension = _safe_extension(file.filename or "")
@@ -399,54 +678,54 @@ def upload_asr_session_audio(
     )
     _write_audio_record(record)
 
-    try:
-        asr_engine = create_asr_engine(session.engine)
-        result = asr_engine.transcribe(audio_id, destination)
-        result = apply_manifest_role_strategy(result, _sample_id_from_record(record))
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        failed = session.model_copy(
-            update={
-                "status": "failed",
-                "audio_id": audio_id,
-                "filename": record.filename,
-                "error": str(exc),
-                "updated_at": _now(),
-            }
-        )
-        _write_session(failed)
-        _write_events(session_id, _failed_event(failed, str(exc)))
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    _write_transcript(result)
-    _write_session_result(session_id, result)
-    ready_session = session.model_copy(
+    transcribing_session = session.model_copy(
         update={
-            "status": "stream_ready",
+            "status": "transcribing",
             "audio_id": audio_id,
             "filename": record.filename,
             "updated_at": _now(),
         }
     )
-    _write_session(ready_session)
-    _write_events(
-        session_id,
-        _build_asr_stream_events(
-            session=ready_session,
-            result=result,
-            filename=record.filename,
-        ),
-    )
+    _write_session(transcribing_session)
+    _write_events(session_id, _initial_asr_stream_events(transcribing_session))
+
+    if background_tasks is None:
+        _run_asr_session_transcription(session_id, record=record, audio_path=destination)
+        current_session = _read_session(session_id)
+        result_path = _result_path(session_id)
+        response_engine = (
+            ASRResult.model_validate_json(result_path.read_text(encoding="utf-8")).engine
+            if result_path.exists()
+            else current_session.engine
+        )
+    else:
+        background_tasks.add_task(
+            _run_asr_session_transcription,
+            session_id,
+            record=record,
+            audio_path=destination,
+        )
+        current_session = transcribing_session
+        response_engine = transcribing_session.engine
+
     return ASRSessionUploadResponse(
         session_id=session_id,
         audio_id=audio_id,
-        status="stream_ready",
+        status=current_session.status,
         filename=record.filename,
-        engine=result.engine,
-        events_url=ready_session.events_url or f"/api/asr/sessions/{session_id}/events",
-        result_url=ready_session.result_url or f"/api/asr/sessions/{session_id}/result",
+        engine=response_engine,
+        events_url=current_session.events_url or f"/api/asr/sessions/{session_id}/events",
+        result_url=current_session.result_url or f"/api/asr/sessions/{session_id}/result",
     )
+
+
+@router.post("/{session_id}/audio")
+def upload_asr_session_audio_route(
+    session_id: str,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+) -> ASRSessionUploadResponse:
+    return upload_asr_session_audio(session_id, file, background_tasks=background_tasks)
 
 
 @router.patch("/{session_id}/result")

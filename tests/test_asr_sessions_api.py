@@ -2,6 +2,10 @@ import asyncio
 import os
 import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from fastapi.testclient import TestClient
 
 from app.api.asr_sessions import (
     _asr_session_event_stream,
@@ -13,7 +17,8 @@ from app.api.asr_sessions import (
 )
 from app.api.audio import read_audio_transcript
 from app.main import app
-from app.schemas import ASRSegmentCorrection, ASRSessionCorrectionRequest
+from app.schemas import ASRResult, ASRSegment, ASRSegmentCorrection, ASRSessionCorrectionRequest
+from app.services.asr import AudioChunk
 
 
 class FakeUploadFile:
@@ -33,6 +38,33 @@ class FakeUploadFile:
         self.file.close()
 
 
+class FakeChunkEngine:
+    name = "fake-sensevoice"
+
+    def __init__(self, *, fail_on: int | None = None):
+        self.fail_on = fail_on
+
+    def transcribe(self, audio_id: str, audio_path: Path) -> ASRResult:
+        if self.fail_on is not None and f"chunk_{self.fail_on:03d}" in audio_id:
+            raise RuntimeError("fake chunk failure")
+        index = int(audio_id.rsplit("_", 1)[-1])
+        return ASRResult(
+            audio_id=audio_id,
+            engine=self.name,
+            text=f"第{index}段转写",
+            conversation_text=f"[sensevoice] 第{index}段转写",
+            segments=[
+                ASRSegment(
+                    speaker="sensevoice",
+                    text=f"第{index}段转写",
+                    start_time=0.0,
+                    end_time=2.0,
+                )
+            ],
+            duration=2.0,
+        )
+
+
 def collect_sse_chunks(session_id: str, last_event_id: int = 0) -> str:
     async def collect() -> str:
         chunks = []
@@ -45,6 +77,13 @@ def collect_sse_chunks(session_id: str, last_event_id: int = 0) -> str:
         return "".join(chunks)
 
     return asyncio.run(collect())
+
+
+def fake_audio_chunks() -> list[AudioChunk]:
+    return [
+        AudioChunk(index=1, path=Path("chunk_001.wav"), start_seconds=0.0, duration_seconds=300.0),
+        AudioChunk(index=2, path=Path("chunk_002.wav"), start_seconds=300.0, duration_seconds=120.0),
+    ]
 
 
 class ASRSessionApiTests(unittest.TestCase):
@@ -101,6 +140,26 @@ class ASRSessionApiTests(unittest.TestCase):
         stream = collect_sse_chunks(session.session_id)
         self.assertIn("event: segment", stream)
         self.assertIn("event: completed", stream)
+
+    def test_upload_route_starts_background_transcription_and_streams_events(self):
+        client = TestClient(app)
+        created = client.post("/api/asr/sessions?engine=mock")
+        self.assertEqual(created.status_code, 200)
+        session_id = created.json()["session_id"]
+
+        uploaded = client.post(
+            f"/api/asr/sessions/{session_id}/audio",
+            files={"file": ("sample.wav", b"RIFF....WAVEfmt ", "audio/wav")},
+        )
+
+        self.assertEqual(uploaded.status_code, 200)
+        self.assertEqual(uploaded.json()["status"], "transcribing")
+        stream = client.get(f"/api/asr/sessions/{session_id}/events?delay_ms=0")
+        self.assertEqual(stream.status_code, 200)
+        self.assertIn("event: segment", stream.text)
+        self.assertIn("event: completed", stream.text)
+        result = client.get(f"/api/asr/sessions/{session_id}/result")
+        self.assertEqual(result.status_code, 200)
 
     def test_role_review_updates_segments_result_and_legacy_transcript(self):
         session = create_asr_session(engine="mock")
@@ -188,6 +247,68 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertNotIn("event: audio_uploaded", stream)
         self.assertIn("event: segment", stream)
         self.assertIn("event: completed", stream)
+
+    def test_chunked_long_audio_events_include_progress(self):
+        session = create_asr_session(engine="sensevoice")
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+        try:
+            with (
+                patch("app.api.asr_sessions.create_asr_engine", return_value=FakeChunkEngine()),
+                patch("app.api.asr_sessions._should_use_chunked_session", return_value=(True, 420.0)),
+                patch("app.api.asr_sessions.split_audio_to_chunks", return_value=fake_audio_chunks()),
+            ):
+                uploaded = upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+
+        self.assertEqual(uploaded.status, "stream_ready")
+        result = read_asr_session_result(session.session_id)
+        self.assertEqual(result.engine, "fake-sensevoice-chunked")
+        self.assertEqual(len(result.segments), 2)
+        self.assertEqual(result.segments[1].start_time, 300.0)
+
+        events = _read_events(session.session_id)
+        event_names = [event.event for event in events]
+        self.assertIn("chunk_plan", event_names)
+        self.assertEqual(event_names.count("chunk_started"), 2)
+        self.assertEqual(event_names.count("chunk_completed"), 2)
+        self.assertLess(event_names.index("chunk_plan"), event_names.index("segment"))
+
+        chunk_plan = next(event for event in events if event.event == "chunk_plan")
+        self.assertEqual(chunk_plan.data["total_chunks"], 2)
+        stream = collect_sse_chunks(session.session_id)
+        self.assertIn("event: chunk_started", stream)
+        self.assertIn("event: chunk_completed", stream)
+        self.assertIn("event: completed", stream)
+
+    def test_chunk_failure_events_include_retry_hint(self):
+        session = create_asr_session(engine="sensevoice")
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+        try:
+            with (
+                patch("app.api.asr_sessions.create_asr_engine", return_value=FakeChunkEngine(fail_on=2)),
+                patch("app.api.asr_sessions._should_use_chunked_session", return_value=(True, 420.0)),
+                patch("app.api.asr_sessions.split_audio_to_chunks", return_value=fake_audio_chunks()),
+            ):
+                uploaded = upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+
+        self.assertEqual(uploaded.status, "failed")
+        events = _read_events(session.session_id)
+        event_names = [event.event for event in events]
+        self.assertIn("chunk_failed", event_names)
+        self.assertEqual(event_names[-1], "failed")
+
+        failed_chunk = next(event for event in events if event.event == "chunk_failed")
+        self.assertEqual(failed_chunk.data["chunk_index"], 2)
+        self.assertTrue(failed_chunk.data["retryable"])
+        self.assertIn("重新上传重试", failed_chunk.data["retry_hint"])
+
+        stream = collect_sse_chunks(session.session_id)
+        self.assertIn("event: chunk_failed", stream)
+        self.assertIn("retry_hint", stream)
+        self.assertIn("event: failed", stream)
 
 
 if __name__ == "__main__":

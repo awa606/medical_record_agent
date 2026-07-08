@@ -27,6 +27,11 @@ const appState = {
   asrStreamCurrentSegment: 0,
   asrStreamTotalSegments: 0,
   asrLastError: "",
+  asrChunkCurrent: 0,
+  asrChunkTotal: 0,
+  asrChunkStatus: "",
+  asrChunkLastError: "",
+  asrRetryHint: "",
   roleReviewDirty: false,
   roleReviewSaving: false,
 };
@@ -562,10 +567,17 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
   const current = asr
     ? total
     : Math.min(appState.asrStreamCurrentSegment || rows.length || 0, total || rows.length || 0);
+  const chunkText = appState.asrChunkTotal
+    ? `${appState.asrChunkCurrent || 0}/${appState.asrChunkTotal}`
+    : "未启用";
   const statusText = appState.asrLastError
     ? "转写异常"
+    : appState.asrChunkLastError
+      ? "切片转写失败"
     : asr
       ? "转写完成"
+      : appState.asrChunkStatus
+        ? appState.asrChunkStatus
       : isStreaming
         ? "转写中"
         : rows.length
@@ -598,11 +610,14 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
       </div>
       <div class="status-metrics">
         <div><span>进度</span><strong>${progress}%</strong></div>
+        <div><span>切片</span><strong>${escapeHtml(chunkText)}</strong></div>
         <div><span>分段</span><strong>${current || 0}/${total || 0}</strong></div>
         <div><span>文件</span><strong>${escapeHtml(appState.uploadedFilename || "未上传")}</strong></div>
         <div><span>校正</span><strong>${escapeHtml(reviewText)}</strong></div>
       </div>
       ${appState.asrLastError ? `<div class="safety-strip danger">${escapeHtml(appState.asrLastError)}</div>` : ""}
+      ${appState.asrChunkLastError ? `<div class="safety-strip danger"><strong>失败切片</strong><br>${escapeHtml(appState.asrChunkLastError)}</div>` : ""}
+      ${appState.asrRetryHint ? `<div class="safety-strip warning"><strong>重试提示</strong><br>${escapeHtml(appState.asrRetryHint)}</div>` : ""}
       ${actionButton ? `<div class="quick-action-row">${actionButton}</div>` : ""}
     </section>
   `;
@@ -1095,6 +1110,11 @@ function resetTaskState({ keepAsr = false } = {}) {
     appState.asrStreamCurrentSegment = 0;
     appState.asrStreamTotalSegments = 0;
     appState.asrLastError = "";
+    appState.asrChunkCurrent = 0;
+    appState.asrChunkTotal = 0;
+    appState.asrChunkStatus = "";
+    appState.asrChunkLastError = "";
+    appState.asrRetryHint = "";
     resetRoleReviewState();
     appState.uploadedFilename = "";
   }
@@ -1180,6 +1200,11 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrStreamCurrentSegment = 0;
     appState.asrStreamTotalSegments = 0;
     appState.asrLastError = "";
+    appState.asrChunkCurrent = 0;
+    appState.asrChunkTotal = 0;
+    appState.asrChunkStatus = "";
+    appState.asrChunkLastError = "";
+    appState.asrRetryHint = "";
     renderAll();
   });
 
@@ -1196,6 +1221,64 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.taskStatus = "TRANSCRIBING";
     setBusy(true, "正在实时转写音频...");
+    renderAll();
+  });
+
+  source.addEventListener("chunk_plan", (event) => {
+    const data = JSON.parse(event.data);
+    appState.currentAudioId = data.audio_id || appState.currentAudioId;
+    appState.selectedEngine = data.engine || appState.selectedEngine;
+    appState.taskStatus = "TRANSCRIBING";
+    appState.asrChunkCurrent = 0;
+    appState.asrChunkTotal = Number(data.total_chunks || data.chunk_count || 0);
+    appState.asrChunkStatus = appState.asrChunkTotal
+      ? `准备切片转写（共 ${appState.asrChunkTotal} 片）`
+      : "准备切片转写";
+    appState.asrStreamProgress = Number(data.progress || 0);
+    appState.asrChunkLastError = "";
+    appState.asrRetryHint = "";
+    renderAll();
+  });
+
+  source.addEventListener("chunk_started", (event) => {
+    const data = JSON.parse(event.data);
+    appState.currentAudioId = data.audio_id || appState.currentAudioId;
+    appState.selectedEngine = data.engine || appState.selectedEngine;
+    appState.taskStatus = "TRANSCRIBING";
+    appState.asrChunkCurrent = Number(data.chunk_index || appState.asrChunkCurrent || 0);
+    appState.asrChunkTotal = Number(data.total_chunks || appState.asrChunkTotal || 0);
+    appState.asrChunkStatus = `第 ${appState.asrChunkCurrent}/${appState.asrChunkTotal || "?"} 片转写中`;
+    appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
+    appState.asrChunkLastError = "";
+    appState.asrRetryHint = "";
+    setBusy(true, appState.asrChunkStatus);
+    renderAll();
+  });
+
+  source.addEventListener("chunk_completed", (event) => {
+    const data = JSON.parse(event.data);
+    appState.currentAudioId = data.audio_id || appState.currentAudioId;
+    appState.selectedEngine = data.engine || appState.selectedEngine;
+    appState.taskStatus = "TRANSCRIBING";
+    appState.asrChunkCurrent = Number(data.chunk_index || appState.asrChunkCurrent || 0);
+    appState.asrChunkTotal = Number(data.total_chunks || appState.asrChunkTotal || 0);
+    appState.asrChunkStatus = `第 ${appState.asrChunkCurrent}/${appState.asrChunkTotal || "?"} 片已完成`;
+    appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
+    renderAll();
+  });
+
+  source.addEventListener("chunk_failed", (event) => {
+    const data = JSON.parse(event.data);
+    appState.currentAudioId = data.audio_id || appState.currentAudioId;
+    appState.selectedEngine = data.engine || appState.selectedEngine;
+    appState.taskStatus = "FAILED";
+    appState.asrChunkCurrent = Number(data.chunk_index || appState.asrChunkCurrent || 0);
+    appState.asrChunkTotal = Number(data.total_chunks || appState.asrChunkTotal || 0);
+    appState.asrChunkStatus = `第 ${appState.asrChunkCurrent}/${appState.asrChunkTotal || "?"} 片失败`;
+    appState.asrChunkLastError = data.error || "切片转写失败";
+    appState.asrRetryHint = data.retry_hint || "请重新上传音频重试，或切换到稳定 fallback 模型。";
+    appState.asrLastError = appState.asrChunkLastError;
+    appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
     renderAll();
   });
 
@@ -1228,6 +1311,9 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrStreamTotalSegments = data.segments || data.asr_result?.segments?.length || appState.asrStreamTotalSegments || appState.liveTranscriptSegments.length;
     appState.asrStreamCurrentSegment = appState.asrStreamTotalSegments;
     appState.asrLastError = "";
+    appState.asrChunkStatus = appState.asrChunkTotal ? "切片转写完成" : "";
+    appState.asrChunkLastError = "";
+    appState.asrRetryHint = "";
     appState.currentEvaluation = null;
     resetRoleReviewState();
     closeAsrStream();
@@ -1242,6 +1328,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     terminalReceived = true;
     appState.taskStatus = "FAILED";
     appState.asrLastError = data.error || "ASR 实时转写失败";
+    appState.asrRetryHint = data.retry_hint || appState.asrRetryHint;
     closeAsrStream();
     setBusy(false);
     renderAll();
@@ -1364,6 +1451,11 @@ async function uploadAndTranscribe(file, engine) {
   appState.asrStreamCurrentSegment = 0;
   appState.asrStreamTotalSegments = 0;
   appState.asrLastError = "";
+  appState.asrChunkCurrent = 0;
+  appState.asrChunkTotal = 0;
+  appState.asrChunkStatus = "";
+  appState.asrChunkLastError = "";
+  appState.asrRetryHint = "";
   renderAll();
 
   setBusy(true, "正在创建 ASR 实时转写会话...");

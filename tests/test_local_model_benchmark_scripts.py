@@ -8,6 +8,7 @@ from scripts.collect_hardware_profile import collect_hardware_profile
 from scripts.check_asr_dependencies import collect_asr_dependency_status, render_markdown
 from scripts.check_qwen_asr_env import render_markdown as render_qwen_markdown
 from scripts.prepare_public_asr_smoke_samples import render_markdown as render_public_samples_markdown
+from scripts.run_local_asr_benchmark import CSV_FIELDS
 from scripts.summarize_asr_benchmark import summarize_benchmark
 
 
@@ -78,25 +79,7 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             with csv_path.open("w", encoding="utf-8-sig", newline="") as csv_file:
                 writer = csv.DictWriter(
                     csv_file,
-                    fieldnames=[
-                        "filename",
-                        "engine",
-                        "duration",
-                        "status",
-                        "error",
-                        "ground_truth_available",
-                        "transcript_non_empty",
-                        "segments",
-                        "model_load_time",
-                        "inference_time",
-                        "realtime_factor",
-                        "peak_memory_mb",
-                        "gpu_memory_mb",
-                        "cer",
-                        "keyword_recall",
-                        "recognized_keywords",
-                        "missing_keywords",
-                    ],
+                    fieldnames=CSV_FIELDS,
                 )
                 writer.writeheader()
                 writer.writerow(
@@ -114,16 +97,70 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
                         "realtime_factor": "0.008",
                         "peak_memory_mb": "1.5",
                         "gpu_memory_mb": "",
+                        "rss_start_mb": "100.0",
+                        "rss_peak_mb": "125.0",
+                        "rss_delta_mb": "25.0",
+                        "cpu_time_seconds": "0.1",
+                        "cpu_process_percent": "50.0",
+                        "cpu_normalized_percent": "6.25",
                         "cer": "0.5",
                         "keyword_recall": "0.25",
                         "recognized_keywords": "发热",
                         "missing_keywords": "咳嗽",
                     }
                 )
+            qwen_dir = reports_dir / "qwen3"
+            qwen_dir.mkdir()
+            (qwen_dir / "hardware_profile.json").write_text(
+                json.dumps(
+                    {
+                        "python": {"implementation": "CPython", "version": "3.12"},
+                        "gpu": {"torch_cuda_available": False},
+                        "dependencies": {
+                            "funasr": {"available": False},
+                            "qwen_asr": {"available": True},
+                            "whisper": {"available": False},
+                        },
+                        "benchmark_status": {"current_machine_role": "qwen_ascii_runtime"},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            with (qwen_dir / "qwen3_report.csv").open("w", encoding="utf-8-sig", newline="") as csv_file:
+                writer = csv.DictWriter(csv_file, fieldnames=CSV_FIELDS)
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "filename": "snakebite_01.wav",
+                        "engine": "qwen3-asr-0.6b",
+                        "duration": "112.0",
+                        "status": "measured",
+                        "error": "",
+                        "ground_truth_available": "True",
+                        "transcript_non_empty": "True",
+                        "segments": "1",
+                        "model_load_time": "1.0",
+                        "inference_time": "66.0",
+                        "realtime_factor": "0.589",
+                        "peak_memory_mb": "20.0",
+                        "gpu_memory_mb": "",
+                        "rss_start_mb": "6000.0",
+                        "rss_peak_mb": "7000.0",
+                        "rss_delta_mb": "1000.0",
+                        "cpu_time_seconds": "120.0",
+                        "cpu_process_percent": "181.8",
+                        "cpu_normalized_percent": "22.7",
+                        "cer": "0.144",
+                        "keyword_recall": "0.6",
+                        "recognized_keywords": "蛇咬伤",
+                        "missing_keywords": "破伤风",
+                    }
+                )
             (reports_dir / "local_asr_benchmark_run.json").write_text(
                 json.dumps(
                     {
-                        "schema_version": "v0.5.5",
+                        "schema_version": "v0.5.6",
                         "mode": "smoke",
                         "evaluation_profile": "mixed_public_smoke",
                         "evaluation_policy": "公开 smoke 混合集",
@@ -156,17 +193,26 @@ class LocalModelBenchmarkScriptTests(unittest.TestCase):
             summary = summarize_benchmark(reports_dir, output_path)
 
             self.assertEqual(summary["engines"][0]["engine"], "mock-asr-v0.2")
-            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.5")
+            self.assertEqual(summary["run_status"]["schema_version"], "v0.5.6")
             self.assertEqual(summary["engines"][0]["sample_count"], 1)
             self.assertEqual(summary["engines"][0]["failed_count"], 0)
             self.assertEqual(summary["engines"][0]["avg_realtime_factor"], 0.008)
+            self.assertEqual(summary["engines"][0]["avg_cpu_process_percent"], 50.0)
+            self.assertEqual(summary["engines"][0]["max_rss_peak_mb"], 125.0)
+            self.assertIn("qwen3/qwen3_report.csv", summary["csv_reports"])
+            self.assertEqual(summary["runtime_profiles"][0]["report_file"], "qwen3/hardware_profile.json")
             self.assertTrue(output_path.exists())
             markdown = output_path.read_text(encoding="utf-8")
             self.assertIn("本地模型与边缘端评测基线报告", markdown)
+            self.assertIn("额外运行环境", markdown)
+            self.assertIn("qwen3/hardware_profile.json", markdown)
             self.assertIn("多引擎运行状态", markdown)
             self.assertIn("评测分层", markdown)
             self.assertIn("平均 RTF", markdown)
+            self.assertIn("CPU%", markdown)
+            self.assertIn("RSS", markdown)
             self.assertIn("mock_report.csv", markdown)
+            self.assertIn("qwen3/qwen3_report.csv", markdown)
             self.assertIn("whisper", markdown)
             self.assertIn("project_portable", markdown)
 

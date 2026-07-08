@@ -1,0 +1,4 @@
+﻿filename,engine,duration,status,error,ground_truth_available,transcript_non_empty,segments,model_load_time,inference_time,realtime_factor,peak_memory_mb,gpu_memory_mb,rss_start_mb,rss_peak_mb,rss_delta_mb,cpu_time_seconds,cpu_process_percent,cpu_normalized_percent,cer,keyword_recall,recognized_keywords,missing_keywords
+chest_pain_01.wav,sensevoice-small,496.303,measured,,True,True,1,6.704,79.921,0.161033,167.03,,4129.34,4297.01,167.67,287.438,359.652,14.986,0.17735,0.5,胸痛|高血压|冠心病,胸闷|心慌|心电图
+fever_01.wav,sensevoice-small,309.94,measured,,True,True,1,6.704,46.458,0.149893,104.31,,4046.83,4158.56,111.73,165.469,356.17,14.84,0.135985,1.0,发烧|三天|淋雨|40度|咳嗽|铁锈色痰|布洛芬|反复发热|食欲不佳,
+snakebite_01.wav,sensevoice-small,111.93,measured,,True,True,22,6.704,17.373,0.155217,34.36,,4064.26,4102.74,38.48,62.047,357.137,14.881,0.1875,0.7,左手|肿痛|两个小时|寒战|头晕|胸闷|心慌,蛇咬伤|季德胜蛇药片|牙龈出血

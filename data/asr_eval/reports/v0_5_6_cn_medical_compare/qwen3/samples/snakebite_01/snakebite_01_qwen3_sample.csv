@@ -1,0 +1,2 @@
+﻿filename,engine,duration,status,error,ground_truth_available,transcript_non_empty,segments,model_load_time,inference_time,realtime_factor,peak_memory_mb,gpu_memory_mb,rss_start_mb,rss_peak_mb,rss_delta_mb,cpu_time_seconds,cpu_process_percent,cpu_normalized_percent,cer,keyword_recall,recognized_keywords,missing_keywords
+snakebite_01.wav,qwen3-asr-0.6b,111.93,measured,,True,True,23,78.039,62.023,0.55412,65.66,,3637.41,5285.81,1648.4,845.406,1363.061,56.794,0.144531,0.6,左手|肿痛|两个小时|头晕|胸闷|心慌,蛇咬伤|季德胜蛇药片|寒战|牙龈出血

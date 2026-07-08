@@ -23,13 +23,15 @@ def summarize_benchmark(
     hardware_path = _report_input_path(reports_dir, "hardware_profile.json")
     run_status_path = reports_dir / RUN_STATUS_FILE
     hardware = _load_json(hardware_path) if hardware_path.exists() else {}
+    runtime_profiles = _load_runtime_profiles(reports_dir, hardware_path)
     run_status = _load_json(run_status_path) if run_status_path.exists() else {}
-    csv_reports = sorted(reports_dir.glob("*_report.csv"))
-    engines = [_summarize_csv(path) for path in csv_reports]
+    csv_reports = sorted(reports_dir.rglob("*_report.csv"))
+    engines = [_summarize_csv(path, reports_dir) for path in csv_reports]
     summary = {
         "hardware_profile": hardware,
+        "runtime_profiles": runtime_profiles,
         "run_status": run_status,
-        "csv_reports": [str(path.name) for path in csv_reports],
+        "csv_reports": [_relative_report_path(path, reports_dir) for path in csv_reports],
         "engines": engines,
         "status": _benchmark_status(hardware, engines, run_status),
     }
@@ -46,6 +48,18 @@ def _report_input_path(reports_dir: Path, filename: str) -> Path:
     return parent_path if parent_path.exists() else local_path
 
 
+def _load_runtime_profiles(reports_dir: Path, primary_hardware_path: Path) -> list[dict[str, Any]]:
+    profiles: list[dict[str, Any]] = []
+    primary = primary_hardware_path.resolve() if primary_hardware_path.exists() else None
+    for path in sorted(reports_dir.rglob("hardware_profile.json")):
+        if primary is not None and path.resolve() == primary:
+            continue
+        data = _load_json(path)
+        data["report_file"] = _relative_report_path(path, reports_dir)
+        profiles.append(data)
+    return profiles
+
+
 def render_markdown(summary: dict[str, Any]) -> str:
     hardware = summary.get("hardware_profile") or {}
     system = hardware.get("system") or {}
@@ -57,7 +71,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines = [
         "# 本地模型与边缘端评测基线报告",
         "",
-        "> 本报告用于 v0.5.5 评测框架验收。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。",
+        "> 本报告用于 v0.5.7 中文医患样本多模型 ASR 对比与 Qwen3 补测。当前结果只代表本机开发基线，不代表医院电脑或边缘端最终性能。",
         "",
         "## 硬件配置",
         "",
@@ -81,15 +95,31 @@ def render_markdown(summary: dict[str, Any]) -> str:
         _dependency_row("ffmpeg", dependencies.get("ffmpeg")),
         f"| Ollama CLI | {_bool_cell((dependencies.get('ollama_cli') or {}).get('available'))} | 只检查命令是否存在，不调用服务 |",
         "",
-        "## 多引擎运行状态",
+        "## 额外运行环境",
         "",
-        f"- 运行模式：`{run_status.get('mode', 'strict')}`",
-        f"- 评测分层：`{run_status.get('evaluation_profile', '未记录')}`",
-        f"- 分层说明：{_cell(run_status.get('evaluation_policy'))}",
-        "",
-        "| 引擎 | 状态 | 报告 | 样本数 | 失败样本 | 说明 |",
-        "| --- | --- | --- | ---: | ---: | --- |",
+        "| 报告 | Python | FunASR | Qwen-ASR | Whisper | CUDA | 说明 |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
+    runtime_profiles = summary.get("runtime_profiles") or []
+    if runtime_profiles:
+        for profile in runtime_profiles:
+            lines.append(_runtime_profile_row(profile))
+    else:
+        lines.append("| 无 | - | - | - | - | - | 未发现子目录硬件档案 |")
+
+    lines.extend(
+        [
+            "",
+            "## 多引擎运行状态",
+            "",
+            f"- 运行模式：`{run_status.get('mode', 'strict')}`",
+            f"- 评测分层：`{run_status.get('evaluation_profile', '未记录')}`",
+            f"- 分层说明：{_cell(run_status.get('evaluation_policy'))}",
+            "",
+            "| 引擎 | 状态 | 报告 | 样本数 | 失败样本 | 说明 |",
+            "| --- | --- | --- | ---: | ---: | --- |",
+        ]
+    )
     engine_runs = run_status.get("engines") or []
     if engine_runs:
         for item in engine_runs:
@@ -112,15 +142,15 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "",
             "## ASR 评测结果",
             "",
-            "| 报告 | 引擎 | 成功样本 | Smoke 样本 | 失败样本 | 平均 CER | 平均关键词召回 | 平均耗时秒 | 平均 RTF | 状态 |",
-            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+            "| 报告 | 引擎 | 成功样本 | Smoke 样本 | 失败样本 | 平均 CER | 平均关键词召回 | 平均耗时秒 | 平均 RTF | 平均 CPU% | 标准化 CPU% | 峰值 RSS MB | 状态 |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
         ]
     )
     engines = summary.get("engines") or []
     if engines:
         for item in engines:
             lines.append(
-                "| {report} | {engine} | {samples} | {smoke} | {failed} | {cer} | {recall} | {time} | {rtf} | {status} |".format(
+                "| {report} | {engine} | {samples} | {smoke} | {failed} | {cer} | {recall} | {time} | {rtf} | {cpu} | {cpu_norm} | {rss} | {status} |".format(
                     report=item["report_file"],
                     engine=item["engine"],
                     samples=item["sample_count"],
@@ -130,11 +160,14 @@ def render_markdown(summary: dict[str, Any]) -> str:
                     recall=_number_cell(item["avg_keyword_recall"]),
                     time=_number_cell(item["avg_inference_time"]),
                     rtf=_number_cell(item["avg_realtime_factor"]),
+                    cpu=_number_cell(item["avg_cpu_process_percent"]),
+                    cpu_norm=_number_cell(item["avg_cpu_normalized_percent"]),
+                    rss=_number_cell(item["max_rss_peak_mb"]),
                     status=item["status"],
                 )
             )
     else:
-        lines.append("| 无 | 待评测 | 0 | 0 | 0 | - | - | - | - | no_csv_reports |")
+        lines.append("| 无 | 待评测 | 0 | 0 | 0 | - | - | - | - | - | - | - | no_csv_reports |")
 
     lines.extend(
         [
@@ -157,11 +190,12 @@ def render_markdown(summary: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _summarize_csv(path: Path) -> dict[str, Any]:
+def _summarize_csv(path: Path, reports_dir: Path) -> dict[str, Any]:
     rows = list(csv.DictReader(path.open("r", encoding="utf-8-sig", newline="")))
+    report_file = _relative_report_path(path, reports_dir)
     if not rows:
         return {
-            "report_file": path.name,
+            "report_file": report_file,
             "engine": "unknown",
             "sample_count": 0,
             "smoke_count": 0,
@@ -170,6 +204,9 @@ def _summarize_csv(path: Path) -> dict[str, Any]:
             "avg_keyword_recall": None,
             "avg_inference_time": None,
             "avg_realtime_factor": None,
+            "avg_cpu_process_percent": None,
+            "avg_cpu_normalized_percent": None,
+            "max_rss_peak_mb": None,
             "status": "no_rows",
         }
     measured_rows = [
@@ -181,7 +218,7 @@ def _summarize_csv(path: Path) -> dict[str, Any]:
     metric_rows = success_rows or rows
     measured_metric_rows = measured_rows or []
     return {
-        "report_file": path.name,
+        "report_file": report_file,
         "engine": (success_rows[0] if success_rows else rows[0]).get("engine") or "unknown",
         "sample_count": len(success_rows),
         "smoke_count": len(smoke_rows),
@@ -190,6 +227,9 @@ def _summarize_csv(path: Path) -> dict[str, Any]:
         "avg_keyword_recall": _average(measured_metric_rows, "keyword_recall"),
         "avg_inference_time": _average(metric_rows, "inference_time"),
         "avg_realtime_factor": _average(metric_rows, "realtime_factor"),
+        "avg_cpu_process_percent": _average(metric_rows, "cpu_process_percent"),
+        "avg_cpu_normalized_percent": _average(metric_rows, "cpu_normalized_percent"),
+        "max_rss_peak_mb": _maximum(metric_rows, "rss_peak_mb"),
         "status": _csv_status(measured_rows, smoke_rows, failed_rows),
     }
 
@@ -202,6 +242,23 @@ def _average(rows: list[dict[str, str]], key: str) -> float | None:
         except ValueError:
             continue
     return round(mean(values), 6) if values else None
+
+
+def _maximum(rows: list[dict[str, str]], key: str) -> float | None:
+    values: list[float] = []
+    for row in rows:
+        try:
+            values.append(float(row.get(key) or ""))
+        except ValueError:
+            continue
+    return round(max(values), 6) if values else None
+
+
+def _relative_report_path(path: Path, reports_dir: Path) -> str:
+    try:
+        return path.relative_to(reports_dir).as_posix()
+    except ValueError:
+        return path.name
 
 
 def _csv_status(
@@ -274,6 +331,22 @@ def _dependency_row(name: str, data: dict[str, Any] | None) -> str:
     if data.get("source"):
         version = f"{version}; source={data.get('source')}"
     return f"| {name} | {status} | {_cell(version)} |"
+
+
+def _runtime_profile_row(profile: dict[str, Any]) -> str:
+    dependencies = profile.get("dependencies") or {}
+    python = profile.get("python") or {}
+    gpu = profile.get("gpu") or {}
+    report_file = profile.get("report_file") or "hardware_profile.json"
+    python_value = f"{_cell(python.get('implementation'))} {_cell(python.get('version'))}"
+    note = (profile.get("benchmark_status") or {}).get("current_machine_role") or "子目录运行环境"
+    return (
+        f"| `{report_file}` | {python_value} | "
+        f"{_bool_cell((dependencies.get('funasr') or {}).get('available'))} | "
+        f"{_bool_cell((dependencies.get('qwen_asr') or {}).get('available'))} | "
+        f"{_bool_cell((dependencies.get('whisper') or {}).get('available'))} | "
+        f"{_bool_cell(gpu.get('torch_cuda_available'))} | {_cell(note)} |"
+    )
 
 
 def _cell(value: Any) -> str:

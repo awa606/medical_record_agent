@@ -1,0 +1,4 @@
+﻿filename,engine,duration,status,error,ground_truth_available,transcript_non_empty,segments,model_load_time,inference_time,realtime_factor,peak_memory_mb,gpu_memory_mb,rss_start_mb,rss_peak_mb,rss_delta_mb,cpu_time_seconds,cpu_process_percent,cpu_normalized_percent,cer,keyword_recall,recognized_keywords,missing_keywords
+chest_pain_01.wav,funasr-paraformer-zh,496.303,measured,,True,True,1,82.742,96.808,0.195058,167.04,,4284.88,4626.28,341.4,316.281,326.711,13.613,0.207265,0.5,胸痛|高血压|冠心病,胸闷|心慌|心电图
+fever_01.wav,funasr-paraformer-zh,309.94,measured,,True,True,1,82.742,54.206,0.174893,104.31,,3686.99,3793.0,106.01,190.766,351.926,14.664,0.183164,1.0,发烧|三天|淋雨|40度|咳嗽|铁锈色痰|布洛芬|反复发热|食欲不佳,
+snakebite_01.wav,funasr-paraformer-zh,111.93,measured,,True,True,22,82.742,19.949,0.178226,34.36,,3698.12,3757.25,59.13,71.5,358.416,14.934,0.195312,0.8,左手|肿痛|两个小时|季德胜蛇药片|寒战|头晕|胸闷|心慌,蛇咬伤|牙龈出血

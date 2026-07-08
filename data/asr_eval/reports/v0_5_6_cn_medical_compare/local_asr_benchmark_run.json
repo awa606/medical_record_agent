@@ -1,0 +1,37 @@
+{
+  "schema_version": "v0.5.6",
+  "generated_at": "2026-07-07T18:07:19+08:00",
+  "mode": "strict",
+  "evaluation_profile": "course_medical_cn",
+  "evaluation_policy": "三条课程中文医患样本，是本项目 ASR 主评测，可用于医学关键词和流程效果分析。",
+  "audio_dir": "video",
+  "truth_dir": "data\\asr_eval\\ground_truth",
+  "reports_dir": "data\\asr_eval\\reports\\v0_5_6_cn_medical_compare",
+  "sample_count": 3,
+  "engines": [
+    {
+      "engine": "funasr",
+      "engine_output": "funasr-paraformer-zh",
+      "status": "measured",
+      "reason": "completed",
+      "report_file": "funasr_report.csv",
+      "rows": 3,
+      "failed_samples": 0,
+      "sample_errors": [],
+      "model_load_time": 82.742,
+      "elapsed_seconds": 322.205
+    },
+    {
+      "engine": "sensevoice",
+      "engine_output": "sensevoice-small",
+      "status": "measured",
+      "reason": "completed",
+      "report_file": "sensevoice_report.csv",
+      "rows": 3,
+      "failed_samples": 0,
+      "sample_errors": [],
+      "model_load_time": 6.704,
+      "elapsed_seconds": 216.099
+    }
+  ]
+}

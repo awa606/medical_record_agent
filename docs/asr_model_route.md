@@ -10,7 +10,7 @@
 | v0.4 | 强化医学知识库、热词和后处理 | 医疗术语准确率不能只靠换模型。 |
 | v0.5 | 做本地模型和边缘端评测 | 用 CER、关键词召回、延迟和资源占用决定模型路线。 |
 
-## v0.5.0 / v0.5.5 当前结论
+## v0.5.0 / v0.5.7 当前结论
 
 `v0.5.0` 先完成评测框架和配置采集，不切换默认模型。
 
@@ -28,6 +28,8 @@
 - 普通医院 Windows PC 基线按 16GB 内存、512GB SSD、集成显卡的办公电脑假设处理；更高阶边缘端配置单独评测。
 - `v0.5.5` 已定位 Qwen-ASR 阻塞为 Windows 中文路径下 `nagisa/DyNet` 读取模型失败；迁移到 `C:\mra_qwen_runtime` ASCII 运行区后，`nagisa/qwen_asr` 导入成功。
 - Qwen3-ASR 已完成公开 smoke 和 `snakebite_01.wav` 课程中文短样本实测，进入可对比评测阶段。
+- `v0.5.7` 已通过分样本子进程补齐 Qwen3-ASR 三条中文医患样本同口径主评测；Qwen3 能跑完，但长音频 CER 和资源占用明显高于 FunASR/SenseVoice。
+- 当前 v0.6 默认建议：SenseVoice 作为优先候选，FunASR 作为稳定 fallback，Qwen3-ASR 保留为研究路线和边缘端/GPU 复测候选。
 - Ollama CLI 可检测到，但 LLM provider 所需环境变量尚未配置。
 - 模型选择仍以本地评测数据决定；当前不切换默认模型，FunASR/SenseVoice 先作为稳定 baseline，Qwen3-ASR 进入 `v0.5.6` 对比评测。
 
@@ -87,6 +89,21 @@
 - `data/asr_eval/reports/qwen_ascii_runtime_check.md`
 - `data/asr_eval/reports/qwen_ascii_runtime/local_model_benchmark.md`
 - `data/asr_eval/reports/qwen_ascii_runtime_course_sample/local_model_benchmark.md`
+
+## v0.5.7 中文医患样本同口径对比
+
+| 引擎 | 成功样本 | 平均 CER | 平均关键词召回 | 平均 RTF | 峰值 RSS | 当前结论 |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `funasr-paraformer-zh` | 3 | 0.195247 | 0.766667 | 0.182726 | 4626.28 MB | 可作为稳定 fallback，普通医院 PC 仍需实机复测。 |
+| `sensevoice-small` | 3 | 0.166945 | 0.733333 | 0.155381 | 4297.01 MB | 本机 CPU-only 下综合表现最好，建议进入 v0.6 默认候选。 |
+| `qwen3-asr-0.6b` | 3 | 0.550381 | 0.588889 | 0.485806 | 10502.26 MB | 分样本补测已跑通，但长音频准确率和内存压力不适合作为 v0.6 默认模型。 |
+
+长音频结论：`fever_01.wav` 和 `chest_pain_01.wav` 均已完成 FunASR/SenseVoice/Qwen3 对比。Qwen3 没有再次崩溃，但在 5-8 分钟中文医患样本上 CER 偏高，且 RSS 峰值超过 10GB。当前应优先把 FunASR/SenseVoice 调通到可交付产品，再把 Qwen3 放入 GPU、边缘端或后处理增强路线。
+
+证据文件：
+- `data/asr_eval/reports/v0_5_6_cn_medical_compare/local_model_benchmark.md`
+- `data/asr_eval/reports/v0_5_6_cn_medical_compare/qwen3/qwen3_split_run.md`
+- `data/asr_eval/reports/v0_5_7_long_audio_stability/long_audio_stability.md`
 
 ## 候选模型
 

@@ -1,0 +1,25 @@
+{
+  "schema_version": "v0.5.6",
+  "generated_at": "2026-07-08T09:42:36+08:00",
+  "mode": "strict",
+  "evaluation_profile": "course_medical_cn",
+  "evaluation_policy": "三条课程中文医患样本，是本项目 ASR 主评测，可用于医学关键词和流程效果分析。",
+  "audio_dir": "data\\asr_eval\\reports\\v0_5_6_cn_medical_compare\\qwen3\\_staging\\snakebite_01\\audio",
+  "truth_dir": "data\\asr_eval\\reports\\v0_5_6_cn_medical_compare\\qwen3\\_staging\\snakebite_01\\ground_truth",
+  "reports_dir": "data\\asr_eval\\reports\\v0_5_6_cn_medical_compare\\qwen3\\samples\\snakebite_01",
+  "sample_count": 1,
+  "engines": [
+    {
+      "engine": "qwen3",
+      "engine_output": "qwen3-asr-0.6b",
+      "status": "measured",
+      "reason": "completed",
+      "report_file": "qwen3_report.csv",
+      "rows": 1,
+      "failed_samples": 0,
+      "sample_errors": [],
+      "model_load_time": 78.039,
+      "elapsed_seconds": 140.354
+    }
+  ]
+}

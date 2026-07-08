@@ -10,7 +10,9 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import sys
+import threading
 import time
 import tracemalloc
 import wave
@@ -57,6 +59,12 @@ CSV_FIELDS = [
     "realtime_factor",
     "peak_memory_mb",
     "gpu_memory_mb",
+    "rss_start_mb",
+    "rss_peak_mb",
+    "rss_delta_mb",
+    "cpu_time_seconds",
+    "cpu_process_percent",
+    "cpu_normalized_percent",
     "cer",
     "keyword_recall",
     "recognized_keywords",
@@ -122,7 +130,7 @@ def run_local_asr_benchmark(
     ]
 
     run_summary = {
-        "schema_version": "v0.5.5",
+        "schema_version": "v0.5.6",
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "mode": mode,
         "evaluation_profile": resolved_profile["profile"],
@@ -152,7 +160,7 @@ def render_run_markdown(run_summary: dict[str, Any]) -> str:
     lines = [
         "# 本地 ASR 多引擎评测运行记录",
         "",
-        "> 本记录用于 v0.5.5。它只说明哪些引擎在当前环境完成评测、哪些因依赖或配置缺失被跳过，不代表最终模型优劣。",
+        "> 本记录用于 v0.5.6。它只说明哪些引擎在当前环境完成评测、哪些因依赖或配置缺失被跳过，不代表最终模型优劣。",
         "",
         "## 运行信息",
         "",
@@ -244,16 +252,19 @@ def _run_one_engine(
 
         peak_memory_mb: float | None = None
         gpu_memory_mb: float | None = None
+        resource_metrics = _empty_resource_metrics()
         try:
             sample_started_at = time.perf_counter()
             tracemalloc.start()
             _reset_gpu_peak_memory()
-            result = engine.transcribe(audio_path.stem, audio_path)
-            result = apply_manifest_role_strategy(result, audio_path.stem, manifest)
+            with _ResourceSampler() as resource_sampler:
+                result = engine.transcribe(audio_path.stem, audio_path)
+                result = apply_manifest_role_strategy(result, audio_path.stem, manifest)
             inference_time = time.perf_counter() - sample_started_at
             duration = _result_or_file_duration(result.duration, audio_path)
             peak_memory_mb = _current_peak_memory_mb()
             gpu_memory_mb = _gpu_peak_memory_mb()
+            resource_metrics = resource_sampler.metrics(inference_time)
             sample = manifest.get(audio_path.stem) or {}
             expected_keywords = sample.get("expected_keywords") or keywords
             evaluation = None
@@ -291,6 +302,7 @@ def _run_one_engine(
                 "realtime_factor": _realtime_factor(inference_time, duration),
                 "peak_memory_mb": peak_memory_mb,
                 "gpu_memory_mb": gpu_memory_mb,
+                **resource_metrics,
                 "cer": round(evaluation.cer, 6) if evaluation else "",
                 "keyword_recall": round(evaluation.keyword_recall, 6) if evaluation else "",
                 "recognized_keywords": "|".join(evaluation.medical_keywords["recognized"]) if evaluation else "",
@@ -417,6 +429,12 @@ def _failed_row(
         "realtime_factor": "",
         "peak_memory_mb": "",
         "gpu_memory_mb": "",
+        "rss_start_mb": "",
+        "rss_peak_mb": "",
+        "rss_delta_mb": "",
+        "cpu_time_seconds": "",
+        "cpu_process_percent": "",
+        "cpu_normalized_percent": "",
         "cer": "",
         "keyword_recall": "",
         "recognized_keywords": "",
@@ -487,6 +505,110 @@ def _gpu_peak_memory_mb() -> float | None:
     except Exception:
         return None
     return None
+
+
+def _empty_resource_metrics() -> dict[str, object]:
+    return {
+        "rss_start_mb": "",
+        "rss_peak_mb": "",
+        "rss_delta_mb": "",
+        "cpu_time_seconds": "",
+        "cpu_process_percent": "",
+        "cpu_normalized_percent": "",
+    }
+
+
+class _ResourceSampler:
+    """Sample process RSS while measuring process CPU time for one transcription."""
+
+    def __init__(self, interval_seconds: float = 0.2) -> None:
+        self.interval_seconds = interval_seconds
+        self.process: Any | None = None
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._rss_start_mb: float | None = None
+        self._rss_peak_mb: float | None = None
+        self._cpu_start_seconds: float | None = None
+        self._cpu_end_seconds: float | None = None
+
+    def __enter__(self) -> "_ResourceSampler":
+        try:
+            import psutil
+
+            self.process = psutil.Process(os.getpid())
+            self._rss_start_mb = self._sample_rss_mb()
+            self._rss_peak_mb = self._rss_start_mb
+            self._cpu_start_seconds = self._cpu_seconds()
+            self._thread = threading.Thread(target=self._sample_loop, daemon=True)
+            self._thread.start()
+        except Exception:
+            self.process = None
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        self._stop_event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=self.interval_seconds * 2)
+        if self.process is not None:
+            self._sample_once()
+            self._cpu_end_seconds = self._cpu_seconds()
+
+    def metrics(self, inference_time: float) -> dict[str, object]:
+        if self.process is None or self._rss_start_mb is None:
+            return _empty_resource_metrics()
+
+        rss_peak_mb = self._rss_peak_mb if self._rss_peak_mb is not None else self._rss_start_mb
+        rss_delta_mb = max(0.0, rss_peak_mb - self._rss_start_mb)
+        cpu_time_seconds = ""
+        cpu_process_percent = ""
+        cpu_normalized_percent = ""
+        if self._cpu_start_seconds is not None and self._cpu_end_seconds is not None:
+            cpu_time = max(0.0, self._cpu_end_seconds - self._cpu_start_seconds)
+            cpu_time_seconds = round(cpu_time, 3)
+            if inference_time > 0:
+                cpu_process_percent = round((cpu_time / inference_time) * 100, 3)
+                cpu_normalized_percent = round(
+                    (cpu_time / (inference_time * max(os.cpu_count() or 1, 1))) * 100,
+                    3,
+                )
+
+        return {
+            "rss_start_mb": round(self._rss_start_mb, 2),
+            "rss_peak_mb": round(rss_peak_mb, 2),
+            "rss_delta_mb": round(rss_delta_mb, 2),
+            "cpu_time_seconds": cpu_time_seconds,
+            "cpu_process_percent": cpu_process_percent,
+            "cpu_normalized_percent": cpu_normalized_percent,
+        }
+
+    def _sample_loop(self) -> None:
+        while not self._stop_event.wait(self.interval_seconds):
+            self._sample_once()
+
+    def _sample_once(self) -> None:
+        rss_mb = self._sample_rss_mb()
+        if rss_mb is not None:
+            self._rss_peak_mb = max(self._rss_peak_mb or rss_mb, rss_mb)
+
+    def _sample_rss_mb(self) -> float | None:
+        if self.process is None:
+            return None
+        try:
+            return self.process.memory_info().rss / (1024 * 1024)
+        except Exception:
+            return None
+
+    def _cpu_seconds(self) -> float | None:
+        if self.process is None:
+            return None
+        try:
+            times = self.process.cpu_times()
+        except Exception:
+            return None
+        return sum(
+            float(getattr(times, name, 0.0))
+            for name in ("user", "system", "children_user", "children_system")
+        )
 
 
 def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:

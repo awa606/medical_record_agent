@@ -1,0 +1,45 @@
+{
+  "schema_version": "v0.5.7",
+  "generated_at": "2026-07-08T09:49:42+08:00",
+  "engine": "qwen3",
+  "mode": "strict",
+  "evaluation_profile": "course_medical_cn",
+  "audio_dir": "C:\\mra_qwen_runtime\\course_medical_cn\\audio",
+  "truth_dir": "C:\\mra_qwen_runtime\\course_medical_cn\\ground_truth",
+  "reports_dir": "data\\asr_eval\\reports\\v0_5_6_cn_medical_compare\\qwen3",
+  "sample_count": 3,
+  "samples": [
+    {
+      "sample_id": "snakebite_01",
+      "status": "measured",
+      "returncode": 0,
+      "elapsed_seconds": 143.108,
+      "report_file": "samples/snakebite_01/snakebite_01_qwen3_sample.csv",
+      "stdout_file": "samples/snakebite_01/stdout.txt",
+      "stderr_file": "samples/snakebite_01/stderr.txt",
+      "error": ""
+    },
+    {
+      "sample_id": "fever_01",
+      "status": "measured",
+      "returncode": 0,
+      "elapsed_seconds": 179.672,
+      "report_file": "samples/fever_01/fever_01_qwen3_sample.csv",
+      "stdout_file": "samples/fever_01/stdout.txt",
+      "stderr_file": "samples/fever_01/stderr.txt",
+      "error": ""
+    },
+    {
+      "sample_id": "chest_pain_01",
+      "status": "measured",
+      "returncode": 0,
+      "elapsed_seconds": 244.378,
+      "report_file": "samples/chest_pain_01/chest_pain_01_qwen3_sample.csv",
+      "stdout_file": "samples/chest_pain_01/stdout.txt",
+      "stderr_file": "samples/chest_pain_01/stderr.txt",
+      "error": ""
+    }
+  ],
+  "rows": 3,
+  "failed_samples": 0
+}

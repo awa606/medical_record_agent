@@ -41,7 +41,7 @@ class RunLocalASRBenchmarkTests(unittest.TestCase):
                 )
 
             by_engine = {item["engine"]: item for item in summary["engines"]}
-            self.assertEqual(summary["schema_version"], "v0.5.5")
+            self.assertEqual(summary["schema_version"], "v0.5.6")
             self.assertEqual(summary["evaluation_profile"], "course_medical_cn")
             self.assertEqual(by_engine["mock"]["status"], "measured")
             self.assertEqual(by_engine["mock"]["rows"], 1)
@@ -52,6 +52,9 @@ class RunLocalASRBenchmarkTests(unittest.TestCase):
             self.assertEqual(rows[0]["status"], "measured")
             self.assertIn("realtime_factor", rows[0])
             self.assertIn("model_load_time", rows[0])
+            self.assertIn("rss_peak_mb", rows[0])
+            self.assertIn("cpu_process_percent", rows[0])
+            self.assertIn("cpu_normalized_percent", rows[0])
             self.assertTrue((reports_dir / "local_asr_benchmark_run.json").exists())
             self.assertTrue((reports_dir / "local_asr_benchmark_run.md").exists())
             benchmark = (reports_dir / "local_model_benchmark.md").read_text(encoding="utf-8")
@@ -135,7 +138,7 @@ class RunLocalASRBenchmarkTests(unittest.TestCase):
                 )
 
             engine = summary["engines"][0]
-            self.assertEqual(summary["schema_version"], "v0.5.5")
+            self.assertEqual(summary["schema_version"], "v0.5.6")
             self.assertEqual(summary["mode"], "smoke")
             self.assertEqual(summary["evaluation_profile"], "course_medical_cn")
             self.assertEqual(engine["status"], "smoke_measured")

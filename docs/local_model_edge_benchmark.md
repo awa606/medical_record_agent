@@ -202,6 +202,29 @@
 - `data/asr_eval/reports/qwen_ascii_runtime/local_asr_benchmark_run.md`
 - `data/asr_eval/reports/qwen_ascii_runtime_course_sample/local_model_benchmark.md`
 
+## v0.5.7 中文医患样本多模型对比与长音频稳定性
+
+本轮在当前开发机 CPU-only 环境下，用同一组三条中文医患课程样本对比 FunASR、SenseVoice 和 Qwen3-ASR。Qwen3-ASR 使用 `C:\mra_qwen_runtime` ASCII 运行区，通过分样本子进程补测，避免长音频崩溃导致全部结果丢失。
+
+| 模型 | 成功样本 | 平均 CER | 平均关键词召回 | 平均 RTF | 平均 CPU% | 峰值 RSS | 结论 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| FunASR | 3 | 0.195247 | 0.766667 | 0.182726 | 345.684 | 4626.28 MB | 稳定完成三样本，适合作为 fallback。 |
+| SenseVoice | 3 | 0.166945 | 0.733333 | 0.155381 | 357.653 | 4297.01 MB | 本轮综合最优，建议作为 v0.6 默认候选。 |
+| Qwen3-ASR | 3 | 0.550381 | 0.588889 | 0.485806 | 1380.968 | 10502.26 MB | 能跑通但资源重、长音频 CER 高，暂不作为默认交付模型。 |
+
+长音频稳定性：
+- `fever_01.wav` 约 310 秒，三模型均完成；Qwen3 CER `0.550416`，RSS 峰值 `8290.41 MB`。
+- `chest_pain_01.wav` 约 496 秒，三模型均完成；Qwen3 CER `0.956197`，RSS 峰值 `10502.26 MB`。
+- FunASR/SenseVoice 在两条长音频上 RTF 均小于 `0.20`，更适合普通医院 PC 的 CPU-only 交付路线。
+
+当前没有普通医院 Windows PC 实机，因此配置建议仍按公开采购资料和合理推断处理：普通办公 PC 以 Windows 10/11、i5/Ryzen5 档 CPU、16GB 内存、512GB SSD、集显为最低参考；推荐本地 ASR PC 使用 32GB 内存；Qwen3、本地 LLM 和说话人分离建议放到 32GB+ 内存、NVIDIA 8-12GB+ 显存的边缘端或工作站复测。
+
+证据文件：
+- `data/asr_eval/reports/v0_5_6_cn_medical_compare/local_model_benchmark.md`
+- `data/asr_eval/reports/v0_5_6_cn_medical_compare/qwen3/qwen3_report.csv`
+- `data/asr_eval/reports/v0_5_6_cn_medical_compare/qwen3/qwen3_split_run.md`
+- `data/asr_eval/reports/v0_5_7_long_audio_stability/long_audio_stability.md`
+
 ## 医院 PC 配置采集表
 
 | 字段 | 采集值 |

@@ -1,0 +1,4 @@
+﻿filename,engine,duration,status,error,ground_truth_available,transcript_non_empty,segments,model_load_time,inference_time,realtime_factor,peak_memory_mb,gpu_memory_mb,rss_start_mb,rss_peak_mb,rss_delta_mb,cpu_time_seconds,cpu_process_percent,cpu_normalized_percent,cer,keyword_recall,recognized_keywords,missing_keywords
+snakebite_01.wav,qwen3-asr-0.6b,111.93,measured,,True,True,23,78.039,62.023,0.55412,65.66,,3637.41,5285.81,1648.4,845.406,1363.061,56.794,0.144531,0.6,左手|肿痛|两个小时|头晕|胸闷|心慌,蛇咬伤|季德胜蛇药片|寒战|牙龈出血
+fever_01.wav,qwen3-asr-0.6b,309.94,measured,,True,True,1,23.259,147.056,0.474464,239.97,,3634.03,8290.41,4656.38,2260.312,1537.047,64.044,0.550416,1.0,发烧|三天|淋雨|40度|咳嗽|铁锈色痰|布洛芬|反复发热|食欲不佳,
+chest_pain_01.wav,qwen3-asr-0.6b,496.303,measured,,True,True,1,26.187,212.831,0.428834,365.38,,3632.25,10502.26,6870.01,2645.062,1242.797,51.783,0.956197,0.166667,胸痛,胸闷|心慌|心电图|高血压|冠心病

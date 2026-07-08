@@ -335,7 +335,7 @@ def add_personal_contribution(doc: Document, template: bool = False) -> None:
         set_cell_text(table.rows[0].cells[i], h, True)
     rows = [["待补充", "待补充", "待补充"], ["待补充", "待补充", "待补充"], ["待补充", "待补充", "待补充"]]
     if not template:
-        rows[0] = ["项目自评", "90/100", "按计划完成 v0.2.1 与 v0.3，记录完整，后续需补真实模型评测。"]
+        rows[0] = ["项目自评", "94/100", "已完成 v0.5.7 Qwen3 同口径补测与长音频稳定性记录，后续需补医院 PC 实机复测。"]
     for r, row in enumerate(rows, start=1):
         for c, value in enumerate(row):
             set_cell_text(table.rows[r].cells[c], value)
@@ -353,9 +353,9 @@ def add_kanban(doc: Document, template: bool = False) -> None:
     for i, h in enumerate(headers):
         set_cell_text(table.rows[0].cells[i], h, True)
     rows = [
-        ["知识库关联规则扩展", "角色校正真实样本验证", "GitHub 工程结构"],
-        ["本地模型评测", "前端产品化优化", "v0.2.1 ASR SSE"],
-        ["边缘端配置建议", "测试记录补充", "v0.3 角色校正"],
+        ["普通医院 PC 实机复测", "前端产品化优化", "v0.5.7 Qwen3 同口径补测"],
+        ["更长音频与连续运行测试", "表单与日报同步", "长音频稳定性初测"],
+        ["答辩材料与视频", "部署说明补充", "资源指标采样与汇总"],
     ]
     if template:
         rows = [["", "", ""], ["", "", ""], ["", "", ""]]
@@ -412,20 +412,20 @@ def add_poc_check(doc: Document, template: bool = False) -> None:
     add_meta(doc, member="项目组", day="Day10")
     rows = [["功能项", "是否完成", "说明"]]
     rows += [["", "是/否", ""], ["", "是/否", ""]] if template else [
-        ["MP3/WAV SSE 实时转写", "是", "v0.2.1 已完成 ASR session SSE。"],
-        ["医生/患者角色校正", "是", "v0.3 已完成逐段校正和保存。"],
-        ["病历生成闭环", "是", "校正后 conversation_text 可进入原病历生成接口。"],
+        ["MP3/WAV SSE 实时转写", "是", "已完成 ASR session SSE，支持医生端分段展示。"],
+        ["医生/患者角色校正", "是", "已完成逐段校正和保存，可回写 conversation_text。"],
+        ["中文医患样本多模型对比", "是", "v0.5.7 已完成 FunASR、SenseVoice、Qwen3 同口径主评测，并补充 CPU/RSS 指标。"],
     ]
     doc.add_heading("一、核心功能完成情况", level=2)
     add_table(doc, rows)
     add_list_section(doc, "二、系统运行情况", ["☑ 可正常运行" if not template else "□ 可正常运行", "□ 偶发错误", "□ 不稳定"])
     add_list_section(doc, "三、演示情况", ["☑ 可完整演示" if not template else "□ 可完整演示", "□ 部分演示", "□ 无法演示"])
     add_list_section(doc, "四、问题清单（Top5）", [
-        "1. 真实流式 ASR 解码尚未实现，当前为上传后 segment SSE。",
-        "2. 方言、多语种、多人物转写需 v0.5 评测。",
-        "3. 知识库关联规则仍需扩展。",
-        "4. 真实医院 PC 配置尚未采集。",
-        "5. 长音频稳定性测试待执行。",
+        "1. 当前 SSE 仍为上传后 segment 回放，不是底层实时流式解码。",
+        "2. Qwen3-ASR 已完成同口径补测，但长音频 CER 和资源占用不适合作为默认交付模型。",
+        "3. 普通医院 Windows 办公 PC 实机配置与实测数据仍待采集。",
+        "4. 已完成 5-8 分钟长音频初测，30-60 分钟连续运行观测仍待执行。",
+        "5. v0.6 前端产品化和最终答辩材料仍待补齐。",
     ] if not template else ["1.", "2.", "3.", "4.", "5."])
     add_list_section(doc, "五、结论", ["☑ 达到阶段性 POC 要求" if not template else "□ 达到POC要求", "□ 未达到POC要求"])
 
@@ -444,25 +444,25 @@ def add_bug_list(doc: Document, template: bool = False) -> None:
 
 def add_test_record(doc: Document, template: bool = False) -> None:
     add_meta(doc, member="测试负责人", day="Day15")
-    add_list_section(doc, "一、测试目标", ["验证 ASR session SSE、角色校正、旧病历生成接口兼容和前端 JS 语法。"] if not template else ["（如稳定性/精度/功耗）"])
+    add_list_section(doc, "一、测试目标", ["验证 v0.5.7 Qwen3 分样本补测、ASR benchmark 资源指标采样、递归汇总能力，以及既有 SSE/角色校正链路未回退。"] if not template else ["（如稳定性/精度/功耗）"])
     doc.add_heading("二、测试方案", level=2)
     rows = [["测试项", "方法", "指标"]]
     rows += [["", "", ""], ["", "", ""]] if template else [
-        ["API 回归", "pytest -q", "75 passed"],
-        ["前端语法", "node --check static/doctor.js", "通过"],
-        ["服务烟测", "GET /health", "ok"],
+        ["Benchmark 脚本回归", "pytest -q tests/test_run_local_asr_benchmark.py tests/test_local_model_benchmark_scripts.py", "10 passed"],
+        ["历史全量回归", "pytest -q", "最近一次记录 97 passed"],
+        ["静态检查", "git diff --check", "通过"],
     ]
     add_table(doc, rows)
     doc.add_heading("三、测试结果", level=2)
     rows = [["测试项", "结果", "是否达标"]]
     rows += [["", "", "是/否"], ["", "", "是/否"]] if template else [
-        ["全量测试", "75 passed", "是"],
-        ["JS 语法检查", "通过", "是"],
+        ["v0.5.7 相关脚本测试", "28 passed", "是"],
+        ["最近一次全量回归", "97 passed（沿用 2026-07-07 记录）", "是"],
         ["Git diff 空白检查", "通过", "是"],
     ]
     add_table(doc, rows)
-    add_list_section(doc, "四、问题分析", ["真实模型和长音频仍需单独性能/稳定性测试。"] if not template else ["1.", "2."])
-    add_list_section(doc, "五、改进措施", ["补真实模型评测表；补边缘端配置建议；补知识库规则测试。"] if not template else ["1.", "2."])
+    add_list_section(doc, "四、问题分析", ["Qwen3 已并入同口径汇总，但普通医院 PC 实机复测和 30-60 分钟连续运行证据仍缺失。"] if not template else ["1.", "2."])
+    add_list_section(doc, "五、改进措施", ["在普通医院 PC 复跑；补 30-60 分钟长音频稳定性；进入 v0.6 前端产品化验收。"] if not template else ["1.", "2."])
 
 
 def add_evt_check(doc: Document, template: bool = False) -> None:
@@ -482,13 +482,13 @@ def add_final_score(doc: Document, template: bool = False) -> None:
     add_meta(doc, day="Day20")
     rows = [["类别", "分值", "当前填写"]]
     rows += [["POC实现", "50", ""], ["工程能力", "20", ""], ["文档", "15", ""], ["展示答辩", "15", ""]] if template else [
-        ["POC实现", "50", "已完成 v0.2.1 与 v0.3 主链路，建议 42/50，待知识库和稳定性测试补强。"],
-        ["工程能力", "20", "工程结构、测试、版本、日志完整，建议 18/20。"],
-        ["文档", "15", "README、版本、架构、模型路线、每日记录已更新，建议 13/15。"],
-        ["展示答辩", "15", "待录制演示视频和预答辩，暂填 10/15。"],
+        ["POC实现", "50", "已完成 SSE、角色校正、病历生成闭环及 v0.5.7 中文医患样本多模型 ASR 对比，建议 46/50。"],
+        ["工程能力", "20", "工程结构、测试、版本、日志和表单自动化完整，建议 19/20。"],
+        ["文档", "15", "README、版本、架构、模型路线、日报和能力矩阵已更新，建议 14/15。"],
+        ["展示答辩", "15", "待录制演示视频和预答辩，暂填 11/15。"],
     ]
     add_table(doc, rows)
-    doc.add_paragraph("总分：" + ("" if template else "建议自评 83/100，待教师确认"))
+    doc.add_paragraph("总分：" + ("" if template else "建议自评 90/100，待教师确认"))
     doc.add_paragraph("评委：" + ("" if template else "待教师评分"))
 
 
@@ -497,8 +497,8 @@ def add_evt_bonus(doc: Document, template: bool = False) -> None:
     rows = [["项目", "最高分", "当前情况"]]
     rows += [["多样机", "5", ""], ["测试能力", "5", ""], ["FMEA", "5", ""], ["工程优化", "5", ""]] if template else [
         ["多样机", "5", "当前为软件原型，暂不申请多样机加分。"],
-        ["测试能力", "5", "已有 pytest、JS 检查、服务烟测；长音频和真实模型评测待补。"],
-        ["FMEA", "5", "待在 v1.0 freeze 前补简化 FMEA。"],
+        ["测试能力", "5", "已有 pytest、JS 检查、服务烟测、Qwen3 同口径补测和 5-8 分钟长音频初测。"],
+        ["FMEA", "5", "待在 v1.0 封版前补简化 FMEA。"],
         ["工程优化", "5", "已完成 SSE、角色校正和工程日志规范，建议申请部分加分。"],
     ]
     add_table(doc, rows)

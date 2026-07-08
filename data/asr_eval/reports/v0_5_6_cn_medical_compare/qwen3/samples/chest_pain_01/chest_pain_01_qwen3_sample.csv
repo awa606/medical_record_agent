@@ -1,0 +1,2 @@
+﻿filename,engine,duration,status,error,ground_truth_available,transcript_non_empty,segments,model_load_time,inference_time,realtime_factor,peak_memory_mb,gpu_memory_mb,rss_start_mb,rss_peak_mb,rss_delta_mb,cpu_time_seconds,cpu_process_percent,cpu_normalized_percent,cer,keyword_recall,recognized_keywords,missing_keywords
+chest_pain_01.wav,qwen3-asr-0.6b,496.303,measured,,True,True,1,26.187,212.831,0.428834,365.38,,3632.25,10502.26,6870.01,2645.062,1242.797,51.783,0.956197,0.166667,胸痛,胸闷|心慌|心电图|高血压|冠心病

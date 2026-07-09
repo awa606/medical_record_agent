@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>医生端工作台 - AI生成式电子病历辅助系统</title>
-    <link rel="stylesheet" href="./doctor.css?v=2026070901" />
+    <link rel="stylesheet" href="./doctor.css?v=2026070902" />
   </head>
   <body class="doctor-mode">
     <div class="doctor-app">
@@ -35,7 +35,16 @@
           </div>
           <div>
             <span class="meta-label">ASR Engine</span>
-            <strong id="asrEngine">-</strong>
+            <label class="engine-select-wrap" for="topAsrEngineSelect">
+              <select id="topAsrEngineSelect" aria-label="选择 ASR 模型">
+                <option value="funasr" selected>FunASR</option>
+                <option value="sensevoice">SenseVoice</option>
+                <option value="whisper">Whisper</option>
+                <option value="mock">Mock ASR</option>
+                <option value="qwen3">Qwen3-ASR</option>
+                <option value="online">Online ASR</option>
+              </select>
+            </label>
           </div>
           <div class="debug-only">
             <span class="meta-label">LLM Provider</span>
@@ -64,8 +73,14 @@
             <button type="button" id="demoModeButton" class="active">演示模式</button>
             <button type="button" id="screenshotModeButton">截图模式</button>
           </div>
-          <button type="button" class="primary-action" id="openAudioGenerateButton">上传音频</button>
-          <button type="button" id="openTextImportButton">文本导入</button>
+          <div class="input-method-menu">
+            <button type="button" class="primary-action" id="inputMethodButton" aria-expanded="false" aria-controls="inputMethodMenu">输入方式</button>
+            <div id="inputMethodMenu" class="input-method-popover" hidden>
+              <button type="button" data-input-method="record">录音生成</button>
+              <button type="button" data-input-method="audio">音频生成</button>
+              <button type="button" data-input-method="text">文本生成</button>
+            </div>
+          </div>
           <details id="debugTools" class="debug-tools debug-only">
             <summary>调试工具</summary>
             <div class="debug-tool-menu">
@@ -156,21 +171,20 @@
             </div>
           </div>
           <div id="assistPanels" class="assist-list"></div>
+          <footer class="bottom-actions assist-operation-panel" aria-label="操作区">
+            <div class="operation-heading">
+              <strong id="currentTaskLabel">操作区</strong>
+              <span id="currentTaskHint">等待输入</span>
+            </div>
+            <div class="button-group">
+              <button type="button" id="regenerateButton">重新生成</button>
+              <button type="button" id="saveDraftButton">保存草稿</button>
+              <button type="button" id="confirmFieldsButton">确认字段</button>
+              <button type="button" class="danger-action" id="exportButton">确认导出</button>
+            </div>
+          </footer>
         </aside>
       </main>
-
-      <footer class="bottom-actions" aria-label="底部操作区">
-        <div>
-          <strong id="currentTaskLabel">当前任务：等待输入</strong>
-          <span id="currentTaskHint">可通过文本导入或上传音频生成病历。</span>
-        </div>
-        <div class="button-group">
-          <button type="button" id="regenerateButton">重新生成</button>
-          <button type="button" id="saveDraftButton">保存草稿到SQLite</button>
-          <button type="button" id="confirmFieldsButton">确认字段</button>
-          <button type="button" class="danger-action" id="exportButton">确认导出</button>
-        </div>
-      </footer>
     </div>
 
     <div id="drawerBackdrop" class="drawer-backdrop"></div>
@@ -240,6 +254,6 @@
     </aside>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=2026070901"></script>
+    <script src="./doctor.js?v=2026070902"></script>
   </body>
 </html>

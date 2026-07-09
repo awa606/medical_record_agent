@@ -34,6 +34,8 @@ const appState = {
   asrRetryHint: "",
   roleReviewDirty: false,
   roleReviewSaving: false,
+  lastActionError: "",
+  inputMenuOpen: false,
 };
 
 const FIELD_DEFS = [
@@ -150,12 +152,27 @@ function setBusy(nextBusy, message = "") {
   }
 }
 
+function setActionError(message) {
+  appState.lastActionError = message || "";
+  renderNextActionPanel();
+}
+
+function clearActionError() {
+  appState.lastActionError = "";
+}
+
 function showToast(text) {
   const toast = $("toast");
   toast.textContent = text;
   toast.classList.add("active");
   window.clearTimeout(showToast.timer);
   showToast.timer = window.setTimeout(() => toast.classList.remove("active"), 2200);
+}
+
+function reportActionError(error) {
+  const message = error?.message || String(error || "操作失败");
+  setActionError(message);
+  showToast(message);
 }
 
 function runLogCommand() {
@@ -243,8 +260,26 @@ function setScreenshotMode(enabled) {
   renderMode();
 }
 
+function renderInputMethodMenu() {
+  const button = $("inputMethodButton");
+  const menu = $("inputMethodMenu");
+  button.classList.toggle("active", appState.inputMenuOpen);
+  button.setAttribute("aria-expanded", appState.inputMenuOpen ? "true" : "false");
+  menu.hidden = !appState.inputMenuOpen;
+}
+
+function closeInputMethodMenu() {
+  appState.inputMenuOpen = false;
+  renderInputMethodMenu();
+}
+
+function toggleInputMethodMenu() {
+  appState.inputMenuOpen = !appState.inputMenuOpen;
+  renderInputMethodMenu();
+}
+
 function renderStartGuide() {
-  $("startGuide").hidden = hasActiveSession();
+  $("startGuide").hidden = appState.viewMode === "doctor" || hasActiveSession();
 }
 
 function renderStepPrompt() {
@@ -301,6 +336,18 @@ function nextActionState() {
     };
   }
 
+  if (appState.lastActionError) {
+    return {
+      tone: "danger",
+      title: "请处理当前提示",
+      detail: appState.lastActionError,
+      actions: [
+        workflowAction({ key: "upload-audio", label: "音频生成", tone: "primary" }),
+        workflowAction({ key: "import-text", label: "文本生成" }),
+      ],
+    };
+  }
+
   if (appState.taskStatus === "FAILED" || appState.asrLastError) {
     return {
       tone: "danger",
@@ -319,8 +366,8 @@ function nextActionState() {
       title: "开始一次病历生成",
       detail: "优先上传中文问诊音频；演示兜底可选择 Mock ASR，文本导入可直接验证病历生成。",
       actions: [
-        workflowAction({ key: "upload-audio", label: "上传问诊音频", tone: "primary" }),
-        workflowAction({ key: "import-text", label: "粘贴问诊文本" }),
+        workflowAction({ key: "upload-audio", label: "音频生成", tone: "primary" }),
+        workflowAction({ key: "import-text", label: "文本生成" }),
       ],
     };
   }
@@ -415,8 +462,8 @@ function nextActionState() {
     title: "等待下一步",
     detail: "可继续上传音频或粘贴文本开始新的病历生成流程。",
     actions: [
-      workflowAction({ key: "upload-audio", label: "上传问诊音频", tone: "primary" }),
-      workflowAction({ key: "import-text", label: "粘贴问诊文本" }),
+      workflowAction({ key: "upload-audio", label: "音频生成", tone: "primary" }),
+      workflowAction({ key: "import-text", label: "文本生成" }),
     ],
   };
 }
@@ -437,6 +484,7 @@ function renderNextActionPanel() {
 }
 
 function openDrawer(panelId, title) {
+  closeInputMethodMenu();
   $("drawerTitle").textContent = title;
   $("drawerBackdrop").classList.add("active");
   $("drawer").classList.add("active");
@@ -463,7 +511,8 @@ function renderPatientBar() {
         ? `A-${appState.currentAudioId}`
         : "未创建";
   $("recordingStatus").textContent = appState.uploadedFilename || "未上传";
-  $("asrEngine").textContent = ENGINE_LABELS[appState.selectedEngine] || appState.selectedEngine;
+  $("topAsrEngineSelect").value = appState.selectedEngine;
+  $("audioEngineSelect").value = appState.selectedEngine;
   $("llmProvider").textContent = llm.provider;
   $("llmModel").textContent = llm.model;
   $("llmFallback").textContent = llm.fallbackLabel;
@@ -1097,6 +1146,145 @@ function runLogBlock() {
   });
 }
 
+function assistCard({ title, badgeClass = "neutral", badgeText = "", body = "" }) {
+  return `
+    <section class="doctor-assist-card">
+      <div class="doctor-assist-card-head">
+        <h3>${escapeHtml(title)}</h3>
+        ${badgeText ? `<span class="status-badge ${badgeClass}">${escapeHtml(badgeText)}</span>` : ""}
+      </div>
+      <div class="doctor-assist-card-body">${body}</div>
+    </section>
+  `;
+}
+
+function renderCandidateDiagnosisCard(diagnoses) {
+  if (!diagnoses.length) {
+    return assistCard({
+      title: "候选诊断",
+      badgeClass: "confirmed",
+      badgeText: "暂无",
+      body: `<div class="empty-state">暂无候选诊断。生成病历后会在这里显示待医生确认的候选结果。</div>`,
+    });
+  }
+
+  return assistCard({
+    title: "候选诊断",
+    badgeClass: "candidate",
+    badgeText: "待医生确认",
+    body: `
+      <ol class="assist-number-list">
+        ${diagnoses.map((diagnosis, index) => `
+          <li>
+            <span>${index + 1}</span>
+            <div>
+              <strong>${escapeHtml(diagnosis.name || "未命名诊断")}</strong>
+              <em>${escapeHtml(diagnosis.status || "候选/待医生确认")} · ${escapeHtml(diagnosisConfidence(diagnosis))}</em>
+            </div>
+          </li>
+        `).join("")}
+      </ol>
+    `,
+  });
+}
+
+function uniqueDiagnosisItems(diagnoses, key) {
+  const values = [];
+  diagnoses.forEach((diagnosis) => {
+    diagnosisList(diagnosis?.[key]).forEach((item) => {
+      if (!values.includes(item)) values.push(item);
+    });
+  });
+  return values;
+}
+
+function renderTreatmentRecommendationCard(fields, diagnoses) {
+  const treatment = fields?.treatment_plan;
+  const treatmentText = treatment?.value || treatment?.hint || "暂无明确处理建议，需医生结合问诊、查体和检查结果补充。";
+  const suggestedChecks = uniqueDiagnosisItems(diagnoses, "suggested_checks");
+  const medicationNotes = uniqueDiagnosisItems(diagnoses, "medication_notes");
+
+  return assistCard({
+    title: "治疗方案推荐",
+    badgeClass: fields ? "candidate" : "neutral",
+    badgeText: fields ? "需医生确认" : "待生成",
+    body: `
+      <div class="assist-plan-block">
+        <span>处理建议</span>
+        <strong>${escapeHtml(treatmentText)}</strong>
+      </div>
+      <div class="assist-mini-grid">
+        <div>
+          <span>建议检查</span>
+          <strong>${escapeHtml(suggestedChecks.join("、") || "暂无结构化建议检查")}</strong>
+        </div>
+        <div>
+          <span>用药提示</span>
+          <strong>${escapeHtml(medicationNotes.join("、") || "不自动处方，需医生确认")}</strong>
+        </div>
+      </div>
+    `,
+  });
+}
+
+function renderEvidenceCard(evidence, diagnoses) {
+  const diagnosisReasons = diagnoses
+    .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "候选诊断"}：${diagnosis.reason}` : "")
+    .filter(Boolean);
+  const items = [...diagnosisReasons, ...evidence].slice(0, 6);
+
+  return assistCard({
+    title: "判断证据",
+    badgeClass: items.length ? "info" : "neutral",
+    badgeText: items.length ? "可追溯" : "暂无",
+    body: items.length
+      ? items.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")
+      : `<div class="empty-state">暂无字段证据。完成转写、角色校正和病历生成后会显示来源片段。</div>`,
+  });
+}
+
+function renderSafetyResultCard({ safety, missing, warnings, errors }) {
+  const rows = [
+    {
+      tone: missing.length ? "danger" : "success",
+      text: missing.length ? `存在 ${missing.length} 项未补充字段：${missing.join("、")}` : "关键字段完整性校验通过",
+    },
+    {
+      tone: safety?.passed && !safety?.blocked ? "success" : safety ? "danger" : "warning",
+      text: safety
+        ? `安全校验：${safety.passed ? "通过" : "未通过"}${safety.blocked ? "，暂不可导出" : ""}`
+        : "等待生成病历后执行安全校验",
+    },
+    ...warnings.map((item) => ({ tone: "warning", text: item })),
+    ...errors.map((item) => ({ tone: "danger", text: item })),
+  ];
+
+  return assistCard({
+    title: "安全校验结果",
+    badgeClass: safety?.passed && !safety?.blocked && !missing.length && !errors.length ? "confirmed" : "missing",
+    badgeText: safety?.passed && !safety?.blocked && !missing.length && !errors.length ? "通过" : "需复核",
+    body: `<div class="assist-check-list">
+      ${rows.map((row) => `
+        <div class="assist-check-row ${row.tone}">
+          <span></span>
+          <strong>${escapeHtml(row.text)}</strong>
+        </div>
+      `).join("")}
+    </div>`,
+  });
+}
+
+function renderDoctorAssistOverview({ fields, diagnoses, evidence, missing, warnings, errors, safety }) {
+  return `
+    <div class="doctor-assist-overview">
+      ${renderCandidateDiagnosisCard(diagnoses)}
+      ${renderTreatmentRecommendationCard(fields, diagnoses)}
+      ${renderEvidenceCard(evidence, diagnoses)}
+      ${renderSafetyResultCard({ safety, missing, warnings, errors })}
+    </div>
+  `;
+}
+
 function renderAssist() {
   const fields = appState.currentRecordFields;
   const safety = appState.currentSafetyCheck;
@@ -1110,6 +1298,20 @@ function renderAssist() {
   }
   const errors = risk.errors;
   const safetyHasRisk = warnings.length > 0 || errors.length > 0 || Boolean(safety && (!safety.passed || safety.blocked));
+
+  if (appState.viewMode === "doctor") {
+    $("assistPanels").innerHTML = renderDoctorAssistOverview({
+      fields,
+      diagnoses,
+      evidence,
+      missing,
+      warnings,
+      errors,
+      safety,
+    });
+    return;
+  }
+
   const evaluationMissing = risk.evaluationMissing;
   const trace = currentAgentTrace();
   const traceLlm = trace.llm || {};
@@ -1230,10 +1432,10 @@ function renderDebug() {
 }
 
 function renderFooter() {
-  $("currentTaskLabel").textContent = `当前任务：${STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入"}`;
+  $("currentTaskLabel").textContent = "操作区";
   $("currentTaskHint").textContent = appState.currentTaskId
-    ? `任务 ${appState.currentTaskId} · ${appState.currentAudioId ? `音频 ${appState.currentAudioId}` : "文本导入"}`
-    : "可通过文本导入或上传音频生成病历。";
+    ? `${STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "任务已创建"} · ${appState.currentAudioId ? "音频生成" : "文本生成"}`
+    : "等待输入";
   $("regenerateButton").disabled = appState.busy || !(appState.currentAsrResult || appState.currentInputText);
   $("saveDraftButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
   $("confirmFieldsButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
@@ -1246,6 +1448,7 @@ function isApprovedForExport() {
 
 function renderAll() {
   renderMode();
+  renderInputMethodMenu();
   renderPatientBar();
   renderRunContext();
   renderStartGuide();
@@ -1515,7 +1718,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     setBusy(false);
     renderAll();
     const error = new Error(data.error || "ASR 实时转写失败");
-    showToast(error.message);
+    reportActionError(error);
     reject?.(error);
   });
 
@@ -1524,7 +1727,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
       appState.taskStatus = "FAILED";
       const error = new Error("ASR SSE 连接异常，请检查服务日志");
       appState.asrLastError = error.message;
-      showToast(error.message);
+      reportActionError(error);
       reject?.(error);
     }
     closeAsrStream();
@@ -1668,7 +1871,7 @@ async function submitTextImport() {
     await createRecordTask(text);
   } catch (error) {
     setBusy(false);
-    showToast(error.message);
+    reportActionError(error);
   }
 }
 
@@ -1700,7 +1903,7 @@ async function submitAudio() {
     }
   } catch (error) {
     setBusy(false);
-    showToast(error.message);
+    reportActionError(error);
   }
 }
 
@@ -1724,7 +1927,7 @@ async function runEvaluation() {
     showToast("ASR 评测完成");
   } catch (error) {
     $("evaluationDrawerResult").innerHTML = `<div class="safety-strip danger">${escapeHtml(error.message)}</div>`;
-    showToast(error.message);
+    reportActionError(error);
   }
 }
 
@@ -1741,7 +1944,7 @@ async function regenerateRecord() {
     await createRecordTask(text);
   } catch (error) {
     setBusy(false);
-    showToast(error.message);
+    reportActionError(error);
   }
 }
 
@@ -1759,7 +1962,7 @@ async function saveDraftReview() {
     showToast("草稿已保存到 SQLite");
   } catch (error) {
     setBusy(false);
-    showToast(error.message);
+    reportActionError(error);
   }
 }
 
@@ -1774,7 +1977,7 @@ async function confirmFields() {
     showToast("字段已确认");
   } catch (error) {
     setBusy(false);
-    showToast(error.message);
+    reportActionError(error);
   }
 }
 
@@ -1789,7 +1992,7 @@ async function exportRecord() {
     showToast(`导出完成：${Object.values(result.exports || {}).join(" / ")}`);
   } catch (error) {
     setBusy(false);
-    showToast(error.message);
+    reportActionError(error);
   }
 }
 
@@ -1823,22 +2026,47 @@ async function handleWorkflowAction(action) {
   }
 }
 
+function handleInputMethod(method) {
+  if (method === "record") {
+    openReservedRecording();
+    return;
+  }
+  if (method === "audio") {
+    openAudioGenerate();
+    return;
+  }
+  if (method === "text") {
+    openTextImport();
+  }
+}
+
 function openTextImport() {
+  clearActionError();
   openDrawer("textImportPanel", "文本导入生成病历");
 }
 
 function openAudioTranscribe() {
+  clearActionError();
   appState.audioMode = "transcribe";
+  $("audioEngineSelect").value = appState.selectedEngine;
   $("audioPanelHint").textContent = "上传 MP3/WAV 预录音频，系统创建 ASR 会话并通过 SSE 实时显示分段转写。";
   $("submitAudioButton").textContent = "上传并实时转写";
   openDrawer("audioPanel", "MP3/WAV 实时转写");
 }
 
 function openAudioGenerate() {
+  clearActionError();
   appState.audioMode = "generate";
+  $("audioEngineSelect").value = appState.selectedEngine;
   $("audioPanelHint").textContent = "上传 MP3/WAV 预录音频，先完成 SSE 实时转写，再进入病历生成流程。";
   $("submitAudioButton").textContent = "实时转写并生成病历";
   openDrawer("audioPanel", "MP3/WAV 生成病历");
+}
+
+function openReservedRecording() {
+  closeInputMethodMenu();
+  setActionError("浏览器麦克风录音暂未接入。本轮请先使用“音频生成”上传 MP3/WAV，后续迭代再接入录音生成。");
+  showToast("录音生成入口已预留，当前请使用音频生成");
 }
 
 function openEvaluation() {
@@ -1864,7 +2092,7 @@ async function testLlmConnection() {
     showToast(message);
     renderAll();
   } catch (error) {
-    showToast(error.message);
+    reportActionError(error);
   }
 }
 
@@ -1873,9 +2101,20 @@ function bindEvents() {
   $("debugModeButton").addEventListener("click", () => setViewMode("debug"));
   $("demoModeButton").addEventListener("click", () => setScreenshotMode(false));
   $("screenshotModeButton").addEventListener("click", () => setScreenshotMode(true));
-  $("openTextImportButton").addEventListener("click", openTextImport);
+  $("inputMethodButton").addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleInputMethodMenu();
+  });
+  $("inputMethodMenu").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-input-method]");
+    if (!button) return;
+    handleInputMethod(button.dataset.inputMethod);
+  });
+  document.addEventListener("click", (event) => {
+    if (!appState.inputMenuOpen || event.target.closest(".input-method-menu")) return;
+    closeInputMethodMenu();
+  });
   $("openAudioTranscribeButton").addEventListener("click", openAudioTranscribe);
-  $("openAudioGenerateButton").addEventListener("click", openAudioGenerate);
   $("guideUploadAudioButton").addEventListener("click", openAudioGenerate);
   $("guideTextImportButton").addEventListener("click", openTextImport);
   $("openEvaluationButton").addEventListener("click", openEvaluation);
@@ -1894,11 +2133,17 @@ function bindEvents() {
       await handleWorkflowAction(button.dataset.workflowAction);
     } catch (error) {
       setBusy(false);
-      showToast(error.message);
+      reportActionError(error);
     }
+  });
+  $("topAsrEngineSelect").addEventListener("change", () => {
+    appState.selectedEngine = $("topAsrEngineSelect").value;
+    $("audioEngineSelect").value = appState.selectedEngine;
+    renderPatientBar();
   });
   $("audioEngineSelect").addEventListener("change", () => {
     appState.selectedEngine = $("audioEngineSelect").value;
+    $("topAsrEngineSelect").value = appState.selectedEngine;
     renderPatientBar();
   });
   $("recordFields").addEventListener("click", (event) => {
@@ -1930,7 +2175,7 @@ function bindEvents() {
     try {
       await saveRoleReview();
     } catch (error) {
-      showToast(error.message);
+      reportActionError(error);
     }
   });
   $("assistPanels").addEventListener("click", (event) => {

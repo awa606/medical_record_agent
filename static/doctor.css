@@ -1465,6 +1465,42 @@ body.doctor-mode .capture-switch {
   padding-left: 10px;
 }
 
+.input-method-menu {
+  position: relative;
+}
+
+.input-method-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 16;
+  width: 152px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid #dfe6ef;
+  border-radius: 8px;
+  padding: 6px;
+  background: #fff;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.14);
+}
+
+.input-method-popover[hidden] {
+  display: none;
+}
+
+.input-method-popover button {
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.input-method-popover button:hover {
+  background: #edf4ff;
+  color: #1f5fbf;
+}
+
 .mode-switch,
 .capture-switch {
   border-radius: 9px;
@@ -1539,6 +1575,30 @@ body.doctor-mode .step-prompt {
   color: #172033;
   font-size: 15px;
   font-weight: 900;
+}
+
+.engine-select-wrap {
+  display: block;
+  margin-top: 2px;
+}
+
+.engine-select-wrap select {
+  min-height: 28px;
+  width: 100%;
+  max-width: 132px;
+  border-color: transparent;
+  border-radius: 7px;
+  padding: 4px 24px 4px 0;
+  background-color: transparent;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.engine-select-wrap select:focus {
+  border-color: #9dbbea;
+  background-color: #edf4ff;
+  outline: 0;
 }
 
 .workflow-panel {
@@ -1677,6 +1737,10 @@ body.doctor-mode .step-prompt {
   color: #fff;
 }
 
+body.doctor-mode .start-guide {
+  display: none !important;
+}
+
 .workbench {
   grid-template-columns: minmax(350px, 1fr) minmax(480px, 1.15fr) minmax(340px, 0.92fr);
   gap: 8px;
@@ -1688,9 +1752,15 @@ body.doctor-mode .step-prompt {
   background: #fff;
 }
 
-.assist-column,
+.assist-column {
+  max-height: calc(100vh - 292px);
+  overflow: hidden;
+}
+
 .assist-column .assist-list {
-  max-height: calc(100vh - 246px);
+  flex: 1 1 auto;
+  max-height: none;
+  overflow-y: auto;
 }
 
 .panel-header {
@@ -1946,12 +2016,187 @@ body.doctor-mode .step-prompt {
   max-height: 260px;
 }
 
+.doctor-assist-overview {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.doctor-assist-card {
+  border: 1px solid #dfe6ef;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.doctor-assist-card-head {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid #edf1f6;
+  padding: 10px 12px;
+}
+
+.doctor-assist-card-head h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.doctor-assist-card-body {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.assist-number-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assist-number-list li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.assist-number-list li > span {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #2767d1;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.assist-number-list strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.assist-number-list em {
+  display: block;
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.4;
+}
+
+.assist-plan-block,
+.assist-mini-grid > div,
+.assist-evidence-quote {
+  border: 1px solid #d8e6fb;
+  border-radius: 7px;
+  padding: 9px 10px;
+  background: #f7fbff;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+.assist-plan-block span,
+.assist-mini-grid span {
+  display: block;
+  margin-bottom: 4px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.assist-plan-block strong,
+.assist-mini-grid strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.assist-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.assist-evidence-quote {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1f5fbf;
+  font-size: 13px;
+}
+
+.assist-check-list {
+  display: grid;
+  gap: 8px;
+}
+
+.assist-check-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.assist-check-row span {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+
+.assist-check-row.success span {
+  background: #1fb36b;
+}
+
+.assist-check-row.warning span {
+  background: #f2b01e;
+}
+
+.assist-check-row.danger span {
+  background: #e03131;
+}
+
+.assist-check-row strong {
+  font-weight: 700;
+}
+
 .bottom-actions {
-  min-height: 58px;
+  position: fixed;
+  right: 16px;
+  bottom: 10px;
+  left: 16px;
+  z-index: 12;
+  min-height: 54px;
   border-radius: 8px;
   padding: 10px 14px;
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 -8px 18px rgba(15, 23, 42, 0.07);
+}
+
+.bottom-actions span {
+  display: none;
+}
+
+.bottom-actions strong {
+  margin-bottom: 0;
+  font-size: 16px;
 }
 
 .button-group {
@@ -1965,6 +2210,73 @@ body.doctor-mode .step-prompt {
 
 .button-group .danger-action {
   background: #e15b5b;
+}
+
+.assist-column .bottom-actions {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  flex: 0 0 auto;
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  margin: 0 12px 12px;
+  border-color: #dfe6ef;
+  border-radius: 8px;
+  padding: 11px 12px 12px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+.assist-column .bottom-actions span {
+  display: none;
+}
+
+.assist-column .bottom-actions strong {
+  display: block;
+  margin: 0;
+  color: #111827;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.assist-column .button-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.assist-column .button-group button {
+  min-width: 0;
+  min-height: 40px;
+  border-radius: 7px;
+  padding: 8px 10px;
+  background: #fff;
+  color: #374151;
+  border-color: #cfd8e6;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.assist-column .button-group button:hover:not(:disabled) {
+  border-color: #9db9e8;
+  background: #f7fbff;
+  color: #1f5fbf;
+}
+
+.assist-column .button-group .danger-action {
+  grid-column: 1 / -1;
+  min-height: 44px;
+  background: #e15b5b;
+  color: #fff;
+  border-color: transparent;
+}
+
+.assist-column .button-group .danger-action:disabled {
+  background: #e5e7eb;
+  color: #94a3b8;
+  opacity: 1;
 }
 
 .toast {

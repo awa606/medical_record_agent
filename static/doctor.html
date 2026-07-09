@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>医生端工作台 - AI生成式电子病历辅助系统</title>
-    <link rel="stylesheet" href="./doctor.css?v=2026070906" />
+    <link rel="stylesheet" href="./doctor.css?v=2026070908" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -148,8 +148,8 @@
         <aside class="column field-column">
           <div class="panel-header">
             <div>
-              <h2>病历字段</h2>
-              <p>用于逐项核对主诉、现病史、查体和处理建议，缺失项需医生补充。</p>
+              <h2>病历草稿</h2>
+              <p>固定展示核心病历槽位，内容过长可打开详情查看。</p>
             </div>
             <span id="fieldCountBadge" class="status-badge neutral">-</span>
           </div>
@@ -170,8 +170,8 @@
         <aside class="column assist-column">
           <div class="panel-header">
             <div>
-              <h2>AI辅助与安全校验</h2>
-              <p>用于查看缺失提醒、候选诊断、证据、风险和导出前校验。</p>
+              <h2>AI辅助</h2>
+              <p>展示候选诊断、治疗方案和诊断证据，最终由医生确认。</p>
             </div>
           </div>
           <div id="assistPanels" class="assist-list"></div>
@@ -262,6 +262,6 @@
     </aside>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=2026070906"></script>
+    <script src="./doctor.js?v=2026070908"></script>
   </body>
 </html>

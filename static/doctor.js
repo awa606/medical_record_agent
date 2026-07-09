@@ -59,6 +59,16 @@ const SUMMARY_FIELD_KEYS = [
   "treatment_plan",
 ];
 
+const DRAFT_FIELD_DEFS = [
+  ["chief_complaint", "主诉"],
+  ["present_illness", "现病史"],
+  ["past_history", "既往史"],
+  ["allergy_history", "过敏史"],
+  ["physical_exam", "查体"],
+  ["preliminary_diagnosis", "初步诊断"],
+  ["treatment_plan", "处理建议"],
+];
+
 const WORKFLOW_STEPS = [
   { key: "INPUT", label: "1.输入" },
   { key: "TRANSCRIBING", label: "2.实时转写" },
@@ -639,6 +649,55 @@ function fieldEvidence(field, key) {
   return spans.length ? spans.map((span) => span.text).filter(Boolean).join("\n") : "暂无证据片段，需结合原始转写复核。";
 }
 
+function draftDiagnoses(fields = {}) {
+  return Array.isArray(fields?.candidate_diagnoses) ? fields.candidate_diagnoses : [];
+}
+
+function draftFieldStatus(fields, key) {
+  if (!fields) return { key: "neutral", label: "待生成" };
+  if (key === "preliminary_diagnosis") {
+    return draftDiagnoses(fields).length
+      ? { key: "candidate", label: "待确认" }
+      : { key: "missing", label: "待补充" };
+  }
+  return fieldStatus(fields?.[key] || null, key);
+}
+
+function draftFieldValue(fields, key) {
+  if (!fields) return "";
+  if (key === "preliminary_diagnosis") {
+    return draftDiagnoses(fields)
+      .map((diagnosis) => diagnosis.name || "")
+      .filter(Boolean)
+      .join("；");
+  }
+  return fieldValue(fields, key);
+}
+
+function draftFieldEvidence(fields, key) {
+  if (!fields) return "暂无证据片段。";
+  if (key === "preliminary_diagnosis") {
+    const evidence = draftDiagnoses(fields)
+      .flatMap((diagnosis) => diagnosis.evidence || [])
+      .map((item) => item.text)
+      .filter(Boolean);
+    return evidence.length ? evidence.join("\n") : "暂无候选诊断证据，需医生结合原始转写复核。";
+  }
+  return fieldEvidence(fields?.[key] || null, key);
+}
+
+function draftFieldConfidence(fields, key) {
+  if (!fields) return "等待生成";
+  if (key === "treatment_plan") return "需医生复核";
+  if (key === "preliminary_diagnosis") {
+    const diagnoses = draftDiagnoses(fields);
+    if (!diagnoses.length) return "需医生补充";
+    return diagnoses.map((diagnosis) => diagnosisConfidence(diagnosis)).join("；");
+  }
+  const confidence = fields?.[key]?.confidence;
+  return confidence == null ? "需医生复核" : `置信度 ${Math.round(confidence * 100)}%`;
+}
+
 function diagnosisList(items) {
   if (!Array.isArray(items)) return [];
   return items.map((item) => String(item || "").trim()).filter(Boolean);
@@ -681,7 +740,21 @@ function renderDiagnosisDetails(diagnosis = {}) {
 function renderFieldDetailContent(key) {
   const fields = appState.currentRecordFields;
   if (!fields) return `<div class="empty-state">暂无病历字段。</div>`;
-  const title = FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1] || "病历字段";
+  const title = DRAFT_FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1]
+    || FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1]
+    || "病历字段";
+  if (key === "preliminary_diagnosis") {
+    const diagnoses = draftDiagnoses(fields);
+    return diagnoses.length
+      ? diagnoses.map((diagnosis, index) => `
+          ${detailSection(`初步诊断 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
+            <div class="detail-kv"><span>状态</span><strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong></div>
+            <div class="detail-kv"><span>置信度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
+            <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
+          `)}
+        `).join("")
+      : `<div class="empty-state">暂无初步诊断。生成病历后会显示候选诊断摘要，需医生确认。</div>`;
+  }
   const field = fields[key] || null;
   const status = fieldStatus(field, key);
   const confidence = key === "treatment_plan" ? null : field?.confidence;
@@ -752,37 +825,41 @@ function renderFields() {
   if (!fields) {
     $("fieldCountBadge").textContent = "待生成";
     $("fieldCountBadge").className = "status-badge neutral";
-    $("recordFields").innerHTML = `<div class="empty-state">暂无病历字段。请点击“文本导入”或“上传生成病历”。</div>`;
-    return;
   }
 
   let missingCount = 0;
-  const displayFieldDefs = appState.viewMode === "doctor"
-    ? FIELD_DEFS.filter(([key]) => SUMMARY_FIELD_KEYS.includes(key))
-    : FIELD_DEFS;
+  const displayFieldDefs = appState.viewMode === "doctor" ? DRAFT_FIELD_DEFS : FIELD_DEFS;
   const cards = displayFieldDefs.map(([key, title]) => {
-    const field = fields[key] || null;
-    const status = fieldStatus(field, key);
+    const status = appState.viewMode === "doctor"
+      ? draftFieldStatus(fields, key)
+      : fieldStatus(fields?.[key] || null, key);
     if (status.key === "missing") missingCount += 1;
-    const confidence = key === "treatment_plan" ? null : field?.confidence;
+    const value = appState.viewMode === "doctor" ? draftFieldValue(fields, key) : fieldValue(fields, key);
+    const evidence = appState.viewMode === "doctor" ? draftFieldEvidence(fields, key) : fieldEvidence(fields?.[key] || null, key);
+    const confidence = appState.viewMode === "doctor"
+      ? draftFieldConfidence(fields, key)
+      : key === "treatment_plan" ? "需医生复核" : fields?.[key]?.confidence == null ? "需医生复核" : `置信度 ${Math.round(fields[key].confidence * 100)}%`;
+    const meta = fields ? `
+        <div class="field-meta">
+          <span class="confidence">${escapeHtml(confidence)}</span>
+          <button type="button" data-evidence-toggle>证据</button>
+          ${detailButton(`field:${key}`, "详情")}
+        </div>
+        <div class="field-evidence">${escapeHtml(evidence)}</div>
+    ` : "";
     return `
-      <article class="field-card ${status.key}" data-field="${key}">
+      <article class="field-card ${status.key} ${value ? "has-value" : "is-empty"}" data-field="${key}">
         <div class="field-head">
           <span class="field-title">${escapeHtml(title)}</span>
           <span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>
         </div>
-        <div class="field-value">${escapeHtml(fieldValue(fields, key))}</div>
-        <div class="field-meta">
-          <span class="confidence">${confidence == null ? "需医生复核" : `置信度 ${Math.round(confidence * 100)}%`}</span>
-          <button type="button" data-evidence-toggle>证据</button>
-          ${detailButton(`field:${key}`, "详情")}
-        </div>
-        <div class="field-evidence">${escapeHtml(fieldEvidence(field, key))}</div>
+        <div class="field-value">${value ? escapeHtml(value) : `<span class="draft-placeholder" aria-hidden="true">&nbsp;</span>`}</div>
+        ${meta}
       </article>
     `;
   }).join("");
 
-  const diagnoses = (fields.candidate_diagnoses || []).map((diagnosis, index) => `
+  const diagnoses = appState.viewMode === "doctor" ? "" : (fields?.candidate_diagnoses || []).map((diagnosis, index) => `
     <article class="field-card candidate" data-field="diagnosis-${index}">
       <div class="field-head">
         <span class="field-title">候选诊断</span>
@@ -798,14 +875,26 @@ function renderFields() {
     </article>
   `).join("");
   const hiddenFieldCount = Math.max(0, FIELD_DEFS.length - displayFieldDefs.length);
-  const summaryFooter = hiddenFieldCount || appState.viewMode === "doctor"
+  const summaryFooter = fields && (hiddenFieldCount || appState.viewMode === "doctor")
     ? `<button type="button" class="inline-more-button" data-open-detail="fields:all">查看全部字段、证据和候选诊断</button>`
     : "";
 
-  const allMissingCount = missingItems().length;
-  $("fieldCountBadge").textContent = allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
-  $("fieldCountBadge").className = `status-badge ${allMissingCount ? "missing" : "confirmed"}`;
-  $("recordFields").innerHTML = cards + diagnoses + summaryFooter;
+  const draftLegend = appState.viewMode === "doctor" ? `
+    <div class="draft-legend" aria-label="病历草稿图示">
+      <span><i class="legend-dot confirmed"></i>已确认</span>
+      <span><i class="legend-dot missing"></i>待补充</span>
+      <span><i class="legend-dot low"></i>低置信度</span>
+      <span><i class="legend-icon">✎</i>编辑</span>
+      <span><i class="legend-icon">↔</i>证据追溯</span>
+    </div>
+  ` : "";
+
+  if (fields) {
+    const allMissingCount = missingItems().length;
+    $("fieldCountBadge").textContent = allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
+    $("fieldCountBadge").className = `status-badge ${allMissingCount ? "missing" : "confirmed"}`;
+  }
+  $("recordFields").innerHTML = cards + diagnoses + summaryFooter + draftLegend;
 }
 
 function classifySpeaker(line, segment = {}) {
@@ -1523,13 +1612,12 @@ function renderAssistDetailContent(section) {
   `);
 }
 
-function renderDoctorAssistOverview({ fields, diagnoses, evidence, missing, warnings, errors, safety }) {
+function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
   return `
     <div class="doctor-assist-overview">
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}
       ${renderEvidenceCard(evidence, diagnoses)}
-      ${renderSafetyResultCard({ safety, missing, warnings, errors })}
     </div>
   `;
 }
@@ -1553,10 +1641,6 @@ function renderAssist() {
       fields,
       diagnoses,
       evidence,
-      missing,
-      warnings,
-      errors,
-      safety,
     });
     return;
   }
@@ -1694,7 +1778,9 @@ function renderFooter() {
 function openWorkbenchDetail(target = "") {
   const [type, value] = String(target).split(":");
   if (type === "field") {
-    const title = FIELD_DEFS.find(([key]) => key === value)?.[1] || "病历字段详情";
+    const title = DRAFT_FIELD_DEFS.find(([key]) => key === value)?.[1]
+      || FIELD_DEFS.find(([key]) => key === value)?.[1]
+      || "病历字段详情";
     openDetailDrawer(title, renderFieldDetailContent(value));
     return;
   }

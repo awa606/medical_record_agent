@@ -4055,3 +4055,338 @@ body.care-mode .assist-check-row {
     grid-template-columns: 1fr;
   }
 }
+
+/* v0.7.8 draft-slot and three-card AI layout: workbench only, topbar untouched */
+body.standard-mode .workbench,
+body.care-mode .workbench {
+  grid-template-columns: minmax(350px, 1.02fr) minmax(500px, 1.2fr) minmax(340px, 0.92fr);
+  gap: 12px;
+  font-size: 13px;
+}
+
+body.standard-mode .field-column,
+body.standard-mode .transcript-column,
+body.standard-mode .assist-column,
+body.care-mode .field-column,
+body.care-mode .transcript-column,
+body.care-mode .assist-column {
+  min-height: 0;
+  border-radius: 8px;
+}
+
+body.standard-mode .panel-header,
+body.care-mode .panel-header {
+  min-height: 48px;
+  padding: 10px 14px;
+}
+
+body.standard-mode .panel-header h2,
+body.care-mode .panel-header h2 {
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+body.standard-mode .field-column .field-list,
+body.care-mode .field-column .field-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 8px;
+  padding: 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+body.standard-mode .field-card,
+body.care-mode .field-card {
+  min-height: 78px;
+  max-height: 118px;
+  display: grid;
+  grid-template-rows: auto minmax(28px, 1fr) auto;
+  border: 1px solid #e0e7f0;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: #fff;
+}
+
+body.standard-mode .field-card.is-empty,
+body.care-mode .field-card.is-empty {
+  background: #fcfdff;
+}
+
+body.standard-mode .field-head,
+body.care-mode .field-head {
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+body.standard-mode .field-title,
+body.care-mode .field-title {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+body.standard-mode .field-value,
+body.care-mode .field-value {
+  min-height: 28px;
+  max-height: 50px;
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: initial;
+  -webkit-line-clamp: unset;
+}
+
+body.standard-mode .field-card.is-empty .field-value,
+body.care-mode .field-card.is-empty .field-value {
+  max-height: 32px;
+}
+
+body.standard-mode .field-meta,
+body.care-mode .field-meta {
+  min-height: 24px;
+  margin-top: 6px;
+  gap: 6px;
+  color: #697386;
+  font-size: 12px;
+}
+
+body.standard-mode .field-meta .confidence,
+body.care-mode .field-meta .confidence {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.standard-mode .field-card button,
+body.care-mode .field-card button,
+body.standard-mode .detail-link,
+body.care-mode .detail-link {
+  min-height: 24px;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 12px;
+}
+
+body.standard-mode .draft-legend,
+body.care-mode .draft-legend {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px 13px;
+  border-top: 1px solid #e5edf7;
+  padding: 10px 4px 0;
+  color: #637083;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+body.standard-mode .draft-legend span,
+body.care-mode .draft-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+body.standard-mode .legend-dot,
+body.care-mode .legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+body.standard-mode .legend-dot.confirmed,
+body.care-mode .legend-dot.confirmed {
+  background: #1fb36b;
+}
+
+body.standard-mode .legend-dot.missing,
+body.care-mode .legend-dot.missing {
+  background: #e13d3d;
+}
+
+body.standard-mode .legend-dot.low,
+body.care-mode .legend-dot.low {
+  background: #f2b01e;
+}
+
+body.standard-mode .legend-icon,
+body.care-mode .legend-icon {
+  color: #50657f;
+  font-style: normal;
+  font-weight: 900;
+}
+
+body.standard-mode .transcript-list,
+body.care-mode .transcript-list {
+  gap: 0;
+  padding: 10px 12px;
+}
+
+body.standard-mode .chat-row,
+body.care-mode .chat-row {
+  grid-template-columns: 70px minmax(0, 1fr);
+}
+
+body.standard-mode .chat-card,
+body.care-mode .chat-card {
+  min-height: 38px;
+}
+
+body.standard-mode .chat-line p,
+body.care-mode .chat-line p,
+body.standard-mode .chat-card textarea,
+body.care-mode .chat-card textarea {
+  font-size: 13px;
+  line-height: 1.48;
+}
+
+body.standard-mode .assist-column,
+body.care-mode .assist-column {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  row-gap: 10px;
+  overflow: hidden;
+}
+
+body.standard-mode .assist-column .assist-list,
+body.care-mode .assist-column .assist-list {
+  min-height: 0;
+  padding: 12px 12px 0;
+  overflow: hidden;
+}
+
+body.standard-mode .doctor-assist-overview,
+body.care-mode .doctor-assist-overview {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(96px, 0.9fr) minmax(126px, 1.1fr) minmax(112px, 1fr);
+  gap: 10px;
+}
+
+body.standard-mode .doctor-assist-card,
+body.care-mode .doctor-assist-card {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid #dfe6ef;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+body.standard-mode .doctor-assist-card-head,
+body.care-mode .doctor-assist-card-head {
+  min-height: 38px;
+  padding: 8px 11px;
+}
+
+body.standard-mode .doctor-assist-card-head h3,
+body.care-mode .doctor-assist-card-head h3 {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+body.standard-mode .doctor-assist-card-body,
+body.care-mode .doctor-assist-card-body {
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  gap: 7px;
+  padding: 9px 11px 11px;
+}
+
+body.standard-mode .assist-plan-block,
+body.standard-mode .assist-mini-grid > div,
+body.standard-mode .assist-evidence-quote,
+body.care-mode .assist-plan-block,
+body.care-mode .assist-mini-grid > div,
+body.care-mode .assist-evidence-quote {
+  padding: 8px 9px;
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+body.standard-mode .assist-number-list strong,
+body.standard-mode .assist-plan-block strong,
+body.standard-mode .assist-mini-grid strong,
+body.standard-mode .assist-evidence-quote,
+body.care-mode .assist-number-list strong,
+body.care-mode .assist-plan-block strong,
+body.care-mode .assist-mini-grid strong,
+body.care-mode .assist-evidence-quote {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+body.standard-mode .assist-column .bottom-actions,
+body.care-mode .assist-column .bottom-actions {
+  margin: 0 12px 12px;
+  border: 1px solid #dfe6ef;
+  border-radius: 8px;
+  padding: 11px;
+  background: #fff;
+}
+
+body.standard-mode .assist-column .bottom-actions strong,
+body.care-mode .assist-column .bottom-actions strong {
+  font-size: 16px;
+}
+
+body.standard-mode .assist-column .button-group,
+body.care-mode .assist-column .button-group {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+body.standard-mode .assist-column .button-group button,
+body.care-mode .assist-column .button-group button {
+  min-height: 36px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+body.standard-mode .assist-column .button-group .danger-action,
+body.care-mode .assist-column .button-group .danger-action {
+  grid-column: 1 / -1;
+  min-height: 42px;
+}
+
+body.care-mode .workbench {
+  grid-template-columns: minmax(360px, 1.02fr) minmax(500px, 1.15fr) minmax(360px, 0.98fr);
+  font-size: 15px;
+}
+
+body.care-mode .field-card {
+  min-height: 94px;
+  max-height: 142px;
+}
+
+body.care-mode .field-title,
+body.care-mode .doctor-assist-card-head h3 {
+  font-size: 17px;
+}
+
+body.care-mode .field-value,
+body.care-mode .chat-line p,
+body.care-mode .chat-card textarea,
+body.care-mode .assist-number-list strong,
+body.care-mode .assist-plan-block strong,
+body.care-mode .assist-mini-grid strong,
+body.care-mode .assist-evidence-quote {
+  font-size: 15px;
+}

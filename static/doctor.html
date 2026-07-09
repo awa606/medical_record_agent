@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>医生端工作台 - AI生成式电子病历辅助系统</title>
-    <link rel="stylesheet" href="./doctor.css?v=2026062101" />
+    <link rel="stylesheet" href="./doctor.css?v=2026070901" />
   </head>
   <body class="doctor-mode">
     <div class="doctor-app">
@@ -16,6 +16,44 @@
             <p>医生端工作台 · 接入真实接口</p>
           </div>
         </div>
+        <section class="patient-bar" aria-label="患者与会话信息">
+          <div>
+            <span class="meta-label">患者</span>
+            <strong id="patientName">-</strong>
+          </div>
+          <div>
+            <span class="meta-label">性别 / 年龄</span>
+            <strong id="patientProfile">-</strong>
+          </div>
+          <div>
+            <span class="meta-label">会话 ID</span>
+            <strong id="sessionId">-</strong>
+          </div>
+          <div>
+            <span class="meta-label">录音状态</span>
+            <strong id="recordingStatus">-</strong>
+          </div>
+          <div>
+            <span class="meta-label">ASR Engine</span>
+            <strong id="asrEngine">-</strong>
+          </div>
+          <div class="debug-only">
+            <span class="meta-label">LLM Provider</span>
+            <strong id="llmProvider">-</strong>
+          </div>
+          <div class="debug-only">
+            <span class="meta-label">LLM Model</span>
+            <strong id="llmModel">-</strong>
+          </div>
+          <div class="debug-only">
+            <span class="meta-label">LLM Fallback</span>
+            <strong id="llmFallback">-</strong>
+          </div>
+          <div>
+            <span class="meta-label">审核状态</span>
+            <strong id="reviewStatus">-</strong>
+          </div>
+        </section>
         <nav class="top-actions" aria-label="全局操作">
           <a href="./index.html">首页</a>
           <div class="mode-switch" aria-label="显示模式">
@@ -43,45 +81,6 @@
 
       <section class="process-hint" aria-label="病历生成流程提示">
         文本/音频输入 → ASR 转写 → 字段抽取 → 草稿生成 → 安全校验 → 医生审核
-      </section>
-
-      <section class="patient-bar" aria-label="患者与会话信息">
-        <div>
-          <span class="meta-label">患者</span>
-          <strong id="patientName">-</strong>
-        </div>
-        <div>
-          <span class="meta-label">性别 / 年龄</span>
-          <strong id="patientProfile">-</strong>
-        </div>
-        <div>
-          <span class="meta-label">会话 ID</span>
-          <strong id="sessionId">-</strong>
-        </div>
-        <div>
-          <span class="meta-label">录音状态</span>
-          <strong id="recordingStatus">-</strong>
-        </div>
-        <div>
-          <span class="meta-label">ASR Engine</span>
-          <strong id="asrEngine">-</strong>
-        </div>
-        <div class="debug-only">
-          <span class="meta-label">LLM Provider</span>
-          <strong id="llmProvider">-</strong>
-        </div>
-        <div class="debug-only">
-          <span class="meta-label">LLM Model</span>
-          <strong id="llmModel">-</strong>
-        </div>
-        <div class="debug-only">
-          <span class="meta-label">LLM Fallback</span>
-          <strong id="llmFallback">-</strong>
-        </div>
-        <div>
-          <span class="meta-label">审核状态</span>
-          <strong id="reviewStatus">-</strong>
-        </div>
       </section>
 
       <section class="workflow-panel" aria-label="病历生成流程">
@@ -241,6 +240,6 @@
     </aside>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=2026061501"></script>
+    <script src="./doctor.js?v=2026070901"></script>
   </body>
 </html>

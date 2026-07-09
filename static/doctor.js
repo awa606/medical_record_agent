@@ -498,7 +498,13 @@ function renderWorkflow() {
   const activeIndex = WORKFLOW_STEPS.findIndex((step) => step.key === activeKey);
   $("workflowSteps").innerHTML = WORKFLOW_STEPS.map((step, index) => {
     const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "";
-    return `<li class="workflow-step ${state}">${escapeHtml(step.label)}</li>`;
+    const label = String(step.label || "").replace(/^\d+\./, "");
+    return `
+      <li class="workflow-step ${state}">
+        <span class="workflow-index">${index + 1}</span>
+        <span class="workflow-label">${escapeHtml(label)}</span>
+      </li>
+    `;
   }).join("");
 }
 

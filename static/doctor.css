@@ -1371,11 +1371,626 @@ body.screenshot-mode .debug-tools {
   opacity: 1;
 }
 
+/* v0.7.0 doctor workbench visual refresh */
+body {
+  background: #edf1f6;
+}
+
+.doctor-app {
+  gap: 8px;
+  padding: 0 16px 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(237, 241, 246, 0.92) 96px),
+    #edf1f6;
+}
+
+.topbar,
+.process-hint,
+.patient-bar,
+.workflow-panel,
+.step-prompt,
+.next-action-panel,
+.run-context,
+.start-guide,
+.column,
+.bottom-actions {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.topbar {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr) auto;
+  overflow: hidden;
+  margin: 0 -16px;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  padding: 14px 22px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
+}
+
+.brand-block {
+  gap: 16px;
+}
+
+.brand-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px 14px 18px 18px;
+  background: linear-gradient(180deg, #2d6cdf, #1f57b8);
+  color: #fff;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.18), 0 8px 18px rgba(31, 87, 184, 0.16);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.brand-block h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.brand-block p {
+  margin-top: 6px;
+  color: #7c8797;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.top-actions {
+  min-width: 0;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+body.doctor-mode .mode-switch,
+body.doctor-mode .capture-switch {
+  display: none;
+}
+
+.top-actions a,
+.top-actions button,
+.button-group button,
+.guide-actions button,
+.drawer-header button {
+  border-radius: 8px;
+}
+
+.top-actions a,
+.top-actions button {
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.mode-switch,
+.capture-switch {
+  border-radius: 9px;
+  background: #f4f7fb;
+}
+
+.top-actions .primary-action,
+.button-group button,
+.primary-action {
+  background: #2868d8;
+}
+
+.top-actions .primary-action:hover,
+.button-group button:hover,
+.primary-action:hover {
+  background: #1f57b8;
+}
+
+.process-hint {
+  display: none;
+}
+
+body.doctor-mode .step-prompt {
+  display: none;
+}
+
+.patient-bar {
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0;
+  border-radius: 0 0 8px 8px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
+}
+
+.topbar .patient-bar {
+  min-width: 0;
+  grid-template-columns: repeat(6, minmax(70px, 1fr));
+  align-self: stretch;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.patient-bar > div {
+  min-height: 54px;
+  border-right: 1px solid #e3e9f1;
+  padding: 9px 16px;
+}
+
+.topbar .patient-bar > div {
+  min-height: 48px;
+  padding: 4px 12px;
+  background: transparent;
+}
+
+.patient-bar > div:last-child {
+  border-right: 0;
+}
+
+.meta-label {
+  color: #7c8797;
+  font-weight: 700;
+}
+
+.patient-bar strong {
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.workflow-panel {
+  border-radius: 8px;
+  padding: 12px 24px;
+  background: #fff;
+}
+
+.workflow-steps {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0;
+}
+
+.workflow-step {
+  position: relative;
+  min-height: 42px;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #6c7686;
+  font-size: 14px;
+}
+
+.workflow-step.done,
+.workflow-step.active {
+  border-color: transparent;
+  background: transparent;
+}
+
+.workflow-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 20px;
+  left: calc(50% + 38px);
+  width: calc(100% - 76px);
+  height: 2px;
+  border-radius: 999px;
+  background: #d8dee8;
+}
+
+.workflow-step.done:not(:last-child)::after,
+.workflow-step.active:not(:last-child)::after {
+  background: #9dbbea;
+}
+
+.workflow-index {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 2px solid #c8d0dc;
+  border-radius: 999px;
+  background: #fff;
+  color: #6c7686;
+  font-weight: 900;
+}
+
+.workflow-label {
+  position: relative;
+  z-index: 1;
+  margin-left: 8px;
+  font-weight: 900;
+}
+
+.workflow-step.done .workflow-index {
+  border-color: #1fb36b;
+  background: #1fb36b;
+  color: #fff;
+}
+
+.workflow-step.done .workflow-label {
+  color: #1f7a4d;
+}
+
+.workflow-step.active .workflow-index {
+  border-color: #2767d1;
+  background: #2767d1;
+  color: #fff;
+}
+
+.workflow-step.active .workflow-label {
+  color: #1e4f9c;
+}
+
+.step-prompt {
+  min-height: 40px;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 14px;
+  text-align: left;
+}
+
+.next-action-panel {
+  min-height: 58px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #fffdf3;
+}
+
+.next-action-panel strong {
+  font-size: 16px;
+}
+
+.next-action-buttons button {
+  border-radius: 8px;
+}
+
+.start-guide {
+  border-radius: 8px;
+  min-height: 82px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px 16px;
+}
+
+.start-guide h2 {
+  margin: 2px 0 6px;
+  font-size: 17px;
+}
+
+.start-guide ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding-left: 18px;
+  color: #374151;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.guide-actions button.primary-action {
+  border-color: transparent;
+  background: #2868d8;
+  color: #fff;
+}
+
+.workbench {
+  grid-template-columns: minmax(350px, 1fr) minmax(480px, 1.15fr) minmax(340px, 0.92fr);
+  gap: 8px;
+}
+
+.column {
+  border-color: #dfe5ee;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.assist-column,
+.assist-column .assist-list {
+  max-height: calc(100vh - 246px);
+}
+
+.panel-header {
+  min-height: 54px;
+  padding: 12px 16px;
+  background: #fff;
+}
+
+.panel-header h2 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.panel-header p {
+  display: none;
+}
+
+.field-list,
+.transcript-list,
+.assist-list {
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.empty-state {
+  border-radius: 8px;
+}
+
+.status-badge {
+  min-height: 22px;
+  border-radius: 7px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.status-badge.confirmed {
+  background: #eaf8f0;
+  color: #108a52;
+}
+
+.status-badge.info {
+  background: #eaf2ff;
+  color: #1f5fbf;
+}
+
+.status-badge.missing {
+  background: #fff0f0;
+  color: #e03131;
+}
+
+.status-badge.low,
+.status-badge.candidate {
+  background: #fff7dd;
+  color: #b16b00;
+}
+
+.field-card {
+  border-color: #e0e6ef;
+  border-radius: 7px;
+  padding: 11px 13px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+.field-card.confirmed {
+  border-left-color: #2767d1;
+}
+
+.field-card.missing {
+  background: #fff;
+}
+
+.field-head {
+  margin-bottom: 7px;
+}
+
+.field-title {
+  font-size: 16px;
+}
+
+.field-value {
+  min-height: 34px;
+  color: #172033;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.field-meta {
+  margin-top: 8px;
+}
+
+.field-card button,
+.evidence-chip {
+  min-height: 28px;
+  border-radius: 7px;
+  background: #f7f9fc;
+}
+
+.field-evidence,
+.diagnosis-detail,
+.draft-block,
+.safety-strip,
+.diagnosis-card,
+.question-card,
+.storage-note {
+  border-radius: 7px;
+}
+
+.transcript-status-panel {
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f7fbff;
+}
+
+.transcript-status-head strong {
+  font-size: 15px;
+}
+
+.progress-track {
+  height: 7px;
+  background: #dfe6ef;
+}
+
+.progress-track span {
+  background: #2767d1;
+}
+
+.status-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.status-metrics > div {
+  border-color: #dfe6ef;
+  border-radius: 7px;
+  padding: 7px 8px;
+  background: #fff;
+}
+
+.chat-row {
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 0;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.chat-time {
+  padding: 11px 12px 0 0;
+  color: #6c7686;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chat-card {
+  border: 0;
+  border-left: 0;
+  border-radius: 0;
+  padding: 8px 10px;
+  background: transparent;
+}
+
+.chat-card.highlight {
+  background: #e8f1ff;
+}
+
+.chat-card.needs-review {
+  border-left: 3px solid #f2b01e;
+}
+
+.chat-card.reviewed {
+  border-left: 3px solid #1fb36b;
+}
+
+.chat-tools {
+  gap: 7px;
+  margin-bottom: 5px;
+}
+
+.chat-tools select {
+  min-height: 28px;
+  border-color: transparent;
+  border-radius: 7px;
+  background: #edf4ff;
+  color: #1f5fbf;
+  font-size: 13px;
+}
+
+.chat-card textarea {
+  min-height: 34px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: #172033;
+  font-size: 14px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.chat-card textarea:disabled {
+  color: #172033;
+  opacity: 1;
+}
+
+.role-review-bar,
+.conversation-warning {
+  border-radius: 8px;
+}
+
+.assist-tabs {
+  gap: 0;
+  border: 1px solid #dfe6ef;
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.assist-tab {
+  min-height: 36px;
+  border: 0;
+  border-right: 1px solid #dfe6ef;
+  border-radius: 0;
+  background: #f7f9fc;
+}
+
+.assist-tab:last-child {
+  border-right: 0;
+}
+
+.assist-tab.active {
+  background: #eaf2ff;
+  color: #1f5fbf;
+}
+
+.assist-block {
+  border-color: #dfe6ef;
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+.assist-title {
+  padding: 11px 12px;
+}
+
+.assist-title h3 {
+  font-size: 16px;
+}
+
+.assist-details > summary::after,
+.assist-details[open] > summary::after {
+  border-radius: 7px;
+}
+
+.assist-body {
+  max-height: 260px;
+}
+
+.bottom-actions {
+  min-height: 58px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 -8px 18px rgba(15, 23, 42, 0.07);
+}
+
+.button-group {
+  gap: 8px;
+}
+
+.button-group button {
+  min-height: 38px;
+  padding: 8px 14px;
+}
+
+.button-group .danger-action {
+  background: #e15b5b;
+}
+
+.toast {
+  border-radius: 8px;
+}
+
 @media (max-width: 1180px) {
   .doctor-app {
     height: auto;
     min-height: 100vh;
     overflow: visible;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr;
+    margin: 0;
+    border-radius: 8px;
+  }
+
+  .topbar .patient-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .top-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .patient-bar,
@@ -1411,6 +2026,10 @@ body.screenshot-mode .debug-tools {
   .next-action-panel,
   .workflow-steps {
     grid-template-columns: 1fr;
+  }
+
+  .topbar .patient-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .next-action-buttons {

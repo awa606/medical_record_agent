@@ -1401,7 +1401,9 @@ body {
   min-height: 76px;
   display: grid;
   grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr) auto;
-  overflow: hidden;
+  position: relative;
+  z-index: 30;
+  overflow: visible;
   margin: 0 -16px;
   border-width: 0 0 1px;
   border-radius: 0;
@@ -1441,6 +1443,8 @@ body {
 }
 
 .top-actions {
+  position: relative;
+  z-index: 32;
   min-width: 0;
   gap: 8px;
   flex-wrap: nowrap;
@@ -1467,13 +1471,14 @@ body.doctor-mode .capture-switch {
 
 .input-method-menu {
   position: relative;
+  z-index: 33;
 }
 
 .input-method-popover {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: 16;
+  z-index: 80;
   width: 152px;
   display: grid;
   gap: 4px;
@@ -1753,14 +1758,22 @@ body.doctor-mode .start-guide {
 }
 
 .assist-column {
-  max-height: calc(100vh - 292px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  row-gap: 8px;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
   overflow: hidden;
 }
 
 .assist-column .assist-list {
-  flex: 1 1 auto;
+  min-height: 0;
   max-height: none;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-bottom: 10px;
 }
 
 .panel-header {
@@ -2216,7 +2229,6 @@ body.doctor-mode .start-guide {
   position: static;
   inset: auto;
   z-index: auto;
-  flex: 0 0 auto;
   display: grid;
   gap: 10px;
   min-height: 0;

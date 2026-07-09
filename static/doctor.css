@@ -4447,3 +4447,22 @@ body.care-mode .transcript-status-detail {
   margin: 3px 0 0;
   font-size: 14px;
 }
+
+/* v0.8.1: realtime record preview stays lightweight and clearly non-final. */
+.preview-notice {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid #bfdbfe;
+  border-left: 3px solid #2563eb;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+body.care-mode .preview-notice {
+  font-size: 14px;
+  padding: 10px 12px;
+}

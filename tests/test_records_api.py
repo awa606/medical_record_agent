@@ -5,7 +5,13 @@ import unittest
 from fastapi import BackgroundTasks
 
 from app.agents import MedicalRecordOrchestrator
-from app.api.records import GenerateRecordRequest, generate_record, run_record_generation_task
+from app.api.records import (
+    GenerateRecordRequest,
+    PreviewRecordRequest,
+    generate_record,
+    preview_record,
+    run_record_generation_task,
+)
 from app.api.tasks import read_task
 
 
@@ -44,6 +50,48 @@ class RecordsApiTests(unittest.TestCase):
         completed_task = read_task(response["task_id"])
         self.assertEqual(completed_task["status"], MedicalRecordOrchestrator.STATUS_WAITING_DOCTOR_REVIEW)
         self.assertIn("门诊病历草稿", completed_task["result_json"]["draft"])
+
+
+    def test_preview_record_returns_non_persistent_preview(self):
+        payload = PreviewRecordRequest(
+            conversation_text=(
+                "[医生] 你好，哪里不舒服？\n"
+                "[患者] 我发热三天，最高体温40度，还有咳嗽和铁锈色痰。\n"
+                "[医生] 之前做过什么处理？\n"
+                "[患者] 在卫生院吃过布洛芬，退热后又反复发热。"
+            ),
+            source="asr_partial",
+            segments=[
+                {"role": "医生", "text": "你好，哪里不舒服？"},
+                {"role": "患者", "text": "我发热三天，最高体温40度，还有咳嗽和铁锈色痰。"},
+            ],
+        )
+
+        response = preview_record(payload)
+        response_data = response.model_dump()
+
+        self.assertEqual(response.status, "preview_ready")
+        self.assertEqual(response.source, "asr_partial")
+        self.assertEqual(response.segment_count, 2)
+        self.assertIn("fields_preview", response_data)
+        self.assertIn("candidate_diagnoses", response_data)
+        self.assertIn("treatment_plan", response_data)
+        self.assertGreater(len(response.candidate_diagnoses), 0)
+        self.assertNotIn("task_id", response_data)
+        self.assertNotIn("events_url", response_data)
+
+    def test_preview_record_marks_partial_missing_items_without_export_task(self):
+        response = preview_record(
+            PreviewRecordRequest(
+                conversation_text="[患者] 我有点发热。",
+                source="asr_partial",
+            )
+        )
+
+        self.assertEqual(response.status, "preview_ready")
+        self.assertGreater(len(response.missing_items), 0)
+        self.assertIn("实时预览", response.preview_notice)
+        self.assertNotIn("task_id", response.model_dump())
 
 
 if __name__ == "__main__":

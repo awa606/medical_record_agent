@@ -39,7 +39,20 @@ const appState = {
   roleReviewSaving: false,
   lastActionError: "",
   inputMenuOpen: false,
+  recordPreview: null,
+  recordPreviewStatus: "idle",
+  recordPreviewUpdatedAt: "",
+  recordPreviewError: "",
+  recordPreviewTimer: null,
+  recordPreviewLastRunAt: 0,
+  recordPreviewLastSignature: "",
+  recordPreviewInFlight: false,
 };
+
+const RECORD_PREVIEW_MIN_CHARS = 80;
+const RECORD_PREVIEW_MIN_SEGMENTS = 2;
+const RECORD_PREVIEW_MIN_INTERVAL_MS = 8000;
+const RECORD_PREVIEW_DEBOUNCE_MS = 900;
 
 const FIELD_DEFS = [
   ["chief_complaint", "主诉"],
@@ -258,14 +271,42 @@ function hasActiveSession() {
       || appState.liveTranscriptSegments.length
       || appState.currentRecordFields
       || appState.currentDraft
+      || appState.recordPreview
       || appState.currentInputText,
   );
 }
 
+function isRecordPreviewActive() {
+  return Boolean(!appState.currentRecordFields && appState.recordPreview?.fields_preview);
+}
+
+function activeRecordFields() {
+  return appState.currentRecordFields || appState.recordPreview?.fields_preview || null;
+}
+
+function activeDraftText() {
+  return appState.currentDraft || appState.recordPreview?.draft_preview || "";
+}
+
+function activeSafetyCheck() {
+  return appState.currentSafetyCheck || appState.recordPreview?.safety_preview || null;
+}
+
+function previewTreatmentText() {
+  const plan = appState.recordPreview?.treatment_plan;
+  if (!isRecordPreviewActive() || !plan) return "";
+  const items = [];
+  if (plan.suggested_checks?.length) items.push(`建议检查：${plan.suggested_checks.join("；")}`);
+  if (plan.medication_notes?.length) items.push(`用药提示：${plan.medication_notes.join("；")}`);
+  if (plan.risk_warnings?.length) items.push(`风险提醒：${plan.risk_warnings.join("；")}`);
+  if (plan.follow_up_questions?.length) items.push(`建议补问：${plan.follow_up_questions.join("；")}`);
+  return items.join("\n");
+}
+
 function riskSummary() {
   const missing = missingItems();
-  const diagnoses = appState.currentRecordFields?.candidate_diagnoses || [];
-  const safety = appState.currentSafetyCheck;
+  const diagnoses = activeRecordFields()?.candidate_diagnoses || [];
+  const safety = activeSafetyCheck();
   const warnings = [...(appState.currentAsrResult?.warnings || []), ...(safety?.warnings || [])];
   const errors = safety?.errors || [];
   const evaluationMissing = appState.currentEvaluation?.medical_keywords?.missing || [];
@@ -627,7 +668,7 @@ function renderWorkflow() {
 
 function fieldStatus(field, key) {
   if (key === "treatment_plan") {
-    return appState.currentDraft
+    return activeDraftText()
       ? { key: "candidate", label: "候选待确认" }
       : { key: "missing", label: "待补充" };
   }
@@ -639,7 +680,8 @@ function fieldStatus(field, key) {
 
 function fieldValue(fields, key) {
   if (key === "treatment_plan") {
-    return appState.currentDraft ? "处理建议已生成在右栏病历草稿中，需医生确认后写入。" : "待医生补充处理建议";
+    return previewTreatmentText()
+      || (activeDraftText() ? "处理建议已生成，需医生确认后写入正式病历。" : "待医生补充处理建议");
   }
   const field = fields?.[key];
   return field?.value || field?.hint || "暂无内容";
@@ -740,7 +782,7 @@ function renderDiagnosisDetails(diagnosis = {}) {
 }
 
 function renderFieldDetailContent(key) {
-  const fields = appState.currentRecordFields;
+  const fields = activeRecordFields();
   if (!fields) return `<div class="empty-state">暂无病历字段。</div>`;
   const title = DRAFT_FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1]
     || FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1]
@@ -777,7 +819,7 @@ function renderFieldDetailContent(key) {
 }
 
 function renderDiagnosisDetailContent(index) {
-  const diagnosis = appState.currentRecordFields?.candidate_diagnoses?.[index];
+  const diagnosis = activeRecordFields()?.candidate_diagnoses?.[index];
   if (!diagnosis) return `<div class="empty-state">暂无候选诊断详情。</div>`;
   return `
     ${detailSection(diagnosis.name || "候选诊断", `
@@ -796,7 +838,7 @@ function renderDiagnosisDetailContent(index) {
 }
 
 function renderAllFieldsDetailContent() {
-  const fields = appState.currentRecordFields;
+  const fields = activeRecordFields();
   if (!fields) return `<div class="empty-state">暂无病历字段。</div>`;
   const fieldSections = FIELD_DEFS.map(([key, title]) => {
     const field = fields[key] || null;
@@ -823,7 +865,8 @@ function renderAllFieldsDetailContent() {
 }
 
 function renderFields() {
-  const fields = appState.currentRecordFields;
+  const fields = activeRecordFields();
+  const isPreview = isRecordPreviewActive();
   if (!fields) {
     $("fieldCountBadge").textContent = "待生成";
     $("fieldCountBadge").className = "status-badge neutral";
@@ -893,16 +936,24 @@ function renderFields() {
 
   if (fields) {
     const allMissingCount = missingItems().length;
-    $("fieldCountBadge").textContent = allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
-    $("fieldCountBadge").className = `status-badge ${allMissingCount ? "missing" : "confirmed"}`;
+    $("fieldCountBadge").textContent = isPreview
+      ? "实时预览"
+      : allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
+    $("fieldCountBadge").className = `status-badge ${isPreview ? "info" : allMissingCount ? "missing" : "confirmed"}`;
   }
-  $("recordFields").innerHTML = cards + diagnoses + summaryFooter + draftLegend;
+  const previewNotice = isPreview
+    ? `<div class="preview-notice">实时预览，需医生确认；正式生成病历后会替换为审核版结果。</div>`
+    : "";
+  $("recordFields").innerHTML = previewNotice + cards + diagnoses + summaryFooter + draftLegend;
 }
 
 function classifySpeaker(line, segment = {}) {
   const raw = `${segment.role || ""} ${segment.speaker || ""} ${line}`.toLowerCase();
   if (raw.includes("医生") || raw.includes("doctor")) return "doctor";
   if (raw.includes("患者") || raw.includes("patient")) return "patient";
+  const inferred = inferLowConfidenceRole(line);
+  if (inferred === "医生") return "doctor";
+  if (inferred === "患者") return "patient";
   return "unknown";
 }
 
@@ -911,6 +962,29 @@ function roleLabelFromSegment(segment = {}, fallbackLine = "") {
   if (speaker === "doctor") return "医生";
   if (speaker === "patient") return "患者";
   return "待确认";
+}
+
+function inferLowConfidenceRole(text = "") {
+  const value = String(text || "");
+  if (!value.trim()) return "待确认";
+  const doctorKeywords = ["请问", "哪里", "什么时候", "有没有", "是否", "怎么了", "哪里不舒服", "做什么工作", "多大", "用过什么药", "过敏", "查体", "检查", "处理过"];
+  const patientKeywords = ["我", "嗯", "是的", "没有", "发烧", "发热", "咳嗽", "头晕", "胸闷", "疼", "痛", "不舒服", "吃了", "用了", "之前", "小时", "天前"];
+  const doctorScore = doctorKeywords.reduce((score, keyword) => score + (value.includes(keyword) ? 1 : 0), 0);
+  const patientScore = patientKeywords.reduce((score, keyword) => score + (value.includes(keyword) ? 1 : 0), 0);
+  if (doctorScore > patientScore) return "医生";
+  if (patientScore > doctorScore) return "患者";
+  return "待确认";
+}
+
+function segmentWithInferredRole(segment = {}) {
+  if (segment.role && segment.role !== "待确认") return segment;
+  const inferredRole = inferLowConfidenceRole(segment.text || "");
+  return {
+    ...segment,
+    role: inferredRole,
+    needs_review: true,
+    role_confidence_note: inferredRole === "待确认" ? "角色待确认" : "低置信度初判，需医生校正",
+  };
 }
 
 function speakerClassFromRole(role) {
@@ -936,6 +1010,75 @@ function textFromSegments(segments = []) {
 function currentReviewSegments() {
   if (appState.currentAsrResult?.segments?.length) return appState.currentAsrResult.segments;
   return appState.liveTranscriptSegments;
+}
+
+function liveConversationTextForPreview() {
+  const segments = currentReviewSegments();
+  if (segments.length) {
+    return segments
+      .map((segment) => {
+        const displaySegment = segmentWithInferredRole(segment);
+        const role = displaySegment.role || "待确认";
+        const text = displaySegment.text || "";
+        return text ? `[${role}] ${text}` : "";
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  return appState.currentInputText || appState.currentAsrResult?.conversation_text || appState.currentAsrResult?.text || "";
+}
+
+function previewSignature(text, segments) {
+  return `${segments.length}:${text.length}:${text.slice(-120)}`;
+}
+
+async function fetchRecordPreview(text, segments) {
+  if (!text.trim() || appState.recordPreviewInFlight || appState.currentRecordFields) return;
+  const signature = previewSignature(text, segments);
+  if (signature === appState.recordPreviewLastSignature) return;
+  appState.recordPreviewInFlight = true;
+  appState.recordPreviewStatus = "loading";
+  appState.recordPreviewError = "";
+  renderFields();
+  renderAssist();
+  try {
+    const response = await api("/api/records/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversation_text: text,
+        source: appState.currentAsrSessionId ? "asr_partial" : "text_preview",
+        segments,
+      }),
+    });
+    appState.recordPreview = response;
+    appState.recordPreviewStatus = response.status || "preview_ready";
+    appState.recordPreviewUpdatedAt = response.updated_at || "";
+    appState.recordPreviewLastSignature = signature;
+    appState.recordPreviewLastRunAt = Date.now();
+  } catch (error) {
+    appState.recordPreviewStatus = "failed";
+    appState.recordPreviewError = error?.message || "实时预览暂不可用，转写继续。";
+  } finally {
+    appState.recordPreviewInFlight = false;
+    renderAll();
+  }
+}
+
+function scheduleRecordPreview({ force = false } = {}) {
+  if (appState.currentRecordFields) return;
+  const segments = currentReviewSegments().map(segmentWithInferredRole);
+  const text = liveConversationTextForPreview();
+  if (!force && segments.length < RECORD_PREVIEW_MIN_SEGMENTS && text.length < RECORD_PREVIEW_MIN_CHARS) return;
+  const now = Date.now();
+  const delay = force
+    ? 0
+    : Math.max(RECORD_PREVIEW_DEBOUNCE_MS, RECORD_PREVIEW_MIN_INTERVAL_MS - (now - appState.recordPreviewLastRunAt));
+  if (appState.recordPreviewTimer) window.clearTimeout(appState.recordPreviewTimer);
+  appState.recordPreviewTimer = window.setTimeout(() => {
+    appState.recordPreviewTimer = null;
+    fetchRecordPreview(text, segments);
+  }, delay);
 }
 
 function syncAsrTextFromSegments() {
@@ -968,7 +1111,8 @@ function transcriptRowsFromText(text) {
 function transcriptRows() {
   if (appState.liveTranscriptSegments.length) {
     return appState.liveTranscriptSegments.map((segment, index) => {
-      const label = roleLabelFromSegment(segment, segment.text || "");
+      const displaySegment = segmentWithInferredRole(segment);
+      const label = roleLabelFromSegment(displaySegment, displaySegment.text || "");
       return {
         index,
         editable: Boolean(appState.currentAsrResult),
@@ -977,7 +1121,7 @@ function transcriptRows() {
         label,
         text: segment.text || "",
         confidence: segment.confidence,
-        needsReview: Boolean(segment.needs_review || label === "待确认"),
+        needsReview: Boolean(displaySegment.needs_review || label === "待确认"),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
     });
@@ -985,7 +1129,8 @@ function transcriptRows() {
   const asr = appState.currentAsrResult;
   if (asr?.segments?.length > 1) {
     return asr.segments.map((segment, index) => {
-      const label = roleLabelFromSegment(segment, segment.text || "");
+      const displaySegment = segmentWithInferredRole(segment);
+      const label = roleLabelFromSegment(displaySegment, displaySegment.text || "");
       return {
         index,
         editable: true,
@@ -994,7 +1139,7 @@ function transcriptRows() {
         label,
         text: segment.text || "",
         confidence: segment.confidence,
-        needsReview: Boolean(segment.needs_review || label === "待确认"),
+        needsReview: Boolean(displaySegment.needs_review || label === "待确认"),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
     });
@@ -1192,13 +1337,13 @@ function renderTranscriptDetailContent() {
 }
 
 function missingItems() {
-  const fields = appState.currentRecordFields;
+  const fields = activeRecordFields();
   if (!fields) return [];
   return FIELD_DEFS.filter(([key]) => fieldStatus(fields[key], key).key === "missing").map(([, label]) => label);
 }
 
 function allEvidence() {
-  const fields = appState.currentRecordFields;
+  const fields = activeRecordFields();
   if (!fields) return [];
   const evidence = [];
   FIELD_DEFS.forEach(([key, label]) => {
@@ -1471,7 +1616,7 @@ function uniqueDiagnosisItems(diagnoses, key) {
 
 function renderTreatmentRecommendationCard(fields, diagnoses) {
   const treatment = fields?.treatment_plan;
-  const treatmentText = treatment?.value || treatment?.hint || "暂无明确处理建议，需医生结合问诊、查体和检查结果补充。";
+  const treatmentText = treatment?.value || treatment?.hint || previewTreatmentText() || "暂无明确处理建议，需医生结合问诊、查体和检查结果补充。";
   const suggestedChecks = uniqueDiagnosisItems(diagnoses, "suggested_checks");
   const medicationNotes = uniqueDiagnosisItems(diagnoses, "medication_notes");
 
@@ -1551,12 +1696,12 @@ function renderSafetyResultCard({ safety, missing, warnings, errors }) {
 }
 
 function renderAssistDetailContent(section) {
-  const fields = appState.currentRecordFields;
+  const fields = activeRecordFields();
   const diagnoses = fields?.candidate_diagnoses || [];
   const evidence = allEvidence();
   const missing = missingItems();
   const risk = riskSummary();
-  const safety = appState.currentSafetyCheck;
+  const safety = activeSafetyCheck();
   const warnings = [...risk.warnings];
   if (appState.currentAsrResult?.role_strategy === "single_segment_needs_review") {
     warnings.unshift("医生/患者角色需人工校正");
@@ -1577,7 +1722,7 @@ function renderAssistDetailContent(section) {
 
   if (section === "treatment") {
     const treatment = fields?.treatment_plan;
-    const treatmentText = treatment?.value || treatment?.hint || appState.currentDraft || "暂无明确处理建议，需医生补充。";
+    const treatmentText = treatment?.value || treatment?.hint || previewTreatmentText() || activeDraftText() || "暂无明确处理建议，需医生补充。";
     const suggestedChecks = uniqueDiagnosisItems(diagnoses, "suggested_checks");
     const medicationNotes = uniqueDiagnosisItems(diagnoses, "medication_notes");
     const riskWarnings = uniqueDiagnosisItems(diagnoses, "risk_warnings");
@@ -1617,8 +1762,16 @@ function renderAssistDetailContent(section) {
 }
 
 function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
+  const previewNotice = isRecordPreviewActive()
+    ? `<div class="preview-notice">实时预览，需医生确认；不作为最终诊断或处方。</div>`
+    : "";
+  const previewError = appState.recordPreviewError
+    ? `<div class="safety-strip warning">${escapeHtml(appState.recordPreviewError)}</div>`
+    : "";
   return `
     <div class="doctor-assist-overview">
+      ${previewNotice}
+      ${previewError}
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}
       ${renderEvidenceCard(evidence, diagnoses)}
@@ -1627,8 +1780,8 @@ function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
 }
 
 function renderAssist() {
-  const fields = appState.currentRecordFields;
-  const safety = appState.currentSafetyCheck;
+  const fields = activeRecordFields();
+  const safety = activeSafetyCheck();
   const missing = missingItems();
   const diagnoses = fields?.candidate_diagnoses || [];
   const evidence = allEvidence();
@@ -1696,10 +1849,10 @@ function renderAssist() {
 
     ${assistDetails({
       title: "病历草稿",
-      badgeClass: appState.currentDraft ? "info" : "neutral",
-      badgeText: appState.currentDraft ? "已生成" : "待生成",
+      badgeClass: activeDraftText() ? "info" : "neutral",
+      badgeText: activeDraftText() ? (isRecordPreviewActive() ? "预览" : "已生成") : "待生成",
       open: false,
-      body: `<div class="draft-block">${escapeHtml(appState.currentDraft || "暂无病历草稿。")}</div>`,
+      body: `<div class="draft-block">${escapeHtml(activeDraftText() || "暂无病历草稿。")}</div>`,
     })}
     ${saveBehaviorBlock()}
   `;
@@ -1843,6 +1996,20 @@ function resetRoleReviewState() {
   appState.roleReviewSaving = false;
 }
 
+function resetRecordPreview() {
+  if (appState.recordPreviewTimer) {
+    window.clearTimeout(appState.recordPreviewTimer);
+    appState.recordPreviewTimer = null;
+  }
+  appState.recordPreview = null;
+  appState.recordPreviewStatus = "idle";
+  appState.recordPreviewUpdatedAt = "";
+  appState.recordPreviewError = "";
+  appState.recordPreviewLastRunAt = 0;
+  appState.recordPreviewLastSignature = "";
+  appState.recordPreviewInFlight = false;
+}
+
 function resetTaskState({ keepAsr = false } = {}) {
   appState.currentTaskId = null;
   appState.currentEvaluation = null;
@@ -1854,6 +2021,7 @@ function resetTaskState({ keepAsr = false } = {}) {
   appState.currentAgentTrace = null;
   appState.currentInputText = "";
   appState.taskStatus = "CREATED";
+  resetRecordPreview();
   if (!keepAsr) {
     closeAsrStream();
     appState.currentAsrResult = null;
@@ -2069,6 +2237,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
         ...appState.liveTranscriptSegments,
         data.segment,
       ];
+      scheduleRecordPreview();
     }
     renderAll();
   });
@@ -2092,6 +2261,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrRetryHint = "";
     appState.currentEvaluation = null;
     resetRoleReviewState();
+    scheduleRecordPreview({ force: true });
     closeAsrStream();
     setBusy(false);
     renderAll();
@@ -2218,6 +2388,7 @@ async function saveRoleReview({ silent = false } = {}) {
 
 async function uploadAndTranscribe(file, engine) {
   if (!file) throw new Error("请选择音频文件");
+  resetRecordPreview();
   appState.selectedEngine = engine;
   appState.uploadedFilename = "上传中";
   appState.taskStatus = "CREATED";

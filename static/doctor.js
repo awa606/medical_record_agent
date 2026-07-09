@@ -771,7 +771,7 @@ function renderFields() {
           <span class="field-title">${escapeHtml(title)}</span>
           <span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>
         </div>
-        <div class="field-value">${escapeHtml(compactText(fieldValue(fields, key), 86))}</div>
+        <div class="field-value">${escapeHtml(fieldValue(fields, key))}</div>
         <div class="field-meta">
           <span class="confidence">${confidence == null ? "需医生复核" : `置信度 ${Math.round(confidence * 100)}%`}</span>
           <button type="button" data-evidence-toggle>证据</button>

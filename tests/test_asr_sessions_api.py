@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.api.asr_sessions import (
     _asr_session_event_stream,
+    _chunk_seconds_for_duration,
     _read_events,
     create_asr_session,
     read_asr_session_result,
@@ -134,12 +135,21 @@ class ASRSessionApiTests(unittest.TestCase):
         events = _read_events(session.session_id)
         event_names = [event.event for event in events]
         self.assertEqual(event_names[:3], ["session_created", "audio_uploaded", "transcribing"])
+        self.assertIn("transcribing_progress", event_names)
         self.assertIn("segment", event_names)
         self.assertEqual(event_names[-1], "completed")
 
         stream = collect_sse_chunks(session.session_id)
         self.assertIn("event: segment", stream)
         self.assertIn("event: completed", stream)
+
+    def test_dynamic_chunk_seconds_uses_short_chunks_for_demo_length_audio(self):
+        os.environ.pop("ASR_SESSION_DYNAMIC_CHUNKING", None)
+        os.environ.pop("ASR_SESSION_SHORT_CHUNK_SECONDS", None)
+        os.environ.pop("ASR_SESSION_CHUNK_SECONDS", None)
+
+        self.assertEqual(_chunk_seconds_for_duration(310.0), 60)
+        self.assertEqual(_chunk_seconds_for_duration(1800.0), 300)
 
     def test_upload_route_starts_background_transcription_and_streams_events(self):
         client = TestClient(app)
@@ -272,13 +282,19 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("chunk_plan", event_names)
         self.assertEqual(event_names.count("chunk_started"), 2)
         self.assertEqual(event_names.count("chunk_completed"), 2)
+        self.assertEqual(event_names.count("segment"), 2)
         self.assertLess(event_names.index("chunk_plan"), event_names.index("segment"))
 
         chunk_plan = next(event for event in events if event.event == "chunk_plan")
         self.assertEqual(chunk_plan.data["total_chunks"], 2)
+        first_segment = next(event for event in events if event.event == "segment")
+        self.assertTrue(first_segment.data["partial"])
+        self.assertEqual(first_segment.data["chunk_index"], 1)
+        self.assertEqual(first_segment.data["progress"], 0.5)
         stream = collect_sse_chunks(session.session_id)
         self.assertIn("event: chunk_started", stream)
         self.assertIn("event: chunk_completed", stream)
+        self.assertIn("\"partial\": true", stream)
         self.assertIn("event: completed", stream)
 
     def test_chunk_failure_events_include_retry_hint(self):

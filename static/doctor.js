@@ -25,6 +25,8 @@ const appState = {
   eventSource: null,
   asrEventSource: null,
   asrStreamProgress: 0,
+  asrProgressEstimated: false,
+  asrElapsedSeconds: 0,
   asrStreamCurrentSegment: 0,
   asrStreamTotalSegments: 0,
   asrLastError: "",
@@ -1018,17 +1020,12 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
   const current = asr
     ? total
     : Math.min(appState.asrStreamCurrentSegment || rows.length || 0, total || rows.length || 0);
-  const chunkText = appState.asrChunkTotal
-    ? `${appState.asrChunkCurrent || 0}/${appState.asrChunkTotal}`
-    : "未启用";
   const statusText = appState.asrLastError
     ? "转写异常"
     : appState.asrChunkLastError
-      ? "切片转写失败"
+      ? "转写失败"
     : asr
       ? "转写完成"
-      : appState.asrChunkStatus
-        ? appState.asrChunkStatus
       : isStreaming
         ? "转写中"
         : rows.length
@@ -1048,27 +1045,30 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
       ? `${unreviewedCount} 段待确认`
       : "角色已确认"
     : "完成转写后校正";
+  const elapsed = appState.asrElapsedSeconds
+    ? ` · 已用时 ${Math.round(appState.asrElapsedSeconds)} 秒`
+    : "";
+  const progressLabel = isStreaming
+    ? `${progress}%${appState.asrProgressEstimated ? " 估算" : ""} · ${current || rows.length || 0}段${elapsed}`
+    : asr
+      ? `${total || rows.length || 0}段 · ${reviewText}`
+      : rows.length
+        ? `${rows.length}条 · ${reviewText}`
+        : "等待音频或文本输入";
   return `
-    <section class="transcript-status-panel ${appState.asrLastError ? "danger" : isStreaming ? "active" : asr ? "done" : ""}" aria-label="转写状态">
+    <section class="transcript-status-panel compact ${appState.asrLastError ? "danger" : isStreaming ? "active" : asr ? "done" : ""}" aria-label="转写状态">
       <div class="transcript-status-head">
         <div>
-          <span class="meta-label">当前状态</span>
           <strong>${escapeHtml(statusText)}</strong>
+          <span class="transcript-status-detail">${escapeHtml(progressLabel)}</span>
         </div>
-        <span class="status-badge ${appState.asrLastError ? "missing" : asr ? "confirmed" : isStreaming ? "info" : "neutral"}">${escapeHtml(asr?.engine || appState.selectedEngine || "ASR")}</span>
+        <span class="status-badge ${appState.asrLastError ? "missing" : asr ? "confirmed" : isStreaming ? "info" : "neutral"}">${escapeHtml(ENGINE_LABELS[asr?.engine || appState.selectedEngine] || asr?.engine || appState.selectedEngine || "ASR")}</span>
       </div>
       <div class="progress-track" aria-label="转写进度">
         <span style="width: ${progress}%"></span>
       </div>
-      <div class="status-metrics">
-        <div><span>进度</span><strong>${progress}%</strong></div>
-        <div><span>切片</span><strong>${escapeHtml(chunkText)}</strong></div>
-        <div><span>分段</span><strong>${current || 0}/${total || 0}</strong></div>
-        <div><span>文件</span><strong>${escapeHtml(appState.uploadedFilename || "未上传")}</strong></div>
-        <div><span>校正</span><strong>${escapeHtml(reviewText)}</strong></div>
-      </div>
       ${appState.asrLastError ? `<div class="safety-strip danger">${escapeHtml(appState.asrLastError)}</div>` : ""}
-      ${appState.asrChunkLastError ? `<div class="safety-strip danger"><strong>失败切片</strong><br>${escapeHtml(appState.asrChunkLastError)}</div>` : ""}
+      ${appState.asrChunkLastError ? `<div class="safety-strip danger">${escapeHtml(appState.asrChunkLastError)}</div>` : ""}
       ${appState.asrRetryHint ? `<div class="safety-strip warning"><strong>重试提示</strong><br>${escapeHtml(appState.asrRetryHint)}</div>` : ""}
       ${actionButton || detailAction ? `<div class="quick-action-row">${actionButton}${detailAction}</div>` : ""}
     </section>
@@ -1094,7 +1094,7 @@ function renderTranscript() {
   $("transcriptBadge").textContent = asr
     ? `${asr.engine || appState.selectedEngine} · ${asr.segments?.length || 0}段`
     : isStreaming
-      ? `SSE · ${rows.length}段 · ${asrProgressPercent()}%`
+      ? `转写中 · ${asrProgressPercent()}% · ${rows.length}段`
       : `${rows.length}条`;
 
   const streamBlock = appState.currentAsrSessionId
@@ -1128,6 +1128,9 @@ function renderTranscript() {
     ? (isStreaming ? rows.slice(-visibleLimit) : rows.slice(0, visibleLimit))
     : rows;
   const hiddenCount = Math.max(0, rows.length - visibleRows.length);
+  const streamingEmptyBlock = isStreaming && !visibleRows.length
+    ? `<div class="empty-state transcribing-empty">正在识别音频，完成的分段会自动显示在这里。模型处理期间页面没有卡住，可以继续等待。</div>`
+    : "";
 
   $("transcriptList").innerHTML = `
     ${renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unreviewedCount })}
@@ -1136,6 +1139,7 @@ function renderTranscript() {
     ${roleReviewBlock}
     ${asrTextBlock}
     ${conversationBlock}
+    ${streamingEmptyBlock}
     ${visibleRows.map((item, index) => `
       <div class="chat-row">
         <div class="chat-time">${escapeHtml(item.time)}</div>
@@ -1947,6 +1951,8 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.currentAsrSessionId = data.session_id || appState.currentAsrSessionId;
     appState.taskStatus = "CREATED";
     appState.asrStreamProgress = 0;
+    appState.asrProgressEstimated = false;
+    appState.asrElapsedSeconds = 0;
     appState.asrStreamCurrentSegment = 0;
     appState.asrStreamTotalSegments = 0;
     appState.asrLastError = "";
@@ -1970,7 +1976,20 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     const data = JSON.parse(event.data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.taskStatus = "TRANSCRIBING";
-    setBusy(true, "正在实时转写音频...");
+    appState.asrProgressEstimated = false;
+    setBusy(true, "正在识别音频...");
+    renderAll();
+  });
+
+  source.addEventListener("transcribing_progress", (event) => {
+    const data = JSON.parse(event.data);
+    appState.currentAudioId = data.audio_id || appState.currentAudioId;
+    appState.selectedEngine = data.engine || appState.selectedEngine;
+    appState.taskStatus = "TRANSCRIBING";
+    appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
+    appState.asrProgressEstimated = Boolean(data.estimated);
+    appState.asrElapsedSeconds = Number(data.elapsed_seconds || appState.asrElapsedSeconds || 0);
+    setBusy(true, "正在识别音频...");
     renderAll();
   });
 
@@ -1985,6 +2004,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
       ? `准备切片转写（共 ${appState.asrChunkTotal} 片）`
       : "准备切片转写";
     appState.asrStreamProgress = Number(data.progress || 0);
+    appState.asrProgressEstimated = false;
     appState.asrChunkLastError = "";
     appState.asrRetryHint = "";
     renderAll();
@@ -1999,6 +2019,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrChunkTotal = Number(data.total_chunks || appState.asrChunkTotal || 0);
     appState.asrChunkStatus = `第 ${appState.asrChunkCurrent}/${appState.asrChunkTotal || "?"} 片转写中`;
     appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
+    appState.asrProgressEstimated = false;
     appState.asrChunkLastError = "";
     appState.asrRetryHint = "";
     setBusy(true, appState.asrChunkStatus);
@@ -2014,6 +2035,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrChunkTotal = Number(data.total_chunks || appState.asrChunkTotal || 0);
     appState.asrChunkStatus = `第 ${appState.asrChunkCurrent}/${appState.asrChunkTotal || "?"} 片已完成`;
     appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
+    appState.asrProgressEstimated = false;
     renderAll();
   });
 
@@ -2029,6 +2051,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrRetryHint = data.retry_hint || "请重新上传音频重试，或切换到稳定 fallback 模型。";
     appState.asrLastError = appState.asrChunkLastError;
     appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
+    appState.asrProgressEstimated = false;
     renderAll();
   });
 
@@ -2038,6 +2061,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.selectedEngine = data.engine || appState.selectedEngine;
     appState.taskStatus = "TRANSCRIBING";
     appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
+    appState.asrProgressEstimated = Boolean(data.estimated);
     appState.asrStreamCurrentSegment = Number(data.index ?? appState.liveTranscriptSegments.length) + 1;
     appState.asrStreamTotalSegments = Number(data.total || appState.asrStreamTotalSegments || 0);
     if (data.segment) {
@@ -2058,6 +2082,8 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.liveTranscriptSegments = data.asr_result?.segments || appState.liveTranscriptSegments;
     appState.taskStatus = "TRANSCRIBED";
     appState.asrStreamProgress = 1;
+    appState.asrProgressEstimated = false;
+    appState.asrElapsedSeconds = 0;
     appState.asrStreamTotalSegments = data.segments || data.asr_result?.segments?.length || appState.asrStreamTotalSegments || appState.liveTranscriptSegments.length;
     appState.asrStreamCurrentSegment = appState.asrStreamTotalSegments;
     appState.asrLastError = "";

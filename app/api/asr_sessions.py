@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import tempfile
+import threading
 import time
 import uuid
 from datetime import UTC, datetime
@@ -46,6 +47,11 @@ router = APIRouter(prefix="/asr/sessions", tags=["asr-sessions"])
 
 SUPPORTED_ASR_ENGINES = {"mock", "funasr", "sensevoice", "whisper", "qwen3", "online"}
 CHUNKABLE_ASR_ENGINES = {"funasr", "sensevoice"}
+TRANSCRIBING_PROGRESS_INTERVAL_SECONDS = 5.0
+TRANSCRIBING_PROGRESS_CAP = 0.88
+SHORT_AUDIO_CHUNK_SECONDS = 60
+LONG_AUDIO_THRESHOLD_SECONDS = 600
+DEFAULT_CHUNK_MIN_SECONDS = 120
 ROLE_LABELS = {
     "doctor": "医生",
     "医生": "医生",
@@ -55,6 +61,8 @@ ROLE_LABELS = {
     "待确认": "待确认",
     "待校正": "待确认",
 }
+
+_EVENTS_LOCK = threading.Lock()
 
 
 def _now() -> str:
@@ -122,13 +130,14 @@ def _write_events(session_id: str, events: list[ASRSessionEvent]) -> None:
 
 
 def _append_events(session_id: str, events: list[ASRSessionEvent]) -> None:
-    existing = _read_events(session_id)
-    last_id = existing[-1].id if existing else 0
-    next_events = [
-        event.model_copy(update={"id": last_id + index + 1})
-        for index, event in enumerate(events)
-    ]
-    _write_events(session_id, [*existing, *next_events])
+    with _EVENTS_LOCK:
+        existing = _read_events(session_id)
+        last_id = existing[-1].id if existing else 0
+        next_events = [
+            event.model_copy(update={"id": last_id + index + 1})
+            for index, event in enumerate(events)
+        ]
+        _write_events(session_id, [*existing, *next_events])
 
 
 def _read_events(session_id: str) -> list[ASRSessionEvent]:
@@ -300,7 +309,75 @@ def _append_session_event(
     _append_events(session_id, [_session_event(session=session, event=event, data=data)])
 
 
-def _append_result_events(session_id: str, *, session: ASRSessionRecord, result: ASRResult) -> None:
+def _estimated_transcribing_progress(started_at: float, duration: float | None) -> float:
+    elapsed = max(time.perf_counter() - started_at, 0.0)
+    if duration:
+        expected_seconds = max(30.0, min(float(duration) * 0.45, 300.0))
+    else:
+        expected_seconds = 180.0
+    progress = 0.05 + (elapsed / expected_seconds) * 0.75
+    return round(min(progress, TRANSCRIBING_PROGRESS_CAP), 4)
+
+
+def _append_transcribing_progress_event(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    started_at: float,
+    duration: float | None,
+) -> None:
+    elapsed = round(time.perf_counter() - started_at, 1)
+    _append_session_event(
+        session_id,
+        session=session,
+        event="transcribing_progress",
+        data={
+            "status": "transcribing",
+            "progress": _estimated_transcribing_progress(started_at, duration),
+            "elapsed_seconds": elapsed,
+            "duration": duration,
+            "estimated": True,
+        },
+    )
+
+
+def _start_transcribing_heartbeat(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    duration: float | None,
+) -> tuple[threading.Event, threading.Thread, float]:
+    stop_event = threading.Event()
+    started_at = time.perf_counter()
+
+    def run() -> None:
+        while not stop_event.wait(TRANSCRIBING_PROGRESS_INTERVAL_SECONDS):
+            current = _read_session(session_id)
+            if current.status != "transcribing":
+                return
+            _append_transcribing_progress_event(
+                session_id,
+                session=session,
+                started_at=started_at,
+                duration=duration,
+            )
+
+    thread = threading.Thread(
+        target=run,
+        name=f"asr-progress-{session_id[:8]}",
+        daemon=True,
+    )
+    thread.start()
+    return stop_event, thread, started_at
+
+
+def _append_result_events(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    result: ASRResult,
+    emit_segments: bool = True,
+) -> None:
     events: list[ASRSessionEvent] = []
 
     def append(event: str, data: dict[str, object]) -> None:
@@ -308,20 +385,21 @@ def _append_result_events(session_id: str, *, session: ASRSessionRecord, result:
 
     segments = _fallback_segments(result)
     total = len(segments)
-    for index, segment in enumerate(segments):
-        append(
-            "segment",
-            {
-                "status": "streaming",
-                "index": index,
-                "total": total,
-                "progress": _segment_progress(segment, index, total, result.duration),
-                "role": segment.role,
-                "speaker": segment.speaker,
-                "text": segment.text,
-                "segment": segment.model_dump(),
-            },
-        )
+    if emit_segments:
+        for index, segment in enumerate(segments):
+            append(
+                "segment",
+                {
+                    "status": "streaming",
+                    "index": index,
+                    "total": total,
+                    "progress": _segment_progress(segment, index, total, result.duration),
+                    "role": segment.role,
+                    "speaker": segment.speaker,
+                    "text": segment.text,
+                    "segment": segment.model_dump(),
+                },
+            )
 
     append(
         "completed",
@@ -335,7 +413,66 @@ def _append_result_events(session_id: str, *, session: ASRSessionRecord, result:
     _append_events(session_id, events)
 
 
+def _offset_segment_for_chunk(segment: ASRSegment, chunk_start_seconds: float) -> ASRSegment:
+    def offset(value: float | None) -> float | None:
+        if value is None:
+            return None
+        return round(float(value) + float(chunk_start_seconds), 3)
+
+    return ASRSegment(
+        speaker=segment.speaker,
+        role=segment.role,
+        text=segment.text,
+        start_time=offset(segment.start_time),
+        end_time=offset(segment.end_time),
+        confidence=segment.confidence,
+        needs_review=True if not segment.role else segment.needs_review,
+        reviewed_by_doctor=segment.reviewed_by_doctor,
+        original_text=segment.original_text,
+    )
+
+
+def _append_partial_segment_events(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    chunk_index: int,
+    total_chunks: int,
+    chunk_start_seconds: float,
+    chunk_result: ASRResult,
+    start_index: int,
+) -> int:
+    segments = _fallback_segments(chunk_result)
+    events: list[ASRSessionEvent] = []
+    progress = round(chunk_index / total_chunks, 4) if total_chunks else 1.0
+    for offset, segment in enumerate(segments):
+        adjusted = _offset_segment_for_chunk(segment, chunk_start_seconds)
+        events.append(
+            _session_event(
+                session=session,
+                event="segment",
+                data={
+                    "status": "streaming",
+                    "partial": True,
+                    "chunk_index": chunk_index,
+                    "total_chunks": total_chunks,
+                    "index": start_index + offset,
+                    "total": start_index + len(segments),
+                    "progress": progress,
+                    "role": adjusted.role,
+                    "speaker": adjusted.speaker,
+                    "text": adjusted.text,
+                    "segment": adjusted.model_dump(),
+                },
+            )
+        )
+    if events:
+        _append_events(session_id, events)
+    return len(segments)
+
+
 def _failed_event(session: ASRSessionRecord, message: str) -> list[ASRSessionEvent]:
+    hint = _retry_hint(session.engine)
     return [
         ASRSessionEvent(
             id=1,
@@ -346,6 +483,8 @@ def _failed_event(session: ASRSessionRecord, message: str) -> list[ASRSessionEve
                 "engine": session.engine,
                 "status": "failed",
                 "error": message,
+                "retryable": True,
+                "retry_hint": hint,
             },
             created_at=_now(),
         )
@@ -356,8 +495,25 @@ def _chunk_seconds() -> int:
     return _env_int("ASR_SESSION_CHUNK_SECONDS", 300)
 
 
+def _short_chunk_seconds() -> int:
+    return _env_int("ASR_SESSION_SHORT_CHUNK_SECONDS", SHORT_AUDIO_CHUNK_SECONDS)
+
+
 def _chunk_min_seconds() -> int:
-    return _env_int("ASR_SESSION_CHUNK_MIN_SECONDS", 900)
+    return _env_int("ASR_SESSION_CHUNK_MIN_SECONDS", DEFAULT_CHUNK_MIN_SECONDS)
+
+
+def _dynamic_chunking_enabled() -> bool:
+    value = str(os.environ.get("ASR_SESSION_DYNAMIC_CHUNKING", "1")).strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+def _chunk_seconds_for_duration(duration: float | None) -> int:
+    if not _dynamic_chunking_enabled() or duration is None:
+        return _chunk_seconds()
+    if duration < LONG_AUDIO_THRESHOLD_SECONDS:
+        return _short_chunk_seconds()
+    return _chunk_seconds()
 
 
 def _env_int(name: str, default: int) -> int:
@@ -513,10 +669,17 @@ def _run_asr_session_transcription(
     audio_path: Path,
 ) -> None:
     session = _read_session(session_id)
+    stop_heartbeat, heartbeat_thread, started_at = _start_transcribing_heartbeat(
+        session_id,
+        session=session,
+        duration=None,
+    )
     try:
         asr_engine = create_asr_engine(session.engine)
         use_chunked, original_duration = _should_use_chunked_session(session.engine, audio_path)
         if use_chunked:
+            stop_heartbeat.set()
+            heartbeat_thread.join(timeout=1.0)
             result = _transcribe_chunked_session(
                 session_id,
                 session=session,
@@ -525,10 +688,18 @@ def _run_asr_session_transcription(
                 audio_path=audio_path,
                 original_duration=original_duration,
             )
+            emit_segments = False
         else:
             result = asr_engine.transcribe(record.audio_id, audio_path)
             result = apply_manifest_role_strategy(result, _sample_id_from_record(record))
-        _write_transcription_success(session_id, session=session, result=result)
+            _append_transcribing_progress_event(
+                session_id,
+                session=session,
+                started_at=started_at,
+                duration=original_duration,
+            )
+            emit_segments = True
+        _write_transcription_success(session_id, session=session, result=result, emit_segments=emit_segments)
     except Exception as exc:  # noqa: BLE001
         message = _compact_error(exc)
         failed = session.model_copy(
@@ -540,6 +711,9 @@ def _run_asr_session_transcription(
         )
         _write_session(failed)
         _append_events(session_id, _failed_event(failed, message))
+    finally:
+        stop_heartbeat.set()
+        heartbeat_thread.join(timeout=1.0)
 
 
 def _transcribe_chunked_session(
@@ -551,7 +725,7 @@ def _transcribe_chunked_session(
     audio_path: Path,
     original_duration: float | None,
 ) -> ASRResult:
-    chunk_seconds = _chunk_seconds()
+    chunk_seconds = _chunk_seconds_for_duration(original_duration)
     with tempfile.TemporaryDirectory(prefix=f"{record.audio_id}_chunks_") as temp_dir_name:
         temp_dir = Path(temp_dir_name)
         chunks = split_audio_to_chunks(audio_path, temp_dir, chunk_seconds=chunk_seconds)
@@ -571,6 +745,7 @@ def _transcribe_chunked_session(
         )
 
         transcriptions: list[ChunkTranscription] = []
+        emitted_segments = 0
         for chunk in chunks:
             started_at = time.perf_counter()
             common = {
@@ -624,6 +799,15 @@ def _transcribe_chunked_session(
                     "elapsed_seconds": round(time.perf_counter() - started_at, 3),
                 },
             )
+            emitted_segments += _append_partial_segment_events(
+                session_id,
+                session=session,
+                chunk_index=chunk.index,
+                total_chunks=total_chunks,
+                chunk_start_seconds=chunk.start_seconds,
+                chunk_result=chunk_result,
+                start_index=emitted_segments,
+            )
 
         merged = merge_chunk_transcriptions(
             record.audio_id,
@@ -639,6 +823,7 @@ def _write_transcription_success(
     *,
     session: ASRSessionRecord,
     result: ASRResult,
+    emit_segments: bool = True,
 ) -> None:
     _write_transcript(result)
     _write_session_result(session_id, result)
@@ -649,7 +834,7 @@ def _write_transcription_success(
         }
     )
     _write_session(ready_session)
-    _append_result_events(session_id, session=ready_session, result=result)
+    _append_result_events(session_id, session=ready_session, result=result, emit_segments=emit_segments)
 
 
 def upload_asr_session_audio(

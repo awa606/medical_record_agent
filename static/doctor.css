@@ -4390,3 +4390,60 @@ body.care-mode .assist-mini-grid strong,
 body.care-mode .assist-evidence-quote {
   font-size: 15px;
 }
+
+/* v0.8.0: doctor-facing ASR progress is compact; chunk/file internals stay in debug blocks. */
+body.standard-mode .transcript-status-panel.compact,
+body.care-mode .transcript-status-panel.compact,
+.transcript-status-panel.compact {
+  gap: 8px;
+  border-left-width: 3px;
+  padding: 9px 11px;
+  background: #f8fbff;
+}
+
+.transcript-status-panel.compact .transcript-status-head {
+  align-items: center;
+}
+
+.transcript-status-panel.compact .transcript-status-head strong {
+  display: inline;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.transcript-status-detail {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.transcript-status-panel.compact .progress-track {
+  height: 5px;
+  background: #dbe6f5;
+}
+
+.transcript-status-panel.compact .quick-action-row {
+  padding-top: 2px;
+}
+
+.transcribing-empty {
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+body.care-mode .transcript-status-panel.compact .transcript-status-head strong {
+  font-size: 16px;
+}
+
+body.care-mode .transcript-status-detail {
+  display: block;
+  margin: 3px 0 0;
+  font-size: 14px;
+}

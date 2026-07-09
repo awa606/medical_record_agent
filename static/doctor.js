@@ -49,6 +49,13 @@ const FIELD_DEFS = [
   ["treatment_plan", "处理建议"],
 ];
 
+const SUMMARY_FIELD_KEYS = [
+  "chief_complaint",
+  "present_illness",
+  "physical_exam",
+  "treatment_plan",
+];
+
 const WORKFLOW_STEPS = [
   { key: "INPUT", label: "1.输入" },
   { key: "TRANSCRIBING", label: "2.实时转写" },
@@ -119,6 +126,36 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function compactText(value, maxLength = 92) {
+  const normalized = String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized) return "暂无内容";
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength)}...`;
+}
+
+function detailButton(target, label = "查看详情") {
+  return `<button type="button" class="detail-link" data-open-detail="${escapeHtml(target)}">${escapeHtml(label)}</button>`;
+}
+
+function detailSection(title, body) {
+  return `
+    <section class="detail-section">
+      <h3>${escapeHtml(title)}</h3>
+      <div>${body}</div>
+    </section>
+  `;
+}
+
+function listPreview(items, limit = 2) {
+  const values = items.filter(Boolean);
+  return {
+    visible: values.slice(0, limit),
+    hiddenCount: Math.max(0, values.length - limit),
+  };
 }
 
 async function api(path, options = {}) {
@@ -499,6 +536,13 @@ function closeDrawer() {
   $("drawer").setAttribute("aria-hidden", "true");
 }
 
+function openDetailDrawer(title, html) {
+  const content = $("detailDrawerContent");
+  if (!content) return;
+  content.innerHTML = html;
+  openDrawer("detailPanel", title);
+}
+
 function renderPatientBar() {
   const llm = llmDisplayState();
   $("patientName").textContent = "模拟患者";
@@ -622,6 +666,75 @@ function renderDiagnosisDetails(diagnosis = {}) {
   return details || `<div class="diagnosis-detail"><span>规则说明</span><strong>暂无扩展说明，需医生结合原始转写复核。</strong></div>`;
 }
 
+function renderFieldDetailContent(key) {
+  const fields = appState.currentRecordFields;
+  if (!fields) return `<div class="empty-state">暂无病历字段。</div>`;
+  const title = FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1] || "病历字段";
+  const field = fields[key] || null;
+  const status = fieldStatus(field, key);
+  const confidence = key === "treatment_plan" ? null : field?.confidence;
+  return `
+    ${detailSection(title, `
+      <div class="detail-kv">
+        <span>状态</span>
+        <strong>${escapeHtml(status.label)}</strong>
+      </div>
+      <div class="detail-kv">
+        <span>置信度</span>
+        <strong>${escapeHtml(confidence == null ? "需医生复核" : `${Math.round(confidence * 100)}%`)}</strong>
+      </div>
+      <div class="detail-text">${escapeHtml(fieldValue(fields, key))}</div>
+    `)}
+    ${detailSection("证据片段", `<div class="detail-text">${escapeHtml(fieldEvidence(field, key))}</div>`)}
+  `;
+}
+
+function renderDiagnosisDetailContent(index) {
+  const diagnosis = appState.currentRecordFields?.candidate_diagnoses?.[index];
+  if (!diagnosis) return `<div class="empty-state">暂无候选诊断详情。</div>`;
+  return `
+    ${detailSection(diagnosis.name || "候选诊断", `
+      <div class="detail-kv">
+        <span>状态</span>
+        <strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong>
+      </div>
+      <div class="detail-kv">
+        <span>置信度</span>
+        <strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong>
+      </div>
+      <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
+    `)}
+    ${detailSection("诊断证据", `<div class="detail-text">${escapeHtml((diagnosis.evidence || []).map((item) => item.text).filter(Boolean).join("\n") || "暂无候选诊断证据。")}</div>`)}
+  `;
+}
+
+function renderAllFieldsDetailContent() {
+  const fields = appState.currentRecordFields;
+  if (!fields) return `<div class="empty-state">暂无病历字段。</div>`;
+  const fieldSections = FIELD_DEFS.map(([key, title]) => {
+    const field = fields[key] || null;
+    const status = fieldStatus(field, key);
+    const confidence = key === "treatment_plan" ? null : field?.confidence;
+    return detailSection(title, `
+      <div class="detail-kv"><span>状态</span><strong>${escapeHtml(status.label)}</strong></div>
+      <div class="detail-kv"><span>置信度</span><strong>${escapeHtml(confidence == null ? "需医生复核" : `${Math.round(confidence * 100)}%`)}</strong></div>
+      <div class="detail-text">${escapeHtml(fieldValue(fields, key))}</div>
+      <div class="detail-text"><strong>证据：</strong><br>${escapeHtml(fieldEvidence(field, key))}</div>
+    `);
+  }).join("");
+  const diagnoses = fields.candidate_diagnoses || [];
+  const diagnosisSection = diagnoses.length
+    ? detailSection("候选诊断", diagnoses.map((diagnosis, index) => `
+      <div class="diagnosis-detail">
+        <span>候选 ${index + 1}</span>
+        <strong>${escapeHtml(diagnosis.name || "未命名诊断")} · ${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong>
+      </div>
+      <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
+    `).join(""))
+    : "";
+  return fieldSections + diagnosisSection;
+}
+
 function renderFields() {
   const fields = appState.currentRecordFields;
   if (!fields) {
@@ -632,7 +745,10 @@ function renderFields() {
   }
 
   let missingCount = 0;
-  const cards = FIELD_DEFS.map(([key, title]) => {
+  const displayFieldDefs = appState.viewMode === "doctor"
+    ? FIELD_DEFS.filter(([key]) => SUMMARY_FIELD_KEYS.includes(key))
+    : FIELD_DEFS;
+  const cards = displayFieldDefs.map(([key, title]) => {
     const field = fields[key] || null;
     const status = fieldStatus(field, key);
     if (status.key === "missing") missingCount += 1;
@@ -643,17 +759,18 @@ function renderFields() {
           <span class="field-title">${escapeHtml(title)}</span>
           <span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>
         </div>
-        <div class="field-value">${escapeHtml(fieldValue(fields, key))}</div>
+        <div class="field-value">${escapeHtml(compactText(fieldValue(fields, key), 86))}</div>
         <div class="field-meta">
           <span class="confidence">${confidence == null ? "需医生复核" : `置信度 ${Math.round(confidence * 100)}%`}</span>
           <button type="button" data-evidence-toggle>证据</button>
+          ${detailButton(`field:${key}`, "详情")}
         </div>
         <div class="field-evidence">${escapeHtml(fieldEvidence(field, key))}</div>
       </article>
     `;
   }).join("");
 
-  const diagnoses = (fields.candidate_diagnoses || []).map((diagnosis, index) => `
+  const diagnoses = appState.viewMode === "doctor" ? "" : (fields.candidate_diagnoses || []).map((diagnosis, index) => `
     <article class="field-card candidate" data-field="diagnosis-${index}">
       <div class="field-head">
         <span class="field-title">候选诊断</span>
@@ -663,15 +780,20 @@ function renderFields() {
       <div class="field-meta">
         <span class="confidence">${escapeHtml(diagnosis.status || "候选/待医生确认")} · ${escapeHtml(diagnosisConfidence(diagnosis))}</span>
         <button type="button" data-evidence-toggle>证据</button>
+        ${detailButton(`diagnosis:${index}`, "详情")}
       </div>
-      <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
       <div class="field-evidence">${escapeHtml((diagnosis.evidence || []).map((item) => item.text).join("\n") || "暂无候选诊断证据。")}</div>
     </article>
   `).join("");
+  const hiddenFieldCount = Math.max(0, FIELD_DEFS.length - displayFieldDefs.length);
+  const summaryFooter = hiddenFieldCount || appState.viewMode === "doctor"
+    ? `<button type="button" class="inline-more-button" data-open-detail="fields:all">查看全部字段、证据和候选诊断</button>`
+    : "";
 
-  $("fieldCountBadge").textContent = missingCount ? `${missingCount}项待补充` : "待医生确认";
-  $("fieldCountBadge").className = `status-badge ${missingCount ? "missing" : "confirmed"}`;
-  $("recordFields").innerHTML = cards + diagnoses;
+  const allMissingCount = missingItems().length;
+  $("fieldCountBadge").textContent = allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
+  $("fieldCountBadge").className = `status-badge ${allMissingCount ? "missing" : "confirmed"}`;
+  $("recordFields").innerHTML = cards + diagnoses + summaryFooter;
 }
 
 function classifySpeaker(line, segment = {}) {
@@ -819,6 +941,7 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
         ? `<button type="button" class="primary-action" data-generate-from-transcript>用校正文本生成病历</button>`
         : ""
     : "";
+  const detailAction = rows.length ? detailButton("transcript:all", "查看全部转写") : "";
   const reviewText = reviewable
     ? unreviewedCount
       ? `${unreviewedCount} 段待确认`
@@ -846,7 +969,7 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
       ${appState.asrLastError ? `<div class="safety-strip danger">${escapeHtml(appState.asrLastError)}</div>` : ""}
       ${appState.asrChunkLastError ? `<div class="safety-strip danger"><strong>失败切片</strong><br>${escapeHtml(appState.asrChunkLastError)}</div>` : ""}
       ${appState.asrRetryHint ? `<div class="safety-strip warning"><strong>重试提示</strong><br>${escapeHtml(appState.asrRetryHint)}</div>` : ""}
-      ${actionButton ? `<div class="quick-action-row">${actionButton}</div>` : ""}
+      ${actionButton || detailAction ? `<div class="quick-action-row">${actionButton}${detailAction}</div>` : ""}
     </section>
   `;
 }
@@ -897,6 +1020,11 @@ function renderTranscript() {
       </div>
     `
     : "";
+  const visibleLimit = appState.viewMode === "doctor" ? 4 : rows.length;
+  const visibleRows = rows.length > visibleLimit
+    ? (isStreaming ? rows.slice(-visibleLimit) : rows.slice(0, visibleLimit))
+    : rows;
+  const hiddenCount = Math.max(0, rows.length - visibleRows.length);
 
   $("transcriptList").innerHTML = `
     ${renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unreviewedCount })}
@@ -905,23 +1033,54 @@ function renderTranscript() {
     ${roleReviewBlock}
     ${asrTextBlock}
     ${conversationBlock}
-    ${rows.map((item, index) => `
+    ${visibleRows.map((item, index) => `
       <div class="chat-row">
         <div class="chat-time">${escapeHtml(item.time)}</div>
         <div class="chat-card ${index === 1 ? "highlight" : ""} ${item.needsReview ? "needs-review" : ""} ${item.reviewedByDoctor ? "reviewed" : ""}" data-segment-index="${item.index}">
-          <div class="chat-tools">
-            <select data-role-select ${item.editable ? "" : "disabled"}>
-              ${renderRoleOptions(item.label)}
-            </select>
-            <span class="status-badge ${item.needsReview ? "candidate" : item.reviewedByDoctor ? "confirmed" : "neutral"}">
-              ${item.needsReview ? "待确认" : item.reviewedByDoctor ? "已校正" : "未保存"}
-            </span>
-            <span class="confidence">${item.confidence == null ? "置信度待评估" : `置信度 ${Math.round(item.confidence * 100)}%`}</span>
-          </div>
-          <textarea data-segment-text ${item.editable ? "" : "disabled"}>${escapeHtml(item.text)}</textarea>
+          ${item.editable ? `
+            <div class="chat-tools">
+              <select data-role-select>
+                ${renderRoleOptions(item.label)}
+              </select>
+              <span class="status-badge ${item.needsReview ? "candidate" : item.reviewedByDoctor ? "confirmed" : "neutral"}">
+                ${item.needsReview ? "待确认" : item.reviewedByDoctor ? "已校正" : "未保存"}
+              </span>
+              <span class="confidence">${item.confidence == null ? "置信度待评估" : `置信度 ${Math.round(item.confidence * 100)}%`}</span>
+            </div>
+            <textarea data-segment-text>${escapeHtml(item.text)}</textarea>
+          ` : `
+            <div class="chat-line">
+              <span class="speaker-tag ${escapeHtml(item.speaker)}">${escapeHtml(item.label)}</span>
+              <p>${escapeHtml(compactText(item.text, 92))}</p>
+            </div>
+          `}
         </div>
       </div>
     `).join("")}
+    ${hiddenCount ? `<button type="button" class="inline-more-button" data-open-detail="transcript:all">还有 ${hiddenCount} 条转写，查看全部</button>` : ""}
+  `;
+}
+
+function renderTranscriptDetailContent() {
+  const rows = transcriptRows();
+  if (!rows.length) return `<div class="empty-state">暂无对话转写。</div>`;
+  return `
+    ${detailSection("转写状态", `
+      <div class="detail-kv"><span>引擎</span><strong>${escapeHtml(appState.currentAsrResult?.engine || appState.selectedEngine || "ASR")}</strong></div>
+      <div class="detail-kv"><span>分段</span><strong>${rows.length} 条</strong></div>
+      <div class="detail-kv"><span>切片</span><strong>${escapeHtml(appState.asrChunkTotal ? `${appState.asrChunkCurrent || 0}/${appState.asrChunkTotal}` : "未启用")}</strong></div>
+    `)}
+    ${detailSection("完整转写", `
+      <div class="detail-transcript">
+        ${rows.map((item) => `
+          <div class="detail-transcript-row">
+            <span>${escapeHtml(item.time)}</span>
+            <strong>${escapeHtml(item.label)}</strong>
+            <p>${escapeHtml(item.text)}</p>
+          </div>
+        `).join("")}
+      </div>
+    `)}
   `;
 }
 
@@ -1146,12 +1305,15 @@ function runLogBlock() {
   });
 }
 
-function assistCard({ title, badgeClass = "neutral", badgeText = "", body = "" }) {
+function assistCard({ title, badgeClass = "neutral", badgeText = "", body = "", detailTarget = "" }) {
   return `
     <section class="doctor-assist-card">
       <div class="doctor-assist-card-head">
         <h3>${escapeHtml(title)}</h3>
-        ${badgeText ? `<span class="status-badge ${badgeClass}">${escapeHtml(badgeText)}</span>` : ""}
+        <div class="doctor-assist-card-actions">
+          ${badgeText ? `<span class="status-badge ${badgeClass}">${escapeHtml(badgeText)}</span>` : ""}
+          ${detailTarget ? detailButton(detailTarget, "详情") : ""}
+        </div>
       </div>
       <div class="doctor-assist-card-body">${body}</div>
     </section>
@@ -1172,9 +1334,10 @@ function renderCandidateDiagnosisCard(diagnoses) {
     title: "候选诊断",
     badgeClass: "candidate",
     badgeText: "待医生确认",
+    detailTarget: "assist:candidates",
     body: `
       <ol class="assist-number-list">
-        ${diagnoses.map((diagnosis, index) => `
+        ${listPreview(diagnoses, 1).visible.map((diagnosis, index) => `
           <li>
             <span>${index + 1}</span>
             <div>
@@ -1184,6 +1347,7 @@ function renderCandidateDiagnosisCard(diagnoses) {
           </li>
         `).join("")}
       </ol>
+      ${diagnoses.length > 1 ? `<div class="summary-note">另有 ${diagnoses.length - 1} 条候选诊断，点击详情查看。</div>` : ""}
     `,
   });
 }
@@ -1208,19 +1372,20 @@ function renderTreatmentRecommendationCard(fields, diagnoses) {
     title: "治疗方案推荐",
     badgeClass: fields ? "candidate" : "neutral",
     badgeText: fields ? "需医生确认" : "待生成",
+    detailTarget: "assist:treatment",
     body: `
       <div class="assist-plan-block">
         <span>处理建议</span>
-        <strong>${escapeHtml(treatmentText)}</strong>
+        <strong>${escapeHtml(compactText(treatmentText, 88))}</strong>
       </div>
       <div class="assist-mini-grid">
         <div>
           <span>建议检查</span>
-          <strong>${escapeHtml(suggestedChecks.join("、") || "暂无结构化建议检查")}</strong>
+          <strong>${escapeHtml(compactText(suggestedChecks.slice(0, 1).join("、") || "暂无结构化建议检查", 40))}</strong>
         </div>
         <div>
           <span>用药提示</span>
-          <strong>${escapeHtml(medicationNotes.join("、") || "不自动处方，需医生确认")}</strong>
+          <strong>${escapeHtml(compactText(medicationNotes.slice(0, 1).join("、") || "不自动处方，需医生确认", 40))}</strong>
         </div>
       </div>
     `,
@@ -1237,8 +1402,10 @@ function renderEvidenceCard(evidence, diagnoses) {
     title: "判断证据",
     badgeClass: items.length ? "info" : "neutral",
     badgeText: items.length ? "可追溯" : "暂无",
+    detailTarget: "assist:evidence",
     body: items.length
-      ? items.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")
+      ? listPreview(items, 1).visible.map((item) => `<div class="assist-evidence-quote">${escapeHtml(compactText(item, 72))}</div>`).join("")
+        + (items.length > 1 ? `<div class="summary-note">另有 ${items.length - 1} 条证据，点击详情查看。</div>` : "")
       : `<div class="empty-state">暂无字段证据。完成转写、角色校正和病历生成后会显示来源片段。</div>`,
   });
 }
@@ -1263,15 +1430,83 @@ function renderSafetyResultCard({ safety, missing, warnings, errors }) {
     title: "安全校验结果",
     badgeClass: safety?.passed && !safety?.blocked && !missing.length && !errors.length ? "confirmed" : "missing",
     badgeText: safety?.passed && !safety?.blocked && !missing.length && !errors.length ? "通过" : "需复核",
+    detailTarget: "assist:safety",
     body: `<div class="assist-check-list">
-      ${rows.map((row) => `
+      ${listPreview(rows, 2).visible.map((row) => `
         <div class="assist-check-row ${row.tone}">
           <span></span>
-          <strong>${escapeHtml(row.text)}</strong>
+          <strong>${escapeHtml(compactText(row.text, 72))}</strong>
         </div>
       `).join("")}
+      ${rows.length > 2 ? `<div class="summary-note">另有 ${rows.length - 2} 条校验结果，点击详情查看。</div>` : ""}
     </div>`,
   });
+}
+
+function renderAssistDetailContent(section) {
+  const fields = appState.currentRecordFields;
+  const diagnoses = fields?.candidate_diagnoses || [];
+  const evidence = allEvidence();
+  const missing = missingItems();
+  const risk = riskSummary();
+  const safety = appState.currentSafetyCheck;
+  const warnings = [...risk.warnings];
+  if (appState.currentAsrResult?.role_strategy === "single_segment_needs_review") {
+    warnings.unshift("医生/患者角色需人工校正");
+  }
+  const errors = risk.errors;
+
+  if (section === "candidates") {
+    return diagnoses.length
+      ? diagnoses.map((diagnosis, index) => `
+          ${detailSection(`候选诊断 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
+            <div class="detail-kv"><span>状态</span><strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong></div>
+            <div class="detail-kv"><span>规则置信度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
+            <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
+          `)}
+        `).join("")
+      : `<div class="empty-state">暂无候选诊断。</div>`;
+  }
+
+  if (section === "treatment") {
+    const treatment = fields?.treatment_plan;
+    const treatmentText = treatment?.value || treatment?.hint || appState.currentDraft || "暂无明确处理建议，需医生补充。";
+    const suggestedChecks = uniqueDiagnosisItems(diagnoses, "suggested_checks");
+    const medicationNotes = uniqueDiagnosisItems(diagnoses, "medication_notes");
+    const riskWarnings = uniqueDiagnosisItems(diagnoses, "risk_warnings");
+    return `
+      ${detailSection("处理建议", `<div class="detail-text">${escapeHtml(treatmentText)}</div>`)}
+      ${detailSection("建议检查", `<div class="detail-text">${escapeHtml(suggestedChecks.join("\n") || "暂无结构化建议检查。")}</div>`)}
+      ${detailSection("用药提示", `<div class="detail-text">${escapeHtml(medicationNotes.join("\n") || "不自动处方，需医生确认。")}</div>`)}
+      ${detailSection("风险提醒", `<div class="detail-text">${escapeHtml(riskWarnings.join("\n") || "暂无结构化风险提醒。")}</div>`)}
+    `;
+  }
+
+  if (section === "evidence") {
+    const diagnosisReasons = diagnoses
+      .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "候选诊断"}：${diagnosis.reason}` : "")
+      .filter(Boolean);
+    const items = [...diagnosisReasons, ...evidence];
+    return items.length
+      ? detailSection("全部判断证据", `
+        <div class="detail-evidence-list">
+          ${items.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")}
+        </div>
+      `)
+      : `<div class="empty-state">暂无判断证据。</div>`;
+  }
+
+  const rows = [
+    missing.length ? `存在 ${missing.length} 项未补充字段：${missing.join("、")}` : "关键字段完整性校验通过",
+    safety ? `安全校验：${safety.passed ? "通过" : "未通过"}${safety.blocked ? "，暂不可导出" : ""}` : "等待生成病历后执行安全校验",
+    ...warnings,
+    ...errors,
+  ];
+  return detailSection("安全校验结果", `
+    <div class="detail-evidence-list">
+      ${rows.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")}
+    </div>
+  `);
 }
 
 function renderDoctorAssistOverview({ fields, diagnoses, evidence, missing, warnings, errors, safety }) {
@@ -1440,6 +1675,36 @@ function renderFooter() {
   $("saveDraftButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
   $("confirmFieldsButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
   $("exportButton").disabled = appState.busy || !appState.currentTaskId || !isApprovedForExport();
+}
+
+function openWorkbenchDetail(target = "") {
+  const [type, value] = String(target).split(":");
+  if (type === "field") {
+    const title = FIELD_DEFS.find(([key]) => key === value)?.[1] || "病历字段详情";
+    openDetailDrawer(title, renderFieldDetailContent(value));
+    return;
+  }
+  if (type === "fields") {
+    openDetailDrawer("全部病历字段与证据", renderAllFieldsDetailContent());
+    return;
+  }
+  if (type === "diagnosis") {
+    openDetailDrawer("候选诊断详情", renderDiagnosisDetailContent(Number(value)));
+    return;
+  }
+  if (type === "transcript") {
+    openDetailDrawer("完整对话转写", renderTranscriptDetailContent());
+    return;
+  }
+  if (type === "assist") {
+    const titleMap = {
+      candidates: "候选诊断详情",
+      treatment: "治疗方案推荐详情",
+      evidence: "判断证据详情",
+      safety: "安全校验结果详情",
+    };
+    openDetailDrawer(titleMap[value] || "AI 辅助详情", renderAssistDetailContent(value));
+  }
 }
 
 function isApprovedForExport() {
@@ -2147,6 +2412,11 @@ function bindEvents() {
     renderPatientBar();
   });
   $("recordFields").addEventListener("click", (event) => {
+    const detail = event.target.closest("[data-open-detail]");
+    if (detail) {
+      openWorkbenchDetail(detail.dataset.openDetail);
+      return;
+    }
     if (event.target.matches("[data-evidence-toggle]")) {
       event.target.closest(".field-card").classList.toggle("open");
     }
@@ -2165,6 +2435,11 @@ function bindEvents() {
     updateReviewSegment(Number(card.dataset.segmentIndex), { text: textInput.value });
   });
   $("transcriptList").addEventListener("click", async (event) => {
+    const detail = event.target.closest("[data-open-detail]");
+    if (detail) {
+      openWorkbenchDetail(detail.dataset.openDetail);
+      return;
+    }
     const generateButton = event.target.closest("[data-generate-from-transcript]");
     if (generateButton) {
       await regenerateRecord();
@@ -2179,6 +2454,11 @@ function bindEvents() {
     }
   });
   $("assistPanels").addEventListener("click", (event) => {
+    const detail = event.target.closest("[data-open-detail]");
+    if (detail) {
+      openWorkbenchDetail(detail.dataset.openDetail);
+      return;
+    }
     const tabButton = event.target.closest("[data-assist-tab]");
     if (!tabButton) return;
     appState.assistTab = tabButton.dataset.assistTab;

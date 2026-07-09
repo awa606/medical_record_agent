@@ -53,6 +53,8 @@ const FIELD_DEFS = [
 const SUMMARY_FIELD_KEYS = [
   "chief_complaint",
   "present_illness",
+  "past_history",
+  "allergy_history",
   "physical_exam",
   "treatment_plan",
 ];
@@ -780,7 +782,7 @@ function renderFields() {
     `;
   }).join("");
 
-  const diagnoses = appState.viewMode === "doctor" ? "" : (fields.candidate_diagnoses || []).map((diagnosis, index) => `
+  const diagnoses = (fields.candidate_diagnoses || []).map((diagnosis, index) => `
     <article class="field-card candidate" data-field="diagnosis-${index}">
       <div class="field-head">
         <span class="field-title">候选诊断</span>
@@ -1031,7 +1033,7 @@ function renderTranscript() {
     `
     : "";
   const visibleLimit = appState.viewMode === "doctor"
-    ? appState.displayScale === "care" ? 3 : 4
+    ? rows.length
     : rows.length;
   const visibleRows = rows.length > visibleLimit
     ? (isStreaming ? rows.slice(-visibleLimit) : rows.slice(0, visibleLimit))
@@ -1063,7 +1065,7 @@ function renderTranscript() {
           ` : `
             <div class="chat-line">
               <span class="speaker-tag ${escapeHtml(item.speaker)}">${escapeHtml(item.label)}</span>
-              <p>${escapeHtml(compactText(item.text, 92))}</p>
+              <p>${escapeHtml(item.text)}</p>
             </div>
           `}
         </div>
@@ -1349,7 +1351,7 @@ function renderCandidateDiagnosisCard(diagnoses) {
     detailTarget: "assist:candidates",
     body: `
       <ol class="assist-number-list">
-        ${listPreview(diagnoses, 1).visible.map((diagnosis, index) => `
+        ${listPreview(diagnoses, 2).visible.map((diagnosis, index) => `
           <li>
             <span>${index + 1}</span>
             <div>
@@ -1359,7 +1361,7 @@ function renderCandidateDiagnosisCard(diagnoses) {
           </li>
         `).join("")}
       </ol>
-      ${diagnoses.length > 1 ? `<div class="summary-note">另有 ${diagnoses.length - 1} 条候选诊断，点击详情查看。</div>` : ""}
+      ${diagnoses.length > 2 ? `<div class="summary-note">另有 ${diagnoses.length - 2} 条候选诊断，点击详情查看。</div>` : ""}
     `,
   });
 }
@@ -1388,16 +1390,16 @@ function renderTreatmentRecommendationCard(fields, diagnoses) {
     body: `
       <div class="assist-plan-block">
         <span>处理建议</span>
-        <strong>${escapeHtml(compactText(treatmentText, 88))}</strong>
+        <strong>${escapeHtml(treatmentText)}</strong>
       </div>
       <div class="assist-mini-grid">
         <div>
           <span>建议检查</span>
-          <strong>${escapeHtml(compactText(suggestedChecks.slice(0, 1).join("、") || "暂无结构化建议检查", 40))}</strong>
+          <strong>${escapeHtml(suggestedChecks.slice(0, 3).join("、") || "暂无结构化建议检查")}</strong>
         </div>
         <div>
           <span>用药提示</span>
-          <strong>${escapeHtml(compactText(medicationNotes.slice(0, 1).join("、") || "不自动处方，需医生确认", 40))}</strong>
+          <strong>${escapeHtml(medicationNotes.slice(0, 3).join("、") || "不自动处方，需医生确认")}</strong>
         </div>
       </div>
     `,
@@ -1416,8 +1418,8 @@ function renderEvidenceCard(evidence, diagnoses) {
     badgeText: items.length ? "可追溯" : "暂无",
     detailTarget: "assist:evidence",
     body: items.length
-      ? listPreview(items, 1).visible.map((item) => `<div class="assist-evidence-quote">${escapeHtml(compactText(item, 72))}</div>`).join("")
-        + (items.length > 1 ? `<div class="summary-note">另有 ${items.length - 1} 条证据，点击详情查看。</div>` : "")
+      ? listPreview(items, 3).visible.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")
+        + (items.length > 3 ? `<div class="summary-note">另有 ${items.length - 3} 条证据，点击详情查看。</div>` : "")
       : `<div class="empty-state">暂无字段证据。完成转写、角色校正和病历生成后会显示来源片段。</div>`,
   });
 }
@@ -1444,13 +1446,13 @@ function renderSafetyResultCard({ safety, missing, warnings, errors }) {
     badgeText: safety?.passed && !safety?.blocked && !missing.length && !errors.length ? "通过" : "需复核",
     detailTarget: "assist:safety",
     body: `<div class="assist-check-list">
-      ${listPreview(rows, 2).visible.map((row) => `
+      ${listPreview(rows, 4).visible.map((row) => `
         <div class="assist-check-row ${row.tone}">
           <span></span>
-          <strong>${escapeHtml(compactText(row.text, 72))}</strong>
+          <strong>${escapeHtml(row.text)}</strong>
         </div>
       `).join("")}
-      ${rows.length > 2 ? `<div class="summary-note">另有 ${rows.length - 2} 条校验结果，点击详情查看。</div>` : ""}
+      ${rows.length > 4 ? `<div class="summary-note">另有 ${rows.length - 4} 条校验结果，点击详情查看。</div>` : ""}
     </div>`,
   });
 }

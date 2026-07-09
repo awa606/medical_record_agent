@@ -3142,3 +3142,385 @@ body.care-mode .assist-column .button-group .danger-action {
     grid-template-columns: 1fr;
   }
 }
+
+/* v0.7.6 reference-style balanced doctor workbench */
+body.standard-mode .doctor-app,
+body.care-mode .doctor-app {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 8px;
+  overflow: hidden;
+  padding: 0 16px 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(237, 241, 246, 0.94) 112px),
+    #edf1f6;
+}
+
+body.standard-mode .topbar,
+body.care-mode .topbar {
+  min-height: 70px;
+  grid-template-columns: minmax(360px, 0.88fr) minmax(560px, 1.18fr) auto;
+  gap: 14px;
+  padding: 9px 22px;
+}
+
+body.standard-mode .brand-mark,
+body.care-mode .brand-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px 14px 18px 18px;
+}
+
+body.standard-mode .brand-block h1,
+body.care-mode .brand-block h1 {
+  font-size: 22px;
+}
+
+body.standard-mode .brand-block p,
+body.care-mode .brand-block p {
+  font-size: 13px;
+}
+
+body.standard-mode .topbar .patient-bar > div,
+body.care-mode .topbar .patient-bar > div {
+  min-height: 44px;
+  padding: 4px 12px;
+}
+
+body.standard-mode .meta-label,
+body.care-mode .meta-label {
+  font-size: 12px;
+}
+
+body.standard-mode .patient-bar strong,
+body.standard-mode .engine-select-wrap select,
+body.care-mode .patient-bar strong,
+body.care-mode .engine-select-wrap select {
+  font-size: 15px;
+}
+
+body.standard-mode .top-actions a,
+body.standard-mode .top-actions button,
+body.care-mode .top-actions a,
+body.care-mode .top-actions button {
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+body.standard-mode .workflow-panel,
+body.care-mode .workflow-panel {
+  border-radius: 8px;
+  padding: 8px 24px;
+}
+
+body.standard-mode .workflow-step,
+body.care-mode .workflow-step {
+  min-height: 34px;
+  font-size: 14px;
+}
+
+body.standard-mode .workflow-step:not(:last-child)::after,
+body.care-mode .workflow-step:not(:last-child)::after {
+  top: 16px;
+}
+
+body.standard-mode .workflow-index,
+body.care-mode .workflow-index {
+  width: 28px;
+  height: 28px;
+}
+
+body.standard-mode .next-action-panel,
+body.care-mode .next-action-panel {
+  min-height: 52px;
+  border-radius: 8px;
+  padding: 8px 16px;
+}
+
+body.standard-mode .next-action-panel strong,
+body.care-mode .next-action-panel strong {
+  font-size: 16px;
+}
+
+body.standard-mode .next-action-panel p,
+body.care-mode .next-action-panel p {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+body.standard-mode .workbench,
+body.care-mode .workbench {
+  min-height: 0;
+  grid-template-columns: minmax(360px, 0.98fr) minmax(470px, 1.15fr) minmax(350px, 0.95fr);
+  gap: 10px;
+}
+
+body.standard-mode .column,
+body.care-mode .column {
+  min-height: 0;
+  overflow: hidden;
+  border-color: #dfe5ee;
+  border-radius: 8px;
+}
+
+body.standard-mode .panel-header,
+body.care-mode .panel-header {
+  min-height: 56px;
+  padding: 12px 16px;
+}
+
+body.standard-mode .panel-header h2,
+body.care-mode .panel-header h2 {
+  font-size: 20px;
+}
+
+body.standard-mode .field-list,
+body.standard-mode .transcript-list,
+body.standard-mode .assist-list,
+body.care-mode .field-list,
+body.care-mode .transcript-list,
+body.care-mode .assist-list {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-content: start;
+  gap: 10px;
+  padding: 12px;
+  scrollbar-width: thin;
+}
+
+body.standard-mode .assist-column,
+body.care-mode .assist-column {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  row-gap: 10px;
+  max-height: none;
+  overflow: hidden;
+}
+
+body.standard-mode .assist-column .assist-list,
+body.care-mode .assist-column .assist-list {
+  max-height: none;
+  padding-bottom: 0;
+}
+
+body.standard-mode .empty-state,
+body.care-mode .empty-state {
+  min-height: 64px;
+  display: grid;
+  align-content: center;
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 15px;
+}
+
+body.standard-mode .field-card,
+body.care-mode .field-card {
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+body.standard-mode .field-title,
+body.care-mode .field-title {
+  font-size: 16px;
+}
+
+body.standard-mode .field-value,
+body.care-mode .field-value {
+  min-height: 0;
+  display: block;
+  overflow: visible;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  color: #172033;
+  font-size: 14px;
+  line-height: 1.62;
+  -webkit-line-clamp: unset;
+}
+
+body.standard-mode .field-meta,
+body.care-mode .field-meta {
+  margin-top: 8px;
+}
+
+body.standard-mode .chat-row,
+body.care-mode .chat-row {
+  grid-template-columns: 76px minmax(0, 1fr);
+  border-bottom: 1px solid #edf1f6;
+}
+
+body.standard-mode .chat-time,
+body.care-mode .chat-time {
+  padding: 11px 12px 0 0;
+  font-size: 13px;
+}
+
+body.standard-mode .chat-card,
+body.care-mode .chat-card {
+  padding: 8px 10px;
+}
+
+body.standard-mode .chat-line,
+body.care-mode .chat-line {
+  gap: 10px;
+}
+
+body.standard-mode .chat-line p,
+body.care-mode .chat-line p {
+  display: block;
+  overflow: visible;
+  margin: 0;
+  color: #172033;
+  font-size: 14px;
+  line-height: 1.62;
+  -webkit-line-clamp: unset;
+}
+
+body.standard-mode .chat-card textarea,
+body.care-mode .chat-card textarea {
+  min-height: 52px;
+  max-height: 120px;
+  overflow: auto;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+body.standard-mode .transcript-status-panel,
+body.care-mode .transcript-status-panel {
+  padding: 10px 12px;
+}
+
+body.standard-mode .status-metrics,
+body.care-mode .status-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+body.standard-mode .doctor-assist-overview,
+body.care-mode .doctor-assist-overview {
+  gap: 10px;
+}
+
+body.standard-mode .doctor-assist-card-head,
+body.care-mode .doctor-assist-card-head {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+body.standard-mode .doctor-assist-card-head h3,
+body.care-mode .doctor-assist-card-head h3 {
+  font-size: 17px;
+}
+
+body.standard-mode .doctor-assist-card-body,
+body.care-mode .doctor-assist-card-body {
+  max-height: none;
+  overflow: visible;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+body.standard-mode .assist-plan-block,
+body.standard-mode .assist-mini-grid > div,
+body.standard-mode .assist-evidence-quote,
+body.care-mode .assist-plan-block,
+body.care-mode .assist-mini-grid > div,
+body.care-mode .assist-evidence-quote {
+  padding: 9px 10px;
+  line-height: 1.5;
+}
+
+body.standard-mode .assist-mini-grid,
+body.care-mode .assist-mini-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+body.standard-mode .assist-plan-block strong,
+body.standard-mode .assist-mini-grid strong,
+body.standard-mode .assist-evidence-quote,
+body.standard-mode .assist-check-row,
+body.care-mode .assist-plan-block strong,
+body.care-mode .assist-mini-grid strong,
+body.care-mode .assist-evidence-quote,
+body.care-mode .assist-check-row {
+  font-size: 13px;
+}
+
+body.standard-mode .summary-note,
+body.care-mode .summary-note {
+  font-size: 12px;
+}
+
+body.standard-mode .assist-column .bottom-actions,
+body.care-mode .assist-column .bottom-actions {
+  margin: 0 12px 12px;
+  gap: 10px;
+  padding: 11px 12px 12px;
+}
+
+body.standard-mode .assist-column .bottom-actions strong,
+body.care-mode .assist-column .bottom-actions strong {
+  font-size: 17px;
+}
+
+body.standard-mode .assist-column .button-group,
+body.care-mode .assist-column .button-group {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+body.standard-mode .assist-column .button-group button,
+body.care-mode .assist-column .button-group button {
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+body.standard-mode .assist-column .button-group .danger-action,
+body.care-mode .assist-column .button-group .danger-action {
+  grid-column: 1 / -1;
+  min-height: 44px;
+}
+
+body.care-mode .field-value,
+body.care-mode .chat-line p,
+body.care-mode .chat-card textarea,
+body.care-mode .assist-plan-block strong,
+body.care-mode .assist-mini-grid strong,
+body.care-mode .assist-evidence-quote,
+body.care-mode .assist-check-row {
+  font-size: 16px;
+  line-height: 1.68;
+}
+
+body.care-mode .field-title,
+body.care-mode .doctor-assist-card-head h3,
+body.care-mode .panel-header h2 {
+  font-size: 20px;
+}
+
+body.care-mode .assist-column .button-group button {
+  min-height: 48px;
+  font-size: 16px;
+}
+
+@media (max-width: 1180px) {
+  body.standard-mode .doctor-app,
+  body.care-mode .doctor-app {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  body.standard-mode .topbar,
+  body.care-mode .topbar,
+  body.standard-mode .workbench,
+  body.care-mode .workbench {
+    grid-template-columns: 1fr;
+  }
+}

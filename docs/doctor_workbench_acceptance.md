@@ -30,6 +30,19 @@ http://127.0.0.1:8001/static/doctor.html
 
 完整 `v0.6.4` 验收记录见：`docs/doctor_workbench_acceptance_v0_6_4.md`。
 
+## v0.6.7 补充验收
+
+`v0.6.7` 已在 Docker `2601` 端口补齐真实前端验收：
+
+- 文本导入生成病历通过。
+- Mock ASR 上传和 SSE 分段显示通过。
+- FunASR 短音频真实前端上传通过。
+- SenseVoice 短音频真实前端上传通过。
+- SenseVoice 16 分钟长音频切片中和完成状态通过。
+- FunASR 30 分钟长音频切片中和完成状态通过。
+
+完整记录见：`docs/doctor_workbench_acceptance_v0_6_7.md`。
+
 ## v0.6.3 前端展示验收点
 
 - 顶部流程条固定为 6 步：输入、实时转写、角色校正、生成病历、医生审核、导出。

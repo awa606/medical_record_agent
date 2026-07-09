@@ -7,6 +7,7 @@
 - 适合本机演示、课程答辩、同一 Wi-Fi 或同一局域网内访问。
 - Docker 镜像包含基础 Web 服务、SQLite、Mock ASR、FunASR 和 SenseVoice CPU 依赖。
 - 不包含公网暴露、HTTPS、登录认证、GPU/CUDA 或医院生产部署。
+- Docker 对外访问端口为 `2601`，容器内部仍监听 `8000`，即 Compose 端口映射为 `2601:8000`。
 
 ## 前置条件
 
@@ -33,13 +34,13 @@ docker compose up
 启动后，本机访问：
 
 ```text
-http://127.0.0.1:8000/static/doctor.html
+http://127.0.0.1:2601/static/doctor.html
 ```
 
 健康检查：
 
 ```powershell
-curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:2601/health
 ```
 
 预期返回：
@@ -65,20 +66,20 @@ ipconfig
 同一局域网内其他电脑访问：
 
 ```text
-http://192.168.1.23:8000/static/doctor.html
+http://192.168.1.23:2601/static/doctor.html
 ```
 
 如果其他人无法访问，优先检查：
 
 - 你的电脑和对方是否在同一 Wi-Fi / 局域网。
 - Docker 容器是否正在运行。
-- 端口映射是否为 `8000:8000`。
-- Windows 防火墙是否允许 TCP 8000 入站。
+- 端口映射是否为 `2601:8000`。
+- Windows 防火墙是否允许 TCP 2601 入站。
 
 如需添加 Windows 防火墙规则，请用管理员 PowerShell 运行：
 
 ```powershell
-New-NetFirewallRule -DisplayName "Medical Record Agent 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow
+New-NetFirewallRule -DisplayName "Medical Record Agent 2601" -Direction Inbound -Protocol TCP -LocalPort 2601 -Action Allow
 ```
 
 ## 数据与缓存
@@ -108,7 +109,7 @@ MODELSCOPE_CACHE=/app/model_cache/modelscope
 
 测试步骤：
 
-1. 打开 `http://127.0.0.1:8000/static/doctor.html`。
+1. 打开 `http://127.0.0.1:2601/static/doctor.html`。
 2. 点击“粘贴问诊文本”，生成病历草稿。
 3. 检查病历字段区、对话转写区、AI 辅助与安全校验区是否正常显示。
 4. 上传短 MP3/WAV，选择 `Mock ASR`，确认 SSE 分段、角色校正和生成病历流程正常。
@@ -130,7 +131,7 @@ MODELSCOPE_CACHE=/app/model_cache/modelscope
 先在本机确认：
 
 ```powershell
-curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:2601/health
 ```
 
 再确认对方访问的是你的局域网 IPv4，而不是 `127.0.0.1`。`127.0.0.1` 只代表访问者自己的电脑。

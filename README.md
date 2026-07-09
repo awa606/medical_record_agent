@@ -151,6 +151,8 @@ $env:ONLINE_ASR_API_KEY = "<set-in-environment-only>"
 
 本项目支持 Docker Desktop 本地部署，镜像包含基础 Web 服务、SQLite、Mock ASR、FunASR 和 SenseVoice CPU 依赖。
 
+Docker 对外访问端口为 `2601`，容器内部服务端口仍为 `8000`。
+
 构建并启动：
 
 ```powershell
@@ -160,13 +162,13 @@ docker compose up
 
 本机访问：
 
-- 医生端：http://127.0.0.1:8000/static/doctor.html
-- 健康检查：http://127.0.0.1:8000/health
+- 医生端：http://127.0.0.1:2601/static/doctor.html
+- 健康检查：http://127.0.0.1:2601/health
 
 局域网其他电脑访问时，先用 `ipconfig` 查看本机 IPv4，例如 `192.168.1.23`，然后访问：
 
 ```text
-http://192.168.1.23:8000/static/doctor.html
+http://192.168.1.23:2601/static/doctor.html
 ```
 
 Docker 运行数据写入 `data/docker_runtime/`，模型缓存写入 `data/asr_model_cache/`，两者均不提交 GitHub。完整说明见 [`docs/docker_local_deploy.md`](docs/docker_local_deploy.md)。

@@ -2451,6 +2451,28 @@ body.doctor-mode .start-guide {
   top: calc(100% + 6px);
 }
 
+.display-scale-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid #dfe6ef;
+  border-radius: 8px;
+  padding: 2px;
+  background: #f7f9fc;
+}
+
+.display-scale-switch button {
+  border: 0;
+  background: transparent;
+  color: #6b7280;
+}
+
+.display-scale-switch button.active {
+  background: #fff;
+  color: #1f5fbf;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
 .workflow-panel {
   padding: 5px 20px;
 }
@@ -2885,6 +2907,238 @@ body.doctor-mode .start-guide {
   }
 
   .topbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* v0.7.5 care mode doctor workbench */
+body.care-mode {
+  color: #0f172a;
+}
+
+body.care-mode .doctor-app {
+  gap: 8px;
+  padding-bottom: 10px;
+}
+
+body.care-mode .topbar {
+  min-height: 70px;
+  grid-template-columns: minmax(310px, 0.74fr) minmax(480px, 1fr) auto;
+  padding: 10px 18px;
+}
+
+body.care-mode .brand-mark {
+  width: 48px;
+  height: 48px;
+  font-size: 12px;
+}
+
+body.care-mode .brand-block h1 {
+  font-size: 20px;
+}
+
+body.care-mode .brand-block p {
+  font-size: 12px;
+}
+
+body.care-mode .meta-label {
+  font-size: 12px;
+}
+
+body.care-mode .patient-bar strong,
+body.care-mode .engine-select-wrap select {
+  font-size: 15px;
+}
+
+body.care-mode .topbar .patient-bar > div {
+  min-height: 46px;
+  padding: 4px 10px;
+}
+
+body.care-mode .top-actions a,
+body.care-mode .top-actions button {
+  min-height: 38px;
+  padding: 8px 11px;
+  font-size: 14px;
+}
+
+body.care-mode .workflow-panel {
+  padding: 7px 22px;
+}
+
+body.care-mode .workflow-step {
+  min-height: 34px;
+  font-size: 14px;
+}
+
+body.care-mode .workflow-index {
+  width: 26px;
+  height: 26px;
+}
+
+body.care-mode .next-action-panel {
+  min-height: 58px;
+  padding: 10px 14px;
+}
+
+body.care-mode .next-action-panel strong {
+  font-size: 17px;
+}
+
+body.care-mode .workbench {
+  grid-template-columns: minmax(310px, 0.92fr) minmax(440px, 1.08fr) minmax(350px, 1fr);
+}
+
+body.care-mode .panel-header {
+  min-height: 50px;
+  padding: 11px 14px;
+}
+
+body.care-mode .panel-header h2 {
+  font-size: 20px;
+}
+
+body.care-mode .status-badge {
+  min-height: 26px;
+  padding: 4px 9px;
+  font-size: 13px;
+}
+
+body.care-mode .field-list,
+body.care-mode .transcript-list,
+body.care-mode .assist-list {
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+body.care-mode .field-card {
+  padding: 10px 12px;
+}
+
+body.care-mode .field-title,
+body.care-mode .doctor-assist-card-head h3 {
+  font-size: 17px;
+}
+
+body.care-mode .field-value {
+  font-size: 15px;
+  line-height: 1.58;
+  -webkit-line-clamp: 2;
+}
+
+body.care-mode .detail-link,
+body.care-mode .inline-more-button {
+  min-height: 36px;
+  padding: 7px 11px;
+  font-size: 14px;
+}
+
+body.care-mode .transcript-status-panel {
+  padding: 10px 12px;
+}
+
+body.care-mode .status-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body.care-mode .status-metrics span {
+  font-size: 12px;
+}
+
+body.care-mode .status-metrics strong {
+  font-size: 14px;
+}
+
+body.care-mode .chat-row {
+  grid-template-columns: 68px minmax(0, 1fr);
+}
+
+body.care-mode .chat-time,
+body.care-mode .confidence,
+body.care-mode .summary-note {
+  font-size: 13px;
+}
+
+body.care-mode .chat-card {
+  padding: 9px 10px;
+}
+
+body.care-mode .chat-line {
+  gap: 10px;
+}
+
+body.care-mode .speaker-tag {
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+body.care-mode .chat-line p,
+body.care-mode .chat-card textarea {
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+body.care-mode .chat-card textarea {
+  min-height: 54px;
+  max-height: 78px;
+}
+
+body.care-mode .doctor-assist-card-head {
+  min-height: 42px;
+  padding: 8px 10px;
+}
+
+body.care-mode .doctor-assist-card-body {
+  max-height: 78px;
+  padding: 8px 10px 10px;
+}
+
+body.care-mode .assist-number-list li > span {
+  width: 27px;
+  height: 27px;
+  font-size: 13px;
+}
+
+body.care-mode .assist-number-list strong,
+body.care-mode .assist-plan-block strong,
+body.care-mode .assist-mini-grid strong,
+body.care-mode .assist-evidence-quote,
+body.care-mode .assist-check-row {
+  font-size: 15px;
+}
+
+body.care-mode .assist-plan-block span,
+body.care-mode .assist-mini-grid span {
+  font-size: 13px;
+}
+
+body.care-mode .assist-column .bottom-actions {
+  padding: 10px;
+}
+
+body.care-mode .assist-column .bottom-actions strong {
+  font-size: 17px;
+}
+
+body.care-mode .assist-column .button-group {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+body.care-mode .assist-column .button-group button,
+body.care-mode .assist-column .button-group .danger-action {
+  min-height: 44px;
+  font-size: 15px;
+}
+
+@media (max-width: 1180px) {
+  body.care-mode .doctor-app {
+    height: auto;
+    overflow: visible;
+  }
+
+  body.care-mode .topbar {
     grid-template-columns: 1fr;
   }
 }

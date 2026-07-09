@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>医生端工作台 - AI生成式电子病历辅助系统</title>
-    <link rel="stylesheet" href="./doctor.css?v=2026070903" />
+    <link rel="stylesheet" href="./doctor.css?v=2026070904" />
   </head>
-  <body class="doctor-mode">
+  <body class="doctor-mode standard-mode">
     <div class="doctor-app">
       <header class="topbar">
         <div class="brand-block">
@@ -80,6 +80,10 @@
               <button type="button" data-input-method="audio">音频生成</button>
               <button type="button" data-input-method="text">文本生成</button>
             </div>
+          </div>
+          <div class="display-scale-switch" aria-label="显示字号">
+            <button type="button" id="standardModeButton" class="active">标准版</button>
+            <button type="button" id="careModeButton">关怀版</button>
           </div>
           <details id="debugTools" class="debug-tools debug-only">
             <summary>调试工具</summary>
@@ -258,6 +262,6 @@
     </aside>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=2026070903"></script>
+    <script src="./doctor.js?v=2026070904"></script>
   </body>
 </html>

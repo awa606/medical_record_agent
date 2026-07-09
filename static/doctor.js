@@ -16,6 +16,7 @@ const appState = {
   selectedEngine: "funasr",
   assistTab: "ai",
   viewMode: "doctor",
+  displayScale: "standard",
   screenshotMode: false,
   audioMode: "transcribe",
   uploadedFilename: "",
@@ -278,10 +279,14 @@ function renderMode() {
   document.body.classList.toggle("debug-mode", isDebug);
   document.body.classList.toggle("doctor-mode", !isDebug);
   document.body.classList.toggle("screenshot-mode", appState.screenshotMode);
+  document.body.classList.toggle("standard-mode", appState.displayScale !== "care");
+  document.body.classList.toggle("care-mode", appState.displayScale === "care");
   $("doctorModeButton").classList.toggle("active", !isDebug);
   $("debugModeButton").classList.toggle("active", isDebug);
   $("demoModeButton").classList.toggle("active", !appState.screenshotMode);
   $("screenshotModeButton").classList.toggle("active", appState.screenshotMode);
+  $("standardModeButton").classList.toggle("active", appState.displayScale !== "care");
+  $("careModeButton").classList.toggle("active", appState.displayScale === "care");
 }
 
 function setViewMode(mode) {
@@ -295,6 +300,11 @@ function setViewMode(mode) {
 function setScreenshotMode(enabled) {
   appState.screenshotMode = Boolean(enabled);
   renderMode();
+}
+
+function setDisplayScale(mode) {
+  appState.displayScale = mode === "care" ? "care" : "standard";
+  renderAll();
 }
 
 function renderInputMethodMenu() {
@@ -1020,7 +1030,9 @@ function renderTranscript() {
       </div>
     `
     : "";
-  const visibleLimit = appState.viewMode === "doctor" ? 4 : rows.length;
+  const visibleLimit = appState.viewMode === "doctor"
+    ? appState.displayScale === "care" ? 3 : 4
+    : rows.length;
   const visibleRows = rows.length > visibleLimit
     ? (isStreaming ? rows.slice(-visibleLimit) : rows.slice(0, visibleLimit))
     : rows;
@@ -2366,6 +2378,8 @@ function bindEvents() {
   $("debugModeButton").addEventListener("click", () => setViewMode("debug"));
   $("demoModeButton").addEventListener("click", () => setScreenshotMode(false));
   $("screenshotModeButton").addEventListener("click", () => setScreenshotMode(true));
+  $("standardModeButton").addEventListener("click", () => setDisplayScale("standard"));
+  $("careModeButton").addEventListener("click", () => setDisplayScale("care"));
   $("inputMethodButton").addEventListener("click", (event) => {
     event.stopPropagation();
     toggleInputMethodMenu();

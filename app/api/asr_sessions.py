@@ -36,6 +36,7 @@ from app.services.asr import (
     ChunkTranscription,
     apply_manifest_role_strategy,
     create_asr_engine,
+    enhance_speaker_diarization,
     merge_chunk_transcriptions,
     split_audio_to_chunks,
 )
@@ -220,6 +221,10 @@ def _apply_segment_corrections(
             segment.text = next_text
         segment.reviewed_by_doctor = correction.reviewed_by_doctor
         segment.needs_review = not correction.reviewed_by_doctor or segment.role == "待确认"
+        if correction.reviewed_by_doctor and segment.role and segment.role != "待确认":
+            segment.role_source = "manual"
+            segment.role_confidence = 0.98
+            segment.role_note = "医生已人工确认"
 
     updated.text = _plain_text_from_segments(updated.segments)
     updated.conversation_text = _conversation_from_segments(updated.segments)
@@ -426,6 +431,10 @@ def _offset_segment_for_chunk(segment: ASRSegment, chunk_start_seconds: float) -
         start_time=offset(segment.start_time),
         end_time=offset(segment.end_time),
         confidence=segment.confidence,
+        role_confidence=segment.role_confidence,
+        role_source=segment.role_source,
+        role_note=segment.role_note,
+        speaker_turn=segment.speaker_turn,
         needs_review=True if not segment.role else segment.needs_review,
         reviewed_by_doctor=segment.reviewed_by_doctor,
         original_text=segment.original_text,
@@ -692,6 +701,7 @@ def _run_asr_session_transcription(
         else:
             result = asr_engine.transcribe(record.audio_id, audio_path)
             result = apply_manifest_role_strategy(result, _sample_id_from_record(record))
+            result = enhance_speaker_diarization(result)
             _append_transcribing_progress_event(
                 session_id,
                 session=session,
@@ -767,6 +777,7 @@ def _transcribe_chunked_session(
             )
             try:
                 chunk_result = engine.transcribe(f"{record.audio_id}_chunk_{chunk.index:03d}", chunk.path)
+                chunk_result = enhance_speaker_diarization(chunk_result)
             except Exception as exc:  # noqa: BLE001
                 error = _compact_error(exc)
                 _append_session_event(
@@ -815,7 +826,8 @@ def _transcribe_chunked_session(
             original_duration=original_duration,
             engine_name=f"{getattr(engine, 'name', session.engine)}-chunked",
         )
-        return apply_manifest_role_strategy(merged, _sample_id_from_record(record))
+        merged = apply_manifest_role_strategy(merged, _sample_id_from_record(record))
+        return enhance_speaker_diarization(merged)
 
 
 def _write_transcription_success(

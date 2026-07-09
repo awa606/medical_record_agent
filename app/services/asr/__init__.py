@@ -7,6 +7,7 @@ from app.services.asr.online_engine import OnlineASREngine, normalize_online_asr
 from app.services.asr.qwen3_engine import Qwen3ASREngine
 from app.services.asr.role_strategy import apply_manifest_role_strategy, load_asr_manifest
 from app.services.asr.sensevoice_engine import SenseVoiceASREngine
+from app.services.asr.speaker_diarization import enhance_speaker_diarization
 from app.services.asr.whisper_engine import WhisperASREngine
 
 __all__ = [
@@ -21,6 +22,7 @@ __all__ = [
     "WhisperASREngine",
     "apply_manifest_role_strategy",
     "create_asr_engine",
+    "enhance_speaker_diarization",
     "load_asr_manifest",
     "merge_chunk_transcriptions",
     "normalize_online_asr_response",

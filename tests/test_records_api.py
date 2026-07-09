@@ -76,6 +76,10 @@ class RecordsApiTests(unittest.TestCase):
         self.assertIn("fields_preview", response_data)
         self.assertIn("candidate_diagnoses", response_data)
         self.assertIn("treatment_plan", response_data)
+        self.assertIn("structured_updates", response_data)
+        self.assertIn(response.preview_stage, {"collecting", "structured_preview", "diagnosis_preview"})
+        self.assertIsInstance(response.ready_for_formal_generation, bool)
+        self.assertTrue(any(item["status"] == "preview" for item in response.structured_updates))
         self.assertGreater(len(response.candidate_diagnoses), 0)
         self.assertNotIn("task_id", response_data)
         self.assertNotIn("events_url", response_data)
@@ -91,6 +95,7 @@ class RecordsApiTests(unittest.TestCase):
         self.assertEqual(response.status, "preview_ready")
         self.assertGreater(len(response.missing_items), 0)
         self.assertIn("实时预览", response.preview_notice)
+        self.assertTrue(response.structured_updates)
         self.assertNotIn("task_id", response.model_dump())
 
 

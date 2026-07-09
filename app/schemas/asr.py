@@ -10,6 +10,10 @@ class ASRSegment(BaseModel):
     start_time: float | None = None
     end_time: float | None = None
     confidence: float | None = None
+    role_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    role_source: str | None = None
+    role_note: str | None = None
+    speaker_turn: int | None = None
     needs_review: bool = False
     reviewed_by_doctor: bool = False
     original_text: str | None = None

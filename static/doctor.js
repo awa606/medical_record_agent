@@ -49,9 +49,9 @@ const appState = {
   recordPreviewInFlight: false,
 };
 
-const RECORD_PREVIEW_MIN_CHARS = 80;
+const RECORD_PREVIEW_MIN_CHARS = 40;
 const RECORD_PREVIEW_MIN_SEGMENTS = 2;
-const RECORD_PREVIEW_MIN_INTERVAL_MS = 8000;
+const RECORD_PREVIEW_MIN_INTERVAL_MS = 5000;
 const RECORD_PREVIEW_DEBOUNCE_MS = 900;
 
 const FIELD_DEFS = [
@@ -301,6 +301,26 @@ function previewTreatmentText() {
   if (plan.risk_warnings?.length) items.push(`风险提醒：${plan.risk_warnings.join("；")}`);
   if (plan.follow_up_questions?.length) items.push(`建议补问：${plan.follow_up_questions.join("；")}`);
   return items.join("\n");
+}
+
+function previewRecognizedLabels() {
+  const updates = appState.recordPreview?.structured_updates || [];
+  return updates
+    .filter((item) => item.status === "preview" && item.value_preview)
+    .map((item) => item.label)
+    .slice(0, 4);
+}
+
+function previewNoticeText() {
+  if (!isRecordPreviewActive()) return "";
+  const labels = previewRecognizedLabels();
+  const stageLabel = appState.recordPreview?.ready_for_formal_generation
+    ? "已可正式生成"
+    : appState.recordPreview?.preview_stage === "collecting"
+      ? "正在收集信息"
+      : "结构化预览更新中";
+  const recognized = labels.length ? ` · 已识别：${labels.join("、")}` : "";
+  return `实时预览，需医生确认 · ${stageLabel}${recognized}`;
 }
 
 function riskSummary() {
@@ -942,7 +962,7 @@ function renderFields() {
     $("fieldCountBadge").className = `status-badge ${isPreview ? "info" : allMissingCount ? "missing" : "confirmed"}`;
   }
   const previewNotice = isPreview
-    ? `<div class="preview-notice">实时预览，需医生确认；正式生成病历后会替换为审核版结果。</div>`
+    ? `<div class="preview-notice">${escapeHtml(previewNoticeText())}；正式生成病历后会替换为审核版结果。</div>`
     : "";
   $("recordFields").innerHTML = previewNotice + cards + diagnoses + summaryFooter + draftLegend;
 }
@@ -982,8 +1002,10 @@ function segmentWithInferredRole(segment = {}) {
   return {
     ...segment,
     role: inferredRole,
+    role_confidence: segment.role_confidence ?? (inferredRole === "待确认" ? 0.4 : 0.58),
+    role_source: segment.role_source || "frontend_text_rule",
+    role_note: segment.role_note || (inferredRole === "待确认" ? "角色待确认" : "低置信度初判，需医生校正"),
     needs_review: true,
-    role_confidence_note: inferredRole === "待确认" ? "角色待确认" : "低置信度初判，需医生校正",
   };
 }
 
@@ -1121,6 +1143,9 @@ function transcriptRows() {
         label,
         text: segment.text || "",
         confidence: segment.confidence,
+        roleConfidence: displaySegment.role_confidence,
+        roleSource: displaySegment.role_source,
+        roleNote: displaySegment.role_note,
         needsReview: Boolean(displaySegment.needs_review || label === "待确认"),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
@@ -1139,6 +1164,9 @@ function transcriptRows() {
         label,
         text: segment.text || "",
         confidence: segment.confidence,
+        roleConfidence: displaySegment.role_confidence,
+        roleSource: displaySegment.role_source,
+        roleNote: displaySegment.role_note,
         needsReview: Boolean(displaySegment.needs_review || label === "待确认"),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
@@ -1152,6 +1180,16 @@ function renderRoleOptions(selectedRole) {
   return ROLE_OPTIONS.map(([value, label]) => (
     `<option value="${escapeHtml(value)}" ${selectedRole === value ? "selected" : ""}>${escapeHtml(label)}</option>`
   )).join("");
+}
+
+function roleConfidenceText(item) {
+  if (item.roleConfidence != null) {
+    const prefix = item.roleNote || "角色置信度";
+    return `${prefix} ${Math.round(Number(item.roleConfidence) * 100)}%`;
+  }
+  if (item.roleNote) return item.roleNote;
+  if (item.confidence != null) return `转写置信度 ${Math.round(Number(item.confidence) * 100)}%`;
+  return "角色置信度待评估";
 }
 
 function asrProgressPercent() {
@@ -1297,7 +1335,7 @@ function renderTranscript() {
               <span class="status-badge ${item.needsReview ? "candidate" : item.reviewedByDoctor ? "confirmed" : "neutral"}">
                 ${item.needsReview ? "待确认" : item.reviewedByDoctor ? "已校正" : "未保存"}
               </span>
-              <span class="confidence">${item.confidence == null ? "置信度待评估" : `置信度 ${Math.round(item.confidence * 100)}%`}</span>
+              <span class="confidence">${escapeHtml(roleConfidenceText(item))}</span>
             </div>
             <textarea data-segment-text>${escapeHtml(item.text)}</textarea>
           ` : `
@@ -1763,7 +1801,7 @@ function renderAssistDetailContent(section) {
 
 function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
   const previewNotice = isRecordPreviewActive()
-    ? `<div class="preview-notice">实时预览，需医生确认；不作为最终诊断或处方。</div>`
+    ? `<div class="preview-notice">${escapeHtml(previewNoticeText())}；不作为最终诊断或处方。</div>`
     : "";
   const previewError = appState.recordPreviewError
     ? `<div class="safety-strip warning">${escapeHtml(appState.recordPreviewError)}</div>`

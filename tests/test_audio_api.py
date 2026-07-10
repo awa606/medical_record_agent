@@ -3,6 +3,7 @@ import tempfile
 import unittest
 
 from fastapi import BackgroundTasks, HTTPException
+from fastapi.testclient import TestClient
 
 from app.api.audio import (
     evaluate_audio,
@@ -51,6 +52,7 @@ class AudioApiTests(unittest.TestCase):
 
         self.assertIn("/api/audio/upload", route_paths)
         self.assertIn("/api/audio/{audio_id}/transcribe", route_paths)
+        self.assertIn("/api/audio/{audio_id}/media", route_paths)
         self.assertIn("/api/audio/{audio_id}/transcript", route_paths)
         self.assertIn("/api/audio/{audio_id}/evaluate", route_paths)
         self.assertIn("/api/audio/{audio_id}/generate-record", route_paths)
@@ -73,6 +75,20 @@ class AudioApiTests(unittest.TestCase):
         transcript = read_audio_transcript(uploaded.audio_id)
         self.assertEqual(transcript.audio_id, uploaded.audio_id)
         self.assertIn("[患者]", transcript.conversation_text)
+
+    def test_media_endpoint_supports_range_requests(self):
+        uploaded = self._upload_sample("sample.wav")
+        client = TestClient(app)
+
+        response = client.get(
+            f"/api/audio/{uploaded.audio_id}/media",
+            headers={"Range": "bytes=2-5"},
+        )
+
+        self.assertEqual(response.status_code, 206)
+        self.assertEqual(response.headers["accept-ranges"], "bytes")
+        self.assertTrue(response.headers["content-range"].startswith("bytes 2-5/"))
+        self.assertEqual(response.content, b"FF..")
 
     def test_snakebite_manifest_restores_single_speaker_script(self):
         uploaded = self._upload_sample("snakebite_01.wav")

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>医生端工作台 - AI生成式电子病历辅助系统</title>
-    <link rel="stylesheet" href="./doctor.css?v=2026070908" />
+    <link rel="stylesheet" href="./doctor.css?v=2026071001" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -160,11 +160,69 @@
           <div class="panel-header">
             <div>
               <h2>对话转写</h2>
-              <p>用于核对问诊原文和医生/患者角色，是字段证据的来源。</p>
+              <p>分段实时显示，点击单行查看原文或校正。</p>
             </div>
-            <span id="transcriptBadge" class="status-badge info">-</span>
+            <div class="transcript-header-actions">
+              <button type="button" id="transcriptSettingsButton" class="transcript-settings-button">显示设置</button>
+              <span id="transcriptBadge" class="status-badge info transcript-badge-inline">-</span>
+            </div>
           </div>
           <div id="transcriptList" class="transcript-list"></div>
+          <footer id="consultationAudioPlayer" class="transcript-audio-player" hidden>
+            <audio id="consultationAudio" preload="metadata"></audio>
+            <div class="audio-player-primary">
+              <button
+                type="button"
+                id="audioPlayPauseButton"
+                class="audio-icon-button"
+                data-busy-allowed="true"
+                aria-label="播放音频"
+                title="播放或暂停"
+              >▶</button>
+              <span id="audioTimeLabel" class="audio-time-label">00:00 / 00:00</span>
+              <input
+                type="range"
+                id="audioSeekRange"
+                class="audio-seek-range"
+                min="0"
+                max="1000"
+                value="0"
+                aria-label="音频播放进度"
+              >
+              <button
+                type="button"
+                id="audioMuteButton"
+                class="audio-icon-button compact"
+                data-busy-allowed="true"
+                aria-label="静音"
+                title="静音或恢复音量"
+              >🔊</button>
+              <input
+                type="range"
+                id="audioVolumeRange"
+                class="audio-volume-range"
+                min="0"
+                max="1"
+                step="0.05"
+                value="1"
+                aria-label="音量"
+              >
+              <select id="audioPlaybackRate" class="audio-rate-select" aria-label="播放倍速">
+                <option value="0.75">0.75x</option>
+                <option value="1" selected>1.0x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2.0x</option>
+              </select>
+            </div>
+            <div class="audio-player-secondary">
+              <div class="transcript-pace-control" role="group" aria-label="转写显示节奏">
+                <button type="button" data-transcript-pace="fast" data-busy-allowed="true" class="active">尽快识别</button>
+                <button type="button" data-transcript-pace="follow" data-busy-allowed="true">跟随播放</button>
+              </div>
+              <span id="audioProcessingSummary" class="audio-processing-summary">等待音频</span>
+            </div>
+          </footer>
         </section>
 
         <aside class="column assist-column">
@@ -262,6 +320,6 @@
     </aside>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=2026070908"></script>
+    <script src="./doctor.js?v=2026071002"></script>
   </body>
 </html>

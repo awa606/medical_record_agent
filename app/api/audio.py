@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 import os
 import shutil
 import uuid
@@ -9,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 
 from app.agents import MedicalRecordOrchestrator
 from app.api.records import run_record_generation_task
@@ -127,6 +129,18 @@ def upload_audio(file: UploadFile = File(...)) -> AudioRecord:
 @router.get("/{audio_id}")
 def read_audio(audio_id: str) -> AudioRecord:
     return _read_audio_record(audio_id)
+
+
+@router.get("/{audio_id}/media")
+def stream_audio_media(audio_id: str) -> FileResponse:
+    record = _read_audio_record(audio_id)
+    audio_path = _audio_path(audio_id)
+    media_type = record.content_type or mimetypes.guess_type(record.filename)[0] or "application/octet-stream"
+    return FileResponse(
+        audio_path,
+        media_type=media_type,
+        headers={"Accept-Ranges": "bytes", "Cache-Control": "private, max-age=3600"},
+    )
 
 
 @router.post("/{audio_id}/transcribe")

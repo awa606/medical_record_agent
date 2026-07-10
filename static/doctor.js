@@ -19,6 +19,7 @@ const appState = {
   displayScale: "standard",
   screenshotMode: false,
   audioMode: "transcribe",
+  pendingGenerateAfterRoleReview: false,
   uploadedFilename: "",
   taskStatus: "CREATED",
   busy: false,
@@ -27,8 +28,16 @@ const appState = {
   asrStreamProgress: 0,
   asrProgressEstimated: false,
   asrElapsedSeconds: 0,
+  asrFirstSegmentAt: "",
+  asrLastSegmentAt: "",
+  asrVisibleAudioSeconds: 0,
   asrStreamCurrentSegment: 0,
   asrStreamTotalSegments: 0,
+  asrPhase: "idle",
+  asrProgressKind: "indeterminate",
+  asrProcessedAudioSeconds: 0,
+  asrAudioDurationSeconds: 0,
+  diarizationStatus: "idle",
   asrLastError: "",
   asrChunkCurrent: 0,
   asrChunkTotal: 0,
@@ -37,6 +46,7 @@ const appState = {
   asrRetryHint: "",
   roleReviewDirty: false,
   roleReviewSaving: false,
+  speakerRoleCorrections: {},
   lastActionError: "",
   inputMenuOpen: false,
   recordPreview: null,
@@ -47,12 +57,25 @@ const appState = {
   recordPreviewLastRunAt: 0,
   recordPreviewLastSignature: "",
   recordPreviewInFlight: false,
+  recordPreviewRequestId: 0,
+  recordPreviewAbortController: null,
+  audioObjectUrl: "",
+  audioMediaUrl: "",
+  audioDurationSeconds: 0,
+  audioCurrentTime: 0,
+  audioPlaying: false,
+  audioMuted: false,
+  audioVolume: 1,
+  audioPlaybackRate: 1,
+  audioSeekDragging: false,
+  transcriptPacing: "fast",
+  activeTranscriptSegmentId: "",
 };
 
-const RECORD_PREVIEW_MIN_CHARS = 40;
-const RECORD_PREVIEW_MIN_SEGMENTS = 2;
-const RECORD_PREVIEW_MIN_INTERVAL_MS = 5000;
-const RECORD_PREVIEW_DEBOUNCE_MS = 900;
+const RECORD_PREVIEW_MIN_CHARS = 10;
+const RECORD_PREVIEW_MIN_SEGMENTS = 1;
+const RECORD_PREVIEW_MIN_INTERVAL_MS = 2000;
+const RECORD_PREVIEW_DEBOUNCE_MS = 450;
 
 const FIELD_DEFS = [
   ["chief_complaint", "主诉"],
@@ -142,6 +165,7 @@ const ENGINE_LABELS = {
 const ROLE_OPTIONS = [
   ["医生", "医生"],
   ["患者", "患者"],
+  ["其他", "其他"],
   ["待确认", "待确认"],
 ];
 
@@ -206,7 +230,9 @@ function renderJson(element, value) {
 function setBusy(nextBusy, message = "") {
   appState.busy = nextBusy;
   document.querySelectorAll("button").forEach((button) => {
-    if (button.id !== "closeDrawerButton") button.disabled = nextBusy;
+    if (button.id !== "closeDrawerButton" && button.dataset.busyAllowed !== "true") {
+      button.disabled = nextBusy;
+    }
   });
   if (message) {
     $("currentTaskHint").textContent = message;
@@ -507,10 +533,17 @@ function nextActionState() {
   }
 
   if (appState.currentAsrResult && (rolePending || appState.roleReviewDirty)) {
+    const pendingCount = roleReviewPendingCount();
+    const pendingText = pendingCount
+      ? `仍有 ${pendingCount} 段角色待确认，请在校正抽屉中选择医生或患者。`
+      : "角色已逐段确认，请保存校正结果。";
+    const resumeText = appState.pendingGenerateAfterRoleReview
+      ? "保存后将自动继续生成病历。"
+      : "保存后可继续生成病历。";
     return {
       tone: "warning",
       title: rolePending ? "请完成医生/患者角色校正" : "请保存角色校正",
-      detail: "逐段确认角色和文本，保存后再使用校正文本生成病历。",
+      detail: `${pendingText}${resumeText}`,
       actions: [
         workflowAction({
           key: "save-role-review",
@@ -971,6 +1004,7 @@ function classifySpeaker(line, segment = {}) {
   const raw = `${segment.role || ""} ${segment.speaker || ""} ${line}`.toLowerCase();
   if (raw.includes("医生") || raw.includes("doctor")) return "doctor";
   if (raw.includes("患者") || raw.includes("patient")) return "patient";
+  if (raw.includes("其他") || raw.includes("other")) return "other";
   const inferred = inferLowConfidenceRole(line);
   if (inferred === "医生") return "doctor";
   if (inferred === "患者") return "patient";
@@ -981,6 +1015,7 @@ function roleLabelFromSegment(segment = {}, fallbackLine = "") {
   const speaker = classifySpeaker(fallbackLine, segment);
   if (speaker === "doctor") return "医生";
   if (speaker === "patient") return "患者";
+  if (speaker === "other") return "其他";
   return "待确认";
 }
 
@@ -1012,11 +1047,24 @@ function segmentWithInferredRole(segment = {}) {
 function speakerClassFromRole(role) {
   if (role === "医生") return "doctor";
   if (role === "患者") return "patient";
+  if (role === "其他") return "other";
   return "unknown";
 }
 
-function segmentTime(segment = {}, index = 0) {
-  return segment.start_time != null ? `${Number(segment.start_time).toFixed(1)}s` : `00:${String(index * 8).padStart(2, "0")}`;
+function formatRelativeTime(seconds = 0) {
+  const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  if (hours) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+  return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function segmentTime(segment = {}) {
+  const startTime = segment.start_time ?? segment.start ?? segment.offset;
+  return startTime != null ? formatRelativeTime(startTime) : "--:--";
 }
 
 function conversationFromSegments(segments = []) {
@@ -1032,6 +1080,67 @@ function textFromSegments(segments = []) {
 function currentReviewSegments() {
   if (appState.currentAsrResult?.segments?.length) return appState.currentAsrResult.segments;
   return appState.liveTranscriptSegments;
+}
+
+function compactSegmentText(segment = {}) {
+  return String(segment.text || "").trim().replace(/\s+/g, " ");
+}
+
+function transcriptSegmentKey(segment = {}, fallbackIndex = 0) {
+  if (segment.segment_id) return `id:${segment.segment_id}`;
+  const text = compactSegmentText(segment);
+  const start = segment.start_time ?? segment.start ?? segment.offset;
+  const end = segment.end_time ?? segment.end;
+  if (start != null || end != null) {
+    return `${Number(start ?? 0).toFixed(2)}:${Number(end ?? 0).toFixed(2)}:${text}`;
+  }
+  const explicitIndex = segment.index ?? segment.segment_index ?? fallbackIndex;
+  return `${explicitIndex}:${text}`;
+}
+
+function segmentStartsAt(segment = {}) {
+  const start = segment.start_time ?? segment.start ?? segment.offset;
+  const value = Number(start);
+  return Number.isFinite(value) ? value : null;
+}
+
+function segmentEndsAt(segment = {}) {
+  const end = segment.end_time ?? segment.end;
+  const value = Number(end);
+  if (Number.isFinite(value)) return value;
+  return segmentStartsAt(segment);
+}
+
+function mergeTranscriptSegments(preferredSegments = [], fallbackSegments = []) {
+  const byKey = new Map();
+  const addSegment = (segment, index) => {
+    if (!segment || !compactSegmentText(segment)) return;
+    const key = transcriptSegmentKey(segment, index);
+    const existing = byKey.get(key);
+    const existingRevision = Number(existing?.revision || 0);
+    const nextRevision = Number(segment.revision || 0);
+    if (!existing || nextRevision >= existingRevision) byKey.set(key, segment);
+  };
+
+  fallbackSegments.forEach(addSegment);
+  preferredSegments.forEach(addSegment);
+
+  return [...byKey.values()].sort((left, right) => {
+    const leftStart = segmentStartsAt(left);
+    const rightStart = segmentStartsAt(right);
+    if (leftStart == null || rightStart == null) return 0;
+    return leftStart - rightStart;
+  });
+}
+
+function finalTranscriptSegments(finalSegments = [], liveSegments = []) {
+  const cleanFinal = finalSegments.filter((segment) => compactSegmentText(segment));
+  const cleanLive = liveSegments.filter((segment) => compactSegmentText(segment));
+  return cleanFinal.length ? mergeTranscriptSegments(cleanFinal, []) : mergeTranscriptSegments(cleanLive, []);
+}
+
+function upsertLiveTranscriptSegment(segment) {
+  appState.liveTranscriptSegments = mergeTranscriptSegments([segment], appState.liveTranscriptSegments);
 }
 
 function liveConversationTextForPreview() {
@@ -1055,12 +1164,18 @@ function previewSignature(text, segments) {
 }
 
 async function fetchRecordPreview(text, segments) {
-  if (!text.trim() || appState.recordPreviewInFlight || appState.currentRecordFields) return;
+  if (!text.trim() || appState.currentRecordFields) return;
   const signature = previewSignature(text, segments);
   if (signature === appState.recordPreviewLastSignature) return;
+  appState.recordPreviewAbortController?.abort();
+  const controller = new AbortController();
+  const requestId = appState.recordPreviewRequestId + 1;
+  appState.recordPreviewRequestId = requestId;
+  appState.recordPreviewAbortController = controller;
   appState.recordPreviewInFlight = true;
   appState.recordPreviewStatus = "loading";
   appState.recordPreviewError = "";
+  appState.recordPreviewLastRunAt = Date.now();
   renderFields();
   renderAssist();
   try {
@@ -1072,18 +1187,24 @@ async function fetchRecordPreview(text, segments) {
         source: appState.currentAsrSessionId ? "asr_partial" : "text_preview",
         segments,
       }),
+      signal: controller.signal,
     });
+    if (requestId !== appState.recordPreviewRequestId) return;
     appState.recordPreview = response;
     appState.recordPreviewStatus = response.status || "preview_ready";
     appState.recordPreviewUpdatedAt = response.updated_at || "";
     appState.recordPreviewLastSignature = signature;
     appState.recordPreviewLastRunAt = Date.now();
   } catch (error) {
+    if (error?.name === "AbortError" || requestId !== appState.recordPreviewRequestId) return;
     appState.recordPreviewStatus = "failed";
     appState.recordPreviewError = error?.message || "实时预览暂不可用，转写继续。";
   } finally {
-    appState.recordPreviewInFlight = false;
-    renderAll();
+    if (requestId === appState.recordPreviewRequestId) {
+      appState.recordPreviewInFlight = false;
+      appState.recordPreviewAbortController = null;
+      renderAll();
+    }
   }
 }
 
@@ -1123,7 +1244,12 @@ function transcriptRowsFromText(text) {
     .map((line, index) => ({
       index,
       editable: false,
-      time: `00:${String(index * 8).padStart(2, "0")}`,
+      sourceSegment: null,
+      segmentId: `text-${index}`,
+      startTime: null,
+      endTime: null,
+      speakerId: null,
+      time: "--:--",
       speaker: classifySpeaker(line),
       label: classifySpeaker(line) === "doctor" ? "医生" : classifySpeaker(line) === "patient" ? "患者" : "待确认",
       text: line.replace(/^\[(医生|患者|doctor|patient|待校正)\]\s*/i, ""),
@@ -1138,7 +1264,13 @@ function transcriptRows() {
       return {
         index,
         editable: Boolean(appState.currentAsrResult),
-        time: segmentTime(segment, index),
+        sourceSegment: segment,
+        segmentId: segment.segment_id || `live-${index}`,
+        startTime: segmentStartsAt(segment),
+        endTime: segmentEndsAt(segment),
+        speakerId: segment.speaker_id || segment.speaker || null,
+        provisional: Boolean(segment.provisional),
+        time: segmentTime(segment),
         speaker: speakerClassFromRole(label),
         label,
         text: segment.text || "",
@@ -1152,14 +1284,20 @@ function transcriptRows() {
     });
   }
   const asr = appState.currentAsrResult;
-  if (asr?.segments?.length > 1) {
+  if (asr?.segments?.length) {
     return asr.segments.map((segment, index) => {
       const displaySegment = segmentWithInferredRole(segment);
       const label = roleLabelFromSegment(displaySegment, displaySegment.text || "");
       return {
         index,
         editable: true,
-        time: segmentTime(segment, index),
+        sourceSegment: segment,
+        segmentId: segment.segment_id || `result-${index}`,
+        startTime: segmentStartsAt(segment),
+        endTime: segmentEndsAt(segment),
+        speakerId: segment.speaker_id || segment.speaker || null,
+        provisional: Boolean(segment.provisional),
+        time: segmentTime(segment),
         speaker: speakerClassFromRole(label),
         label,
         text: segment.text || "",
@@ -1195,6 +1333,207 @@ function roleConfidenceText(item) {
 function asrProgressPercent() {
   const progress = Math.max(0, Math.min(1, Number(appState.asrStreamProgress || 0)));
   return Math.round(progress * 100);
+}
+
+function asrPhaseLabel() {
+  const labels = {
+    idle: "等待音频",
+    model_loading: "模型加载中",
+    model_ready: "模型已就绪",
+    streaming: "实时转写中",
+    streaming_completed: "文字转写完成",
+    speaker_calibration: "角色与标点校准中",
+    speaker_calibration_completed: "说话人校准完成",
+    speaker_calibration_failed: "说话人校准需人工复核",
+    streaming_fallback: "流式不可用，正在分段识别",
+    completed: "转写完成",
+  };
+  return labels[appState.asrPhase] || "转写处理中";
+}
+
+function releaseAudioPlayerSource() {
+  const audio = $("consultationAudio");
+  audio?.pause();
+  if (appState.audioObjectUrl) URL.revokeObjectURL(appState.audioObjectUrl);
+  appState.audioObjectUrl = "";
+  appState.audioMediaUrl = "";
+  appState.audioDurationSeconds = 0;
+  appState.audioCurrentTime = 0;
+  appState.audioPlaying = false;
+  appState.activeTranscriptSegmentId = "";
+  if (audio) {
+    audio.removeAttribute("src");
+    audio.load();
+  }
+}
+
+function updateSessionUrl(sessionId = "") {
+  const url = new URL(window.location.href);
+  if (sessionId) {
+    url.searchParams.set("session_id", sessionId);
+  } else {
+    url.searchParams.delete("session_id");
+  }
+  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function prepareAudioPlayer(file) {
+  releaseAudioPlayerSource();
+  if (!file || !URL?.createObjectURL) return;
+  appState.audioObjectUrl = URL.createObjectURL(file);
+  const audio = $("consultationAudio");
+  audio.src = appState.audioObjectUrl;
+  audio.volume = appState.audioVolume;
+  audio.playbackRate = appState.audioPlaybackRate;
+  audio.load();
+  renderAudioPlayer();
+}
+
+function applyUploadedAudioMetadata(uploaded = {}) {
+  appState.audioMediaUrl = uploaded.media_url || appState.audioMediaUrl;
+  appState.audioDurationSeconds = Number(uploaded.duration_seconds || appState.audioDurationSeconds || 0);
+  const audio = $("consultationAudio");
+  if (audio && !appState.audioObjectUrl && appState.audioMediaUrl) {
+    audio.src = appState.audioMediaUrl;
+    audio.load();
+  }
+  if (appState.currentAsrSessionId) updateSessionUrl(appState.currentAsrSessionId);
+}
+
+async function restoreAsrSessionFromUrl() {
+  const sessionId = new URLSearchParams(window.location.search).get("session_id");
+  if (!sessionId) return;
+  try {
+    const session = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}`);
+    appState.currentAsrSessionId = session.session_id;
+    appState.currentAudioId = session.audio_id;
+    appState.uploadedFilename = session.filename || "已恢复音频";
+    appState.selectedEngine = session.engine || appState.selectedEngine;
+    appState.audioMediaUrl = session.audio_id ? `/api/audio/${encodeURIComponent(session.audio_id)}/media` : "";
+    if (appState.audioMediaUrl) {
+      const audio = $("consultationAudio");
+      audio.src = appState.audioMediaUrl;
+      audio.load();
+    }
+    if (["stream_ready", "reviewed"].includes(session.status)) {
+      const result = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/result`);
+      appState.currentAsrResult = result;
+      appState.liveTranscriptSegments = result.segments || [];
+      appState.audioDurationSeconds = Number(result.duration || 0);
+      appState.asrAudioDurationSeconds = Number(result.duration || 0);
+      appState.asrProcessedAudioSeconds = Number(result.duration || 0);
+      appState.asrStreamProgress = 1;
+      appState.asrProgressKind = "actual";
+      appState.asrPhase = "completed";
+      appState.taskStatus = "TRANSCRIBED";
+    } else if (session.status === "transcribing") {
+      appState.taskStatus = "TRANSCRIBING";
+      appState.asrPhase = "model_loading";
+      listenForAsrEvents(session.events_url || `/api/asr/sessions/${sessionId}/events`);
+    }
+    $("topAsrEngineSelect").value = appState.selectedEngine;
+    $("audioEngineSelect").value = appState.selectedEngine;
+    renderAll();
+  } catch (error) {
+    appState.asrLastError = `会话恢复失败：${error?.message || error}`;
+    renderAll();
+  }
+}
+
+function seekConsultationAudio(seconds, { autoplay = false } = {}) {
+  const audio = $("consultationAudio");
+  if (!audio?.src || !Number.isFinite(Number(seconds))) return;
+  const duration = Number.isFinite(audio.duration) ? audio.duration : appState.audioDurationSeconds;
+  audio.currentTime = Math.max(0, Math.min(Number(seconds), duration || Number(seconds)));
+  appState.audioCurrentTime = audio.currentTime;
+  if (autoplay) audio.play().catch(() => undefined);
+  renderTranscript();
+}
+
+function activeTranscriptSegment(rows) {
+  const currentTime = appState.audioCurrentTime;
+  const timedRows = rows.filter((row) => row.startTime != null);
+  if (!timedRows.length) return null;
+  return [...timedRows]
+    .reverse()
+    .find((row) => currentTime >= row.startTime && (row.endTime == null || currentTime < row.endTime + 0.35))
+    || [...timedRows].reverse().find((row) => currentTime >= row.startTime)
+    || null;
+}
+
+function visibleTranscriptRows(rows) {
+  if (appState.transcriptPacing !== "follow") return rows;
+  return rows.filter((row) => row.startTime != null && row.startTime <= appState.audioCurrentTime + 0.2);
+}
+
+function speakerDisplayLabel(row, speakerCount) {
+  if (!row.speakerId || speakerCount < 2) return row.label;
+  const match = String(row.speakerId).match(/(\d+)$/);
+  const suffix = match
+    ? String.fromCharCode(65 + Math.min(Number(match[1]), 25))
+    : String(row.speakerId).replace(/^speaker[-_]?|^spk/i, "").toUpperCase();
+  return `${row.label} · ${suffix || row.speakerId}`;
+}
+
+function renderAudioPlayer() {
+  const shell = $("consultationAudioPlayer");
+  const audio = $("consultationAudio");
+  if (!shell || !audio) return;
+  const hasSource = Boolean(appState.audioObjectUrl || appState.audioMediaUrl || audio.src);
+  shell.hidden = !hasSource;
+  if (!hasSource) return;
+
+  const duration = Number.isFinite(audio.duration) ? audio.duration : appState.audioDurationSeconds;
+  const currentTime = Number.isFinite(audio.currentTime) ? audio.currentTime : appState.audioCurrentTime;
+  appState.audioDurationSeconds = duration || appState.audioDurationSeconds;
+  appState.audioCurrentTime = currentTime || 0;
+  $("audioPlayPauseButton").textContent = audio.paused ? "▶" : "Ⅱ";
+  $("audioPlayPauseButton").setAttribute("aria-label", audio.paused ? "播放音频" : "暂停音频");
+  $("audioTimeLabel").textContent = `${formatRelativeTime(currentTime)} / ${formatRelativeTime(duration || 0)}`;
+  if (!appState.audioSeekDragging) {
+    $("audioSeekRange").value = duration ? String(Math.round(currentTime / duration * 1000)) : "0";
+  }
+  $("audioVolumeRange").value = String(audio.volume);
+  $("audioPlaybackRate").value = String(audio.playbackRate || appState.audioPlaybackRate || 1);
+  $("audioMuteButton").textContent = audio.muted || audio.volume === 0 ? "🔇" : "🔊";
+  shell.querySelectorAll("[data-transcript-pace]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.transcriptPace === appState.transcriptPacing);
+  });
+  const processed = Number(appState.asrProcessedAudioSeconds || 0);
+  const progressText = appState.asrProgressKind === "actual" && appState.taskStatus === "TRANSCRIBING"
+    ? `${asrPhaseLabel()} · 已处理 ${formatRelativeTime(processed)} / ${formatRelativeTime(appState.asrAudioDurationSeconds || duration || 0)}`
+    : asrPhaseLabel();
+  $("audioProcessingSummary").textContent = progressText;
+}
+
+function updateTranscriptPlaybackHighlight() {
+  const active = activeTranscriptSegment(transcriptRows());
+  appState.activeTranscriptSegmentId = active?.segmentId || "";
+  document.querySelectorAll(".transcript-table-row[data-segment-id]").forEach((row) => {
+    row.classList.toggle("transcript-row-active", row.dataset.segmentId === appState.activeTranscriptSegmentId);
+  });
+}
+
+function handleAudioTimeUpdate() {
+  const audio = $("consultationAudio");
+  if (!audio) return;
+  appState.audioCurrentTime = Number(audio.currentTime || 0);
+  if (appState.transcriptPacing === "follow") {
+    renderTranscript();
+  } else {
+    renderAudioPlayer();
+    updateTranscriptPlaybackHighlight();
+  }
+}
+
+function toggleAudioPlayback() {
+  const audio = $("consultationAudio");
+  if (!audio?.src) return;
+  if (audio.paused) {
+    audio.play().catch((error) => reportActionError(error));
+  } else {
+    audio.pause();
+  }
 }
 
 function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unreviewedCount }) {
@@ -1261,115 +1600,130 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
 function renderTranscript() {
   const asr = appState.currentAsrResult;
   const rows = transcriptRows();
-  const warningBlocks = [];
   const isStreaming = appState.currentAsrSessionId && appState.taskStatus === "TRANSCRIBING" && !asr;
-  if (asr?.role_strategy === "single_segment_needs_review") {
-    warningBlocks.push("当前 ASR 返回单段长文本，医生/患者角色需人工校正。");
-  }
-  (asr?.warnings || []).forEach((warning) => warningBlocks.push(warning));
+  const hasTranscriptIssue = Boolean(appState.asrLastError || appState.asrChunkLastError);
+  const progressPercent = asrProgressPercent();
+  renderAudioPlayer();
 
   if (!rows.length && !asr && !appState.currentAsrSessionId) {
     $("transcriptBadge").textContent = "待转写";
-    $("transcriptList").innerHTML = `<div class="empty-state">暂无对话转写。可导入文本或上传音频。</div>`;
+    $("transcriptList").innerHTML = `<div class="empty-state transcript-empty">暂无对话转写。上传音频后，识别完成的句子会逐行显示。</div>`;
     return;
   }
 
+  const progressLabel = appState.asrProgressKind === "actual" ? ` · ${progressPercent}%` : "";
   $("transcriptBadge").textContent = asr
-    ? `${asr.engine || appState.selectedEngine} · ${asr.segments?.length || 0}段`
+    ? `转写完成 · ${rows.length}段`
     : isStreaming
-      ? `转写中 · ${asrProgressPercent()}% · ${rows.length}段`
+      ? `${asrPhaseLabel()}${progressLabel} · ${rows.length}段`
       : `${rows.length}条`;
 
-  const streamBlock = appState.currentAsrSessionId
-    ? `<div class="safety-strip debug-only ${asr ? "success" : "warning"}"><strong>SSE 实时转写</strong><br>会话 ${escapeHtml(appState.currentAsrSessionId)} · ${asr ? "已完成" : `进行中 ${asrProgressPercent()}%`}</div>`
-    : "";
-  const asrTextBlock = asr?.text
-    ? `<div class="safety-strip debug-only"><strong>ASRResult.text</strong><br>${escapeHtml(asr.text)}</div>`
-    : "";
-  const conversationBlock = asr?.conversation_text
-    ? `<div class="safety-strip debug-only"><strong>conversation_text</strong><br>${escapeHtml(asr.conversation_text)}</div>`
-    : "";
-  const reviewable = Boolean(appState.currentAsrSessionId && asr?.segments?.length);
-  const unreviewedCount = rows.filter((item) => item.needsReview || !item.reviewedByDoctor).length;
-  const roleReviewBlock = reviewable
+  const visibleRows = visibleTranscriptRows(rows);
+  const activeSegment = activeTranscriptSegment(rows);
+  appState.activeTranscriptSegmentId = activeSegment?.segmentId || "";
+  const speakerCount = new Set(rows.map((row) => row.speakerId).filter(Boolean)).size;
+  const streamingEmptyBlock = isStreaming && !rows.length
     ? `
-      <div class="role-review-bar ${unreviewedCount ? "pending" : "reviewed"}">
-        <div>
-          <strong>${unreviewedCount ? `${unreviewedCount} 段待确认` : "角色已确认"}</strong>
-          <span>${appState.roleReviewDirty ? "存在未保存校正" : "校正结果会用于后续病历生成"}</span>
+      <div class="empty-state transcript-empty transcribing-empty" aria-live="polite">
+        <div class="transcribing-empty-spinner" aria-hidden="true"></div>
+        <div class="transcribing-empty-copy">
+          <strong>${escapeHtml(asrPhaseLabel())}</strong>
+          <span>${appState.asrProgressKind === "actual" ? `已处理 ${formatRelativeTime(appState.asrProcessedAudioSeconds)} / ${formatRelativeTime(appState.asrAudioDurationSeconds)}` : "正在准备本地模型"}</span>
+          <small>模型产生稳定文字后会立即追加；说话人和标点将在转写后全局校准。</small>
         </div>
-        <button type="button" data-save-role-review ${appState.roleReviewSaving ? "disabled" : ""}>
-          ${appState.roleReviewSaving ? "保存中" : "保存角色校正"}
-        </button>
       </div>
     `
     : "";
-  const visibleLimit = appState.viewMode === "doctor"
-    ? rows.length
-    : rows.length;
-  const visibleRows = rows.length > visibleLimit
-    ? (isStreaming ? rows.slice(-visibleLimit) : rows.slice(0, visibleLimit))
-    : rows;
-  const hiddenCount = Math.max(0, rows.length - visibleRows.length);
-  const streamingEmptyBlock = isStreaming && !visibleRows.length
-    ? `<div class="empty-state transcribing-empty">正在识别音频，完成的分段会自动显示在这里。模型处理期间页面没有卡住，可以继续等待。</div>`
+  const followEmptyBlock = appState.transcriptPacing === "follow" && rows.length && !visibleRows.length
+    ? `<div class="empty-state transcript-empty">已识别 ${rows.length} 段。播放音频后，文字会跟随播放位置出现。</div>`
+    : "";
+  const issueBlock = hasTranscriptIssue
+    ? `<div class="transcript-inline-alert">${escapeHtml(appState.asrLastError || appState.asrChunkLastError)}</div>`
     : "";
 
   $("transcriptList").innerHTML = `
-    ${renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unreviewedCount })}
-    ${warningBlocks.map((item) => `<div class="conversation-warning">${escapeHtml(item)}</div>`).join("")}
-    ${streamBlock}
-    ${roleReviewBlock}
-    ${asrTextBlock}
-    ${conversationBlock}
+    ${issueBlock}
     ${streamingEmptyBlock}
-    ${visibleRows.map((item, index) => `
-      <div class="chat-row">
-        <div class="chat-time">${escapeHtml(item.time)}</div>
-        <div class="chat-card ${index === 1 ? "highlight" : ""} ${item.needsReview ? "needs-review" : ""} ${item.reviewedByDoctor ? "reviewed" : ""}" data-segment-index="${item.index}">
-          ${item.editable ? `
-            <div class="chat-tools">
-              <select data-role-select>
-                ${renderRoleOptions(item.label)}
-              </select>
-              <span class="status-badge ${item.needsReview ? "candidate" : item.reviewedByDoctor ? "confirmed" : "neutral"}">
-                ${item.needsReview ? "待确认" : item.reviewedByDoctor ? "已校正" : "未保存"}
-              </span>
-              <span class="confidence">${escapeHtml(roleConfidenceText(item))}</span>
-            </div>
-            <textarea data-segment-text>${escapeHtml(item.text)}</textarea>
-          ` : `
-            <div class="chat-line">
-              <span class="speaker-tag ${escapeHtml(item.speaker)}">${escapeHtml(item.label)}</span>
-              <p>${escapeHtml(item.text)}</p>
-            </div>
-          `}
+    ${followEmptyBlock}
+    <div class="transcript-table" role="list" aria-label="对话转写列表">
+      ${visibleRows.map((item, index) => `
+        <div
+          class="transcript-table-row ${item.segmentId === appState.activeTranscriptSegmentId ? "transcript-row-active" : ""} ${item.provisional ? "provisional" : ""}"
+          data-segment-index="${item.index}"
+          data-segment-id="${escapeHtml(item.segmentId)}"
+          ${item.startTime != null ? `data-segment-start="${item.startTime}"` : ""}
+          role="listitem"
+          tabindex="0"
+        >
+          <span class="transcript-row-time">${escapeHtml(item.time)}</span>
+          <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount))}】</span>
+          <span class="transcript-row-text">${escapeHtml(item.text || "（无文本）")}</span>
+          <button type="button" class="transcript-row-link" data-open-detail="transcript:${item.index}" data-busy-allowed="true">查看原文</button>
         </div>
-      </div>
-    `).join("")}
-    ${hiddenCount ? `<button type="button" class="inline-more-button" data-open-detail="transcript:all">还有 ${hiddenCount} 条转写，查看全部</button>` : ""}
+      `).join("")}
+    </div>
   `;
 }
 
-function renderTranscriptDetailContent() {
+function renderTranscriptDetailContent(target = "all") {
   const rows = transcriptRows();
   if (!rows.length) return `<div class="empty-state">暂无对话转写。</div>`;
+  const selectedIndex = Number(target);
+  const canEdit = Boolean(appState.currentAsrSessionId && appState.currentAsrResult?.segments?.length);
+  const unreviewedCount = rows.filter((item) => item.needsReview || !item.reviewedByDoctor).length;
+  const canGenerateFromTranscript = Boolean(appState.currentAsrResult && !appState.currentTaskId && !appState.currentRecordFields);
+  const speakerGroups = transcriptSpeakerGroups(rows);
+  const reviewHint = canEdit
+    ? appState.roleReviewDirty
+      ? "存在未保存校正，保存后会用于后续病历生成。"
+      : "可在这里校正角色和原文，默认列表保持只读。"
+    : "当前内容来自文本导入或无可保存 ASR 会话，仅展示完整原文。";
+  const actionButtons = `
+    <div class="transcript-review-actions">
+      ${canEdit ? `<button type="button" class="primary-action" data-save-role-review ${appState.roleReviewSaving ? "disabled" : ""}>${appState.roleReviewSaving ? "保存中" : "保存校正"}</button>` : ""}
+      ${canGenerateFromTranscript ? `<button type="button" class="secondary-action" data-generate-from-transcript>用当前转写生成病历</button>` : ""}
+    </div>
+  `;
   return `
     ${detailSection("转写状态", `
       <div class="detail-kv"><span>引擎</span><strong>${escapeHtml(appState.currentAsrResult?.engine || appState.selectedEngine || "ASR")}</strong></div>
       <div class="detail-kv"><span>分段</span><strong>${rows.length} 条</strong></div>
-      <div class="detail-kv"><span>切片</span><strong>${escapeHtml(appState.asrChunkTotal ? `${appState.asrChunkCurrent || 0}/${appState.asrChunkTotal}` : "未启用")}</strong></div>
+      <div class="detail-kv"><span>校正</span><strong>${escapeHtml(canEdit ? (unreviewedCount ? `${unreviewedCount} 段待确认` : "角色已确认") : "只读")}</strong></div>
+      <p class="detail-note">${escapeHtml(reviewHint)}</p>
     `)}
-    ${detailSection("完整转写", `
-      <div class="detail-transcript">
+    ${canEdit && speakerGroups.length ? detailSection("按说话人统一校正", `
+      <p class="detail-note">说话人由 CAM++ 声纹聚类得到；临床角色仍需医生确认。一次修改会同步到该说话人的全部发言。</p>
+      <div class="speaker-role-groups">
+        ${speakerGroups.map((group) => `
+          <label class="speaker-role-group">
+            <span><strong>${escapeHtml(group.displayName)}</strong><small>${escapeHtml(group.speakerId)} · ${group.count} 段</small></span>
+            <select data-speaker-role-select data-speaker-id="${escapeHtml(group.speakerId)}" aria-label="设置${escapeHtml(group.displayName)}角色">
+              ${renderRoleOptions(group.role)}
+            </select>
+          </label>
+        `).join("")}
+      </div>
+    `) : ""}
+    ${detailSection("角色与文本校正", `
+      <div class="transcript-review-list">
         ${rows.map((item) => `
-          <div class="detail-transcript-row">
-            <span>${escapeHtml(item.time)}</span>
-            <strong>${escapeHtml(item.label)}</strong>
-            <p>${escapeHtml(item.text)}</p>
+          <div class="transcript-review-row ${Number.isFinite(selectedIndex) && selectedIndex === item.index ? "focus" : ""}" data-segment-index="${item.index}">
+            <div class="transcript-review-meta">
+              <span class="transcript-row-time">${escapeHtml(item.time)}</span>
+              ${canEdit ? `
+                <select data-detail-role-select aria-label="校正角色">
+                  ${renderRoleOptions(item.label)}
+                </select>
+              ` : `<strong class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(item.label)}】</strong>`}
+              <span class="status-badge ${item.needsReview ? "candidate" : item.reviewedByDoctor ? "confirmed" : "neutral"}">
+                ${item.needsReview ? "待确认" : item.reviewedByDoctor ? "已校正" : "未校正"}
+              </span>
+            </div>
+            <textarea data-detail-segment-text ${canEdit ? "" : "readonly"}>${escapeHtml(item.text)}</textarea>
           </div>
         `).join("")}
       </div>
+      ${actionButtons}
     `)}
   `;
 }
@@ -1686,7 +2040,16 @@ function renderEvidenceCard(evidence, diagnoses) {
   const diagnosisReasons = diagnoses
     .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "候选诊断"}：${diagnosis.reason}` : "")
     .filter(Boolean);
-  const items = [...diagnosisReasons, ...evidence].slice(0, 6);
+  const linkedEvidence = (appState.recordPreview?.evidence_links || []).map((item) => ({
+    text: `${item.label || "字段证据"}：${item.evidence || item.text || ""}`,
+    segmentId: item.segment_id || "",
+    startTime: item.start_time,
+  }));
+  const items = [
+    ...linkedEvidence,
+    ...diagnosisReasons.map((text) => ({ text })),
+    ...evidence.map((text) => ({ text })),
+  ].filter((item, index, values) => item.text && values.findIndex((candidate) => candidate.text === item.text) === index).slice(0, 6);
 
   return assistCard({
     title: "判断证据",
@@ -1694,7 +2057,9 @@ function renderEvidenceCard(evidence, diagnoses) {
     badgeText: items.length ? "可追溯" : "暂无",
     detailTarget: "assist:evidence",
     body: items.length
-      ? listPreview(items, 3).visible.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")
+      ? listPreview(items, 3).visible.map((item) => item.segmentId
+        ? `<button type="button" class="assist-evidence-quote linked" data-evidence-segment-id="${escapeHtml(item.segmentId)}" ${item.startTime != null ? `data-evidence-start="${item.startTime}"` : ""}>${escapeHtml(item.text)}<span>播放证据</span></button>`
+        : `<div class="assist-evidence-quote">${escapeHtml(item.text)}</div>`).join("")
         + (items.length > 3 ? `<div class="summary-note">另有 ${items.length - 3} 条证据，点击详情查看。</div>` : "")
       : `<div class="empty-state">暂无字段证据。完成转写、角色校正和病历生成后会显示来源片段。</div>`,
   });
@@ -1988,7 +2353,7 @@ function openWorkbenchDetail(target = "") {
     return;
   }
   if (type === "transcript") {
-    openDetailDrawer("完整对话转写", renderTranscriptDetailContent());
+    openDetailDrawer("对话转写与校正", renderTranscriptDetailContent(value));
     return;
   }
   if (type === "assist") {
@@ -2032,6 +2397,8 @@ function closeAsrStream() {
 function resetRoleReviewState() {
   appState.roleReviewDirty = false;
   appState.roleReviewSaving = false;
+  appState.pendingGenerateAfterRoleReview = false;
+  appState.speakerRoleCorrections = {};
 }
 
 function resetRecordPreview() {
@@ -2039,6 +2406,9 @@ function resetRecordPreview() {
     window.clearTimeout(appState.recordPreviewTimer);
     appState.recordPreviewTimer = null;
   }
+  appState.recordPreviewAbortController?.abort();
+  appState.recordPreviewAbortController = null;
+  appState.recordPreviewRequestId += 1;
   appState.recordPreview = null;
   appState.recordPreviewStatus = "idle";
   appState.recordPreviewUpdatedAt = "";
@@ -2062,6 +2432,8 @@ function resetTaskState({ keepAsr = false } = {}) {
   resetRecordPreview();
   if (!keepAsr) {
     closeAsrStream();
+    releaseAudioPlayerSource();
+    updateSessionUrl("");
     appState.currentAsrResult = null;
     appState.currentAudioId = null;
     appState.currentAsrSessionId = null;
@@ -2069,6 +2441,14 @@ function resetTaskState({ keepAsr = false } = {}) {
     appState.asrStreamProgress = 0;
     appState.asrStreamCurrentSegment = 0;
     appState.asrStreamTotalSegments = 0;
+    appState.asrPhase = "idle";
+    appState.asrProgressKind = "indeterminate";
+    appState.asrProcessedAudioSeconds = 0;
+    appState.asrAudioDurationSeconds = 0;
+    appState.diarizationStatus = "idle";
+    appState.asrFirstSegmentAt = "";
+    appState.asrLastSegmentAt = "";
+    appState.asrVisibleAudioSeconds = 0;
     appState.asrLastError = "";
     appState.asrChunkCurrent = 0;
     appState.asrChunkTotal = 0;
@@ -2161,6 +2541,14 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrElapsedSeconds = 0;
     appState.asrStreamCurrentSegment = 0;
     appState.asrStreamTotalSegments = 0;
+    appState.asrPhase = "idle";
+    appState.asrProgressKind = "indeterminate";
+    appState.asrProcessedAudioSeconds = 0;
+    appState.asrAudioDurationSeconds = 0;
+    appState.diarizationStatus = "idle";
+    appState.asrFirstSegmentAt = "";
+    appState.asrLastSegmentAt = "";
+    appState.asrVisibleAudioSeconds = 0;
     appState.asrLastError = "";
     appState.asrChunkCurrent = 0;
     appState.asrChunkTotal = 0;
@@ -2182,6 +2570,8 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     const data = JSON.parse(event.data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.taskStatus = "TRANSCRIBING";
+    appState.asrPhase = "model_loading";
+    appState.asrProgressKind = "indeterminate";
     appState.asrProgressEstimated = false;
     setBusy(true, "正在识别音频...");
     renderAll();
@@ -2192,8 +2582,16 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.selectedEngine = data.engine || appState.selectedEngine;
     appState.taskStatus = "TRANSCRIBING";
-    appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
-    appState.asrProgressEstimated = Boolean(data.estimated);
+    appState.asrPhase = data.phase || appState.asrPhase || "streaming";
+    appState.asrProgressKind = data.progress_kind || appState.asrProgressKind || "indeterminate";
+    if (data.progress != null) appState.asrStreamProgress = Number(data.progress);
+    if (data.processed_audio_seconds != null) {
+      appState.asrProcessedAudioSeconds = Number(data.processed_audio_seconds);
+    }
+    if (data.audio_duration_seconds != null) {
+      appState.asrAudioDurationSeconds = Number(data.audio_duration_seconds);
+    }
+    appState.asrProgressEstimated = false;
     appState.asrElapsedSeconds = Number(data.elapsed_seconds || appState.asrElapsedSeconds || 0);
     setBusy(true, "正在识别音频...");
     renderAll();
@@ -2261,22 +2659,64 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("segment", (event) => {
+  const handleTranscriptSegment = (event) => {
     const data = JSON.parse(event.data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.selectedEngine = data.engine || appState.selectedEngine;
     appState.taskStatus = "TRANSCRIBING";
-    appState.asrStreamProgress = Number(data.progress || appState.asrStreamProgress || 0);
-    appState.asrProgressEstimated = Boolean(data.estimated);
-    appState.asrStreamCurrentSegment = Number(data.index ?? appState.liveTranscriptSegments.length) + 1;
+    appState.asrPhase = "streaming";
+    appState.asrProgressKind = data.progress_kind || appState.asrProgressKind || "actual";
+    if (data.progress != null) appState.asrStreamProgress = Number(data.progress);
+    if (data.processed_audio_seconds != null) {
+      appState.asrProcessedAudioSeconds = Number(data.processed_audio_seconds);
+    }
+    if (data.audio_duration_seconds != null) {
+      appState.asrAudioDurationSeconds = Number(data.audio_duration_seconds);
+    }
+    appState.asrProgressEstimated = false;
     appState.asrStreamTotalSegments = Number(data.total || appState.asrStreamTotalSegments || 0);
     if (data.segment) {
-      appState.liveTranscriptSegments = [
-        ...appState.liveTranscriptSegments,
-        data.segment,
-      ];
+      upsertLiveTranscriptSegment(data.segment);
+      appState.asrStreamCurrentSegment = appState.liveTranscriptSegments.length;
+      const now = new Date().toISOString();
+      appState.asrFirstSegmentAt = appState.asrFirstSegmentAt || now;
+      appState.asrLastSegmentAt = now;
+      const segmentEnd = segmentEndsAt(data.segment);
+      if (segmentEnd != null) {
+        appState.asrVisibleAudioSeconds = Math.max(appState.asrVisibleAudioSeconds || 0, segmentEnd);
+      }
       scheduleRecordPreview();
     }
+    renderAll();
+  };
+
+  source.addEventListener("segment", handleTranscriptSegment);
+  source.addEventListener("segment_update", handleTranscriptSegment);
+
+  source.addEventListener("diarization_progress", (event) => {
+    const data = JSON.parse(event.data);
+    appState.taskStatus = "TRANSCRIBING";
+    appState.asrPhase = data.phase || "speaker_calibration";
+    appState.asrProgressKind = data.progress_kind || "indeterminate";
+    appState.diarizationStatus = data.status || "reconciling";
+    if (data.progress != null) appState.asrStreamProgress = Number(data.progress);
+    if (data.status === "failed") {
+      appState.asrRetryHint = data.message || "说话人校准未完成，可在转写详情中人工校正。";
+    }
+    renderAll();
+  });
+
+  source.addEventListener("reconciliation_completed", (event) => {
+    const data = JSON.parse(event.data);
+    const result = data.asr_result;
+    if (!result) return;
+    appState.currentAsrResult = result;
+    appState.liveTranscriptSegments = finalTranscriptSegments(result.segments || [], []);
+    appState.asrStreamCurrentSegment = appState.liveTranscriptSegments.length;
+    appState.asrStreamTotalSegments = appState.liveTranscriptSegments.length;
+    appState.asrPhase = "speaker_calibration_completed";
+    appState.diarizationStatus = "completed";
+    scheduleRecordPreview({ force: true });
     renderAll();
   });
 
@@ -2285,12 +2725,28 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     terminalReceived = true;
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.selectedEngine = data.engine || appState.selectedEngine;
-    appState.currentAsrResult = data.asr_result;
-    appState.liveTranscriptSegments = data.asr_result?.segments || appState.liveTranscriptSegments;
+    const mergedSegments = finalTranscriptSegments(data.asr_result?.segments || [], appState.liveTranscriptSegments);
+    appState.currentAsrResult = data.asr_result
+      ? {
+          ...data.asr_result,
+          segments: mergedSegments,
+          text: textFromSegments(mergedSegments) || data.asr_result.text,
+          conversation_text: conversationFromSegments(mergedSegments) || data.asr_result.conversation_text,
+        }
+      : data.asr_result;
+    appState.liveTranscriptSegments = mergedSegments;
     appState.taskStatus = "TRANSCRIBED";
+    appState.asrPhase = "completed";
+    appState.asrProgressKind = "actual";
     appState.asrStreamProgress = 1;
     appState.asrProgressEstimated = false;
     appState.asrElapsedSeconds = 0;
+    appState.asrVisibleAudioSeconds = Math.max(
+      appState.asrVisibleAudioSeconds || 0,
+      Number(data.duration || data.asr_result?.duration || 0),
+    );
+    appState.asrProcessedAudioSeconds = Number(data.duration || data.asr_result?.duration || appState.asrProcessedAudioSeconds || 0);
+    appState.asrAudioDurationSeconds = Number(data.duration || data.asr_result?.duration || appState.asrAudioDurationSeconds || 0);
     appState.asrStreamTotalSegments = data.segments || data.asr_result?.segments?.length || appState.asrStreamTotalSegments || appState.liveTranscriptSegments.length;
     appState.asrStreamCurrentSegment = appState.asrStreamTotalSegments;
     appState.asrLastError = "";
@@ -2335,19 +2791,21 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
   };
 }
 
-async function createRecordTask(conversationText) {
-  resetTaskState();
+async function createRecordTask(conversationText, { keepAsr = false } = {}) {
+  resetTaskState({ keepAsr });
   appState.currentInputText = conversationText;
-  appState.currentAsrResult = {
-    audio_id: "text-import",
-    engine: "text-import",
-    text: conversationText,
-    conversation_text: conversationText,
-    segments: [],
-    duration: null,
-    medical_keywords: {},
-    warnings: [],
-  };
+  if (!keepAsr) {
+    appState.currentAsrResult = {
+      audio_id: "text-import",
+      engine: "text-import",
+      text: conversationText,
+      conversation_text: conversationText,
+      segments: [],
+      duration: null,
+      medical_keywords: {},
+      warnings: [],
+    };
+  }
   appState.taskStatus = "CREATED";
   renderAll();
   setBusy(true, "正在创建病历生成任务...");
@@ -2377,6 +2835,52 @@ function updateReviewSegment(index, patch) {
   renderDebug();
 }
 
+function updateSpeakerRole(speakerId, role) {
+  if (!speakerId) return;
+  const segments = currentReviewSegments();
+  let changed = false;
+  segments.forEach((segment) => {
+    const identity = segment.speaker_id || segment.speaker;
+    if (identity !== speakerId) return;
+    segment.role = role;
+    segment.reviewed_by_doctor = role !== "待确认";
+    segment.needs_review = role === "待确认";
+    changed = true;
+  });
+  if (!changed) return;
+  appState.speakerRoleCorrections[speakerId] = role;
+  appState.roleReviewDirty = true;
+  syncAsrTextFromSegments();
+  renderAll();
+}
+
+function transcriptSpeakerGroups(rows = transcriptRows()) {
+  const groups = new Map();
+  rows.forEach((row) => {
+    if (!row.speakerId) return;
+    const current = groups.get(row.speakerId) || {
+      speakerId: row.speakerId,
+      count: 0,
+      roles: [],
+    };
+    current.count += 1;
+    current.roles.push(row.label);
+    groups.set(row.speakerId, current);
+  });
+  return [...groups.values()].map((group, index) => {
+    const roleCounts = group.roles.reduce((counts, role) => {
+      counts[role] = (counts[role] || 0) + 1;
+      return counts;
+    }, {});
+    const role = Object.entries(roleCounts).sort((left, right) => right[1] - left[1])[0]?.[0] || "待确认";
+    return {
+      ...group,
+      role,
+      displayName: `说话人 ${String.fromCharCode(65 + Math.min(index, 25))}`,
+    };
+  });
+}
+
 function roleReviewRequired() {
   const asr = appState.currentAsrResult;
   const segments = currentReviewSegments();
@@ -2385,6 +2889,19 @@ function roleReviewRequired() {
       || asr?.role_strategy === "single_segment_needs_review"
       || segments.some((segment) => segment.needs_review || !segment.role || segment.role === "待确认"),
   );
+}
+
+function roleReviewPendingCount() {
+  return currentReviewSegments()
+    .filter((segment) => segment.needs_review || !segment.role || segment.role === "待确认")
+    .length;
+}
+
+function focusNextActionPanel() {
+  const panel = $("nextActionPanel");
+  if (!panel) return;
+  panel.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  panel.querySelector("[data-workflow-action='generate-record'], [data-workflow-action='save-role-review']")?.focus?.();
 }
 
 async function saveRoleReview({ silent = false } = {}) {
@@ -2396,12 +2913,20 @@ async function saveRoleReview({ silent = false } = {}) {
   syncAsrTextFromSegments();
   appState.roleReviewSaving = true;
   renderAll();
+  let savedResult = appState.currentAsrResult;
+  let pendingCount = 0;
+  let shouldAutoGenerate = false;
   try {
     const segments = appState.currentAsrResult.segments.map((segment, index) => ({
       index,
       role: segment.role || "待确认",
       text: segment.text || "",
       reviewed_by_doctor: Boolean(segment.reviewed_by_doctor && segment.role && segment.role !== "待确认"),
+    }));
+    const speakerRoles = Object.entries(appState.speakerRoleCorrections).map(([speakerId, role]) => ({
+      speaker_id: speakerId,
+      role,
+      reviewed_by_doctor: role !== "待确认",
     }));
 
     const response = await api(`/api/asr/sessions/${appState.currentAsrSessionId}/result`, {
@@ -2410,23 +2935,51 @@ async function saveRoleReview({ silent = false } = {}) {
       body: JSON.stringify({
         reviewer: "doctor",
         segments,
+        speaker_roles: speakerRoles,
       }),
     });
     appState.currentAsrResult = response.asr_result;
     appState.liveTranscriptSegments = response.asr_result.segments || [];
     appState.currentAudioId = response.audio_id || appState.currentAudioId;
     appState.roleReviewDirty = false;
-    if (!silent) showToast("角色校正已保存");
-    return response.asr_result;
+    appState.speakerRoleCorrections = {};
+    savedResult = response.asr_result;
+    pendingCount = roleReviewPendingCount();
+    shouldAutoGenerate = Boolean(
+      !silent
+        && appState.pendingGenerateAfterRoleReview
+        && !pendingCount
+        && !appState.currentTaskId
+        && !appState.currentRecordFields,
+    );
   } finally {
     appState.roleReviewSaving = false;
     renderAll();
   }
+  if (silent) return savedResult;
+  if (pendingCount) {
+    showToast(`角色校正已保存，仍有 ${pendingCount} 段待确认`);
+    focusNextActionPanel();
+    return savedResult;
+  }
+  if (shouldAutoGenerate) {
+    appState.pendingGenerateAfterRoleReview = false;
+    closeDrawer();
+    showToast("角色校正已保存，正在生成病历");
+    await regenerateRecord();
+    return savedResult;
+  }
+  appState.pendingGenerateAfterRoleReview = false;
+  showToast("角色校正已保存，可继续生成病历");
+  focusNextActionPanel();
+  renderAll();
+  return savedResult;
 }
 
 async function uploadAndTranscribe(file, engine) {
   if (!file) throw new Error("请选择音频文件");
   resetRecordPreview();
+  prepareAudioPlayer(file);
   appState.selectedEngine = engine;
   appState.uploadedFilename = "上传中";
   appState.taskStatus = "CREATED";
@@ -2435,6 +2988,14 @@ async function uploadAndTranscribe(file, engine) {
   appState.asrStreamProgress = 0;
   appState.asrStreamCurrentSegment = 0;
   appState.asrStreamTotalSegments = 0;
+  appState.asrPhase = "model_loading";
+  appState.asrProgressKind = "indeterminate";
+  appState.asrProcessedAudioSeconds = 0;
+  appState.asrAudioDurationSeconds = 0;
+  appState.diarizationStatus = "idle";
+  appState.asrFirstSegmentAt = "";
+  appState.asrLastSegmentAt = "";
+  appState.asrVisibleAudioSeconds = 0;
   appState.asrLastError = "";
   appState.asrChunkCurrent = 0;
   appState.asrChunkTotal = 0;
@@ -2453,6 +3014,7 @@ async function uploadAndTranscribe(file, engine) {
   setBusy(true, "正在上传音频...");
   const uploaded = await api(`/api/asr/sessions/${session.session_id}/audio`, { method: "POST", body: form });
   appState.currentAudioId = uploaded.audio_id;
+  applyUploadedAudioMetadata(uploaded);
   appState.uploadedFilename = uploaded.filename || uploaded.audio_id;
   appState.taskStatus = "TRANSCRIBING";
   renderAll();
@@ -2486,8 +3048,14 @@ async function submitAudio() {
     const transcribed = await uploadAndTranscribe(file, engine);
     if (appState.audioMode === "generate") {
       if (roleReviewRequired()) {
+        appState.pendingGenerateAfterRoleReview = true;
         setBusy(false);
-        showToast("转写完成，请先确认医生/患者角色后再生成病历");
+        const pendingCount = roleReviewPendingCount();
+        showToast(pendingCount
+          ? `转写完成，仍有 ${pendingCount} 段角色待确认`
+          : "转写完成，请保存角色校正后自动生成病历");
+        focusNextActionPanel();
+        renderAll();
         return;
       }
       setBusy(true, "正在从转写文本生成病历...");
@@ -2541,7 +3109,8 @@ async function regenerateRecord() {
     }
     const text = appState.currentAsrResult?.conversation_text || appState.currentInputText || $("conversationInput").value.trim();
     if (!text) throw new Error("暂无可重新生成的对话文本");
-    await createRecordTask(text);
+    const keepAsr = Boolean(appState.currentAudioId && appState.currentAsrResult?.engine !== "text-import");
+    await createRecordTask(text, { keepAsr });
   } catch (error) {
     setBusy(false);
     reportActionError(error);
@@ -2697,6 +3266,7 @@ async function testLlmConnection() {
 }
 
 function bindEvents() {
+  const consultationAudio = $("consultationAudio");
   $("doctorModeButton").addEventListener("click", () => setViewMode("doctor"));
   $("debugModeButton").addEventListener("click", () => setViewMode("debug"));
   $("demoModeButton").addEventListener("click", () => setScreenshotMode(false));
@@ -2728,6 +3298,63 @@ function bindEvents() {
   $("submitTextButton").addEventListener("click", submitTextImport);
   $("submitAudioButton").addEventListener("click", submitAudio);
   $("submitEvaluationButton").addEventListener("click", runEvaluation);
+  $("transcriptSettingsButton").addEventListener("click", () => openWorkbenchDetail("transcript:all"));
+  $("audioPlayPauseButton").addEventListener("click", toggleAudioPlayback);
+  $("audioMuteButton").addEventListener("click", () => {
+    consultationAudio.muted = !consultationAudio.muted;
+    appState.audioMuted = consultationAudio.muted;
+    renderAudioPlayer();
+  });
+  $("audioSeekRange").addEventListener("pointerdown", () => {
+    appState.audioSeekDragging = true;
+  });
+  $("audioSeekRange").addEventListener("input", (event) => {
+    const duration = Number.isFinite(consultationAudio.duration)
+      ? consultationAudio.duration
+      : appState.audioDurationSeconds;
+    seekConsultationAudio(duration * Number(event.target.value || 0) / 1000);
+  });
+  $("audioSeekRange").addEventListener("change", () => {
+    appState.audioSeekDragging = false;
+    renderAudioPlayer();
+  });
+  $("audioVolumeRange").addEventListener("input", (event) => {
+    consultationAudio.volume = Number(event.target.value);
+    consultationAudio.muted = false;
+    appState.audioVolume = consultationAudio.volume;
+    appState.audioMuted = false;
+    renderAudioPlayer();
+  });
+  $("audioPlaybackRate").addEventListener("change", (event) => {
+    consultationAudio.playbackRate = Number(event.target.value);
+    appState.audioPlaybackRate = consultationAudio.playbackRate;
+    renderAudioPlayer();
+  });
+  $("consultationAudioPlayer").addEventListener("click", (event) => {
+    const paceButton = event.target.closest("[data-transcript-pace]");
+    if (!paceButton) return;
+    appState.transcriptPacing = paceButton.dataset.transcriptPace;
+    renderTranscript();
+  });
+  consultationAudio.addEventListener("loadedmetadata", () => {
+    appState.audioDurationSeconds = Number.isFinite(consultationAudio.duration)
+      ? consultationAudio.duration
+      : appState.audioDurationSeconds;
+    renderAudioPlayer();
+  });
+  consultationAudio.addEventListener("timeupdate", handleAudioTimeUpdate);
+  consultationAudio.addEventListener("play", () => {
+    appState.audioPlaying = true;
+    renderAudioPlayer();
+  });
+  consultationAudio.addEventListener("pause", () => {
+    appState.audioPlaying = false;
+    renderAudioPlayer();
+  });
+  consultationAudio.addEventListener("ended", () => {
+    appState.audioPlaying = false;
+    renderAudioPlayer();
+  });
   $("nextActionPanel").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-workflow-action]");
     if (!button) return;
@@ -2777,6 +3404,11 @@ function bindEvents() {
       openWorkbenchDetail(detail.dataset.openDetail);
       return;
     }
+    const transcriptRow = event.target.closest(".transcript-table-row[data-segment-start]");
+    if (transcriptRow) {
+      seekConsultationAudio(Number(transcriptRow.dataset.segmentStart), { autoplay: true });
+      return;
+    }
     const generateButton = event.target.closest("[data-generate-from-transcript]");
     if (generateButton) {
       await regenerateRecord();
@@ -2790,7 +3422,58 @@ function bindEvents() {
       reportActionError(error);
     }
   });
+  $("transcriptList").addEventListener("keydown", (event) => {
+    if (!['Enter', ' '].includes(event.key)) return;
+    const transcriptRow = event.target.closest(".transcript-table-row[data-segment-start]");
+    if (!transcriptRow || event.target.closest("button, select, textarea")) return;
+    event.preventDefault();
+    seekConsultationAudio(Number(transcriptRow.dataset.segmentStart), { autoplay: true });
+  });
+  $("detailDrawerContent").addEventListener("change", (event) => {
+    const speakerRoleSelect = event.target.closest("[data-speaker-role-select]");
+    if (speakerRoleSelect) {
+      updateSpeakerRole(speakerRoleSelect.dataset.speakerId, speakerRoleSelect.value);
+      $("detailDrawerContent").innerHTML = renderTranscriptDetailContent();
+      return;
+    }
+    const roleSelect = event.target.closest("[data-detail-role-select]");
+    if (!roleSelect) return;
+    const row = roleSelect.closest("[data-segment-index]");
+    updateReviewSegment(Number(row.dataset.segmentIndex), { role: roleSelect.value });
+    renderTranscript();
+  });
+  $("detailDrawerContent").addEventListener("input", (event) => {
+    const textInput = event.target.closest("[data-detail-segment-text]");
+    if (!textInput) return;
+    const row = textInput.closest("[data-segment-index]");
+    updateReviewSegment(Number(row.dataset.segmentIndex), { text: textInput.value });
+    renderTranscript();
+  });
+  $("detailDrawerContent").addEventListener("click", async (event) => {
+    const generateButton = event.target.closest("[data-generate-from-transcript]");
+    if (generateButton) {
+      await regenerateRecord();
+      return;
+    }
+    const saveButton = event.target.closest("[data-save-role-review]");
+    if (!saveButton) return;
+    try {
+      await saveRoleReview();
+      $("detailDrawerContent").innerHTML = renderTranscriptDetailContent();
+    } catch (error) {
+      reportActionError(error);
+    }
+  });
   $("assistPanels").addEventListener("click", (event) => {
+    const evidenceButton = event.target.closest("[data-evidence-segment-id]");
+    if (evidenceButton) {
+      const row = transcriptRows().find((item) => item.segmentId === evidenceButton.dataset.evidenceSegmentId);
+      const start = evidenceButton.dataset.evidenceStart !== undefined
+        ? Number(evidenceButton.dataset.evidenceStart)
+        : row?.startTime;
+      if (start != null) seekConsultationAudio(start, { autoplay: true });
+      return;
+    }
     const detail = event.target.closest("[data-open-detail]");
     if (detail) {
       openWorkbenchDetail(detail.dataset.openDetail);
@@ -2807,10 +3490,11 @@ function bindEvents() {
   $("exportButton").addEventListener("click", exportRecord);
 }
 
-function init() {
+async function init() {
   bindEvents();
   renderAll();
   refreshLlmStatus();
+  await restoreAsrSessionFromUrl();
 }
 
 init();

@@ -133,7 +133,7 @@ class ASRFactoryTests(unittest.TestCase):
                             {
                                 "spk": "speaker-0",
                                 "sentence": "患者发热三天",
-                                "start": 0,
+                                "start": 480,
                                 "end": 1200,
                             }
                         ]
@@ -153,6 +153,7 @@ class ASRFactoryTests(unittest.TestCase):
         self.assertEqual(result.engine, "sensevoice-small")
         self.assertEqual(result.text, "患者发热三天")
         self.assertEqual(result.segments[0].speaker, "speaker-0")
+        self.assertEqual(result.segments[0].start_time, 0.48)
         self.assertEqual(result.segments[0].end_time, 1.2)
         self.assertTrue(result.segments[0].needs_review)
 

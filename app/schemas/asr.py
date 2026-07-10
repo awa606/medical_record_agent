@@ -4,7 +4,12 @@ from pydantic import BaseModel, Field
 
 
 class ASRSegment(BaseModel):
+    segment_id: str | None = None
+    revision: int = Field(default=1, ge=1)
+    provisional: bool = False
     speaker: str | None = None
+    speaker_id: str | None = None
+    speaker_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     role: str | None = None
     text: str = ""
     start_time: float | None = None
@@ -90,6 +95,8 @@ class ASRSessionUploadResponse(BaseModel):
     engine: str
     events_url: str
     result_url: str
+    media_url: str | None = None
+    duration_seconds: float | None = None
 
 
 class ASRSegmentCorrection(BaseModel):
@@ -99,8 +106,15 @@ class ASRSegmentCorrection(BaseModel):
     reviewed_by_doctor: bool = True
 
 
+class ASRSpeakerRoleCorrection(BaseModel):
+    speaker_id: str = Field(min_length=1)
+    role: str
+    reviewed_by_doctor: bool = True
+
+
 class ASRSessionCorrectionRequest(BaseModel):
-    segments: list[ASRSegmentCorrection] = Field(min_length=1)
+    segments: list[ASRSegmentCorrection] = Field(default_factory=list)
+    speaker_roles: list[ASRSpeakerRoleCorrection] = Field(default_factory=list)
     reviewer: str | None = None
     note: str | None = None
 

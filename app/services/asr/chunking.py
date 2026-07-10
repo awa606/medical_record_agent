@@ -130,12 +130,21 @@ def merge_chunk_transcriptions(
         for segment in result.segments:
             segments.append(
                 ASRSegment(
+                    segment_id=segment.segment_id,
+                    revision=segment.revision,
+                    provisional=segment.provisional,
                     speaker=segment.speaker,
+                    speaker_id=segment.speaker_id,
+                    speaker_confidence=segment.speaker_confidence,
                     role=segment.role,
                     text=segment.text,
                     start_time=_offset_time(segment.start_time, item.chunk.start_seconds),
                     end_time=_offset_time(segment.end_time, item.chunk.start_seconds),
                     confidence=segment.confidence,
+                    role_confidence=segment.role_confidence,
+                    role_source=segment.role_source,
+                    role_note=segment.role_note,
+                    speaker_turn=segment.speaker_turn,
                     needs_review=segment.needs_review,
                     reviewed_by_doctor=segment.reviewed_by_doctor,
                     original_text=segment.original_text,

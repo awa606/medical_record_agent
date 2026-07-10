@@ -185,7 +185,7 @@ class SenseVoiceASREngine:
         number = self._optional_float(value)
         if number is None:
             return None
-        return round(number / 1000.0, 3) if number > 1000 else number
+        return round(number / 1000.0, 3)
 
     def _optional_float(self, value: Any) -> float | None:
         if value is None:

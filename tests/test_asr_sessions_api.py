@@ -11,6 +11,7 @@ from app.api.asr_sessions import (
     _asr_session_event_stream,
     _chunk_seconds_for_duration,
     _read_events,
+    _should_use_realtime_upload_session,
     create_asr_session,
     read_asr_session_result,
     update_asr_session_result,
@@ -63,6 +64,92 @@ class FakeChunkEngine:
                 )
             ],
             duration=2.0,
+        )
+
+
+class FakeNativeStreamingEngine:
+    name = "fake-funasr-streaming"
+    model_load_time_seconds = 0.01
+
+    def transcribe_streaming(self, audio_id, audio_path, *, on_progress=None, on_segment=None):
+        provisional = ASRSegment(
+            segment_id=f"{audio_id}-seg-0001",
+            revision=1,
+            provisional=True,
+            speaker="streaming",
+            text="您好",
+            start_time=0.0,
+            end_time=0.6,
+            needs_review=True,
+        )
+        segment = provisional.model_copy(
+            update={
+                "revision": 2,
+                "provisional": False,
+                "text": "您好，请问哪里不舒服？",
+                "end_time": 2.4,
+            }
+        )
+        if on_segment:
+            on_segment(
+                "segment",
+                provisional,
+                {"processed_audio_seconds": 0.6, "audio_duration_seconds": 9.5},
+            )
+            on_segment(
+                "segment_update",
+                segment,
+                {"processed_audio_seconds": 2.4, "audio_duration_seconds": 9.5},
+            )
+        if on_progress:
+            on_progress(
+                {
+                    "phase": "streaming_completed",
+                    "processed_audio_seconds": 9.5,
+                    "audio_duration_seconds": 9.5,
+                    "progress": 1.0,
+                    "progress_kind": "actual",
+                    "elapsed_seconds": 0.1,
+                }
+            )
+        return ASRResult(
+            audio_id=audio_id,
+            engine=self.name,
+            text=segment.text,
+            conversation_text=f"[待确认] {segment.text}",
+            segments=[segment],
+            duration=9.5,
+            needs_review=True,
+        )
+
+
+class FakeReconciliationEngine:
+    def transcribe(self, audio_id, audio_path):
+        segments = [
+            ASRSegment(
+                segment_id=f"{audio_id}-cal-0001",
+                speaker="spk0",
+                speaker_id="spk0",
+                text="请问哪里不舒服？",
+                start_time=0.0,
+                end_time=1.2,
+            ),
+            ASRSegment(
+                segment_id=f"{audio_id}-cal-0002",
+                speaker="spk1",
+                speaker_id="spk1",
+                text="我发热三天。",
+                start_time=1.2,
+                end_time=2.4,
+            ),
+        ]
+        return ASRResult(
+            audio_id=audio_id,
+            engine="fake-funasr-cam++",
+            text="请问哪里不舒服？我发热三天。",
+            conversation_text="",
+            segments=segments,
+            duration=9.5,
         )
 
 
@@ -126,7 +213,7 @@ class ASRSessionApiTests(unittest.TestCase):
 
         result = read_asr_session_result(session.session_id)
         self.assertEqual(result.audio_id, uploaded.audio_id)
-        self.assertEqual(result.engine, "mock-asr-v0.2")
+        self.assertEqual(result.engine, "mock-asr-v0.2-realtime")
         self.assertGreaterEqual(len(result.segments), 1)
 
         legacy_transcript = read_audio_transcript(uploaded.audio_id)
@@ -135,7 +222,9 @@ class ASRSessionApiTests(unittest.TestCase):
         events = _read_events(session.session_id)
         event_names = [event.event for event in events]
         self.assertEqual(event_names[:3], ["session_created", "audio_uploaded", "transcribing"])
-        self.assertIn("transcribing_progress", event_names)
+        self.assertIn("chunk_plan", event_names)
+        self.assertIn("chunk_started", event_names)
+        self.assertIn("chunk_completed", event_names)
         self.assertIn("segment", event_names)
         self.assertEqual(event_names[-1], "completed")
 
@@ -150,6 +239,64 @@ class ASRSessionApiTests(unittest.TestCase):
 
         self.assertEqual(_chunk_seconds_for_duration(310.0), 60)
         self.assertEqual(_chunk_seconds_for_duration(1800.0), 300)
+
+    def test_funasr_native_streaming_is_not_limited_to_short_audio(self):
+        enabled, duration = _should_use_realtime_upload_session(
+            "funasr",
+            Path("long.wav"),
+            duration=1800.0,
+        )
+
+        self.assertTrue(enabled)
+        self.assertEqual(duration, 1800.0)
+
+    def test_funasr_realtime_upload_uses_model_native_streaming_without_temp_chunks(self):
+        session = create_asr_session(engine="funasr")
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+
+        try:
+            with (
+                patch(
+                    "app.api.asr_sessions._create_funasr_streaming_engine",
+                    return_value=FakeNativeStreamingEngine(),
+                ),
+                patch(
+                    "app.api.asr_sessions._create_funasr_reconciliation_engine",
+                    return_value=FakeReconciliationEngine(),
+                ),
+                patch("app.api.asr_sessions._audio_duration_for_chunking", return_value=9.5),
+                patch("app.api.asr_sessions.split_audio_to_chunks") as split_chunks,
+            ):
+                uploaded = upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+
+        self.assertEqual(uploaded.status, "stream_ready")
+        self.assertEqual(uploaded.duration_seconds, 9.5)
+        self.assertEqual(uploaded.media_url, f"/api/audio/{uploaded.audio_id}/media")
+        split_chunks.assert_not_called()
+
+        result = read_asr_session_result(session.session_id)
+        self.assertEqual(result.engine, "fake-funasr-cam++")
+        self.assertEqual(len(result.segments), 2)
+        self.assertEqual({segment.speaker_id for segment in result.segments}, {"spk0", "spk1"})
+        self.assertEqual(len({segment.segment_id for segment in result.segments}), len(result.segments))
+        self.assertTrue(result.segments[0].segment_id.startswith(f"{uploaded.audio_id}-cal-0001"))
+
+        events = _read_events(session.session_id)
+        event_names = [event.event for event in events]
+        self.assertNotIn("chunk_plan", event_names)
+        self.assertIn("transcribing_progress", event_names)
+        self.assertIn("diarization_progress", event_names)
+        self.assertIn("reconciliation_completed", event_names)
+        self.assertEqual(event_names.count("segment"), 1)
+        self.assertEqual(event_names.count("segment_update"), 1)
+        self.assertLess(event_names.index("segment"), event_names.index("segment_update"))
+        self.assertLess(event_names.index("segment"), event_names.index("completed"))
+        first_segment = next(event for event in events if event.event == "segment")
+        self.assertTrue(first_segment.data["partial"])
+        self.assertEqual(first_segment.data["mode"], "model_native_streaming")
+        self.assertEqual(first_segment.data["progress_kind"], "actual")
 
     def test_upload_route_starts_background_transcription_and_streams_events(self):
         client = TestClient(app)

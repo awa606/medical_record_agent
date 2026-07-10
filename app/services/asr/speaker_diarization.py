@@ -9,6 +9,7 @@ from app.services.asr.role_strategy import conversation_from_segments
 
 ROLE_DOCTOR = "医生"
 ROLE_PATIENT = "患者"
+ROLE_OTHER = "其他"
 ROLE_PENDING = "待确认"
 
 DOCTOR_KEYWORDS = [
@@ -76,6 +77,7 @@ def enhance_speaker_diarization(result: ASRResult) -> ASRResult:
                     "role_confidence": confidence,
                     "role_source": source,
                     "role_note": note,
+                    "speaker_id": segment.speaker_id or segment.speaker,
                     "speaker_turn": index + 1,
                     "needs_review": segment.needs_review
                     or source != "manual"
@@ -112,6 +114,11 @@ def _expand_long_segments(segments: list[ASRSegment]) -> list[ASRSegment]:
             expanded.append(
                 segment.model_copy(
                     update={
+                        "segment_id": (
+                            f"{segment.segment_id}-part-{offset + 1:02d}"
+                            if segment.segment_id
+                            else None
+                        ),
                         "text": part,
                         "start_time": _interpolate_time(segment.start_time, segment.end_time, start_ratio),
                         "end_time": _interpolate_time(segment.start_time, segment.end_time, end_ratio),
@@ -161,16 +168,16 @@ def _split_turn_candidates(text: str) -> list[str]:
 
 def _infer_speaker_role_map(segments: list[ASRSegment]) -> dict[str, tuple[str, float]]:
     unique_speakers = {
-        _normalized_speaker(segment.speaker)
+        _normalized_speaker(segment.speaker_id or segment.speaker)
         for segment in segments
-        if _normalized_speaker(segment.speaker)
+        if _normalized_speaker(segment.speaker_id or segment.speaker)
     }
     if len(unique_speakers) < 2:
         return {}
 
     scores: dict[str, dict[str, int]] = defaultdict(lambda: {ROLE_DOCTOR: 0, ROLE_PATIENT: 0})
     for segment in segments:
-        speaker = _normalized_speaker(segment.speaker)
+        speaker = _normalized_speaker(segment.speaker_id or segment.speaker)
         if not speaker:
             continue
         role, confidence, _ = _classify_text_role(segment.text)
@@ -186,16 +193,26 @@ def _infer_speaker_role_map(segments: list[ASRSegment]) -> dict[str, tuple[str, 
         total = max(doctor_score + patient_score, 1)
         role = ROLE_DOCTOR if doctor_score > patient_score else ROLE_PATIENT
         mapping[speaker] = (role, min(0.88, 0.55 + abs(doctor_score - patient_score) / total * 0.35))
+
+    if len(unique_speakers) >= 3:
+        text_lengths = defaultdict(int)
+        for segment in segments:
+            speaker = _normalized_speaker(segment.speaker_id or segment.speaker)
+            if speaker:
+                text_lengths[speaker] += len((segment.text or "").strip())
+        for speaker in unique_speakers:
+            if speaker not in mapping and text_lengths[speaker] >= 12:
+                mapping[speaker] = (ROLE_OTHER, 0.58)
     return mapping
 
 
 def _infer_role(segment: ASRSegment, speaker_role_map: dict[str, tuple[str, float]]) -> tuple[str, float, str]:
-    if segment.reviewed_by_doctor and segment.role in {ROLE_DOCTOR, ROLE_PATIENT}:
+    if segment.reviewed_by_doctor and segment.role in {ROLE_DOCTOR, ROLE_PATIENT, ROLE_OTHER}:
         return segment.role, 0.98, "manual"
-    if segment.role in {ROLE_DOCTOR, ROLE_PATIENT}:
+    if segment.role in {ROLE_DOCTOR, ROLE_PATIENT, ROLE_OTHER}:
         return segment.role, segment.role_confidence or 0.86, segment.role_source or "existing"
 
-    speaker = _normalized_speaker(segment.speaker)
+    speaker = _normalized_speaker(segment.speaker_id or segment.speaker)
     if speaker and speaker in speaker_role_map:
         role, confidence = speaker_role_map[speaker]
         return role, confidence, "speaker_map"
@@ -225,6 +242,8 @@ def _role_note(role: str, confidence: float, source: str) -> str:
         return "医生已人工确认"
     if role == ROLE_PENDING:
         return "角色待确认"
+    if role == ROLE_OTHER:
+        return "已区分为其他说话人，身份仍需医生确认"
     return "低置信度初判，需医生校正" if confidence < 0.85 else "按说话人/文本规则初判，需医生复核"
 
 

@@ -21,7 +21,21 @@ class FunASREngine:
         hotword_path: str | Path | None = DEFAULT_HOTWORD_PATH,
         enable_punctuation: bool = True,
         enable_vad: bool = True,
+        enable_speaker_diarization: bool = False,
+        model_instance: Any | None = None,
     ) -> None:
+        self.hotwords = self._load_hotwords(hotword_path)
+        self.speaker_diarization_enabled = enable_speaker_diarization
+        model_kwargs: dict[str, Any] = {"model": model, "device": device}
+        if enable_vad:
+            model_kwargs["vad_model"] = "fsmn-vad"
+        if enable_punctuation:
+            model_kwargs["punc_model"] = "ct-punc"
+        if enable_speaker_diarization:
+            model_kwargs["spk_model"] = "cam++"
+        if model_instance is not None:
+            self.model = model_instance
+            return
         try:
             from funasr import AutoModel
         except ImportError as exc:
@@ -31,13 +45,6 @@ class FunASREngine:
                 "`pip install -r requirements-asr.txt`. "
                 f"Original error: {exc!r}"
             ) from exc
-
-        self.hotwords = self._load_hotwords(hotword_path)
-        model_kwargs: dict[str, Any] = {"model": model, "device": device}
-        if enable_vad:
-            model_kwargs["vad_model"] = "fsmn-vad"
-        if enable_punctuation:
-            model_kwargs["punc_model"] = "ct-punc"
         self.model = AutoModel(**model_kwargs)
 
     def transcribe(self, audio_id: str, audio_path: Path) -> ASRResult:
@@ -53,7 +60,7 @@ class FunASREngine:
 
         raw_result = self.model.generate(**generate_kwargs)
         text = self._extract_text(raw_result)
-        segments = self._extract_segments(raw_result, text)
+        segments = self._extract_segments(audio_id, raw_result, text)
         conversation_text = self._build_conversation_text(segments, text)
         keywords = ASREvaluator().keyword_metrics(self.hotwords, text)
 
@@ -93,7 +100,12 @@ class FunASREngine:
                 texts.append(item.strip())
         return "\n".join(text for text in texts if text)
 
-    def _extract_segments(self, raw_result: Any, fallback_text: str) -> list[ASRSegment]:
+    def _extract_segments(
+        self,
+        audio_id: str,
+        raw_result: Any,
+        fallback_text: str,
+    ) -> list[ASRSegment]:
         items = raw_result if isinstance(raw_result, list) else [raw_result]
         segments: list[ASRSegment] = []
         for item in items:
@@ -103,12 +115,19 @@ class FunASREngine:
             for index, sentence in enumerate(sentence_info):
                 if not isinstance(sentence, dict):
                     continue
-                text = str(sentence.get("text") or "").strip()
+                text = str(sentence.get("text") or sentence.get("sentence") or "").strip()
                 if not text:
                     continue
+                raw_speaker = sentence.get("spk")
+                if raw_speaker is None:
+                    raw_speaker = sentence.get("speaker")
+                speaker = self._normalize_speaker(raw_speaker, index)
                 segments.append(
                     ASRSegment(
-                        speaker=str(sentence.get("spk") or sentence.get("speaker") or f"spk{index}"),
+                        segment_id=f"{audio_id}-cal-{len(segments) + 1:04d}",
+                        provisional=False,
+                        speaker=speaker,
+                        speaker_id=speaker if self.speaker_diarization_enabled else None,
                         role=None,
                         text=text,
                         start_time=self._timestamp_to_seconds(sentence.get("start")),
@@ -118,7 +137,26 @@ class FunASREngine:
                 )
         if segments:
             return segments
-        return [ASRSegment(speaker="spk0", role=None, text=fallback_text, start_time=None, end_time=None)]
+        return [
+            ASRSegment(
+                segment_id=f"{audio_id}-cal-0001",
+                speaker="spk0",
+                speaker_id="spk0" if self.speaker_diarization_enabled else None,
+                role=None,
+                text=fallback_text,
+                start_time=None,
+                end_time=None,
+            )
+        ]
+
+    @staticmethod
+    def _normalize_speaker(value: Any, fallback_index: int) -> str:
+        if value is None or str(value).strip() == "":
+            return f"spk{fallback_index}"
+        normalized = str(value).strip()
+        if normalized.isdigit():
+            return f"spk{normalized}"
+        return normalized
 
     def _build_conversation_text(self, segments: list[ASRSegment], fallback_text: str) -> str:
         if not segments:
@@ -133,7 +171,7 @@ class FunASREngine:
         number = self._optional_float(value)
         if number is None:
             return None
-        return round(number / 1000.0, 3) if number > 1000 else number
+        return round(number / 1000.0, 3)
 
     def _optional_float(self, value: Any) -> float | None:
         if value is None:

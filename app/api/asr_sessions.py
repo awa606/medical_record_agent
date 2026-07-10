@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import gc
 import json
 import os
 import shutil
@@ -33,6 +34,7 @@ from app.schemas import (
     AudioRecord,
 )
 from app.services.asr import (
+    AudioChunk,
     ChunkTranscription,
     apply_manifest_role_strategy,
     create_asr_engine,
@@ -40,7 +42,7 @@ from app.services.asr import (
     merge_chunk_transcriptions,
     split_audio_to_chunks,
 )
-from app.services.asr.chunking import probe_audio_duration
+from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 
 
@@ -48,22 +50,34 @@ router = APIRouter(prefix="/asr/sessions", tags=["asr-sessions"])
 
 SUPPORTED_ASR_ENGINES = {"mock", "funasr", "sensevoice", "whisper", "qwen3", "online"}
 CHUNKABLE_ASR_ENGINES = {"funasr", "sensevoice"}
+REALTIME_UPLOAD_ASR_ENGINES = {"mock", "funasr"}
 TRANSCRIBING_PROGRESS_INTERVAL_SECONDS = 5.0
 TRANSCRIBING_PROGRESS_CAP = 0.88
+STREAMING_PROGRESS_EVENT_INTERVAL_SECONDS = 3.0
+STREAMING_PROGRESS_WALL_INTERVAL_SECONDS = 0.5
 SHORT_AUDIO_CHUNK_SECONDS = 60
 LONG_AUDIO_THRESHOLD_SECONDS = 600
 DEFAULT_CHUNK_MIN_SECONDS = 120
+DEFAULT_REALTIME_UPLOAD_CHUNK_SECONDS = 3
+DEFAULT_REALTIME_UPLOAD_MAX_SECONDS = 120
+REALTIME_UPLOAD_WARNING = "ASR result was produced by realtime upload chunk transcription."
+CHUNKED_LONG_AUDIO_WARNING = "ASR result was produced by chunked long-audio transcription."
 ROLE_LABELS = {
     "doctor": "医生",
     "医生": "医生",
     "patient": "患者",
     "患者": "患者",
+    "other": "其他",
+    "其他": "其他",
     "unknown": "待确认",
     "待确认": "待确认",
     "待校正": "待确认",
 }
 
 _EVENTS_LOCK = threading.Lock()
+_FUNASR_MODEL_CACHE_LOCK = threading.Lock()
+_FUNASR_STREAMING_ENGINE: Any | None = None
+_FUNASR_RECONCILIATION_ENGINE: Any | None = None
 
 
 def _now() -> str:
@@ -113,6 +127,26 @@ def _normalize_engine_name(engine: str) -> str:
             detail="Unsupported ASR engine. Expected mock, funasr, sensevoice, whisper, qwen3, or online.",
         )
     return normalized
+
+
+def _create_funasr_streaming_engine() -> Any:
+    global _FUNASR_STREAMING_ENGINE
+    from app.services.asr.funasr_streaming_engine import FunASRStreamingEngine
+
+    with _FUNASR_MODEL_CACHE_LOCK:
+        if _FUNASR_STREAMING_ENGINE is None:
+            _FUNASR_STREAMING_ENGINE = FunASRStreamingEngine()
+        return _FUNASR_STREAMING_ENGINE
+
+
+def _create_funasr_reconciliation_engine() -> Any:
+    global _FUNASR_RECONCILIATION_ENGINE
+    from app.services.asr.funasr_engine import FunASREngine
+
+    with _FUNASR_MODEL_CACHE_LOCK:
+        if _FUNASR_RECONCILIATION_ENGINE is None:
+            _FUNASR_RECONCILIATION_ENGINE = FunASREngine(enable_speaker_diarization=True)
+        return _FUNASR_RECONCILIATION_ENGINE
 
 
 def _write_session(session: ASRSessionRecord) -> None:
@@ -205,6 +239,27 @@ def _apply_segment_corrections(
     updated = result.model_copy(deep=True)
     if not updated.segments:
         updated.segments = [ASRSegment(speaker="asr", role="待确认", text=updated.text)]
+
+    for speaker_correction in payload.speaker_roles:
+        role = _normalize_role(speaker_correction.role)
+        matched = False
+        for segment in updated.segments:
+            identity = segment.speaker_id or segment.speaker
+            if identity != speaker_correction.speaker_id:
+                continue
+            matched = True
+            segment.role = role
+            segment.reviewed_by_doctor = speaker_correction.reviewed_by_doctor
+            segment.needs_review = not speaker_correction.reviewed_by_doctor or role == "待确认"
+            if speaker_correction.reviewed_by_doctor and role != "待确认":
+                segment.role_source = "manual_speaker_map"
+                segment.role_confidence = 0.98
+                segment.role_note = "医生已确认该说话人的全局角色"
+        if not matched:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Speaker id not found: {speaker_correction.speaker_id}",
+            )
 
     for correction in payload.segments:
         if correction.index >= len(updated.segments):
@@ -338,10 +393,14 @@ def _append_transcribing_progress_event(
         event="transcribing_progress",
         data={
             "status": "transcribing",
-            "progress": _estimated_transcribing_progress(started_at, duration),
+            "phase": "model_processing",
+            "progress": None,
+            "progress_kind": "indeterminate",
+            "processed_audio_seconds": None,
+            "audio_duration_seconds": duration,
             "elapsed_seconds": elapsed,
             "duration": duration,
-            "estimated": True,
+            "estimated": False,
         },
     )
 
@@ -425,7 +484,12 @@ def _offset_segment_for_chunk(segment: ASRSegment, chunk_start_seconds: float) -
         return round(float(value) + float(chunk_start_seconds), 3)
 
     return ASRSegment(
+        segment_id=segment.segment_id,
+        revision=segment.revision,
+        provisional=segment.provisional,
         speaker=segment.speaker,
+        speaker_id=segment.speaker_id,
+        speaker_confidence=segment.speaker_confidence,
         role=segment.role,
         text=segment.text,
         start_time=offset(segment.start_time),
@@ -450,6 +514,7 @@ def _append_partial_segment_events(
     chunk_start_seconds: float,
     chunk_result: ASRResult,
     start_index: int,
+    mode: str = "chunked_long_audio",
 ) -> int:
     segments = _fallback_segments(chunk_result)
     events: list[ASRSessionEvent] = []
@@ -463,6 +528,7 @@ def _append_partial_segment_events(
                 data={
                     "status": "streaming",
                     "partial": True,
+                    "mode": mode,
                     "chunk_index": chunk_index,
                     "total_chunks": total_chunks,
                     "index": start_index + offset,
@@ -512,6 +578,27 @@ def _chunk_min_seconds() -> int:
     return _env_int("ASR_SESSION_CHUNK_MIN_SECONDS", DEFAULT_CHUNK_MIN_SECONDS)
 
 
+def _realtime_upload_enabled() -> bool:
+    value = str(os.environ.get("ASR_SESSION_REALTIME_UPLOAD_ENABLED", "1")).strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+def _realtime_chunk_seconds() -> int:
+    return _env_int("ASR_SESSION_REALTIME_CHUNK_SECONDS", DEFAULT_REALTIME_UPLOAD_CHUNK_SECONDS)
+
+
+def _realtime_chunk_min_seconds() -> int:
+    return _env_int("ASR_SESSION_REALTIME_CHUNK_MIN_SECONDS", 0)
+
+
+def _realtime_max_seconds() -> float:
+    return _env_float("ASR_SESSION_REALTIME_MAX_SECONDS", DEFAULT_REALTIME_UPLOAD_MAX_SECONDS)
+
+
+def _realtime_mock_delay_seconds() -> float:
+    return _env_float("ASR_SESSION_REALTIME_MOCK_DELAY_SECONDS", 0.0)
+
+
 def _dynamic_chunking_enabled() -> bool:
     value = str(os.environ.get("ASR_SESSION_DYNAMIC_CHUNKING", "1")).strip().lower()
     return value not in {"0", "false", "no", "off"}
@@ -531,6 +618,14 @@ def _env_int(name: str, default: int) -> int:
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        value = float(str(os.environ.get(name, default)).strip())
+    except ValueError:
+        return default
+    return value if value >= 0 else default
 
 
 def _chunking_enabled() -> bool:
@@ -555,6 +650,24 @@ def _should_use_chunked_session(engine_name: str, audio_path: Path) -> tuple[boo
     if duration is None:
         return False, None
     return duration >= _chunk_min_seconds(), duration
+
+
+def _should_use_realtime_upload_session(
+    engine_name: str,
+    audio_path: Path,
+    *,
+    duration: float | None = None,
+) -> tuple[bool, float | None]:
+    if not _realtime_upload_enabled() or engine_name not in REALTIME_UPLOAD_ASR_ENGINES:
+        return False, duration
+    resolved_duration = duration if duration is not None else _audio_duration_for_chunking(audio_path)
+    if engine_name == "funasr":
+        return True, resolved_duration
+    if resolved_duration is None:
+        return engine_name == "mock", resolved_duration
+    if resolved_duration < _realtime_chunk_min_seconds():
+        return False, resolved_duration
+    return resolved_duration <= _realtime_max_seconds(), resolved_duration
 
 
 def _compact_error(exc: Exception) -> str:
@@ -676,6 +789,7 @@ def _run_asr_session_transcription(
     *,
     record: AudioRecord,
     audio_path: Path,
+    pace_realtime: bool = False,
 ) -> None:
     session = _read_session(session_id)
     stop_heartbeat, heartbeat_thread, started_at = _start_transcribing_heartbeat(
@@ -684,11 +798,41 @@ def _run_asr_session_transcription(
         duration=None,
     )
     try:
-        asr_engine = create_asr_engine(session.engine)
         use_chunked, original_duration = _should_use_chunked_session(session.engine, audio_path)
-        if use_chunked:
+        use_realtime, realtime_duration = _should_use_realtime_upload_session(
+            session.engine,
+            audio_path,
+            duration=original_duration,
+        )
+        if use_realtime and session.engine == "funasr":
             stop_heartbeat.set()
             heartbeat_thread.join(timeout=1.0)
+            result = _transcribe_funasr_streaming_session(
+                session_id,
+                session=session,
+                record=record,
+                audio_path=audio_path,
+                original_duration=realtime_duration,
+            )
+            emit_segments = False
+        elif use_realtime:
+            stop_heartbeat.set()
+            heartbeat_thread.join(timeout=1.0)
+            asr_engine = create_asr_engine(session.engine)
+            result = _transcribe_realtime_upload_session(
+                session_id,
+                session=session,
+                engine=asr_engine,
+                record=record,
+                audio_path=audio_path,
+                original_duration=realtime_duration,
+                pace_realtime=pace_realtime,
+            )
+            emit_segments = False
+        elif use_chunked:
+            stop_heartbeat.set()
+            heartbeat_thread.join(timeout=1.0)
+            asr_engine = create_asr_engine(session.engine)
             result = _transcribe_chunked_session(
                 session_id,
                 session=session,
@@ -699,6 +843,7 @@ def _run_asr_session_transcription(
             )
             emit_segments = False
         else:
+            asr_engine = create_asr_engine(session.engine)
             result = asr_engine.transcribe(record.audio_id, audio_path)
             result = apply_manifest_role_strategy(result, _sample_id_from_record(record))
             result = enhance_speaker_diarization(result)
@@ -726,6 +871,280 @@ def _run_asr_session_transcription(
         heartbeat_thread.join(timeout=1.0)
 
 
+def _transcribe_funasr_streaming_session(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    record: AudioRecord,
+    audio_path: Path,
+    original_duration: float | None,
+) -> ASRResult:
+    _append_session_event(
+        session_id,
+        session=session,
+        event="transcribing_progress",
+        data={
+            "status": "transcribing",
+            "phase": "model_loading",
+            "progress": None,
+            "progress_kind": "indeterminate",
+            "processed_audio_seconds": 0.0,
+            "audio_duration_seconds": original_duration,
+            "elapsed_seconds": 0.0,
+        },
+    )
+
+    try:
+        engine = _create_funasr_streaming_engine()
+    except Exception as exc:  # noqa: BLE001
+        return _fallback_from_streaming_failure(
+            session_id,
+            session=session,
+            record=record,
+            audio_path=audio_path,
+            original_duration=original_duration,
+            error=exc,
+        )
+
+    _append_session_event(
+        session_id,
+        session=session,
+        event="transcribing_progress",
+        data={
+            "status": "transcribing",
+            "phase": "model_ready",
+            "progress": 0.0 if original_duration else None,
+            "progress_kind": "actual" if original_duration else "indeterminate",
+            "processed_audio_seconds": 0.0,
+            "audio_duration_seconds": original_duration,
+            "model_load_time_seconds": engine.model_load_time_seconds,
+            "elapsed_seconds": 0.0,
+        },
+    )
+
+    last_progress_audio_seconds = -STREAMING_PROGRESS_EVENT_INTERVAL_SECONDS
+    last_progress_elapsed_seconds = -STREAMING_PROGRESS_WALL_INTERVAL_SECONDS
+    last_progress_phase = ""
+
+    def on_progress(data: dict[str, object]) -> None:
+        nonlocal last_progress_audio_seconds, last_progress_elapsed_seconds, last_progress_phase
+        processed = float(data.get("processed_audio_seconds") or 0.0)
+        elapsed = float(data.get("elapsed_seconds") or 0.0)
+        phase = str(data.get("phase") or "streaming")
+        progress = data.get("progress")
+        should_emit = (
+            phase != last_progress_phase
+            or (
+                processed - last_progress_audio_seconds >= STREAMING_PROGRESS_EVENT_INTERVAL_SECONDS
+                and elapsed - last_progress_elapsed_seconds >= STREAMING_PROGRESS_WALL_INTERVAL_SECONDS
+            )
+            or progress == 1.0
+        )
+        if not should_emit:
+            return
+        last_progress_audio_seconds = processed
+        last_progress_elapsed_seconds = elapsed
+        last_progress_phase = phase
+        _append_session_event(
+            session_id,
+            session=session,
+            event="transcribing_progress",
+            data={"status": "transcribing", **data},
+        )
+
+    def on_segment(event_name: str, segment: ASRSegment, metadata: dict[str, object]) -> None:
+        duration = metadata.get("audio_duration_seconds") or original_duration
+        processed = metadata.get("processed_audio_seconds")
+        progress = (
+            round(float(processed) / float(duration), 4)
+            if processed is not None and duration
+            else None
+        )
+        _append_session_event(
+            session_id,
+            session=session,
+            event=event_name,
+            data={
+                "status": "streaming",
+                "partial": segment.provisional,
+                "mode": "model_native_streaming",
+                "segment_id": segment.segment_id,
+                "revision": segment.revision,
+                "progress": progress,
+                "progress_kind": "actual" if progress is not None else "indeterminate",
+                "processed_audio_seconds": processed,
+                "audio_duration_seconds": duration,
+                "role": segment.role,
+                "speaker": segment.speaker,
+                "text": segment.text,
+                "segment": segment.model_dump(),
+            },
+        )
+
+    try:
+        result = engine.transcribe_streaming(
+            record.audio_id,
+            audio_path,
+            on_progress=on_progress,
+            on_segment=on_segment,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _fallback_from_streaming_failure(
+            session_id,
+            session=session,
+            record=record,
+            audio_path=audio_path,
+            original_duration=original_duration,
+            error=exc,
+        )
+
+    del engine
+    gc.collect()
+    return _reconcile_streaming_result(
+        session_id,
+        session=session,
+        record=record,
+        audio_path=audio_path,
+        streaming_result=result,
+    )
+
+
+def _reconcile_streaming_result(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    record: AudioRecord,
+    audio_path: Path,
+    streaming_result: ASRResult,
+) -> ASRResult:
+    _append_session_event(
+        session_id,
+        session=session,
+        event="diarization_progress",
+        data={
+            "status": "reconciling",
+            "phase": "speaker_calibration",
+            "progress": None,
+            "progress_kind": "indeterminate",
+            "message": "正在校准标点、时间戳和说话人",
+        },
+    )
+    try:
+        calibration_engine = _create_funasr_reconciliation_engine()
+        calibrated = calibration_engine.transcribe(record.audio_id, audio_path)
+        calibrated = apply_manifest_role_strategy(calibrated, _sample_id_from_record(record))
+        calibrated = enhance_speaker_diarization(calibrated)
+        calibrated.segments = [
+            segment.model_copy(
+                update={
+                    "segment_id": segment.segment_id or f"{record.audio_id}-cal-{index:04d}",
+                    "revision": max(segment.revision, 1),
+                    "provisional": False,
+                    "speaker_id": segment.speaker_id or segment.speaker,
+                }
+            )
+            for index, segment in enumerate(calibrated.segments, start=1)
+        ]
+        calibrated.text = _plain_text_from_segments(calibrated.segments)
+        calibrated.conversation_text = _conversation_from_segments(calibrated.segments)
+        _append_session_event(
+            session_id,
+            session=session,
+            event="diarization_progress",
+            data={
+                "status": "completed",
+                "phase": "speaker_calibration_completed",
+                "progress": 1.0,
+                "progress_kind": "actual",
+                "speaker_count": len(
+                    {
+                        segment.speaker_id
+                        for segment in calibrated.segments
+                        if segment.speaker_id
+                    }
+                ),
+            },
+        )
+        _append_session_event(
+            session_id,
+            session=session,
+            event="reconciliation_completed",
+            data={
+                "status": "completed",
+                "phase": "reconciliation_completed",
+                "segments": len(calibrated.segments),
+                "asr_result": calibrated.model_dump(),
+            },
+        )
+        return calibrated
+    except Exception as exc:  # noqa: BLE001
+        fallback = apply_manifest_role_strategy(streaming_result, _sample_id_from_record(record))
+        fallback = enhance_speaker_diarization(fallback)
+        fallback.segments = [
+            segment.model_copy(update={"provisional": False})
+            for segment in fallback.segments
+        ]
+        warning = (
+            "Speaker calibration was unavailable; streaming transcript was retained for manual review. "
+            f"Reason: {_compact_error(exc)}"
+        )
+        if warning not in fallback.warnings:
+            fallback.warnings.append(warning)
+        _append_session_event(
+            session_id,
+            session=session,
+            event="diarization_progress",
+            data={
+                "status": "failed",
+                "phase": "speaker_calibration_failed",
+                "progress": None,
+                "progress_kind": "indeterminate",
+                "message": "说话人校准暂不可用，已保留转写结果供人工校正",
+                "error": _compact_error(exc),
+                "retryable": True,
+            },
+        )
+        return fallback
+
+
+def _fallback_from_streaming_failure(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    record: AudioRecord,
+    audio_path: Path,
+    original_duration: float | None,
+    error: Exception,
+) -> ASRResult:
+    _append_session_event(
+        session_id,
+        session=session,
+        event="transcribing_progress",
+        data={
+            "status": "transcribing",
+            "phase": "streaming_fallback",
+            "progress": None,
+            "progress_kind": "indeterminate",
+            "processed_audio_seconds": None,
+            "audio_duration_seconds": original_duration,
+            "error": _compact_error(error),
+            "retryable": True,
+        },
+    )
+    offline_engine = create_asr_engine("funasr")
+    return _transcribe_chunked_session(
+        session_id,
+        session=session,
+        engine=offline_engine,
+        record=record,
+        audio_path=audio_path,
+        original_duration=original_duration,
+        chunk_seconds=_short_chunk_seconds(),
+        mode="streaming_fallback",
+        engine_suffix="fallback",
+    )
+
+
 def _transcribe_chunked_session(
     session_id: str,
     *,
@@ -734,8 +1153,11 @@ def _transcribe_chunked_session(
     record: AudioRecord,
     audio_path: Path,
     original_duration: float | None,
+    chunk_seconds: int | None = None,
+    mode: str = "chunked_long_audio",
+    engine_suffix: str = "chunked",
 ) -> ASRResult:
-    chunk_seconds = _chunk_seconds_for_duration(original_duration)
+    chunk_seconds = chunk_seconds or _chunk_seconds_for_duration(original_duration)
     with tempfile.TemporaryDirectory(prefix=f"{record.audio_id}_chunks_") as temp_dir_name:
         temp_dir = Path(temp_dir_name)
         chunks = split_audio_to_chunks(audio_path, temp_dir, chunk_seconds=chunk_seconds)
@@ -746,6 +1168,7 @@ def _transcribe_chunked_session(
             event="chunk_plan",
             data={
                 "status": "chunk_plan",
+                "mode": mode,
                 "chunk_seconds": chunk_seconds,
                 "chunk_count": total_chunks,
                 "total_chunks": total_chunks,
@@ -763,6 +1186,7 @@ def _transcribe_chunked_session(
                 "total_chunks": total_chunks,
                 "chunk_start_seconds": chunk.start_seconds,
                 "chunk_duration_seconds": chunk.duration_seconds,
+                "mode": mode,
             }
             _append_session_event(
                 session_id,
@@ -818,16 +1242,235 @@ def _transcribe_chunked_session(
                 chunk_start_seconds=chunk.start_seconds,
                 chunk_result=chunk_result,
                 start_index=emitted_segments,
+                mode=mode,
             )
 
         merged = merge_chunk_transcriptions(
             record.audio_id,
             transcriptions,
             original_duration=original_duration,
-            engine_name=f"{getattr(engine, 'name', session.engine)}-chunked",
+            engine_name=f"{getattr(engine, 'name', session.engine)}-{engine_suffix}",
         )
+        if mode == "realtime_upload":
+            merged.warnings = [
+                warning for warning in merged.warnings if warning != CHUNKED_LONG_AUDIO_WARNING
+            ]
+            if REALTIME_UPLOAD_WARNING not in merged.warnings:
+                merged.warnings.insert(0, REALTIME_UPLOAD_WARNING)
         merged = apply_manifest_role_strategy(merged, _sample_id_from_record(record))
         return enhance_speaker_diarization(merged)
+
+
+def _transcribe_realtime_upload_session(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    engine: Any,
+    record: AudioRecord,
+    audio_path: Path,
+    original_duration: float | None,
+    pace_realtime: bool = False,
+) -> ASRResult:
+    chunk_seconds = _realtime_chunk_seconds()
+    if session.engine == "mock":
+        return _transcribe_mock_realtime_upload_session(
+            session_id,
+            session=session,
+            engine=engine,
+            record=record,
+            audio_path=audio_path,
+            chunk_seconds=chunk_seconds,
+            pace_realtime=pace_realtime,
+        )
+    return _transcribe_chunked_session(
+        session_id,
+        session=session,
+        engine=engine,
+        record=record,
+        audio_path=audio_path,
+        original_duration=original_duration,
+        chunk_seconds=chunk_seconds,
+        mode="realtime_upload",
+        engine_suffix="realtime",
+    )
+
+
+def _relative_segment_for_chunk(
+    segment: ASRSegment,
+    chunk_start_seconds: float,
+) -> ASRSegment:
+    def relative(value: float | None) -> float | None:
+        if value is None:
+            return None
+        return round(max(float(value) - float(chunk_start_seconds), 0.0), 3)
+
+    return segment.model_copy(
+        update={
+            "start_time": relative(segment.start_time),
+            "end_time": relative(segment.end_time),
+        }
+    )
+
+
+def _segment_emit_time(segment: ASRSegment) -> float:
+    if segment.end_time is not None:
+        return float(segment.end_time)
+    if segment.start_time is not None:
+        return float(segment.start_time)
+    return 0.0
+
+
+def _segments_for_realtime_chunk(
+    segments: list[ASRSegment],
+    *,
+    chunk_start_seconds: float,
+    chunk_duration_seconds: float,
+) -> list[ASRSegment]:
+    chunk_end_seconds = chunk_start_seconds + chunk_duration_seconds
+    selected: list[ASRSegment] = []
+    for segment in segments:
+        emit_time = _segment_emit_time(segment)
+        if chunk_start_seconds < emit_time <= chunk_end_seconds or (
+            chunk_start_seconds == 0 and emit_time == 0
+        ):
+            selected.append(_relative_segment_for_chunk(segment, chunk_start_seconds))
+    return selected
+
+
+def _maybe_sleep_mock_realtime(pace_realtime: bool) -> None:
+    if not pace_realtime:
+        return
+    delay_seconds = _realtime_mock_delay_seconds()
+    if delay_seconds > 0:
+        time.sleep(delay_seconds)
+
+
+def _transcribe_mock_realtime_upload_session(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    engine: Any,
+    record: AudioRecord,
+    audio_path: Path,
+    chunk_seconds: int,
+    pace_realtime: bool = False,
+) -> ASRResult:
+    result = engine.transcribe(record.audio_id, audio_path)
+    duration = result.duration or _infer_result_duration(result)
+    chunks = [
+        (index, start_seconds, duration_seconds)
+        for index, (start_seconds, duration_seconds) in enumerate(
+            build_chunk_plan(duration, chunk_seconds),
+            start=1,
+        )
+    ]
+    total_chunks = len(chunks)
+    _append_session_event(
+        session_id,
+        session=session,
+        event="chunk_plan",
+        data={
+            "status": "chunk_plan",
+            "mode": "realtime_upload",
+            "chunk_seconds": chunk_seconds,
+            "chunk_count": total_chunks,
+            "total_chunks": total_chunks,
+            "duration": duration,
+            "progress": 0,
+        },
+    )
+
+    transcriptions: list[ChunkTranscription] = []
+    emitted_segments = 0
+    for index, start_seconds, duration_seconds in chunks:
+        started_at = time.perf_counter()
+        common = {
+            "chunk_index": index,
+            "total_chunks": total_chunks,
+            "chunk_start_seconds": start_seconds,
+            "chunk_duration_seconds": duration_seconds,
+            "mode": "realtime_upload",
+        }
+        _append_session_event(
+            session_id,
+            session=session,
+            event="chunk_started",
+            data={
+                **common,
+                "status": "chunk_transcribing",
+                "progress": round((index - 1) / total_chunks, 4) if total_chunks else 0,
+                "retryable": False,
+            },
+        )
+        chunk_segments = _segments_for_realtime_chunk(
+            result.segments,
+            chunk_start_seconds=start_seconds,
+            chunk_duration_seconds=duration_seconds,
+        )
+        chunk_result = ASRResult(
+            audio_id=f"{record.audio_id}_chunk_{index:03d}",
+            engine=result.engine,
+            text="\n".join(segment.text for segment in chunk_segments if segment.text.strip()),
+            conversation_text=_conversation_from_segments(chunk_segments),
+            segments=chunk_segments,
+            duration=duration_seconds,
+            medical_keywords=result.medical_keywords,
+        )
+        transcriptions.append(
+            ChunkTranscription(
+                chunk=AudioChunk(
+                    index=index,
+                    path=audio_path,
+                    start_seconds=start_seconds,
+                    duration_seconds=duration_seconds,
+                ),
+                result=chunk_result,
+            )
+        )
+        _append_session_event(
+            session_id,
+            session=session,
+            event="chunk_completed",
+            data={
+                **common,
+                "status": "chunk_completed",
+                "progress": round(index / total_chunks, 4) if total_chunks else 1,
+                "segments": len(chunk_segments),
+                "text_length": len(chunk_result.text),
+                "elapsed_seconds": round(time.perf_counter() - started_at, 3),
+            },
+        )
+        emitted_segments += _append_partial_segment_events(
+            session_id,
+            session=session,
+            chunk_index=index,
+            total_chunks=total_chunks,
+            chunk_start_seconds=start_seconds,
+            chunk_result=chunk_result,
+            start_index=emitted_segments,
+            mode="realtime_upload",
+        )
+        if chunk_segments and index < total_chunks:
+            _maybe_sleep_mock_realtime(pace_realtime)
+
+    merged = merge_chunk_transcriptions(
+        record.audio_id,
+        transcriptions,
+        original_duration=duration,
+        engine_name=f"{result.engine}-realtime",
+    )
+    merged.medical_keywords = result.medical_keywords
+    merged.warnings = [warning for warning in merged.warnings if warning != CHUNKED_LONG_AUDIO_WARNING]
+    if REALTIME_UPLOAD_WARNING not in merged.warnings:
+        merged.warnings.insert(0, REALTIME_UPLOAD_WARNING)
+    return enhance_speaker_diarization(apply_manifest_role_strategy(merged, _sample_id_from_record(record)))
+
+
+def _infer_result_duration(result: ASRResult) -> float:
+    end_times = [segment.end_time for segment in result.segments if segment.end_time is not None]
+    if end_times:
+        return max(float(end_time) for end_time in end_times)
+    return float(_realtime_chunk_seconds())
 
 
 def _write_transcription_success(
@@ -901,6 +1544,7 @@ def upload_asr_session_audio(
             session_id,
             record=record,
             audio_path=destination,
+            pace_realtime=True,
         )
         current_session = transcribing_session
         response_engine = transcribing_session.engine
@@ -913,6 +1557,8 @@ def upload_asr_session_audio(
         engine=response_engine,
         events_url=current_session.events_url or f"/api/asr/sessions/{session_id}/events",
         result_url=current_session.result_url or f"/api/asr/sessions/{session_id}/result",
+        media_url=f"/api/audio/{audio_id}/media",
+        duration_seconds=_audio_duration_for_chunking(destination),
     )
 
 

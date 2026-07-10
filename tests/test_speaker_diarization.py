@@ -1,7 +1,13 @@
 import unittest
 
 from app.api.asr_sessions import _apply_segment_corrections
-from app.schemas.asr import ASRResult, ASRSegment, ASRSegmentCorrection, ASRSessionCorrectionRequest
+from app.schemas.asr import (
+    ASRResult,
+    ASRSegment,
+    ASRSegmentCorrection,
+    ASRSessionCorrectionRequest,
+    ASRSpeakerRoleCorrection,
+)
 from app.services.asr.speaker_diarization import enhance_speaker_diarization
 
 
@@ -76,6 +82,37 @@ class SpeakerDiarizationAssistTests(unittest.TestCase):
         self.assertEqual(corrected.segments[0].role_source, "manual")
         self.assertEqual(corrected.segments[0].role_confidence, 0.98)
         self.assertFalse(corrected.needs_review)
+
+    def test_global_speaker_role_correction_updates_every_turn(self):
+        result = ASRResult(
+            audio_id="demo_audio",
+            engine="funasr",
+            text="请问哪里不舒服？还有其他症状吗？",
+            conversation_text="",
+            segments=[
+                ASRSegment(speaker="spk0", speaker_id="spk0", text="请问哪里不舒服？"),
+                ASRSegment(speaker="spk1", speaker_id="spk1", text="我发热三天。"),
+                ASRSegment(speaker="spk0", speaker_id="spk0", text="还有其他症状吗？"),
+            ],
+        )
+
+        corrected = _apply_segment_corrections(
+            result,
+            ASRSessionCorrectionRequest(
+                speaker_roles=[
+                    ASRSpeakerRoleCorrection(
+                        speaker_id="spk0",
+                        role="医生",
+                        reviewed_by_doctor=True,
+                    )
+                ]
+            ),
+        )
+
+        doctor_turns = [segment for segment in corrected.segments if segment.speaker_id == "spk0"]
+        self.assertEqual(len(doctor_turns), 2)
+        self.assertTrue(all(segment.role == "医生" for segment in doctor_turns))
+        self.assertTrue(all(segment.role_source == "manual_speaker_map" for segment in doctor_turns))
 
 
 if __name__ == "__main__":

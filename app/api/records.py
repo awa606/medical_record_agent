@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import re
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks
@@ -38,6 +39,7 @@ class PreviewRecordResponse(BaseModel):
     candidate_diagnoses: list[dict[str, Any]]
     treatment_plan: dict[str, list[str]]
     diagnosis_evidence: list[str]
+    evidence_links: list[dict[str, Any]]
     structured_updates: list[dict[str, Any]]
     missing_items: list[str]
     safety_preview: dict[str, Any]
@@ -102,11 +104,59 @@ def _treatment_plan(fields: MedicalRecordFields) -> dict[str, list[str]]:
     }
 
 
-def _structured_updates(fields: MedicalRecordFields) -> list[dict[str, Any]]:
+def _matching_source_segments(
+    source_text: str,
+    segments: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    def normalize(value: str) -> str:
+        without_role = re.sub(r"^\s*\[[^\]]+\]\s*", "", value or "")
+        return re.sub(r"[\s，。！？?!；;：:,、]+", "", without_role)
+
+    normalized_source = normalize(source_text)
+    if not normalized_source:
+        return []
+    matches: list[dict[str, Any]] = []
+    for index, segment in enumerate(segments):
+        segment_text = normalize(str(segment.get("text") or ""))
+        if not segment_text:
+            continue
+        overlap = (
+            normalized_source in segment_text
+            or segment_text in normalized_source
+            or (len(normalized_source) >= 6 and normalized_source[:6] in segment_text)
+        )
+        if not overlap:
+            continue
+        matches.append(
+            {
+                "segment_id": segment.get("segment_id") or f"segment-{index}",
+                "start_time": segment.get("start_time"),
+                "end_time": segment.get("end_time"),
+                "speaker_id": segment.get("speaker_id") or segment.get("speaker"),
+                "role": segment.get("role"),
+                "text": segment.get("text") or "",
+            }
+        )
+    return matches
+
+
+def _source_segment_ids(source_text: str, segments: list[dict[str, Any]]) -> list[str]:
+    return [
+        str(item["segment_id"])
+        for item in _matching_source_segments(source_text, segments)
+        if item.get("segment_id")
+    ]
+
+
+def _structured_updates(
+    fields: MedicalRecordFields,
+    segments: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     updates: list[dict[str, Any]] = []
     for key, label in FIELD_LABELS.items():
         field = getattr(fields, key)
         value = field.value or ""
+        source_text = field.source_spans[0].text if field.source_spans else ""
         updates.append(
             {
                 "key": key,
@@ -114,11 +164,17 @@ def _structured_updates(fields: MedicalRecordFields) -> list[dict[str, Any]]:
                 "status": "missing" if field.missing or not value else "preview",
                 "value_preview": value[:120],
                 "confidence": field.confidence,
-                "source_text": field.source_spans[0].text if field.source_spans else "",
+                "source_text": source_text,
+                "source_segment_ids": _source_segment_ids(source_text, segments),
                 "notice": "实时预览，需医生确认",
             }
         )
     if fields.candidate_diagnoses:
+        diagnosis_source = (
+            fields.candidate_diagnoses[0].evidence[0].text
+            if fields.candidate_diagnoses[0].evidence
+            else fields.candidate_diagnoses[0].reason or ""
+        )
         updates.append(
             {
                 "key": "candidate_diagnoses",
@@ -129,11 +185,39 @@ def _structured_updates(fields: MedicalRecordFields) -> list[dict[str, Any]]:
                     (diagnosis.confidence or 0.0 for diagnosis in fields.candidate_diagnoses),
                     default=None,
                 ),
-                "source_text": fields.candidate_diagnoses[0].reason or "",
+                "source_text": diagnosis_source,
+                "source_segment_ids": _source_segment_ids(diagnosis_source, segments),
                 "notice": "候选结果，需医生确认",
             }
         )
     return updates
+
+
+def _evidence_links(
+    fields: MedicalRecordFields,
+    segments: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    links: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for key, label in FIELD_LABELS.items():
+        field = getattr(fields, key)
+        for span in field.source_spans:
+            for match in _matching_source_segments(span.text, segments):
+                identity = (label, str(match.get("segment_id") or ""))
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                links.append({"label": label, "evidence": span.text, **match})
+    for diagnosis in fields.candidate_diagnoses:
+        for span in diagnosis.evidence:
+            for match in _matching_source_segments(span.text, segments):
+                label = f"候选诊断：{diagnosis.name}"
+                identity = (label, str(match.get("segment_id") or ""))
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                links.append({"label": label, "evidence": span.text, **match})
+    return links[:12]
 
 
 def _preview_stage(fields: MedicalRecordFields) -> str:
@@ -177,7 +261,7 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
     fields = llm.extract_fields(payload.conversation_text)
     draft = llm.generate_draft(fields)
     safety = llm.safety_check(draft, fields, allow_export=False)
-    updates = _structured_updates(fields)
+    updates = _structured_updates(fields, payload.segments)
 
     return PreviewRecordResponse(
         status="preview_ready",
@@ -196,6 +280,7 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
         ],
         treatment_plan=_treatment_plan(fields),
         diagnosis_evidence=_diagnosis_evidence(fields),
+        evidence_links=_evidence_links(fields, payload.segments),
         structured_updates=updates,
         missing_items=_missing_items(fields),
         safety_preview=safety.model_dump(mode="json"),

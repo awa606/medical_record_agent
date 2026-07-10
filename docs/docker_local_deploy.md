@@ -113,8 +113,9 @@ MODELSCOPE_CACHE=/app/model_cache/modelscope
 2. 点击“粘贴问诊文本”，生成病历草稿。
 3. 检查病历字段区、对话转写区、AI 辅助与安全校验区是否正常显示。
 4. 上传短 MP3/WAV，选择 `Mock ASR`，确认 SSE 分段、角色校正和生成病历流程正常。
-5. 上传中文音频，选择 `FunASR` 或 `SenseVoice Small`。首次运行会下载模型，耗时较长。
-6. 上传长音频时，检查中间转写区是否显示“切片”指标和进度；失败时应显示失败原因和重试提示。
+5. 上传中文音频并选择 `FunASR`。首次运行会下载 Paraformer Streaming、VAD、标点和 CAM++ 模型，模型加载阶段不显示百分比。
+6. 识别开始后，检查中栏是否持续出现转写行和真实进度；测试播放器的播放、拖动和倍速。
+7. 等待全局校准完成，确认时间戳、说话人标签和实时病历预览已更新；失败时应显示可理解的原因和重试提示。
 
 ## 常见问题
 
@@ -124,7 +125,7 @@ MODELSCOPE_CACHE=/app/model_cache/modelscope
 
 ### 2. FunASR / SenseVoice 首次运行慢
 
-首次使用真实 ASR 引擎会下载模型到 `data/asr_model_cache/`。后续复用缓存会快很多。
+首次使用真实 ASR 引擎会下载模型到 `data/asr_model_cache/`。FunASR 原生流式路线还会下载 Paraformer Streaming、FSMN-VAD、标点和 CAM++，首次加载可能需要数分钟；后续会话复用磁盘缓存和进程内模型实例。
 
 ### 3. 其他电脑打不开页面
 

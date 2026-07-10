@@ -62,8 +62,20 @@ class RecordsApiTests(unittest.TestCase):
             ),
             source="asr_partial",
             segments=[
-                {"role": "医生", "text": "你好，哪里不舒服？"},
-                {"role": "患者", "text": "我发热三天，最高体温40度，还有咳嗽和铁锈色痰。"},
+                {
+                    "segment_id": "seg-doctor-1",
+                    "role": "医生",
+                    "text": "你好，哪里不舒服？",
+                    "start_time": 0.0,
+                    "end_time": 1.2,
+                },
+                {
+                    "segment_id": "seg-patient-1",
+                    "role": "患者",
+                    "text": "我发热三天，最高体温40度，还有咳嗽和铁锈色痰。",
+                    "start_time": 1.2,
+                    "end_time": 4.8,
+                },
             ],
         )
 
@@ -77,10 +89,15 @@ class RecordsApiTests(unittest.TestCase):
         self.assertIn("candidate_diagnoses", response_data)
         self.assertIn("treatment_plan", response_data)
         self.assertIn("structured_updates", response_data)
+        self.assertIn("evidence_links", response_data)
         self.assertIn(response.preview_stage, {"collecting", "structured_preview", "diagnosis_preview"})
         self.assertIsInstance(response.ready_for_formal_generation, bool)
         self.assertTrue(any(item["status"] == "preview" for item in response.structured_updates))
         self.assertGreater(len(response.candidate_diagnoses), 0)
+        self.assertTrue(any(item["segment_id"] == "seg-patient-1" for item in response.evidence_links))
+        self.assertTrue(
+            any("seg-patient-1" in item["source_segment_ids"] for item in response.structured_updates)
+        )
         self.assertNotIn("task_id", response_data)
         self.assertNotIn("events_url", response_data)
 

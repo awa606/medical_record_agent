@@ -137,6 +137,23 @@
 - `data/asr_eval/reports/v0_5_9_chunked_long_audio/chunked_asr_benchmark_run.md`
 - `data/asr_eval/reports/v0_5_9_chunked_long_audio/local_model_benchmark.md`
 
+## v0.8.3-v0.8.5 上传音频流式路线
+
+当前交付路线不再把“先生成全部临时切片、再逐片调用离线 ASR”描述为模型原生流式。FunASR 上传音频使用 `paraformer-zh-streaming`：音频一次解码为 16 kHz PCM，并按约 600 ms 帧持续输入模型，SSE 根据模型已处理的音频秒数报告真实进度。
+
+流式输出是临时结果，完成后再使用 `paraformer-zh + fsmn-vad + ct-punc + cam++` 做全局校准。校准可以修订文本、标点、时间戳和 `speaker_id`，但不能仅凭声纹可靠确定临床角色，因此医生/患者/其他/待确认继续保留人工校正入口。
+
+| 能力 | 当前路线 | 结论 |
+| --- | --- | --- |
+| 上传音频持续出字 | Paraformer Streaming | 默认 FunASR 上传路线，模型加载后持续产生 provisional segment。 |
+| 真实进度 | 已处理音频秒数 / 总时长 | 模型加载阶段不显示虚假百分比。 |
+| 多说话人 | FSMN-VAD + CAM++ | 输出声学 `speaker_id`，不等同于医生/患者角色。 |
+| 最终校准 | Paraformer + 标点 + CAM++ | 通过 `segment_update` 和 `reconciliation_completed` 原位修订。 |
+| SenseVoice/Whisper | 分段/离线识别 | 不伪装为模型原生流式，继续作为评测和 fallback 路线。 |
+| 实时结构化 | `/api/records/preview` | 只生成待医生确认的预览，不创建正式任务。 |
+
+详细协议和前端验收见 `docs/asr_streaming_player_diarization_v0_8_5.md`。
+
 ## 候选模型
 
 | 场景 | 候选 | 说明 |
@@ -162,7 +179,7 @@
 
 ## 参考资料
 
-- [FunASR 官方文档](https://modelscope.github.io/FunASR/)
+- [FunASR 官方 README](https://github.com/modelscope/FunASR/blob/main/README.md)
 - [SenseVoice GitHub](https://github.com/FunAudioLLM/SenseVoice)
 - [Qwen3-ASR-0.6B 模型卡](https://huggingface.co/Qwen/Qwen3-ASR-0.6B)
 - [OpenAI Whisper GitHub](https://github.com/openai/whisper)

@@ -12,7 +12,7 @@ from app.services.asr.speaker_diarization import enhance_speaker_diarization
 
 
 class SpeakerDiarizationAssistTests(unittest.TestCase):
-    def test_long_single_segment_is_split_into_reviewable_role_turns(self):
+    def test_single_speaker_script_is_not_faked_as_doctor_and_patient(self):
         result = ASRResult(
             audio_id="demo_audio",
             engine="funasr",
@@ -27,14 +27,12 @@ class SpeakerDiarizationAssistTests(unittest.TestCase):
         )
 
         enhanced = enhance_speaker_diarization(result)
-        roles = [segment.role for segment in enhanced.segments]
-
-        self.assertGreaterEqual(len(enhanced.segments), 3)
-        self.assertIn("医生", roles)
-        self.assertIn("患者", roles)
+        self.assertEqual(len(enhanced.segments), 1)
+        self.assertIsNone(enhanced.segments[0].role)
         self.assertTrue(enhanced.needs_review)
-        self.assertIn("[医生]", enhanced.conversation_text)
-        self.assertIn("[患者]", enhanced.conversation_text)
+        self.assertEqual(len(enhanced.speaker_assignments), 1)
+        self.assertTrue(enhanced.speaker_assignments[0].requires_confirmation)
+        self.assertIn("[说话人 A]", enhanced.conversation_text)
         self.assertTrue(enhanced.warnings)
 
     def test_two_speaker_segments_get_role_map_confidence(self):
@@ -57,8 +55,27 @@ class SpeakerDiarizationAssistTests(unittest.TestCase):
 
         self.assertEqual(speaker_roles["spk0"], "医生")
         self.assertEqual(speaker_roles["spk1"], "患者")
-        self.assertEqual(speaker_sources["spk0"], "speaker_map")
+        self.assertEqual(speaker_sources["spk0"], "speaker_context_rules")
         self.assertGreater(speaker_confidence["spk0"] or 0, 0.5)
+
+    def test_short_filler_cluster_is_merged_into_adjacent_primary_speaker(self):
+        result = ASRResult(
+            audio_id="demo_audio",
+            engine="funasr",
+            text="请问哪里不舒服？嗯，我发热三天。",
+            conversation_text="",
+            segments=[
+                ASRSegment(speaker="spk1", text="请问哪里不舒服？", start_time=0.0, end_time=4.0),
+                ASRSegment(speaker="spk0", text="嗯", start_time=4.0, end_time=4.4),
+                ASRSegment(speaker="spk2", text="我发热三天。", start_time=4.4, end_time=8.5),
+            ],
+        )
+
+        enhanced = enhance_speaker_diarization(result)
+
+        self.assertEqual(len({segment.speaker_id for segment in enhanced.segments}), 2)
+        self.assertEqual({item.role for item in enhanced.speaker_assignments}, {"医生", "患者"})
+        self.assertNotIn("待确认", {segment.role for segment in enhanced.segments})
 
     def test_manual_role_correction_is_marked_as_doctor_reviewed(self):
         result = ASRResult(

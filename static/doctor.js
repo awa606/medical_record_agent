@@ -4,6 +4,7 @@ const appState = {
   currentAsrSessionId: null,
   currentAsrResult: null,
   liveTranscriptSegments: [],
+  provisionalTranscriptSegments: [],
   currentEvaluation: null,
   currentTask: null,
   currentSteps: [],
@@ -25,6 +26,7 @@ const appState = {
   busy: false,
   eventSource: null,
   asrEventSource: null,
+  asrConnectionStatus: "idle",
   asrStreamProgress: 0,
   asrProgressEstimated: false,
   asrElapsedSeconds: 0,
@@ -47,6 +49,11 @@ const appState = {
   roleReviewDirty: false,
   roleReviewSaving: false,
   speakerRoleCorrections: {},
+  speakerAssignments: [],
+  speakerMappingRequired: false,
+  doctorProfiles: [],
+  selectedDoctorProfileId: "",
+  doctorProfileEnrollmentBusy: false,
   lastActionError: "",
   inputMenuOpen: false,
   recordPreview: null,
@@ -70,6 +77,9 @@ const appState = {
   audioSeekDragging: false,
   transcriptPacing: "fast",
   activeTranscriptSegmentId: "",
+  asrPrewarmStatus: null,
+  asrPrewarmCheckedAt: "",
+  asrPrewarmTimer: null,
 };
 
 const RECORD_PREVIEW_MIN_CHARS = 10;
@@ -163,10 +173,10 @@ const ENGINE_LABELS = {
 };
 
 const ROLE_OPTIONS = [
+  ["", "请选择角色"],
   ["医生", "医生"],
   ["患者", "患者"],
   ["其他", "其他"],
-  ["待确认", "待确认"],
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -535,19 +545,19 @@ function nextActionState() {
   if (appState.currentAsrResult && (rolePending || appState.roleReviewDirty)) {
     const pendingCount = roleReviewPendingCount();
     const pendingText = pendingCount
-      ? `仍有 ${pendingCount} 段角色待确认，请在校正抽屉中选择医生或患者。`
+      ? `仍有 ${pendingCount} 位说话人需要映射，请一次确认说话人 A/B/C 的角色。`
       : "角色已逐段确认，请保存校正结果。";
     const resumeText = appState.pendingGenerateAfterRoleReview
       ? "保存后将自动继续生成病历。"
       : "保存后可继续生成病历。";
     return {
       tone: "warning",
-      title: rolePending ? "请完成医生/患者角色校正" : "请保存角色校正",
+      title: rolePending ? "请完成说话人全局角色映射" : "请保存角色映射",
       detail: `${pendingText}${resumeText}`,
       actions: [
         workflowAction({
           key: "save-role-review",
-          label: appState.roleReviewSaving ? "保存中" : "保存角色校正",
+          label: appState.roleReviewSaving ? "保存中" : "确认全局映射",
           tone: "primary",
           disabled: appState.roleReviewSaving,
         }),
@@ -679,6 +689,52 @@ function renderPatientBar() {
   $("llmModel").textContent = llm.model;
   $("llmFallback").textContent = llm.fallbackLabel;
   $("reviewStatus").textContent = STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入";
+  renderAsrPrewarmStatus();
+}
+
+function renderAsrPrewarmStatus() {
+  const target = $("asrModelStatus");
+  if (!target) return;
+  const status = appState.asrPrewarmStatus?.status || "idle";
+  let label = "按需加载";
+  let tone = "neutral";
+  if (appState.selectedEngine !== "funasr") {
+    label = "切换后按需加载";
+  } else if (status === "warming") {
+    label = "模型准备中";
+    tone = "warning";
+  } else if (status === "ready") {
+    label = "模型已就绪";
+    tone = "ok";
+  } else if (status === "failed") {
+    label = "预热失败，可用 Mock";
+    tone = "danger";
+  } else if (status === "idle") {
+    label = "启动后自动预热";
+  }
+  target.textContent = label;
+  target.className = `model-status ${tone}`;
+  target.title = appState.asrPrewarmStatus?.last_error || "";
+}
+
+async function refreshAsrPrewarmStatus() {
+  try {
+    const status = await api("/api/asr/prewarm/status");
+    appState.asrPrewarmStatus = status;
+    appState.asrPrewarmCheckedAt = new Date().toISOString();
+  } catch (error) {
+    appState.asrPrewarmStatus = { status: "failed", last_error: error.message || String(error) };
+  }
+  renderPatientBar();
+  return appState.asrPrewarmStatus;
+}
+
+function startAsrPrewarmPolling() {
+  if (appState.asrPrewarmTimer) {
+    clearInterval(appState.asrPrewarmTimer);
+  }
+  refreshAsrPrewarmStatus();
+  appState.asrPrewarmTimer = setInterval(refreshAsrPrewarmStatus, 8000);
 }
 
 function llmDisplayState() {
@@ -1001,7 +1057,10 @@ function renderFields() {
 }
 
 function classifySpeaker(line, segment = {}) {
-  const raw = `${segment.role || ""} ${segment.speaker || ""} ${line}`.toLowerCase();
+  if (segment.role === "医生") return "doctor";
+  if (segment.role === "患者") return "patient";
+  if (segment.role === "其他") return "other";
+  const raw = `${segment.speaker || ""} ${line}`.toLowerCase();
   if (raw.includes("医生") || raw.includes("doctor")) return "doctor";
   if (raw.includes("患者") || raw.includes("patient")) return "patient";
   if (raw.includes("其他") || raw.includes("other")) return "other";
@@ -1016,7 +1075,7 @@ function roleLabelFromSegment(segment = {}, fallbackLine = "") {
   if (speaker === "doctor") return "医生";
   if (speaker === "patient") return "患者";
   if (speaker === "other") return "其他";
-  return "待确认";
+  return "";
 }
 
 function inferLowConfidenceRole(text = "") {
@@ -1032,16 +1091,9 @@ function inferLowConfidenceRole(text = "") {
 }
 
 function segmentWithInferredRole(segment = {}) {
-  if (segment.role && segment.role !== "待确认") return segment;
-  const inferredRole = inferLowConfidenceRole(segment.text || "");
-  return {
-    ...segment,
-    role: inferredRole,
-    role_confidence: segment.role_confidence ?? (inferredRole === "待确认" ? 0.4 : 0.58),
-    role_source: segment.role_source || "frontend_text_rule",
-    role_note: segment.role_note || (inferredRole === "待确认" ? "角色待确认" : "低置信度初判，需医生校正"),
-    needs_review: true,
-  };
+  // ASR speaker roles are assigned once per acoustic speaker on the backend.
+  // Per-sentence text guesses caused role oscillation and are intentionally disabled.
+  return segment;
 }
 
 function speakerClassFromRole(role) {
@@ -1068,8 +1120,13 @@ function segmentTime(segment = {}) {
 }
 
 function conversationFromSegments(segments = []) {
+  const aliases = new Map();
   return segments
-    .map((segment) => `[${segment.role || "待确认"}] ${segment.text || ""}`)
+    .map((segment) => {
+      const speakerId = segment.speaker_id || segment.speaker || "speaker_0";
+      if (!aliases.has(speakerId)) aliases.set(speakerId, `说话人 ${String.fromCharCode(65 + Math.min(aliases.size, 25))}`);
+      return `[${segment.role || aliases.get(speakerId)}] ${segment.text || ""}`;
+    })
     .join("\n");
 }
 
@@ -1078,8 +1135,10 @@ function textFromSegments(segments = []) {
 }
 
 function currentReviewSegments() {
-  if (appState.currentAsrResult?.segments?.length) return appState.currentAsrResult.segments;
-  return appState.liveTranscriptSegments;
+  const segments = appState.currentAsrResult?.segments?.length
+    ? appState.currentAsrResult.segments
+    : appState.liveTranscriptSegments;
+  return segments.filter((segment) => !segment.provisional);
 }
 
 function compactSegmentText(segment = {}) {
@@ -1143,13 +1202,31 @@ function upsertLiveTranscriptSegment(segment) {
   appState.liveTranscriptSegments = mergeTranscriptSegments([segment], appState.liveTranscriptSegments);
 }
 
+function upsertProvisionalTranscriptSegment(segment) {
+  appState.provisionalTranscriptSegments = mergeTranscriptSegments(
+    [segment],
+    appState.provisionalTranscriptSegments,
+  );
+}
+
+function latestProvisionalTranscriptText() {
+  return appState.provisionalTranscriptSegments
+    .slice(-3)
+    .map((segment) => compactSegmentText(segment))
+    .filter(Boolean)
+    .join(" ");
+}
+
 function liveConversationTextForPreview() {
   const segments = currentReviewSegments();
   if (segments.length) {
+    const aliases = new Map();
     return segments
       .map((segment) => {
         const displaySegment = segmentWithInferredRole(segment);
-        const role = displaySegment.role || "待确认";
+        const speakerId = displaySegment.speaker_id || displaySegment.speaker || "speaker_0";
+        if (!aliases.has(speakerId)) aliases.set(speakerId, `说话人 ${String.fromCharCode(65 + Math.min(aliases.size, 25))}`);
+        const role = displaySegment.role || aliases.get(speakerId);
         const text = displaySegment.text || "";
         return text ? `[${role}] ${text}` : "";
       })
@@ -1210,7 +1287,8 @@ async function fetchRecordPreview(text, segments) {
 
 function scheduleRecordPreview({ force = false } = {}) {
   if (appState.currentRecordFields) return;
-  const segments = currentReviewSegments().map(segmentWithInferredRole);
+  if (roleReviewRequired()) return;
+  const segments = currentReviewSegments().filter((segment) => !segment.provisional).map(segmentWithInferredRole);
   const text = liveConversationTextForPreview();
   if (!force && segments.length < RECORD_PREVIEW_MIN_SEGMENTS && text.length < RECORD_PREVIEW_MIN_CHARS) return;
   const now = Date.now();
@@ -1466,13 +1544,24 @@ function visibleTranscriptRows(rows) {
   return rows.filter((row) => row.startTime != null && row.startTime <= appState.audioCurrentTime + 0.2);
 }
 
-function speakerDisplayLabel(row, speakerCount) {
-  if (!row.speakerId || speakerCount < 2) return row.label;
+function buildSpeakerAliasMap(rows) {
+  const aliases = new Map();
+  rows.forEach((row) => {
+    if (row.speakerId && !aliases.has(row.speakerId)) {
+      aliases.set(row.speakerId, String.fromCharCode(65 + Math.min(aliases.size, 25)));
+    }
+  });
+  return aliases;
+}
+
+function speakerDisplayLabel(row, speakerCount, speakerAliases = null) {
+  if (!row.speakerId) return row.label || "说话人 A";
   const match = String(row.speakerId).match(/(\d+)$/);
-  const suffix = match
+  const suffix = speakerAliases?.get(row.speakerId) || (match
     ? String.fromCharCode(65 + Math.min(Number(match[1]), 25))
-    : String(row.speakerId).replace(/^speaker[-_]?|^spk/i, "").toUpperCase();
-  return `${row.label} · ${suffix || row.speakerId}`;
+    : String(row.speakerId).replace(/^speaker[-_]?|^spk/i, "").toUpperCase());
+  const speakerName = `说话人 ${suffix || row.speakerId}`;
+  return row.label ? `${row.label} · ${suffix || row.speakerId}` : speakerName;
 }
 
 function renderAudioPlayer() {
@@ -1564,7 +1653,7 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
   const detailAction = rows.length ? detailButton("transcript:all", "查看全部转写") : "";
   const reviewText = reviewable
     ? unreviewedCount
-      ? `${unreviewedCount} 段待确认`
+      ? "需确认说话人映射"
       : "角色已确认"
     : "完成转写后校正";
   const elapsed = appState.asrElapsedSeconds
@@ -1622,6 +1711,8 @@ function renderTranscript() {
   const activeSegment = activeTranscriptSegment(rows);
   appState.activeTranscriptSegmentId = activeSegment?.segmentId || "";
   const speakerCount = new Set(rows.map((row) => row.speakerId).filter(Boolean)).size;
+  const speakerAliases = buildSpeakerAliasMap(rows);
+  const provisionalText = latestProvisionalTranscriptText();
   const streamingEmptyBlock = isStreaming && !rows.length
     ? `
       <div class="empty-state transcript-empty transcribing-empty" aria-live="polite">
@@ -1629,7 +1720,9 @@ function renderTranscript() {
         <div class="transcribing-empty-copy">
           <strong>${escapeHtml(asrPhaseLabel())}</strong>
           <span>${appState.asrProgressKind === "actual" ? `已处理 ${formatRelativeTime(appState.asrProcessedAudioSeconds)} / ${formatRelativeTime(appState.asrAudioDurationSeconds)}` : "正在准备本地模型"}</span>
-          <small>模型产生稳定文字后会立即追加；说话人和标点将在转写后全局校准。</small>
+          ${provisionalText
+            ? `<p class="provisional-transcript-text">${escapeHtml(provisionalText)}</p><small>临时识别结果，仅用于反馈进度；完成说话人切分后才进入正式转写。</small>`
+            : `<small>模型正在输出临时文字；完成说话人切分后会显示稳定转写。</small>`}
         </div>
       </div>
     `
@@ -1656,7 +1749,7 @@ function renderTranscript() {
           tabindex="0"
         >
           <span class="transcript-row-time">${escapeHtml(item.time)}</span>
-          <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount))}】</span>
+          <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount, speakerAliases))}】</span>
           <span class="transcript-row-text">${escapeHtml(item.text || "（无文本）")}</span>
           <button type="button" class="transcript-row-link" data-open-detail="transcript:${item.index}" data-busy-allowed="true">查看原文</button>
         </div>
@@ -1670,9 +1763,10 @@ function renderTranscriptDetailContent(target = "all") {
   if (!rows.length) return `<div class="empty-state">暂无对话转写。</div>`;
   const selectedIndex = Number(target);
   const canEdit = Boolean(appState.currentAsrSessionId && appState.currentAsrResult?.segments?.length);
-  const unreviewedCount = rows.filter((item) => item.needsReview || !item.reviewedByDoctor).length;
+  const unreviewedCount = roleReviewPendingCount();
   const canGenerateFromTranscript = Boolean(appState.currentAsrResult && !appState.currentTaskId && !appState.currentRecordFields);
   const speakerGroups = transcriptSpeakerGroups(rows);
+  const speakerAliases = buildSpeakerAliasMap(rows);
   const reviewHint = canEdit
     ? appState.roleReviewDirty
       ? "存在未保存校正，保存后会用于后续病历生成。"
@@ -1688,7 +1782,7 @@ function renderTranscriptDetailContent(target = "all") {
     ${detailSection("转写状态", `
       <div class="detail-kv"><span>引擎</span><strong>${escapeHtml(appState.currentAsrResult?.engine || appState.selectedEngine || "ASR")}</strong></div>
       <div class="detail-kv"><span>分段</span><strong>${rows.length} 条</strong></div>
-      <div class="detail-kv"><span>校正</span><strong>${escapeHtml(canEdit ? (unreviewedCount ? `${unreviewedCount} 段待确认` : "角色已确认") : "只读")}</strong></div>
+      <div class="detail-kv"><span>校正</span><strong>${escapeHtml(canEdit ? (unreviewedCount ? `${unreviewedCount} 位说话人需映射` : "角色已映射") : "只读")}</strong></div>
       <p class="detail-note">${escapeHtml(reviewHint)}</p>
     `)}
     ${canEdit && speakerGroups.length ? detailSection("按说话人统一校正", `
@@ -1710,14 +1804,7 @@ function renderTranscriptDetailContent(target = "all") {
           <div class="transcript-review-row ${Number.isFinite(selectedIndex) && selectedIndex === item.index ? "focus" : ""}" data-segment-index="${item.index}">
             <div class="transcript-review-meta">
               <span class="transcript-row-time">${escapeHtml(item.time)}</span>
-              ${canEdit ? `
-                <select data-detail-role-select aria-label="校正角色">
-                  ${renderRoleOptions(item.label)}
-                </select>
-              ` : `<strong class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(item.label)}】</strong>`}
-              <span class="status-badge ${item.needsReview ? "candidate" : item.reviewedByDoctor ? "confirmed" : "neutral"}">
-                ${item.needsReview ? "待确认" : item.reviewedByDoctor ? "已校正" : "未校正"}
-              </span>
+              <strong class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerGroups.length, speakerAliases))}】</strong>
             </div>
             <textarea data-detail-segment-text ${canEdit ? "" : "readonly"}>${escapeHtml(item.text)}</textarea>
           </div>
@@ -2399,6 +2486,8 @@ function resetRoleReviewState() {
   appState.roleReviewSaving = false;
   appState.pendingGenerateAfterRoleReview = false;
   appState.speakerRoleCorrections = {};
+  appState.speakerAssignments = [];
+  appState.speakerMappingRequired = false;
 }
 
 function resetRecordPreview() {
@@ -2438,6 +2527,7 @@ function resetTaskState({ keepAsr = false } = {}) {
     appState.currentAudioId = null;
     appState.currentAsrSessionId = null;
     appState.liveTranscriptSegments = [];
+    appState.provisionalTranscriptSegments = [];
     appState.asrStreamProgress = 0;
     appState.asrStreamCurrentSegment = 0;
     appState.asrStreamTotalSegments = 0;
@@ -2528,9 +2618,18 @@ function listenForEvents(taskId, eventsUrl) {
 function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
   closeAsrStream();
   const separator = eventsUrl.includes("?") ? "&" : "?";
-  const source = new EventSource(`${eventsUrl}${separator}delay_ms=220`);
+  const source = new EventSource(`${eventsUrl}${separator}delay_ms=100`);
   appState.asrEventSource = source;
+  appState.asrConnectionStatus = "connecting";
   let terminalReceived = false;
+
+  source.onopen = () => {
+    appState.asrConnectionStatus = "connected";
+    if (appState.asrLastError === "转写连接正在恢复，识别任务仍在后台运行。") {
+      appState.asrLastError = "";
+    }
+    renderAll();
+  };
 
   source.addEventListener("session_created", (event) => {
     const data = JSON.parse(event.data);
@@ -2555,6 +2654,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrChunkStatus = "";
     appState.asrChunkLastError = "";
     appState.asrRetryHint = "";
+    appState.provisionalTranscriptSegments = [];
     renderAll();
   });
 
@@ -2676,7 +2776,11 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrProgressEstimated = false;
     appState.asrStreamTotalSegments = Number(data.total || appState.asrStreamTotalSegments || 0);
     if (data.segment) {
-      upsertLiveTranscriptSegment(data.segment);
+      if (data.segment.provisional || data.partial) {
+        upsertProvisionalTranscriptSegment(data.segment);
+      } else {
+        upsertLiveTranscriptSegment(data.segment);
+      }
       appState.asrStreamCurrentSegment = appState.liveTranscriptSegments.length;
       const now = new Date().toISOString();
       appState.asrFirstSegmentAt = appState.asrFirstSegmentAt || now;
@@ -2685,7 +2789,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
       if (segmentEnd != null) {
         appState.asrVisibleAudioSeconds = Math.max(appState.asrVisibleAudioSeconds || 0, segmentEnd);
       }
-      scheduleRecordPreview();
+      if (!data.segment.provisional && !data.partial) scheduleRecordPreview();
     }
     renderAll();
   };
@@ -2711,7 +2815,10 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     const result = data.asr_result;
     if (!result) return;
     appState.currentAsrResult = result;
+    appState.speakerAssignments = result.speaker_assignments || appState.speakerAssignments;
+    appState.speakerMappingRequired = appState.speakerAssignments.some((item) => item.requires_confirmation);
     appState.liveTranscriptSegments = finalTranscriptSegments(result.segments || [], []);
+    appState.provisionalTranscriptSegments = [];
     appState.asrStreamCurrentSegment = appState.liveTranscriptSegments.length;
     appState.asrStreamTotalSegments = appState.liveTranscriptSegments.length;
     appState.asrPhase = "speaker_calibration_completed";
@@ -2719,6 +2826,24 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     scheduleRecordPreview({ force: true });
     renderAll();
   });
+
+  source.addEventListener("speaker_turn", (event) => {
+    const data = JSON.parse(event.data);
+    if (!data.segment || data.segment.provisional) return;
+    upsertLiveTranscriptSegment(data.segment);
+    appState.asrStreamCurrentSegment = appState.liveTranscriptSegments.length;
+    renderTranscript();
+  });
+
+  const handleSpeakerMapping = (event, required) => {
+    const data = JSON.parse(event.data);
+    appState.speakerAssignments = data.assignments || [];
+    appState.speakerMappingRequired = required
+      || appState.speakerAssignments.some((item) => item.requires_confirmation);
+    renderAll();
+  };
+  source.addEventListener("speaker_mapping_update", (event) => handleSpeakerMapping(event, false));
+  source.addEventListener("speaker_mapping_required", (event) => handleSpeakerMapping(event, true));
 
   source.addEventListener("completed", (event) => {
     const data = JSON.parse(event.data);
@@ -2734,7 +2859,10 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
           conversation_text: conversationFromSegments(mergedSegments) || data.asr_result.conversation_text,
         }
       : data.asr_result;
+    appState.speakerAssignments = appState.currentAsrResult?.speaker_assignments || appState.speakerAssignments;
+    appState.speakerMappingRequired = appState.speakerAssignments.some((item) => item.requires_confirmation);
     appState.liveTranscriptSegments = mergedSegments;
+    appState.provisionalTranscriptSegments = [];
     appState.taskStatus = "TRANSCRIBED";
     appState.asrPhase = "completed";
     appState.asrProgressKind = "actual";
@@ -2750,6 +2878,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrStreamTotalSegments = data.segments || data.asr_result?.segments?.length || appState.asrStreamTotalSegments || appState.liveTranscriptSegments.length;
     appState.asrStreamCurrentSegment = appState.asrStreamTotalSegments;
     appState.asrLastError = "";
+    appState.asrConnectionStatus = "completed";
     appState.asrChunkStatus = appState.asrChunkTotal ? "切片转写完成" : "";
     appState.asrChunkLastError = "";
     appState.asrRetryHint = "";
@@ -2779,15 +2908,13 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
 
   source.onerror = () => {
     if (!terminalReceived) {
-      appState.taskStatus = "FAILED";
-      const error = new Error("ASR SSE 连接异常，请检查服务日志");
-      appState.asrLastError = error.message;
-      reportActionError(error);
-      reject?.(error);
+      // EventSource reconnects automatically and sends Last-Event-ID. A transient
+      // network interruption must not turn a running ASR job into a failed job.
+      appState.asrConnectionStatus = "reconnecting";
+      appState.asrLastError = "转写连接正在恢复，识别任务仍在后台运行。";
+      setBusy(true, "正在恢复转写连接...");
+      renderAll();
     }
-    closeAsrStream();
-    setBusy(false);
-    renderAll();
   };
 }
 
@@ -2843,12 +2970,20 @@ function updateSpeakerRole(speakerId, role) {
     const identity = segment.speaker_id || segment.speaker;
     if (identity !== speakerId) return;
     segment.role = role;
-    segment.reviewed_by_doctor = role !== "待确认";
-    segment.needs_review = role === "待确认";
+    segment.reviewed_by_doctor = Boolean(role);
+    segment.needs_review = !role;
     changed = true;
   });
   if (!changed) return;
   appState.speakerRoleCorrections[speakerId] = role;
+  appState.speakerAssignments = (appState.speakerAssignments || []).map((item) => (
+    item.speaker_id === speakerId
+      ? { ...item, role, confidence: 0.99, source: "manual_speaker_map", requires_confirmation: !role }
+      : item
+  ));
+  appState.speakerMappingRequired = appState.speakerAssignments.some(
+    (item) => item.requires_confirmation || !item.role,
+  );
   appState.roleReviewDirty = true;
   syncAsrTextFromSegments();
   renderAll();
@@ -2872,7 +3007,9 @@ function transcriptSpeakerGroups(rows = transcriptRows()) {
       counts[role] = (counts[role] || 0) + 1;
       return counts;
     }, {});
-    const role = Object.entries(roleCounts).sort((left, right) => right[1] - left[1])[0]?.[0] || "待确认";
+    const role = Object.entries(roleCounts)
+      .filter(([name]) => ["医生", "患者", "其他"].includes(name))
+      .sort((left, right) => right[1] - left[1])[0]?.[0] || "";
     return {
       ...group,
       role,
@@ -2884,6 +3021,11 @@ function transcriptSpeakerGroups(rows = transcriptRows()) {
 function roleReviewRequired() {
   const asr = appState.currentAsrResult;
   const segments = currentReviewSegments();
+  const assignments = asr?.speaker_assignments || appState.speakerAssignments || [];
+  if (assignments.length) {
+    return assignments.some((item) => item.requires_confirmation || !item.role)
+      || appState.speakerMappingRequired;
+  }
   return Boolean(
     asr?.needs_review
       || asr?.role_strategy === "single_segment_needs_review"
@@ -2892,6 +3034,10 @@ function roleReviewRequired() {
 }
 
 function roleReviewPendingCount() {
+  const assignments = appState.currentAsrResult?.speaker_assignments || appState.speakerAssignments || [];
+  if (assignments.length) {
+    return assignments.filter((item) => item.requires_confirmation || !item.role).length;
+  }
   return currentReviewSegments()
     .filter((segment) => segment.needs_review || !segment.role || segment.role === "待确认")
     .length;
@@ -2907,6 +3053,12 @@ function focusNextActionPanel() {
 async function saveRoleReview({ silent = false } = {}) {
   if (!appState.currentAsrSessionId || !appState.currentAsrResult?.segments?.length) {
     if (!silent) showToast("暂无可保存的角色校正结果");
+    return appState.currentAsrResult;
+  }
+
+  const unresolvedSpeakers = transcriptSpeakerGroups().filter((group) => !group.role);
+  if (unresolvedSpeakers.length) {
+    if (!silent) showToast(`请先完成 ${unresolvedSpeakers.length} 位说话人的全局角色映射`);
     return appState.currentAsrResult;
   }
 
@@ -2926,7 +3078,7 @@ async function saveRoleReview({ silent = false } = {}) {
     const speakerRoles = Object.entries(appState.speakerRoleCorrections).map(([speakerId, role]) => ({
       speaker_id: speakerId,
       role,
-      reviewed_by_doctor: role !== "待确认",
+      reviewed_by_doctor: Boolean(role),
     }));
 
     const response = await api(`/api/asr/sessions/${appState.currentAsrSessionId}/result`, {
@@ -2939,12 +3091,17 @@ async function saveRoleReview({ silent = false } = {}) {
       }),
     });
     appState.currentAsrResult = response.asr_result;
+    appState.speakerAssignments = response.asr_result.speaker_assignments || [];
+    appState.speakerMappingRequired = appState.speakerAssignments.some(
+      (item) => item.requires_confirmation || !item.role,
+    );
     appState.liveTranscriptSegments = response.asr_result.segments || [];
     appState.currentAudioId = response.audio_id || appState.currentAudioId;
     appState.roleReviewDirty = false;
     appState.speakerRoleCorrections = {};
     savedResult = response.asr_result;
     pendingCount = roleReviewPendingCount();
+    if (!pendingCount) scheduleRecordPreview({ force: true });
     shouldAutoGenerate = Boolean(
       !silent
         && appState.pendingGenerateAfterRoleReview
@@ -2958,7 +3115,7 @@ async function saveRoleReview({ silent = false } = {}) {
   }
   if (silent) return savedResult;
   if (pendingCount) {
-    showToast(`角色校正已保存，仍有 ${pendingCount} 段待确认`);
+    showToast(`角色校正已保存，仍有 ${pendingCount} 位说话人需要映射`);
     focusNextActionPanel();
     return savedResult;
   }
@@ -2984,7 +3141,8 @@ async function uploadAndTranscribe(file, engine) {
   appState.uploadedFilename = "上传中";
   appState.taskStatus = "CREATED";
   appState.currentAsrResult = null;
-  appState.liveTranscriptSegments = [];
+    appState.liveTranscriptSegments = [];
+    appState.provisionalTranscriptSegments = [];
   appState.asrStreamProgress = 0;
   appState.asrStreamCurrentSegment = 0;
   appState.asrStreamTotalSegments = 0;
@@ -3002,10 +3160,25 @@ async function uploadAndTranscribe(file, engine) {
   appState.asrChunkStatus = "";
   appState.asrChunkLastError = "";
   appState.asrRetryHint = "";
+  if (engine === "funasr") {
+    const prewarm = await refreshAsrPrewarmStatus();
+    if (prewarm?.status === "warming") {
+      appState.asrLastError = "FunASR 模型仍在准备中，首次真实转写可能需要等待；Mock ASR 可作为现场保底。";
+    } else if (prewarm?.status === "failed") {
+      appState.asrLastError = "FunASR 自动预热失败，真实转写可能回退为按需加载；如现场演示受阻请切换 Mock ASR。";
+    }
+  }
   renderAll();
 
   setBusy(true, "正在创建 ASR 实时转写会话...");
-  const session = await api(`/api/asr/sessions?engine=${encodeURIComponent(engine)}`, { method: "POST" });
+  const sessionParams = new URLSearchParams({
+    engine,
+    diarization_engine: "auto",
+  });
+  if (appState.selectedDoctorProfileId) {
+    sessionParams.set("doctor_profile_id", appState.selectedDoctorProfileId);
+  }
+  const session = await api(`/api/asr/sessions?${sessionParams.toString()}`, { method: "POST" });
   appState.currentAsrSessionId = session.session_id;
   renderAll();
 
@@ -3052,8 +3225,8 @@ async function submitAudio() {
         setBusy(false);
         const pendingCount = roleReviewPendingCount();
         showToast(pendingCount
-          ? `转写完成，仍有 ${pendingCount} 段角色待确认`
-          : "转写完成，请保存角色校正后自动生成病历");
+          ? `转写完成，仍有 ${pendingCount} 位说话人需要全局映射`
+          : "转写完成，请确认说话人映射后自动生成病历");
         focusNextActionPanel();
         renderAll();
         return;
@@ -3221,6 +3394,7 @@ function openAudioTranscribe() {
   $("audioPanelHint").textContent = "上传 MP3/WAV 预录音频，系统创建 ASR 会话并通过 SSE 实时显示分段转写。";
   $("submitAudioButton").textContent = "上传并实时转写";
   openDrawer("audioPanel", "MP3/WAV 实时转写");
+  refreshDoctorProfiles();
 }
 
 function openAudioGenerate() {
@@ -3230,6 +3404,58 @@ function openAudioGenerate() {
   $("audioPanelHint").textContent = "上传 MP3/WAV 预录音频，先完成 SSE 实时转写，再进入病历生成流程。";
   $("submitAudioButton").textContent = "实时转写并生成病历";
   openDrawer("audioPanel", "MP3/WAV 生成病历");
+  refreshDoctorProfiles();
+}
+
+async function refreshDoctorProfiles() {
+  const select = $("doctorProfileSelect");
+  if (!select) return;
+  try {
+    const response = await api("/api/speaker-profiles");
+    appState.doctorProfiles = response.profiles || [];
+    select.innerHTML = `
+      <option value="">不使用注册声纹</option>
+      ${appState.doctorProfiles.map((profile) => `
+        <option value="${escapeHtml(profile.profile_id)}">${escapeHtml(profile.name)} · ${Math.round(profile.effective_speech_seconds)}秒</option>
+      `).join("")}
+    `;
+    const selectedExists = appState.doctorProfiles.some(
+      (profile) => profile.profile_id === appState.selectedDoctorProfileId,
+    );
+    if (!selectedExists) appState.selectedDoctorProfileId = "";
+    select.value = appState.selectedDoctorProfileId;
+  } catch (error) {
+    showToast(`医生声纹列表暂不可用：${error.message}`);
+  }
+}
+
+async function enrollDoctorProfile() {
+  const file = $("doctorProfileAudioInput")?.files?.[0];
+  if (!file) {
+    showToast("请选择 10-30 秒医生本人语音");
+    return;
+  }
+  const name = $("doctorProfileNameInput")?.value?.trim() || "本机医生";
+  const form = new FormData();
+  form.append("file", file);
+  appState.doctorProfileEnrollmentBusy = true;
+  $("enrollDoctorProfileButton").disabled = true;
+  $("enrollDoctorProfileButton").textContent = "正在提取声纹...";
+  try {
+    const profile = await api(`/api/speaker-profiles/doctor?name=${encodeURIComponent(name)}`, {
+      method: "POST",
+      body: form,
+    });
+    appState.selectedDoctorProfileId = profile.profile_id;
+    await refreshDoctorProfiles();
+    showToast("医生声纹已保存在本机，注册原始音频已删除");
+  } catch (error) {
+    reportActionError(error);
+  } finally {
+    appState.doctorProfileEnrollmentBusy = false;
+    $("enrollDoctorProfileButton").disabled = false;
+    $("enrollDoctorProfileButton").textContent = "注册 10-30 秒声纹";
+  }
 }
 
 function openReservedRecording() {
@@ -3297,6 +3523,10 @@ function bindEvents() {
   $("drawerBackdrop").addEventListener("click", closeDrawer);
   $("submitTextButton").addEventListener("click", submitTextImport);
   $("submitAudioButton").addEventListener("click", submitAudio);
+  $("enrollDoctorProfileButton").addEventListener("click", enrollDoctorProfile);
+  $("doctorProfileSelect").addEventListener("change", (event) => {
+    appState.selectedDoctorProfileId = event.target.value;
+  });
   $("submitEvaluationButton").addEventListener("click", runEvaluation);
   $("transcriptSettingsButton").addEventListener("click", () => openWorkbenchDetail("transcript:all"));
   $("audioPlayPauseButton").addEventListener("click", toggleAudioPlayback);
@@ -3493,6 +3723,7 @@ function bindEvents() {
 async function init() {
   bindEvents();
   renderAll();
+  startAsrPrewarmPolling();
   refreshLlmStatus();
   await restoreAsrSessionFromUrl();
 }

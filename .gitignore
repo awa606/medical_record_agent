@@ -31,12 +31,23 @@ data/asr_eval/long_audio_stability/audio/*
 !data/asr_eval/long_audio_stability/audio/.gitkeep
 data/asr_eval/long_audio_stability/tmp/*
 !data/asr_eval/long_audio_stability/tmp/.gitkeep
+data/asr_eval/public_diarization/audio/*
+!data/asr_eval/public_diarization/audio/.gitkeep
+data/asr_eval/public_diarization/cache/*
+!data/asr_eval/public_diarization/cache/.gitkeep
+data/asr_eval/public_diarization/extracted/*
+!data/asr_eval/public_diarization/extracted/.gitkeep
 data/docker_runtime/*
 !data/docker_runtime/
 !data/docker_runtime/.gitkeep
 data/asr_model_cache/*
 !data/asr_model_cache/
 !data/asr_model_cache/.gitkeep
+data/speaker_profiles/*
+!data/speaker_profiles/
+!data/speaker_profiles/.gitkeep
+.env
+.env.local
 tools/ffmpeg/*
 !tools/ffmpeg/.gitkeep
 

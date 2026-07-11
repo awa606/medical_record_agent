@@ -1,0 +1,21 @@
+{
+  "scope": "v0.8.7 diarization dependency check",
+  "engines": {
+    "pyannote": {
+      "status": "skipped",
+      "reason": "pyannote.audio is not installed"
+    },
+    "three_d_speaker": {
+      "status": "skipped",
+      "reason": "THREED_SPEAKER_PYTHON is not configured"
+    },
+    "funasr_campp": {
+      "status": "measured_in_docker",
+      "reason": "FunASR VAD + punctuation + CAM++ is the current production baseline."
+    }
+  },
+  "ground_truth": {
+    "status": "pending_annotation",
+    "reason": "Human-reviewed RTTM files are required before DER/JER conclusions."
+  }
+}

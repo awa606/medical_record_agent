@@ -1,0 +1,23 @@
+{
+  "sample_id": "three_speaker_alimeeting_01",
+  "status": "materialized",
+  "reason": "",
+  "dataset": {
+    "name": "AliMeeting Eval",
+    "url": "https://speech-lab-share-data.oss-cn-shanghai.aliyuncs.com/AliMeeting/openlr/Eval_Ali.tar.gz",
+    "license": "CC BY-SA 4.0",
+    "source": "https://openslr.org/119/",
+    "size": "3.42G"
+  },
+  "source_root": "data\\asr_eval\\public_diarization\\extracted\\alimeeting",
+  "audio_source": "data\\asr_eval\\public_diarization\\extracted\\alimeeting\\Eval_Ali\\Eval_Ali_near\\audio_dir\\R8001_M8004_N_SPK8013.wav",
+  "annotation_source": "data\\asr_eval\\public_diarization\\extracted\\alimeeting\\Eval_Ali\\Eval_Ali_far\\textgrid_dir\\R8001_M8004.TextGrid",
+  "audio_output": "data\\asr_eval\\public_diarization\\audio\\three_speaker_alimeeting_01.wav",
+  "rttm_output": "data\\asr_eval\\diarization_ground_truth\\three_speaker_alimeeting_01.rttm",
+  "window_seconds": [
+    6.9,
+    246.9
+  ],
+  "speaker_count": 4,
+  "note": "Raw audio and archives are local-only and must not be committed."
+}

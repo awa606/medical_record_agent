@@ -11,6 +11,8 @@ from app.schemas.asr import (
     ASRSessionRecord,
     ASRSessionUploadResponse,
     AudioRecord,
+    DiarizationTurn,
+    SpeakerRoleAssignment,
 )
 from app.schemas.medical_record import (
     CandidateDiagnosis,
@@ -19,6 +21,7 @@ from app.schemas.medical_record import (
     SafetyCheckResult,
     SourceSpan,
 )
+from app.schemas.speaker_profile import DoctorSpeakerProfile, SpeakerProfileList
 from app.schemas.task import (
     AgentTaskResponse,
     AgentTaskStepResponse,
@@ -41,11 +44,15 @@ __all__ = [
     "AgentTaskResponse",
     "AgentTaskStepResponse",
     "AudioRecord",
+    "DiarizationTurn",
     "CandidateDiagnosis",
+    "DoctorSpeakerProfile",
     "MedicalField",
     "MedicalRecordFields",
     "SafetyCheckResult",
     "StepStatus",
     "SourceSpan",
+    "SpeakerRoleAssignment",
+    "SpeakerProfileList",
     "TaskStatus",
 ]

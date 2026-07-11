@@ -1,263 +1,478 @@
 from __future__ import annotations
 
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
+from dataclasses import dataclass
 
-from app.schemas.asr import ASRResult, ASRSegment
+from app.schemas.asr import (
+    ASRResult,
+    ASRSegment,
+    DiarizationTurn,
+    SpeakerRoleAssignment,
+)
 from app.services.asr.role_strategy import conversation_from_segments
 
 
 ROLE_DOCTOR = "医生"
 ROLE_PATIENT = "患者"
 ROLE_OTHER = "其他"
-ROLE_PENDING = "待确认"
+FINAL_ROLES = {ROLE_DOCTOR, ROLE_PATIENT, ROLE_OTHER}
 
-DOCTOR_KEYWORDS = [
-    "你好",
+DOCTOR_ANCHORS = (
+    "我是医生",
+    "我是实习医生",
+    "主治医生",
+    "接诊医生",
     "请问",
-    "哪里",
+)
+DOCTOR_KEYWORDS = (
+    "哪里不舒服",
     "什么时候",
     "多长时间",
     "有没有",
     "是否",
     "怎么了",
-    "哪里不舒服",
-    "做什么工作",
     "多大",
+    "多少岁",
+    "做什么工作",
     "用过什么药",
-    "过敏",
-    "查体",
-    "检查",
-    "处理过",
-    "现在",
-    "之前",
-]
-
-PATIENT_KEYWORDS = [
-    "我",
-    "嗯",
-    "是的",
-    "没有",
-    "发烧",
-    "发热",
-    "咳嗽",
-    "头晕",
-    "胸闷",
-    "疼",
-    "痛",
+    "药物过敏",
+    "测过体温",
+    "做过检查",
+    "还有其他",
+    "既往",
+)
+PATIENT_KEYWORDS = (
+    "我发烧",
+    "我发热",
+    "我咳嗽",
+    "我头晕",
+    "我胸闷",
+    "我疼",
+    "我痛",
     "不舒服",
     "吃了",
     "用了",
-    "小时",
     "天前",
-    "卫生院",
-]
-
-QUESTION_MARKERS = ["?", "？", "吗", "呢", "么"]
-TURN_WARNING = (
-    "Speaker roles were inferred by lightweight text/speaker rules and require doctor review."
+    "小时前",
+    "一直",
+    "症状",
+)
+FILLER_PATTERN = re.compile(r"[嗯呃哦啊对是好的没有]+[，。！？,.!?\s]*")
+GLOBAL_REVIEW_WARNING = (
+    "Speaker identities are acoustically grouped; uncertain clinical roles require one global mapping confirmation."
 )
 
 
+@dataclass
+class _SpeakerStats:
+    speaker_id: str
+    text: str
+    text_length: int
+    meaningful_length: int
+    duration: float
+    max_turn_duration: float
+    turn_count: int
+    doctor_score: float
+    patient_score: float
+
+
 def enhance_speaker_diarization(result: ASRResult) -> ASRResult:
-    """Add lightweight speaker/role turns without claiming true acoustic diarization."""
+    """Normalize acoustic speakers and assign roles once per speaker.
+
+    Streaming windows are deliberately excluded: without a VAD/speaker boundary
+    they may contain multiple people and must not enter medical previews.
+    """
     updated = result.model_copy(deep=True)
-    raw_segments = updated.segments or [ASRSegment(speaker="asr", text=updated.text)]
-    expanded_segments = _expand_long_segments(raw_segments)
-    speaker_role_map = _infer_speaker_role_map(expanded_segments)
+    raw_segments = updated.segments or [
+        ASRSegment(speaker="speaker_0", speaker_id="speaker_0", text=updated.text)
+    ]
+    stable_segments = [segment for segment in raw_segments if not segment.provisional]
+    if not stable_segments:
+        updated.segments = raw_segments
+        updated.speaker_assignments = []
+        updated.diarization_turns = []
+        updated.conversation_text = ""
+        updated.needs_review = True
+        return updated
+
+    normalized = _normalize_speaker_ids(stable_segments)
+    merged = _merge_stable_utterances(_merge_short_speaker_clusters(normalized))
+    assignments = _assign_roles_by_speaker(merged)
+    assignment_map = {item.speaker_id: item for item in assignments}
 
     enhanced: list[ASRSegment] = []
-    for index, segment in enumerate(expanded_segments):
-        role, confidence, source = _infer_role(segment, speaker_role_map)
-        note = _role_note(role, confidence, source)
+    for index, segment in enumerate(merged, start=1):
+        speaker_id = _normalized_speaker(segment.speaker_id or segment.speaker)
+        assignment = assignment_map.get(speaker_id)
+        manual_role = segment.role if segment.reviewed_by_doctor and segment.role in FINAL_ROLES else None
+        role = manual_role or (assignment.role if assignment else None)
+        role_source = "manual" if manual_role else (assignment.source if assignment else "unassigned")
+        confidence = 0.99 if manual_role else (assignment.confidence if assignment else 0.0)
+        requires_confirmation = False if manual_role else bool(
+            assignment is None or assignment.requires_confirmation
+        )
         enhanced.append(
             segment.model_copy(
                 update={
+                    "speaker": speaker_id,
+                    "speaker_id": speaker_id,
+                    "speaker_turn": index,
                     "role": role,
-                    "role_confidence": confidence,
-                    "role_source": source,
-                    "role_note": note,
-                    "speaker_id": segment.speaker_id or segment.speaker,
-                    "speaker_turn": index + 1,
-                    "needs_review": segment.needs_review
-                    or source != "manual"
-                    or confidence < 0.85
-                    or role == ROLE_PENDING,
+                    "role_confidence": confidence if role else None,
+                    "role_source": role_source,
+                    "role_note": assignment.reason if assignment else "需要确认整位说话人的角色",
+                    "needs_review": requires_confirmation,
                 }
             )
         )
 
-    updated.segments = _merge_adjacent_same_role(enhanced)
-    updated.text = "\n".join(segment.text for segment in updated.segments if segment.text.strip())
-    updated.conversation_text = conversation_from_segments(updated.segments)
-    updated.needs_review = any(segment.needs_review for segment in updated.segments)
-    if updated.segments and not updated.role_strategy:
-        updated.role_strategy = "speaker_diarization_assist"
-    if updated.needs_review and TURN_WARNING not in updated.warnings:
-        updated.warnings.append(TURN_WARNING)
+    updated.segments = enhanced
+    updated.speaker_assignments = assignments
+    updated.diarization_turns = _diarization_turns(enhanced)
+    updated.text = "\n".join(segment.text for segment in enhanced if segment.text.strip())
+    updated.conversation_text = _conversation_with_speaker_fallback(enhanced)
+    updated.needs_review = any(item.requires_confirmation for item in assignments)
+    updated.reviewed_by_doctor = bool(assignments) and all(
+        not item.requires_confirmation for item in assignments
+    )
+    updated.role_strategy = "global_speaker_role_assignment"
+    if updated.needs_review and GLOBAL_REVIEW_WARNING not in updated.warnings:
+        updated.warnings.append(GLOBAL_REVIEW_WARNING)
     return updated
 
 
-def _expand_long_segments(segments: list[ASRSegment]) -> list[ASRSegment]:
-    expanded: list[ASRSegment] = []
+def _normalize_speaker_ids(segments: list[ASRSegment]) -> list[ASRSegment]:
+    aliases: dict[str, str] = {}
+    normalized: list[ASRSegment] = []
     for segment in segments:
-        parts = _split_turn_candidates(segment.text)
-        if len(parts) <= 1:
-            expanded.append(segment)
-            continue
-        total_chars = max(sum(len(part) for part in parts), 1)
-        cursor = 0
-        for offset, part in enumerate(parts):
-            start_ratio = cursor / total_chars
-            cursor += len(part)
-            end_ratio = cursor / total_chars
-            expanded.append(
-                segment.model_copy(
-                    update={
-                        "segment_id": (
-                            f"{segment.segment_id}-part-{offset + 1:02d}"
-                            if segment.segment_id
-                            else None
-                        ),
-                        "text": part,
-                        "start_time": _interpolate_time(segment.start_time, segment.end_time, start_ratio),
-                        "end_time": _interpolate_time(segment.start_time, segment.end_time, end_ratio),
-                        "speaker_turn": None,
-                    }
-                )
-            )
-    return expanded
+        raw = _normalized_speaker(segment.speaker_id or segment.speaker)
+        if not raw:
+            raw = "speaker_0"
+        aliases.setdefault(raw, raw)
+        normalized.append(
+            segment.model_copy(update={"speaker": aliases[raw], "speaker_id": aliases[raw]})
+        )
+    return normalized
 
 
-def _split_turn_candidates(text: str) -> list[str]:
-    normalized = re.sub(r"\s+", " ", text or "").strip()
-    if not normalized:
-        return []
-    clauses = [
-        item.strip()
-        for item in re.split(r"(?<=[。！？!?])|(?<=，)\s*", normalized)
-        if item.strip()
-    ]
-    if len(clauses) <= 1 and len(normalized) > 220:
-        clauses = [normalized[index:index + 120] for index in range(0, len(normalized), 120)]
+def _merge_short_speaker_clusters(segments: list[ASRSegment]) -> list[ASRSegment]:
+    groups: dict[str, list[int]] = defaultdict(list)
+    for index, segment in enumerate(segments):
+        groups[_normalized_speaker(segment.speaker_id or segment.speaker)].append(index)
+    if len(groups) < 2:
+        return segments
 
-    turns: list[str] = []
-    buffer = ""
-    last_role = ""
-    for clause in clauses:
-        role, _, _ = _classify_text_role(clause)
-        should_flush = (
-            buffer
-            and (
-                len(buffer) + len(clause) > 160
-                or (last_role and role and role != last_role)
-                or (role == ROLE_DOCTOR and any(marker in clause for marker in QUESTION_MARKERS))
+    stats = {speaker: _speaker_stats(speaker, [segments[i] for i in indexes]) for speaker, indexes in groups.items()}
+    short_speakers = {
+        speaker
+        for speaker, item in stats.items()
+        if (
+            item.duration < 3.0
+            or item.max_turn_duration < 1.0 and item.duration < 5.0
+            or (
+                12 <= item.text_length <= 40
+                and item.meaningful_length / max(item.text_length, 1) <= 0.25
             )
         )
-        if should_flush:
-            turns.append(buffer.strip())
-            buffer = clause
-        else:
-            buffer = f"{buffer}{clause}" if buffer else clause
-        if role != ROLE_PENDING:
-            last_role = role
-    if buffer.strip():
-        turns.append(buffer.strip())
-    return turns or [normalized]
-
-
-def _infer_speaker_role_map(segments: list[ASRSegment]) -> dict[str, tuple[str, float]]:
-    unique_speakers = {
-        _normalized_speaker(segment.speaker_id or segment.speaker)
-        for segment in segments
-        if _normalized_speaker(segment.speaker_id or segment.speaker)
     }
-    if len(unique_speakers) < 2:
-        return {}
+    substantial = set(groups) - short_speakers
+    if not substantial:
+        return segments
 
-    scores: dict[str, dict[str, int]] = defaultdict(lambda: {ROLE_DOCTOR: 0, ROLE_PATIENT: 0})
-    for segment in segments:
+    merged: list[ASRSegment] = []
+    for index, segment in enumerate(segments):
         speaker = _normalized_speaker(segment.speaker_id or segment.speaker)
-        if not speaker:
+        if speaker not in short_speakers:
+            merged.append(segment)
             continue
-        role, confidence, _ = _classify_text_role(segment.text)
-        if role in {ROLE_DOCTOR, ROLE_PATIENT}:
-            scores[speaker][role] += max(1, round(confidence * 10))
-
-    mapping: dict[str, tuple[str, float]] = {}
-    for speaker, role_scores in scores.items():
-        doctor_score = role_scores[ROLE_DOCTOR]
-        patient_score = role_scores[ROLE_PATIENT]
-        if doctor_score == patient_score:
+        replacement = _nearest_substantial_speaker(segments, index, substantial)
+        if replacement is None:
+            merged.append(segment)
             continue
-        total = max(doctor_score + patient_score, 1)
-        role = ROLE_DOCTOR if doctor_score > patient_score else ROLE_PATIENT
-        mapping[speaker] = (role, min(0.88, 0.55 + abs(doctor_score - patient_score) / total * 0.35))
-
-    if len(unique_speakers) >= 3:
-        text_lengths = defaultdict(int)
-        for segment in segments:
-            speaker = _normalized_speaker(segment.speaker_id or segment.speaker)
-            if speaker:
-                text_lengths[speaker] += len((segment.text or "").strip())
-        for speaker in unique_speakers:
-            if speaker not in mapping and text_lengths[speaker] >= 12:
-                mapping[speaker] = (ROLE_OTHER, 0.58)
-    return mapping
+        merged.append(
+            segment.model_copy(
+                update={
+                    "speaker": replacement,
+                    "speaker_id": replacement,
+                    "speaker_confidence": min(segment.speaker_confidence or 0.65, 0.65),
+                    "role_note": "短促声纹簇已按相邻稳定说话人合并",
+                }
+            )
+        )
+    return merged
 
 
-def _infer_role(segment: ASRSegment, speaker_role_map: dict[str, tuple[str, float]]) -> tuple[str, float, str]:
-    if segment.reviewed_by_doctor and segment.role in {ROLE_DOCTOR, ROLE_PATIENT, ROLE_OTHER}:
-        return segment.role, 0.98, "manual"
-    if segment.role in {ROLE_DOCTOR, ROLE_PATIENT, ROLE_OTHER}:
-        return segment.role, segment.role_confidence or 0.86, segment.role_source or "existing"
+def _merge_stable_utterances(segments: list[ASRSegment]) -> list[ASRSegment]:
+    merged: list[ASRSegment] = []
+    for segment in segments:
+        if not merged:
+            merged.append(segment)
+            continue
+        previous = merged[-1]
+        same_speaker = (previous.speaker_id or previous.speaker) == (segment.speaker_id or segment.speaker)
+        gap = (
+            float(segment.start_time) - float(previous.end_time)
+            if segment.start_time is not None and previous.end_time is not None
+            else float("inf")
+        )
+        combined_duration = (
+            float(segment.end_time) - float(previous.start_time)
+            if segment.end_time is not None and previous.start_time is not None
+            else float("inf")
+        )
+        combined_text = f"{previous.text}{segment.text}".strip()
+        if (
+            same_speaker
+            and not previous.overlap
+            and not segment.overlap
+            and 0.0 <= gap <= 0.8
+            and combined_duration <= 8.0
+            and len(combined_text) <= 100
+        ):
+            merged[-1] = previous.model_copy(
+                update={
+                    "text": combined_text,
+                    "end_time": segment.end_time,
+                    "confidence": _minimum_optional(previous.confidence, segment.confidence),
+                    "speaker_confidence": _minimum_optional(
+                        previous.speaker_confidence,
+                        segment.speaker_confidence,
+                    ),
+                }
+            )
+        else:
+            merged.append(segment)
+    return merged
 
-    speaker = _normalized_speaker(segment.speaker_id or segment.speaker)
-    if speaker and speaker in speaker_role_map:
-        role, confidence = speaker_role_map[speaker]
-        return role, confidence, "speaker_map"
 
-    return _classify_text_role(segment.text)
-
-
-def _classify_text_role(text: str) -> tuple[str, float, str]:
-    value = text or ""
-    doctor_score = sum(1 for keyword in DOCTOR_KEYWORDS if keyword in value)
-    patient_score = sum(1 for keyword in PATIENT_KEYWORDS if keyword in value)
-    if any(marker in value for marker in QUESTION_MARKERS):
-        doctor_score += 1
-    if "我" in value and not any(marker in value for marker in QUESTION_MARKERS):
-        patient_score += 1
-
-    if doctor_score == patient_score:
-        return ROLE_PENDING, 0.4, "text_rule"
-    role = ROLE_DOCTOR if doctor_score > patient_score else ROLE_PATIENT
-    total = max(doctor_score + patient_score, 1)
-    confidence = min(0.82, 0.52 + abs(doctor_score - patient_score) / total * 0.3)
-    return role, confidence, "text_rule"
+def _nearest_substantial_speaker(
+    segments: list[ASRSegment],
+    index: int,
+    substantial: set[str],
+) -> str | None:
+    for distance in range(1, len(segments)):
+        candidates: list[tuple[float, str]] = []
+        for candidate_index in (index - distance, index + distance):
+            if candidate_index < 0 or candidate_index >= len(segments):
+                continue
+            candidate = segments[candidate_index]
+            speaker = _normalized_speaker(candidate.speaker_id or candidate.speaker)
+            if speaker not in substantial:
+                continue
+            temporal_gap = _temporal_gap(segments[index], candidate)
+            candidates.append((temporal_gap, speaker))
+        if candidates:
+            candidates.sort(key=lambda item: item[0])
+            return candidates[0][1]
+    return None
 
 
-def _role_note(role: str, confidence: float, source: str) -> str:
-    if source == "manual":
-        return "医生已人工确认"
-    if role == ROLE_PENDING:
-        return "角色待确认"
-    if role == ROLE_OTHER:
-        return "已区分为其他说话人，身份仍需医生确认"
-    return "低置信度初判，需医生校正" if confidence < 0.85 else "按说话人/文本规则初判，需医生复核"
+def _assign_roles_by_speaker(segments: list[ASRSegment]) -> list[SpeakerRoleAssignment]:
+    groups: dict[str, list[ASRSegment]] = defaultdict(list)
+    for segment in segments:
+        groups[_normalized_speaker(segment.speaker_id or segment.speaker)].append(segment)
+    ordered_speakers = list(groups)
+    manual_roles: dict[str, str] = {}
+    for speaker, speaker_segments in groups.items():
+        reviewed = [
+            segment.role
+            for segment in speaker_segments
+            if segment.reviewed_by_doctor and segment.role in FINAL_ROLES
+        ]
+        if reviewed:
+            manual_roles[speaker] = Counter(reviewed).most_common(1)[0][0]
+
+    if len(groups) == 1:
+        speaker = ordered_speakers[0]
+        if speaker in manual_roles:
+            return [
+                SpeakerRoleAssignment(
+                    speaker_id=speaker,
+                    role=manual_roles[speaker],
+                    confidence=0.99,
+                    source="manual",
+                    reason="医生已确认整位说话人的角色",
+                )
+            ]
+        return [
+            SpeakerRoleAssignment(
+                speaker_id=speaker,
+                role=None,
+                confidence=0.0,
+                source="single_speaker",
+                reason="仅检测到一位真实说话人，不能伪造成医生和患者两人",
+                requires_confirmation=True,
+            )
+        ]
+
+    stats = {speaker: _speaker_stats(speaker, items) for speaker, items in groups.items()}
+    assignments: dict[str, SpeakerRoleAssignment] = {}
+    for speaker, role in manual_roles.items():
+        assignments[speaker] = SpeakerRoleAssignment(
+            speaker_id=speaker,
+            role=role,
+            confidence=0.99,
+            source="manual",
+            reason="医生已确认整位说话人的角色",
+        )
+
+    doctor_candidates = [speaker for speaker in ordered_speakers if speaker not in assignments]
+    if doctor_candidates and not any(item.role == ROLE_DOCTOR for item in assignments.values()):
+        ranked_doctors = sorted(
+            doctor_candidates,
+            key=lambda speaker: (
+                stats[speaker].doctor_score - stats[speaker].patient_score,
+                stats[speaker].doctor_score,
+            ),
+            reverse=True,
+        )
+        doctor = ranked_doctors[0]
+        item = stats[doctor]
+        margin = item.doctor_score - item.patient_score
+        if item.doctor_score >= 2.0 and margin > 0:
+            confidence = min(0.94, 0.72 + margin / max(item.doctor_score + item.patient_score, 1.0) * 0.22)
+            assignments[doctor] = SpeakerRoleAssignment(
+                speaker_id=doctor,
+                role=ROLE_DOCTOR,
+                confidence=round(confidence, 4),
+                source="speaker_context_rules",
+                reason="整位说话人的问诊提问和医生身份表达占主导",
+                requires_confirmation=confidence < 0.75,
+            )
+
+    remaining = [speaker for speaker in ordered_speakers if speaker not in assignments]
+    if remaining and not any(item.role == ROLE_PATIENT for item in assignments.values()):
+        if len(remaining) == 1:
+            patient = remaining[0]
+            assignments[patient] = SpeakerRoleAssignment(
+                speaker_id=patient,
+                role=ROLE_PATIENT,
+                confidence=0.86,
+                source="global_two_party_constraint",
+                reason="已锁定医生，唯一剩余主要说话人按患者处理",
+            )
+            remaining = []
+        else:
+            ranked_patients = sorted(
+                remaining,
+                key=lambda speaker: (
+                    stats[speaker].patient_score - stats[speaker].doctor_score,
+                    stats[speaker].duration,
+                    stats[speaker].meaningful_length,
+                ),
+                reverse=True,
+            )
+            patient = ranked_patients[0]
+            top = stats[patient]
+            next_score = (
+                stats[ranked_patients[1]].patient_score - stats[ranked_patients[1]].doctor_score
+                if len(ranked_patients) > 1
+                else -1.0
+            )
+            confidence = 0.78 if top.patient_score - top.doctor_score > next_score else 0.62
+            assignments[patient] = SpeakerRoleAssignment(
+                speaker_id=patient,
+                role=ROLE_PATIENT,
+                confidence=confidence,
+                source="speaker_context_rules",
+                reason="整位说话人的症状和个人经历叙述占主导",
+                requires_confirmation=confidence < 0.75,
+            )
+            remaining = [speaker for speaker in remaining if speaker != patient]
+
+    for speaker in remaining:
+        assignments[speaker] = SpeakerRoleAssignment(
+            speaker_id=speaker,
+            role=ROLE_OTHER,
+            confidence=0.55,
+            source="multi_speaker_fallback",
+            reason="检测到第三位及以上说话人，需一次全局映射确认其身份",
+            requires_confirmation=True,
+        )
+
+    for speaker in ordered_speakers:
+        if speaker not in assignments:
+            assignments[speaker] = SpeakerRoleAssignment(
+                speaker_id=speaker,
+                role=None,
+                confidence=0.0,
+                source="unassigned",
+                reason="上下文不足，需一次全局映射确认",
+                requires_confirmation=True,
+            )
+    return [assignments[speaker] for speaker in ordered_speakers]
 
 
-def _merge_adjacent_same_role(segments: list[ASRSegment]) -> list[ASRSegment]:
-    for index, segment in enumerate(segments, start=1):
-        segment.speaker_turn = index
-    return segments
+def _speaker_stats(speaker: str, segments: list[ASRSegment]) -> _SpeakerStats:
+    text = "。".join(segment.text.strip() for segment in segments if segment.text.strip())
+    durations = [
+        max(0.0, float(segment.end_time) - float(segment.start_time))
+        for segment in segments
+        if segment.start_time is not None and segment.end_time is not None
+    ]
+    meaningful = FILLER_PATTERN.sub("", text)
+    doctor_score = sum(text.count(keyword) for keyword in DOCTOR_KEYWORDS)
+    doctor_score += sum(text.count(anchor) * 4 for anchor in DOCTOR_ANCHORS)
+    doctor_score += min(text.count("？") + text.count("?"), 8) * 0.6
+    patient_score = sum(text.count(keyword) for keyword in PATIENT_KEYWORDS)
+    patient_score += min(len(re.findall(r"(?:^|[。！？])我[^，。！？]{1,20}", text)), 6) * 0.6
+    return _SpeakerStats(
+        speaker_id=speaker,
+        text=text,
+        text_length=len(re.sub(r"\s+", "", text)),
+        meaningful_length=len(re.sub(r"[\s，。！？,.!?]", "", meaningful)),
+        duration=round(sum(durations), 3),
+        max_turn_duration=round(max(durations, default=0.0), 3),
+        turn_count=len(segments),
+        doctor_score=float(doctor_score),
+        patient_score=float(patient_score),
+    )
+
+
+def _diarization_turns(segments: list[ASRSegment]) -> list[DiarizationTurn]:
+    turns: list[DiarizationTurn] = []
+    for segment in segments:
+        if segment.start_time is None or segment.end_time is None:
+            continue
+        turns.append(
+            DiarizationTurn(
+                start_time=max(0.0, float(segment.start_time)),
+                end_time=max(float(segment.start_time), float(segment.end_time)),
+                speaker_id=segment.speaker_id or segment.speaker or "speaker_0",
+                confidence=segment.speaker_confidence,
+                overlap=segment.overlap,
+            )
+        )
+    return turns
+
+
+def _conversation_with_speaker_fallback(segments: list[ASRSegment]) -> str:
+    aliases: dict[str, str] = {}
+    lines: list[str] = []
+    for segment in segments:
+        speaker = segment.speaker_id or segment.speaker or "speaker_0"
+        aliases.setdefault(speaker, f"说话人 {chr(65 + min(len(aliases), 25))}")
+        label = segment.role if segment.role in FINAL_ROLES else aliases[speaker]
+        if segment.text.strip():
+            lines.append(f"[{label}] {segment.text.strip()}")
+    return "\n".join(lines)
+
+
+def _temporal_gap(left: ASRSegment, right: ASRSegment) -> float:
+    if left.start_time is None or left.end_time is None or right.start_time is None or right.end_time is None:
+        return float("inf")
+    if right.end_time <= left.start_time:
+        return left.start_time - right.end_time
+    if left.end_time <= right.start_time:
+        return right.start_time - left.end_time
+    return 0.0
+
+
+def _minimum_optional(left: float | None, right: float | None) -> float | None:
+    values = [value for value in (left, right) if value is not None]
+    return min(values) if values else None
 
 
 def _normalized_speaker(speaker: str | None) -> str:
     return re.sub(r"\s+", "", (speaker or "").strip().lower())
-
-
-def _interpolate_time(start: float | None, end: float | None, ratio: float) -> float | None:
-    if start is None or end is None:
-        return None
-    return round(start + (end - start) * ratio, 3)

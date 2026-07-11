@@ -1,0 +1,1 @@
+{"status":"ready","started_at":"2026-07-11T13:43:37.097049+00:00","completed_at":"2026-07-11T13:46:04.479079+00:00","last_error":null,"model_load_seconds":147.391,"components":["paraformer-zh-streaming","paraformer-zh","fsmn-vad","ct-punc","cam++"]}

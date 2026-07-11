@@ -22,6 +22,24 @@ class ASRSegment(BaseModel):
     needs_review: bool = False
     reviewed_by_doctor: bool = False
     original_text: str | None = None
+    overlap: bool = False
+
+
+class DiarizationTurn(BaseModel):
+    start_time: float = Field(ge=0.0)
+    end_time: float = Field(ge=0.0)
+    speaker_id: str
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    overlap: bool = False
+
+
+class SpeakerRoleAssignment(BaseModel):
+    speaker_id: str
+    role: str | None = None
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    source: str = "unassigned"
+    reason: str | None = None
+    requires_confirmation: bool = False
 
 
 class ASRResult(BaseModel):
@@ -40,6 +58,8 @@ class ASRResult(BaseModel):
     needs_review: bool = False
     reviewed_by_doctor: bool = False
     warnings: list[str] = Field(default_factory=list)
+    diarization_turns: list[DiarizationTurn] = Field(default_factory=list)
+    speaker_assignments: list[SpeakerRoleAssignment] = Field(default_factory=list)
 
 
 class AudioRecord(BaseModel):
@@ -76,6 +96,8 @@ class ASRSessionRecord(BaseModel):
     events_url: str | None = None
     result_url: str | None = None
     error: str | None = None
+    doctor_profile_id: str | None = None
+    diarization_engine: str = "auto"
     created_at: str | None = None
     updated_at: str | None = None
 

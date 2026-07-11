@@ -12,12 +12,14 @@ services:
       MEDICAL_RECORD_AGENT_DB: /app/runtime/medical_record_agent.sqlite3
       MEDICAL_RECORD_AGENT_UPLOAD_DIR: /app/runtime/uploads
       MEDICAL_RECORD_AGENT_OUTPUT_DIR: /app/runtime/outputs
+      MEDICAL_RECORD_AGENT_SPEAKER_PROFILE_DIR: /app/runtime/speaker_profiles
       ASR_SESSION_CHUNK_ENABLED: "1"
       ASR_SESSION_DYNAMIC_CHUNKING: "1"
       ASR_SESSION_REALTIME_UPLOAD_ENABLED: "1"
       FUNASR_STREAMING_MODEL_ID: paraformer-zh-streaming
       FUNASR_STREAMING_SEGMENT_SECONDS: "6"
       FUNASR_DEVICE: cpu
+      ASR_PREWARM_ENABLED: "1"
       ASR_SESSION_REALTIME_CHUNK_SECONDS: "3"
       ASR_SESSION_REALTIME_CHUNK_MIN_SECONDS: "0"
       ASR_SESSION_REALTIME_MAX_SECONDS: "7200"
@@ -28,6 +30,10 @@ services:
       SENSEVOICE_DEVICE: cpu
       SENSEVOICE_LANGUAGE: zh
       SENSEVOICE_HUB: hf
+      CAMPP_SPEAKER_DEVICE: cpu
+      SPEAKER_ROLE_PROVIDER: rules
+      SPEAKER_ROLE_OLLAMA_BASE_URL: http://host.docker.internal:11434
+      SPEAKER_ROLE_OLLAMA_MODEL: qwen3:4b-instruct
       HF_HOME: /app/model_cache/hf
       MODELSCOPE_CACHE: /app/model_cache/modelscope
       TORCH_HOME: /app/model_cache/torch

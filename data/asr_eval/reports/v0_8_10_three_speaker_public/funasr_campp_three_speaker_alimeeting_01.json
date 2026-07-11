@@ -1,0 +1,5 @@
+{
+  "engine": "funasr_campp",
+  "status": "skipped",
+  "reason": "--asr-result is required for the FunASR CAM++ adapter"
+}

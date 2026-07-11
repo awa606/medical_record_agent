@@ -18,6 +18,7 @@ data/processed/
 data/asr_eval/
 data/docker_runtime/
 data/asr_model_cache/
+data/speaker_profiles/
 tools/ffmpeg/
 video/
 

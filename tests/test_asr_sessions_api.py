@@ -1,6 +1,7 @@
 import asyncio
 import os
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -8,6 +9,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.api.asr_sessions import (
+    _append_events,
     _asr_session_event_stream,
     _chunk_seconds_for_duration,
     _read_events,
@@ -19,7 +21,13 @@ from app.api.asr_sessions import (
 )
 from app.api.audio import read_audio_transcript
 from app.main import app
-from app.schemas import ASRResult, ASRSegment, ASRSegmentCorrection, ASRSessionCorrectionRequest
+from app.schemas import (
+    ASRResult,
+    ASRSegment,
+    ASRSegmentCorrection,
+    ASRSessionCorrectionRequest,
+    ASRSessionEvent,
+)
 from app.services.asr import AudioChunk
 
 
@@ -195,6 +203,16 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("/api/asr/sessions/{session_id}/events", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/result", route_paths)
 
+    def test_session_accepts_doctor_profile_and_diarization_engine(self):
+        session = create_asr_session(
+            engine="funasr",
+            doctor_profile_id="doctor-profile-1",
+            diarization_engine="auto",
+        )
+
+        self.assertEqual(session.doctor_profile_id, "doctor-profile-1")
+        self.assertEqual(session.diarization_engine, "auto")
+
     def test_upload_mp3_builds_stream_events_and_result(self):
         session = create_asr_session(engine="mock")
         fake_file = FakeUploadFile(
@@ -288,6 +306,9 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertNotIn("chunk_plan", event_names)
         self.assertIn("transcribing_progress", event_names)
         self.assertIn("diarization_progress", event_names)
+        self.assertIn("speaker_turn", event_names)
+        self.assertIn("speaker_mapping_update", event_names)
+        self.assertIn("diarization_completed", event_names)
         self.assertIn("reconciliation_completed", event_names)
         self.assertEqual(event_names.count("segment"), 1)
         self.assertEqual(event_names.count("segment_update"), 1)
@@ -404,6 +425,36 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertNotIn("event: audio_uploaded", stream)
         self.assertIn("event: segment", stream)
         self.assertIn("event: completed", stream)
+
+    def test_sse_batches_500_events_without_per_event_delay_and_resumes(self):
+        session = create_asr_session(engine="mock")
+        progress_events = [
+            ASRSessionEvent(
+                id=1,
+                event="transcribing_progress",
+                data={"sequence": index},
+            )
+            for index in range(500)
+        ]
+        progress_events.append(
+            ASRSessionEvent(id=1, event="completed", data={"status": "completed"})
+        )
+        _append_events(session.session_id, progress_events)
+
+        started_at = time.perf_counter()
+        stream = collect_sse_chunks(session.session_id)
+        elapsed = time.perf_counter() - started_at
+
+        self.assertLess(elapsed, 1.0)
+        self.assertEqual(stream.count("event: transcribing_progress"), 500)
+        self.assertEqual(stream.count("event: completed"), 1)
+
+        stored = _read_events(session.session_id)
+        resume_after = stored[-52].id
+        resumed = collect_sse_chunks(session.session_id, last_event_id=resume_after)
+        self.assertEqual(resumed.count("event: transcribing_progress"), 50)
+        self.assertEqual(resumed.count("event: completed"), 1)
+        self.assertNotIn(f"id: {resume_after}\n", resumed)
 
     def test_chunked_long_audio_events_include_progress(self):
         session = create_asr_session(engine="sensevoice")

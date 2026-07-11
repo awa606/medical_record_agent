@@ -48,7 +48,8 @@ class FunASRStreamingEngineTests(unittest.TestCase):
         self.assertEqual(first_id, segment_events[1][1].segment_id)
         self.assertNotEqual(first_id, segment_events[2][1].segment_id)
         self.assertTrue(segment_events[0][1].provisional)
-        self.assertFalse(segment_events[1][1].provisional)
+        self.assertTrue(segment_events[1][1].provisional)
+        self.assertTrue(all(segment.provisional for segment in result.segments))
         self.assertEqual(result.duration, 0.18)
         self.assertEqual(len(result.segments), 2)
         self.assertEqual(progress_events[-1]["progress"], 1.0)
@@ -73,7 +74,7 @@ class FunASRStreamingEngineTests(unittest.TestCase):
             result = engine.transcribe_streaming("audio-2", audio_path)
 
         self.assertEqual(len(result.segments), 1)
-        self.assertFalse(result.segments[0].provisional)
+        self.assertTrue(result.segments[0].provisional)
         self.assertEqual(result.segments[0].start_time, 0.0)
         self.assertEqual(result.segments[0].end_time, 0.12)
 

@@ -1,0 +1,76 @@
+{
+  "scope": "v0.8.8 two-speaker diarization evaluation",
+  "sample_count": 3,
+  "annotated_sample_count": 2,
+  "annotated_samples": [
+    "chest_pain_01",
+    "fever_01"
+  ],
+  "pending_samples": [
+    {
+      "sample_id": "three_speaker_course_sample",
+      "status": "pending_sample",
+      "reason": "用户选择本轮只做两说话人样本；不合成三说话人样本。"
+    }
+  ],
+  "measured_result_count": 2,
+  "results": [
+    {
+      "sample_id": "chest_pain_01",
+      "engine": "funasr_campp",
+      "status": "measured",
+      "reason": null,
+      "speaker_count_error": 1,
+      "boundary_f1": 0.2944,
+      "mixed_utterance_rate": 0.3282,
+      "role_consistency": 0.9078,
+      "der": null,
+      "jer": null,
+      "der_status": "not_available",
+      "jer_status": "not_available",
+      "rtf": 0.0002,
+      "elapsed_seconds": 0.12,
+      "audio_duration_seconds": 496.303,
+      "report_file": "chest_pain_01_funasr_campp.json"
+    },
+    {
+      "sample_id": "fever_01",
+      "engine": "funasr_campp",
+      "status": "measured",
+      "reason": null,
+      "speaker_count_error": 0,
+      "boundary_f1": 0.4472,
+      "mixed_utterance_rate": 0.3258,
+      "role_consistency": 0.8931,
+      "der": null,
+      "jer": null,
+      "der_status": "not_available",
+      "jer_status": "not_available",
+      "rtf": 0.0004,
+      "elapsed_seconds": 0.121,
+      "audio_duration_seconds": 309.94,
+      "report_file": "fever_01_funasr_campp.json"
+    }
+  ],
+  "dependency_status": {
+    "pyannote": {
+      "status": "skipped",
+      "reason": "pyannote.audio is not installed"
+    },
+    "three_d_speaker": {
+      "status": "skipped",
+      "reason": "THREED_SPEAKER_PYTHON is not configured"
+    },
+    "funasr_campp": {
+      "status": "measured_in_docker",
+      "reason": "FunASR VAD + punctuation + CAM++ is the current production baseline."
+    }
+  },
+  "der_jer_status": "not_available",
+  "conclusion": [
+    "本轮只引用 fever_01 与 chest_pain_01 两条两说话人课程样本。",
+    "两说话人样本平均 boundary_f1 为 0.3708，平均 role_consistency 为 0.9004。",
+    "三说话人样本仍为 pending_sample；不能把本轮结果扩展解释为三说话人成绩。",
+    "pyannote 和 3D-Speaker 的缺依赖状态只说明本机未配置，不代表模型效果差。"
+  ]
+}

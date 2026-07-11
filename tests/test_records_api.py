@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from fastapi import HTTPException
 
 from fastapi import BackgroundTasks
 
@@ -114,6 +115,50 @@ class RecordsApiTests(unittest.TestCase):
         self.assertIn("实时预览", response.preview_notice)
         self.assertTrue(response.structured_updates)
         self.assertNotIn("task_id", response.model_dump())
+
+    def test_preview_ignores_provisional_windows_and_uses_stable_mapped_turns(self):
+        response = preview_record(
+            PreviewRecordRequest(
+                conversation_text="[患者] 临时混合文本不应进入预览",
+                source="asr_partial",
+                segments=[
+                    {
+                        "segment_id": "temp-1",
+                        "provisional": True,
+                        "role": "患者",
+                        "text": "临时混合文本不应进入预览",
+                    },
+                    {
+                        "segment_id": "stable-1",
+                        "provisional": False,
+                        "role": "患者",
+                        "text": "我发热三天。",
+                    },
+                ],
+            )
+        )
+
+        self.assertEqual(response.segment_count, 1)
+        self.assertEqual(response.character_count, len("[患者] 我发热三天。"))
+
+    def test_preview_rejects_unmapped_stable_speaker(self):
+        with self.assertRaises(HTTPException) as raised:
+            preview_record(
+                PreviewRecordRequest(
+                    conversation_text="[说话人 A] 我发热三天。",
+                    source="asr_partial",
+                    segments=[
+                        {
+                            "segment_id": "stable-1",
+                            "provisional": False,
+                            "speaker_id": "spk0",
+                            "role": None,
+                            "text": "我发热三天。",
+                        }
+                    ],
+                )
+            )
+        self.assertEqual(raised.exception.status_code, 409)
 
 
 if __name__ == "__main__":

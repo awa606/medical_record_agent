@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import re
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
 from app.agents import MedicalRecordOrchestrator
@@ -239,6 +239,30 @@ def _ready_for_formal_generation(fields: MedicalRecordFields, conversation_text:
     return has_core_fields or len(conversation_text.strip()) >= 120
 
 
+def _stable_preview_input(payload: PreviewRecordRequest) -> tuple[str, list[dict[str, Any]]]:
+    if not payload.segments:
+        return payload.conversation_text, []
+    stable = [segment for segment in payload.segments if not segment.get("provisional")]
+    mapped = [
+        segment
+        for segment in stable
+        if segment.get("role") in {"医生", "患者", "其他"}
+    ]
+    if not mapped:
+        raise HTTPException(
+            status_code=409,
+            detail="Stable speaker-role mapping is required before structured preview",
+        )
+    conversation = "\n".join(
+        f"[{segment['role']}] {str(segment.get('text') or '').strip()}"
+        for segment in mapped
+        if str(segment.get("text") or "").strip()
+    )
+    if not conversation:
+        raise HTTPException(status_code=409, detail="No stable transcript is available for preview")
+    return conversation, mapped
+
+
 @router.post("/generate")
 def generate_record(
     payload: GenerateRecordRequest,
@@ -257,21 +281,22 @@ def generate_record(
 
 @router.post("/preview", response_model=PreviewRecordResponse)
 def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
+    conversation_text, stable_segments = _stable_preview_input(payload)
     llm = MockLLM()
-    fields = llm.extract_fields(payload.conversation_text)
+    fields = llm.extract_fields(conversation_text)
     draft = llm.generate_draft(fields)
     safety = llm.safety_check(draft, fields, allow_export=False)
-    updates = _structured_updates(fields, payload.segments)
+    updates = _structured_updates(fields, stable_segments)
 
     return PreviewRecordResponse(
         status="preview_ready",
         source=payload.source,
         preview_notice="实时预览，需医生确认；不会创建正式任务，也不能直接导出。",
         preview_stage=_preview_stage(fields),
-        ready_for_formal_generation=_ready_for_formal_generation(fields, payload.conversation_text),
+        ready_for_formal_generation=_ready_for_formal_generation(fields, conversation_text),
         updated_at=datetime.now(timezone.utc).isoformat(),
-        character_count=len(payload.conversation_text),
-        segment_count=len(payload.segments),
+        character_count=len(conversation_text),
+        segment_count=len(stable_segments),
         fields_preview=fields.model_dump(mode="json"),
         draft_preview=draft,
         candidate_diagnoses=[
@@ -280,7 +305,7 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
         ],
         treatment_plan=_treatment_plan(fields),
         diagnosis_evidence=_diagnosis_evidence(fields),
-        evidence_links=_evidence_links(fields, payload.segments),
+        evidence_links=_evidence_links(fields, stable_segments),
         structured_updates=updates,
         missing_items=_missing_items(fields),
         safety_preview=safety.model_dump(mode="json"),

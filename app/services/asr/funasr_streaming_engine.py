@@ -112,7 +112,7 @@ class FunASRStreamingEngine:
                     current_revision = 0
                 current_text = _append_streaming_text(current_text, delta)
                 current_revision += 1
-                finalize = (
+                flush_window = (
                     is_final
                     or processed_seconds - current_start >= self.config.segment_seconds
                     or _ends_sentence(current_text)
@@ -120,7 +120,9 @@ class FunASRStreamingEngine:
                 segment = ASRSegment(
                     segment_id=current_id,
                     revision=current_revision,
-                    provisional=not finalize,
+                    # Streaming text has no reliable speaker boundary. It remains
+                    # provisional until the offline VAD/diarization pass replaces it.
+                    provisional=True,
                     speaker="streaming",
                     speaker_id=None,
                     role=None,
@@ -139,8 +141,8 @@ class FunASRStreamingEngine:
                             "audio_duration_seconds": duration,
                         },
                     )
-                if finalize:
-                    segments.append(segment.model_copy(update={"provisional": False}))
+                if flush_window:
+                    segments.append(segment)
                     current_id = None
                     current_text = ""
                     current_revision = 0
@@ -151,7 +153,7 @@ class FunASRStreamingEngine:
             final_segment = ASRSegment(
                 segment_id=current_id,
                 revision=current_revision,
-                provisional=False,
+                provisional=True,
                 speaker="streaming",
                 text=current_text.strip(),
                 start_time=round(current_start, 3),
@@ -176,7 +178,7 @@ class FunASRStreamingEngine:
             audio_id=audio_id,
             engine=self.name,
             text=text,
-            conversation_text="\n".join(f"[待确认] {segment.text}" for segment in segments),
+            conversation_text="",
             segments=segments,
             duration=duration,
             medical_keywords={

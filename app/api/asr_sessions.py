@@ -32,6 +32,7 @@ from app.schemas import (
     ASRSessionRecord,
     ASRSessionUploadResponse,
     AudioRecord,
+    SpeakerRoleAssignment,
 )
 from app.services.asr import (
     AudioChunk,
@@ -44,6 +45,7 @@ from app.services.asr import (
 )
 from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
+from app.services.asr.speaker_role_classifier import resolve_speaker_roles
 
 
 router = APIRouter(prefix="/asr/sessions", tags=["asr-sessions"])
@@ -62,6 +64,7 @@ DEFAULT_REALTIME_UPLOAD_CHUNK_SECONDS = 3
 DEFAULT_REALTIME_UPLOAD_MAX_SECONDS = 120
 REALTIME_UPLOAD_WARNING = "ASR result was produced by realtime upload chunk transcription."
 CHUNKED_LONG_AUDIO_WARNING = "ASR result was produced by chunked long-audio transcription."
+SUPPORTED_DIARIZATION_ENGINES = {"auto", "funasr_campp", "pyannote", "three_d_speaker"}
 ROLE_LABELS = {
     "doctor": "医生",
     "医生": "医生",
@@ -75,6 +78,7 @@ ROLE_LABELS = {
 }
 
 _EVENTS_LOCK = threading.Lock()
+_EVENT_ID_CACHE: dict[str, int] = {}
 _FUNASR_MODEL_CACHE_LOCK = threading.Lock()
 _FUNASR_STREAMING_ENGINE: Any | None = None
 _FUNASR_RECONCILIATION_ENGINE: Any | None = None
@@ -106,6 +110,10 @@ def _session_path(session_id: str) -> Path:
 
 def _events_path(session_id: str) -> Path:
     return _session_dir(session_id) / "events.json"
+
+
+def _event_log_path(session_id: str) -> Path:
+    return _session_dir(session_id) / "events.jsonl"
 
 
 def _result_path(session_id: str) -> Path:
@@ -161,25 +169,59 @@ def _read_session(session_id: str) -> ASRSessionRecord:
 
 
 def _write_events(session_id: str, events: list[ASRSessionEvent]) -> None:
-    _write_json(_events_path(session_id), [event.model_dump() for event in events])
+    path = _event_log_path(session_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = "".join(
+        json.dumps(event.model_dump(), ensure_ascii=False) + "\n"
+        for event in events
+    )
+    tmp_path = path.with_name(f"{path.name}.tmp")
+    tmp_path.write_text(payload, encoding="utf-8")
+    tmp_path.replace(path)
+    _EVENT_ID_CACHE[session_id] = events[-1].id if events else 0
+
+
+def _last_event_id(session_id: str) -> int:
+    cached = _EVENT_ID_CACHE.get(session_id)
+    if cached is not None:
+        return cached
+    events = _read_events(session_id)
+    value = events[-1].id if events else 0
+    _EVENT_ID_CACHE[session_id] = value
+    return value
 
 
 def _append_events(session_id: str, events: list[ASRSessionEvent]) -> None:
+    if not events:
+        return
     with _EVENTS_LOCK:
-        existing = _read_events(session_id)
-        last_id = existing[-1].id if existing else 0
+        last_id = _last_event_id(session_id)
         next_events = [
             event.model_copy(update={"id": last_id + index + 1})
             for index, event in enumerate(events)
         ]
-        _write_events(session_id, [*existing, *next_events])
+        path = _event_log_path(session_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8", newline="\n") as output:
+            for event in next_events:
+                output.write(json.dumps(event.model_dump(), ensure_ascii=False) + "\n")
+        _EVENT_ID_CACHE[session_id] = next_events[-1].id
 
 
 def _read_events(session_id: str) -> list[ASRSessionEvent]:
-    path = _events_path(session_id)
-    if not path.exists():
+    log_path = _event_log_path(session_id)
+    if log_path.exists():
+        events: list[ASRSessionEvent] = []
+        for line in log_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                events.append(ASRSessionEvent.model_validate_json(line))
+        return events
+
+    # Read-only compatibility for sessions created before the append-only log.
+    legacy_path = _events_path(session_id)
+    if not legacy_path.exists():
         return []
-    raw_events = json.loads(path.read_text(encoding="utf-8"))
+    raw_events = json.loads(legacy_path.read_text(encoding="utf-8"))
     return [ASRSessionEvent.model_validate(event) for event in raw_events]
 
 
@@ -260,6 +302,29 @@ def _apply_segment_corrections(
                 status_code=400,
                 detail=f"Speaker id not found: {speaker_correction.speaker_id}",
             )
+        assignment = next(
+            (
+                item
+                for item in updated.speaker_assignments
+                if item.speaker_id == speaker_correction.speaker_id
+            ),
+            None,
+        )
+        replacement = SpeakerRoleAssignment(
+            speaker_id=speaker_correction.speaker_id,
+            role=role,
+            confidence=0.99 if speaker_correction.reviewed_by_doctor else 0.6,
+            source="manual_speaker_map" if speaker_correction.reviewed_by_doctor else "manual_draft",
+            reason="医生已确认整位说话人的全局角色",
+            requires_confirmation=not speaker_correction.reviewed_by_doctor or role == "待确认",
+        )
+        if assignment is None:
+            updated.speaker_assignments.append(replacement)
+        else:
+            updated.speaker_assignments = [
+                replacement if item.speaker_id == speaker_correction.speaker_id else item
+                for item in updated.speaker_assignments
+            ]
 
     for correction in payload.segments:
         if correction.index >= len(updated.segments):
@@ -284,8 +349,13 @@ def _apply_segment_corrections(
     updated.text = _plain_text_from_segments(updated.segments)
     updated.conversation_text = _conversation_from_segments(updated.segments)
     updated.role_strategy = "manual_reviewed"
+    assignment_review_pending = any(
+        assignment.requires_confirmation for assignment in updated.speaker_assignments
+    )
     updated.reviewed_by_doctor = all(segment.reviewed_by_doctor for segment in updated.segments)
-    updated.needs_review = any(segment.needs_review for segment in updated.segments)
+    updated.needs_review = assignment_review_pending or any(
+        segment.needs_review for segment in updated.segments
+    )
     if updated.reviewed_by_doctor and "ASR segments were manually reviewed by doctor." not in updated.warnings:
         updated.warnings.append("ASR segments were manually reviewed by doctor.")
     return updated
@@ -708,16 +778,18 @@ async def _asr_session_event_stream(
 ):
     next_event_id = last_event_id
     sent_any = False
+    keepalive_interval_seconds = 10.0
+    last_output_at = time.monotonic()
+    poll_seconds = max(min(delay_ms / 1000, 0.5), 0.05) if delay_ms > 0 else 0.0
     while True:
         events = [event for event in _read_events(session_id) if event.id > next_event_id]
         for event in events:
             sent_any = True
             next_event_id = event.id
             yield _sse_message(event)
+            last_output_at = time.monotonic()
             if event.event in {"completed", "failed"}:
                 return
-            if delay_ms > 0:
-                await asyncio.sleep(delay_ms / 1000)
 
         if events:
             continue
@@ -756,14 +828,31 @@ async def _asr_session_event_stream(
                 yield _sse_message(state)
             return
 
-        await asyncio.sleep(delay_ms / 1000)
+        if time.monotonic() - last_output_at >= keepalive_interval_seconds:
+            yield ": keepalive\n\n"
+            last_output_at = time.monotonic()
+        await asyncio.sleep(poll_seconds)
 
 
 @router.post("")
 def create_asr_session(
     engine: str = Query(default="mock"),
+    doctor_profile_id: str | None = Query(default=None),
+    diarization_engine: str = Query(default="auto"),
 ) -> ASRSessionRecord:
     normalized_engine = _normalize_engine_name(engine)
+    if not isinstance(doctor_profile_id, str):
+        doctor_profile_id = None
+    normalized_diarization_engine = (
+        diarization_engine.strip().lower()
+        if isinstance(diarization_engine, str)
+        else "auto"
+    )
+    if normalized_diarization_engine not in SUPPORTED_DIARIZATION_ENGINES:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported diarization engine. Expected auto, funasr_campp, pyannote, or three_d_speaker.",
+        )
     session_id = uuid.uuid4().hex
     now = _now()
     session = ASRSessionRecord(
@@ -772,6 +861,8 @@ def create_asr_session(
         status="created",
         events_url=f"/api/asr/sessions/{session_id}/events",
         result_url=f"/api/asr/sessions/{session_id}/result",
+        doctor_profile_id=doctor_profile_id,
+        diarization_engine=normalized_diarization_engine,
         created_at=now,
         updated_at=now,
     )
@@ -1034,6 +1125,11 @@ def _reconcile_streaming_result(
         calibrated = calibration_engine.transcribe(record.audio_id, audio_path)
         calibrated = apply_manifest_role_strategy(calibrated, _sample_id_from_record(record))
         calibrated = enhance_speaker_diarization(calibrated)
+        calibrated = resolve_speaker_roles(
+            calibrated,
+            audio_path=audio_path,
+            doctor_profile_id=session.doctor_profile_id,
+        )
         calibrated.segments = [
             segment.model_copy(
                 update={
@@ -1047,6 +1143,55 @@ def _reconcile_streaming_result(
         ]
         calibrated.text = _plain_text_from_segments(calibrated.segments)
         calibrated.conversation_text = _conversation_from_segments(calibrated.segments)
+        diarization_events = [
+            ASRSessionEvent(
+                id=1,
+                event="speaker_turn",
+                data={
+                    "status": "stable",
+                    "segment": segment.model_dump(),
+                    "speaker_id": segment.speaker_id,
+                    "role": segment.role,
+                    "start_time": segment.start_time,
+                    "end_time": segment.end_time,
+                    "overlap": segment.overlap,
+                },
+                created_at=_now(),
+            )
+            for segment in calibrated.segments
+        ]
+        mapping_event_name = (
+            "speaker_mapping_required"
+            if any(item.requires_confirmation for item in calibrated.speaker_assignments)
+            else "speaker_mapping_update"
+        )
+        diarization_events.extend(
+            [
+                ASRSessionEvent(
+                    id=1,
+                    event=mapping_event_name,
+                    data={
+                        "status": "mapping_required" if mapping_event_name.endswith("required") else "mapped",
+                        "assignments": [item.model_dump() for item in calibrated.speaker_assignments],
+                    },
+                    created_at=_now(),
+                ),
+                ASRSessionEvent(
+                    id=1,
+                    event="diarization_completed",
+                    data={
+                        "status": "completed",
+                        "engine": "funasr_campp",
+                        "requested_engine": session.diarization_engine,
+                        "speaker_count": len(calibrated.speaker_assignments),
+                        "turn_count": len(calibrated.diarization_turns),
+                        "assignments": [item.model_dump() for item in calibrated.speaker_assignments],
+                    },
+                    created_at=_now(),
+                ),
+            ]
+        )
+        _append_events(session_id, diarization_events)
         _append_session_event(
             session_id,
             session=session,
@@ -1078,12 +1223,10 @@ def _reconcile_streaming_result(
         )
         return calibrated
     except Exception as exc:  # noqa: BLE001
-        fallback = apply_manifest_role_strategy(streaming_result, _sample_id_from_record(record))
-        fallback = enhance_speaker_diarization(fallback)
-        fallback.segments = [
-            segment.model_copy(update={"provisional": False})
-            for segment in fallback.segments
-        ]
+        # Streaming windows are not speaker turns. Keep them provisional when
+        # calibration fails so they cannot enter structured medical previews.
+        fallback = streaming_result.model_copy(deep=True)
+        fallback.needs_review = True
         warning = (
             "Speaker calibration was unavailable; streaming transcript was retained for manual review. "
             f"Reason: {_compact_error(exc)}"
@@ -1613,7 +1756,7 @@ def update_asr_session_result(
 def read_asr_session_events(
     session_id: str,
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
-    delay_ms: int = Query(default=250, ge=0, le=5000),
+    delay_ms: int = Query(default=100, ge=0, le=5000),
 ) -> StreamingResponse:
     _read_session(session_id)
     return StreamingResponse(

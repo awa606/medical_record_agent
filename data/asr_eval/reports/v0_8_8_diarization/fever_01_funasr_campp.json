@@ -1,0 +1,20 @@
+{
+  "engine": "funasr_campp",
+  "status": "measured",
+  "elapsed_seconds": 0.121,
+  "audio_duration_seconds": 309.94,
+  "rtf": 0.0004,
+  "turn_count": 89,
+  "rss_start_mb": "",
+  "rss_peak_mb": "",
+  "rss_delta_mb": "",
+  "cpu_time_seconds": "",
+  "cpu_process_percent": "",
+  "cpu_normalized_percent": "",
+  "speaker_count_error": 0,
+  "boundary_f1": 0.4472,
+  "mixed_utterance_rate": 0.3258,
+  "role_consistency": 0.8931,
+  "der": null,
+  "jer": null
+}

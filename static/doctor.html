@@ -45,6 +45,7 @@
                 <option value="online">Online ASR</option>
               </select>
             </label>
+            <span id="asrModelStatus" class="model-status neutral">模型状态未知</span>
           </div>
           <div class="debug-only">
             <span class="meta-label">LLM Provider</span>
@@ -268,6 +269,18 @@
       <section id="audioPanel" class="drawer-panel">
         <p id="audioPanelHint" class="form-help">选择 MP3/WAV 音频与 ASR 引擎，系统将通过 SSE 在中间转写栏显示分段结果。</p>
         <input id="audioFileInput" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" />
+        <div class="speaker-profile-control">
+          <label for="doctorProfileSelect">医生声纹（可选）</label>
+          <select id="doctorProfileSelect">
+            <option value="">不使用注册声纹</option>
+          </select>
+          <div class="speaker-profile-enroll-row">
+            <input id="doctorProfileNameInput" type="text" value="本机医生" aria-label="医生声纹名称">
+            <input id="doctorProfileAudioInput" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" aria-label="医生声纹注册音频">
+            <button type="button" id="enrollDoctorProfileButton">注册 10-30 秒声纹</button>
+          </div>
+          <small>注册音频提取 CAM++ 向量后立即删除，只在本机保存声纹向量。</small>
+        </div>
           <select id="audioEngineSelect">
             <option value="funasr" selected>FunASR</option>
             <option value="sensevoice">SenseVoice Small</option>
@@ -320,6 +333,6 @@
     </aside>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=2026071002"></script>
+    <script src="./doctor.js?v=2026071003"></script>
   </body>
 </html>

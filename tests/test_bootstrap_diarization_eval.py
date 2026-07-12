@@ -33,5 +33,5 @@ def test_collect_bootstrap_status_can_report_ready_engines():
     assert payload["pyannote"]["status"] == "ready"
     assert payload["three_d_speaker"]["status"] == "ready"
     markdown = render_markdown(payload)
-    assert "v0.8.19 说话人分离引擎环境准备报告" in markdown
-    assert "AliMeeting 公开会议样本只用于多说话人分离评测" in markdown
+    assert "Diarization Engine Bootstrap Report" in markdown
+    assert "AliMeeting public meeting samples" in markdown

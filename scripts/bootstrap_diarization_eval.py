@@ -1,7 +1,8 @@
-"""Prepare and document the next true diarization evaluation environment.
+"""Prepare and document diarization evaluation environment readiness.
 
-This script does not download models or install packages by default. It records
-whether pyannote and 3D-Speaker are ready, then writes exact next commands.
+This script does not install packages, download models, or read private tokens.
+It records whether pyannote and 3D-Speaker are ready, then writes exact next
+commands for measured evaluation.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_REPORTS_DIR = PROJECT_ROOT / "data" / "asr_eval" / "reports" / "v0_8_19_diarization_bootstrap"
+DEFAULT_REPORTS_DIR = PROJECT_ROOT / "data" / "asr_eval" / "reports" / "v0_8_21_diarization_bootstrap"
 
 ModuleChecker = Callable[[str], bool]
 ModuleProbe = Callable[[str], dict[str, Any]]
@@ -38,14 +39,19 @@ def collect_bootstrap_status(
     hf_token_present = bool(env.get("HF_TOKEN"))
     pyannote_audio = module_checker("pyannote.audio")
     pyannote_metrics = module_checker("pyannote.metrics")
-    pyannote_audio_probe = module_probe("pyannote.audio") if pyannote_audio else {"import_ok": False, "reason": "not installed"}
-    pyannote_metrics_probe = (
-        module_probe("pyannote.metrics") if pyannote_metrics else {"import_ok": False, "reason": "not installed"}
-    )
+    pyannote_audio_probe = module_probe("pyannote.audio") if pyannote_audio else {
+        "import_ok": False,
+        "reason": "not installed",
+    }
+    pyannote_metrics_probe = module_probe("pyannote.metrics") if pyannote_metrics else {
+        "import_ok": False,
+        "reason": "not installed",
+    }
     torch_probe = module_probe("torch") if module_checker("torch") else {"import_ok": False, "reason": "not installed"}
-    torchaudio_probe = (
-        module_probe("torchaudio") if module_checker("torchaudio") else {"import_ok": False, "reason": "not installed"}
-    )
+    torchaudio_probe = module_probe("torchaudio") if module_checker("torchaudio") else {
+        "import_ok": False,
+        "reason": "not installed",
+    }
     numpy_probe = module_probe("numpy") if module_checker("numpy") else {"import_ok": False, "reason": "not installed"}
     pyannote_ready = bool(pyannote_audio_probe.get("import_ok") and hf_token_present)
 
@@ -55,8 +61,8 @@ def collect_bootstrap_status(
     speaker_script_ready = bool(speaker_script and path_exists(speaker_script))
     threed_ready = speaker_python_ready and speaker_script_ready
 
-    payload = {
-        "scope": "v0.8.19 diarization engine bootstrap",
+    return {
+        "scope": "diarization engine bootstrap",
         "python": {
             "executable": sys.executable,
             "version": platform.python_version(),
@@ -85,7 +91,6 @@ def collect_bootstrap_status(
         "recommended_commands": recommended_commands(),
         "next_decision": "run measured pyannote or 3D-Speaker comparison once one engine is ready",
     }
-    return payload
 
 
 def module_available(name: str) -> bool:
@@ -133,12 +138,12 @@ def recommended_commands() -> dict[str, list[str]]:
             ".\\.venv-diarization\\Scripts\\python -m pip install -r requirements-diarization-experimental.txt",
             ".\\.venv-diarization\\Scripts\\python -m pip install -r requirements.txt",
             "$env:HF_TOKEN='<your local Hugging Face token>'",
-            ".\\.venv-diarization\\Scripts\\python scripts\\run_diarization_engine_compare.py --engines pyannote --reports-dir data\\asr_eval\\reports\\v0_8_20_pyannote_measured",
+            ".\\.venv-diarization\\Scripts\\python scripts\\run_diarization_engine_compare.py --engines pyannote --reports-dir data\\asr_eval\\reports\\v0_8_21_pyannote_measured",
         ],
         "three_d_speaker_setup": [
             "$env:THREED_SPEAKER_PYTHON='C:\\path\\to\\3d-speaker\\venv\\Scripts\\python.exe'",
             "$env:THREED_SPEAKER_SCRIPT='C:\\path\\to\\3d-speaker\\diarize_wrapper.py'",
-            "python scripts\\run_diarization_engine_compare.py --engines three_d_speaker --reports-dir data\\asr_eval\\reports\\v0_8_19_three_d_speaker_measured",
+            "python scripts\\run_diarization_engine_compare.py --engines three_d_speaker --reports-dir data\\asr_eval\\reports\\v0_8_21_three_d_speaker_measured",
         ],
     }
 
@@ -148,32 +153,33 @@ def render_markdown(payload: dict[str, object]) -> str:
     threed = payload["three_d_speaker"]
     commands = payload["recommended_commands"]
     lines = [
-        "# v0.8.19 说话人分离引擎环境准备报告",
+        "# Diarization Engine Bootstrap Report",
         "",
-        "## 当前状态",
+        "## Current Status",
         "",
-        "| 引擎 | 状态 | 说明 |",
+        "| Engine | Status | Reason |",
         "| --- | --- | --- |",
         f"| pyannote community-1 | `{pyannote['status']}` | {pyannote['reason']} |",
         f"| 3D-Speaker | `{threed['status']}` | {threed['reason']} |",
         "",
-        "## pyannote 复测命令",
+        "## pyannote Retest Commands",
         "",
         "```powershell",
         *commands["pyannote_setup"],
         "```",
         "",
-        "## 3D-Speaker 复测命令",
+        "## 3D-Speaker Retest Commands",
         "",
         "```powershell",
         *commands["three_d_speaker_setup"],
         "```",
         "",
-        "## 工程边界",
+        "## Engineering Boundaries",
         "",
-        "- 本脚本只记录环境准备状态，不下载公开音频、不提交模型权重、不提交 HF_TOKEN。",
-        "- pyannote 和 3D-Speaker 缺失时记录为 blocked，不解释为模型效果差。",
-        "- AliMeeting 公开会议样本只用于多说话人分离评测，不代表医疗问诊效果。",
+        "- This script records environment readiness only.",
+        "- It does not download public audio, commit model weights, or commit HF_TOKEN.",
+        "- Missing pyannote or 3D-Speaker dependencies are recorded as blocked, not as poor model quality.",
+        "- AliMeeting public meeting samples are used only for diarization evaluation, not for medical consultation accuracy.",
         "",
     ]
     return "\n".join(lines)

@@ -6,7 +6,7 @@ services:
     image: medical-record-agent:local-asr
     container_name: medical-record-agent
     ports:
-      - "2601:8000"
+      - "${MRA_HOST_PORT:-2626}:8000"
     environment:
       PYTHONPATH: /app
       MEDICAL_RECORD_AGENT_DB: /app/runtime/medical_record_agent.sqlite3

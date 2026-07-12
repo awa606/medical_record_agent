@@ -1,0 +1,60 @@
+{
+  "scope": "diarization engine bootstrap",
+  "python": {
+    "executable": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\.venv-diarization\\Scripts\\python.exe",
+    "version": "3.11.6",
+    "implementation": "CPython"
+  },
+  "pyannote": {
+    "status": "blocked",
+    "pyannote_audio_installed": true,
+    "pyannote_audio_import": {
+      "import_ok": true,
+      "version": "3.4.0"
+    },
+    "pyannote_metrics_installed": true,
+    "pyannote_metrics_import": {
+      "import_ok": true,
+      "version": "3.2.1"
+    },
+    "torch_import": {
+      "import_ok": true,
+      "version": "2.2.2+cpu"
+    },
+    "torchaudio_import": {
+      "import_ok": true,
+      "version": "2.2.2+cpu",
+      "has_audio_metadata": true
+    },
+    "numpy_import": {
+      "import_ok": true,
+      "version": "1.26.4"
+    },
+    "hf_token_present": false,
+    "reason": "HF_TOKEN is not configured"
+  },
+  "three_d_speaker": {
+    "status": "blocked",
+    "python_configured": false,
+    "python_exists": false,
+    "script_configured": false,
+    "script_exists": false,
+    "reason": "THREED_SPEAKER_PYTHON is missing or does not exist; THREED_SPEAKER_SCRIPT is missing or does not exist"
+  },
+  "recommended_commands": {
+    "pyannote_setup": [
+      "py -3.11 -m venv .venv-diarization",
+      ".\\.venv-diarization\\Scripts\\python -m pip install --upgrade pip setuptools wheel",
+      ".\\.venv-diarization\\Scripts\\python -m pip install -r requirements-diarization-experimental.txt",
+      ".\\.venv-diarization\\Scripts\\python -m pip install -r requirements.txt",
+      "$env:HF_TOKEN='<your local Hugging Face token>'",
+      ".\\.venv-diarization\\Scripts\\python scripts\\run_diarization_engine_compare.py --engines pyannote --reports-dir data\\asr_eval\\reports\\v0_8_21_pyannote_measured"
+    ],
+    "three_d_speaker_setup": [
+      "$env:THREED_SPEAKER_PYTHON='C:\\path\\to\\3d-speaker\\venv\\Scripts\\python.exe'",
+      "$env:THREED_SPEAKER_SCRIPT='C:\\path\\to\\3d-speaker\\diarize_wrapper.py'",
+      "python scripts\\run_diarization_engine_compare.py --engines three_d_speaker --reports-dir data\\asr_eval\\reports\\v0_8_21_three_d_speaker_measured"
+    ]
+  },
+  "next_decision": "run measured pyannote or 3D-Speaker comparison once one engine is ready"
+}

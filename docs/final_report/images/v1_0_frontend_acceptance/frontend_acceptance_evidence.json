@@ -1,0 +1,46 @@
+{
+  "session": {
+    "id": "05371ae9a2334b8188c0b3874fe46544",
+    "mtime": 1783736580317.6692,
+    "audioId": "556c3a5bcac8476aa8b17c78dec48c90"
+  },
+  "screenshots": [
+    "01_doctor_workbench_home.png",
+    "02_text_generation_record.png",
+    "03_evidence_panel.png",
+    "04_mock_asr_transcript.png",
+    "05_funasr_short_audio_completed.png",
+    "06_role_unified_correction.png"
+  ],
+  "checks": [
+    {
+      "name": "text_generation",
+      "ok": true
+    },
+    {
+      "name": "evidence_panel",
+      "ok": true
+    },
+    {
+      "name": "mock_asr",
+      "ok": true
+    },
+    {
+      "name": "funasr_short_audio",
+      "ok": true,
+      "rows": 38
+    },
+    {
+      "name": "role_unified_correction",
+      "ok": true
+    },
+    {
+      "name": "range_request",
+      "ok": true,
+      "status": 206,
+      "contentRange": "bytes 0-1023/895437",
+      "method": "curl.exe -H \"Range: bytes=0-1023\""
+    }
+  ],
+  "boundary": "snakebite_01 is single-speaker and is used only for ASR/frontend flow retest, not diarization scoring."
+}

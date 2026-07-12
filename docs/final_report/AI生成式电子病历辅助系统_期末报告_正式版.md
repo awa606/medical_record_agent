@@ -425,7 +425,20 @@ python -m pytest
 2. 查看 ASRResult、Task、Steps、Safety、Agent Trace JSON。
 3. 复制运行日志命令并生成 Markdown 日志。
 
-### 10.3 当前已知限制
+### 10.3 v0.8.8 RTTM 评测与前端复测
+
+v0.8.8 冻结时补充了两说话人 diarization 评测与医生端真实前端复测证据。本轮只覆盖 `fever_01` 与 `chest_pain_01` 两条两说话人课程样本，人工 RTTM speaker id 固定为 `doctor`、`patient`。三说话人样本仍为待补，不合成样本，不输出伪三说话人成绩。
+
+| 样本 | 引擎 | speaker_count_error | boundary_f1 | mixed_utterance_rate | role_consistency | DER/JER |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `fever_01` | `funasr_campp` | 0 | 0.4472 | 0.3258 | 0.8931 | `not_available` |
+| `chest_pain_01` | `funasr_campp` | 1 | 0.2944 | 0.3282 | 0.9078 | `not_available` |
+
+本机未安装 `pyannote.metrics`，因此 DER/JER 明确记录为 `not_available`；`pyannote` 与 `3D-Speaker` 依赖状态继续记录为 `skipped`。完整报告见 `data/asr_eval/reports/v0_8_8_diarization/diarization_summary.md`。
+
+医生端复测复用 Docker `2601` 路线，覆盖文本生成、Mock ASR、FunASR 短音频、播放器 Range、说话人统一校正、证据面板和生成入口。FunASR 首次复测存在模型下载/冷启动超过 150 秒的问题，后端随后完成识别并可恢复 session；该问题归类为真实 ASR 模型运行时耗时，不归类为前端流程失败。验收记录见 `docs/doctor_workbench_acceptance_v1_0.md`，截图位于 `docs/final_report/images/v1_0_frontend_acceptance/`。
+
+### 10.4 当前已知限制
 
 - 本项目是课程 POC，没有临床验证，不能用于真实诊疗。
 - MockLLM 是规则模拟，不代表真实大模型泛化效果。
@@ -433,6 +446,7 @@ python -m pytest
 - Online LLM 依赖网络、API 配置和模型 JSON 输出稳定性。
 - ASR 医生/患者角色分离不稳定时需要人工校正。
 - 未接真实医院 HIS/EMR，也未实现完整权限系统。
+- 三说话人 diarization 样本仍未完成标注与复测，不能展示三说话人成绩。
 
 图 9：debug.html Task / Steps / Safety JSON
 
@@ -483,11 +497,11 @@ python -m pytest
 后续可以继续改进：
 
 1. 扩展样例集，覆盖更多疾病和对话风格。
-2. 增强 ASR 角色分离和人工校正界面。
+2. 补充三说话人课程样本，并扩展 ASR 角色分离和人工校正评测。
 3. 对真实 LLM 字段抽取做更多 JSON 稳定性测试。
 4. 增加权限控制、脱敏策略和更完整的审计查询。
 5. 将医生确认后的导出流程与更标准的 EMR 模板对齐。
-6. 在不接真实患者数据的前提下，建立更系统的课程评测集。
+6. 在不接真实患者数据的前提下，建立更系统的课程评测集和三说话人边界样本。
 
 ## 13. 提交说明
 

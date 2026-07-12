@@ -4620,6 +4620,10 @@ body.care-mode .transcript-list,
   color: #0f766e;
 }
 
+.transcript-role-tag.speaker {
+  color: #1d4ed8;
+}
+
 .transcript-role-tag.unknown {
   color: #b45309;
 }

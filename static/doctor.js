@@ -1057,6 +1057,12 @@ function renderFields() {
 }
 
 function classifySpeaker(line, segment = {}) {
+  if (isFinalClinicalRole(segment.role)) {
+    if (segment.role === "医生") return "doctor";
+    if (segment.role === "患者") return "patient";
+    return "other";
+  }
+  if (segment.speaker_id || segment.speaker) return "speaker";
   if (segment.role === "医生") return "doctor";
   if (segment.role === "患者") return "patient";
   if (segment.role === "其他") return "other";
@@ -1070,11 +1076,30 @@ function classifySpeaker(line, segment = {}) {
   return "unknown";
 }
 
+function isFinalClinicalRole(role) {
+  return ["医生", "患者", "其他"].includes(role);
+}
+
+function speakerAliasLabelForId(speakerId) {
+  const id = String(speakerId || "").trim();
+  if (!id) return "说话人 A";
+  const segments = currentReviewSegments();
+  const ids = [];
+  segments.forEach((segment) => {
+    const identity = segment.speaker_id || segment.speaker;
+    if (identity && !ids.includes(identity)) ids.push(identity);
+  });
+  if (!ids.includes(id)) ids.push(id);
+  const index = Math.max(0, ids.indexOf(id));
+  return `说话人 ${String.fromCharCode(65 + Math.min(index, 25))}`;
+}
+
 function roleLabelFromSegment(segment = {}, fallbackLine = "") {
   const speaker = classifySpeaker(fallbackLine, segment);
   if (speaker === "doctor") return "医生";
   if (speaker === "patient") return "患者";
   if (speaker === "other") return "其他";
+  if (speaker === "speaker") return speakerAliasLabelForId(segment.speaker_id || segment.speaker);
   return "";
 }
 
@@ -1100,6 +1125,7 @@ function speakerClassFromRole(role) {
   if (role === "医生") return "doctor";
   if (role === "患者") return "patient";
   if (role === "其他") return "other";
+  if (String(role || "").startsWith("说话人 ")) return "speaker";
   return "unknown";
 }
 
@@ -1561,6 +1587,7 @@ function speakerDisplayLabel(row, speakerCount, speakerAliases = null) {
     ? String.fromCharCode(65 + Math.min(Number(match[1]), 25))
     : String(row.speakerId).replace(/^speaker[-_]?|^spk/i, "").toUpperCase());
   const speakerName = `说话人 ${suffix || row.speakerId}`;
+  if (String(row.label || "").startsWith("说话人 ")) return row.label;
   return row.label ? `${row.label} · ${suffix || row.speakerId}` : speakerName;
 }
 

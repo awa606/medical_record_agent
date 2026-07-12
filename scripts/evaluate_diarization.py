@@ -163,17 +163,30 @@ def main() -> int:
         ffprobe = find_ffprobe_executable()
         duration = probe_audio_duration(args.audio, ffprobe) if ffprobe else None
         elapsed = time.perf_counter() - started
-        metrics = evaluate_turns(parse_rttm(args.reference_rttm), hypothesis)
-        payload = {
-            "engine": engine.name,
-            "status": "measured",
-            "elapsed_seconds": round(elapsed, 3),
-            "audio_duration_seconds": duration,
-            "rtf": round(elapsed / duration, 4) if duration else None,
-            "turn_count": len(hypothesis),
-            **resources,
-            **metrics.__dict__,
-        }
+        reference = parse_rttm(args.reference_rttm)
+        if reference and not hypothesis:
+            payload = {
+                "engine": engine.name,
+                "status": "failed",
+                "reason": "engine returned no diarization turns for a non-empty RTTM reference",
+                "elapsed_seconds": round(elapsed, 3),
+                "audio_duration_seconds": duration,
+                "rtf": round(elapsed / duration, 4) if duration else None,
+                "turn_count": 0,
+                **resources,
+            }
+        else:
+            metrics = evaluate_turns(reference, hypothesis)
+            payload = {
+                "engine": engine.name,
+                "status": "measured",
+                "elapsed_seconds": round(elapsed, 3),
+                "audio_duration_seconds": duration,
+                "rtf": round(elapsed / duration, 4) if duration else None,
+                "turn_count": len(hypothesis),
+                **resources,
+                **metrics.__dict__,
+            }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(payload, ensure_ascii=False))

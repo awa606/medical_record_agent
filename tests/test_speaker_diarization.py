@@ -132,5 +132,65 @@ class SpeakerDiarizationAssistTests(unittest.TestCase):
         self.assertTrue(all(segment.role_source == "manual_speaker_map" for segment in doctor_turns))
 
 
+    def test_mixed_segment_is_split_by_diarization_turns(self):
+        from app.schemas.asr import DiarizationTurn
+
+        result = ASRResult(
+            audio_id="demo_audio",
+            engine="funasr",
+            text="doctor asks patient answers",
+            conversation_text="",
+            segments=[
+                ASRSegment(
+                    segment_id="mixed-1",
+                    speaker="spk0",
+                    speaker_id="spk0",
+                    text="doctor asks patient answers",
+                    start_time=0.0,
+                    end_time=4.0,
+                )
+            ],
+            diarization_turns=[
+                DiarizationTurn(start_time=0.0, end_time=2.0, speaker_id="spk0", confidence=0.91),
+                DiarizationTurn(start_time=2.0, end_time=4.0, speaker_id="spk1", confidence=0.88),
+            ],
+        )
+
+        enhanced = enhance_speaker_diarization(result)
+
+        self.assertGreaterEqual(len(enhanced.segments), 2)
+        self.assertEqual(enhanced.segments[0].speaker_id, "spk0")
+        self.assertEqual(enhanced.segments[1].speaker_id, "spk1")
+        self.assertEqual(enhanced.segments[0].start_time, 0.0)
+        self.assertEqual(enhanced.segments[0].end_time, 2.0)
+        self.assertEqual(enhanced.segments[1].start_time, 2.0)
+        self.assertEqual(enhanced.segments[1].end_time, 4.0)
+        self.assertTrue(all(segment.original_text == "doctor asks patient answers" for segment in enhanced.segments[:2]))
+
+    def test_segment_is_not_split_without_diarization_turns(self):
+        result = ASRResult(
+            audio_id="demo_audio",
+            engine="funasr",
+            text="doctor asks patient answers",
+            conversation_text="",
+            segments=[
+                ASRSegment(
+                    segment_id="mixed-1",
+                    speaker="spk0",
+                    speaker_id="spk0",
+                    text="doctor asks patient answers",
+                    start_time=0.0,
+                    end_time=4.0,
+                )
+            ],
+        )
+
+        enhanced = enhance_speaker_diarization(result)
+
+        self.assertEqual(len(enhanced.segments), 1)
+        self.assertEqual(enhanced.segments[0].segment_id, "mixed-1")
+        self.assertEqual(enhanced.segments[0].speaker_id, "spk0")
+
+
 if __name__ == "__main__":
     unittest.main()

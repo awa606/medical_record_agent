@@ -96,7 +96,8 @@ def enhance_speaker_diarization(result: ASRResult) -> ASRResult:
         updated.needs_review = True
         return updated
 
-    normalized = _normalize_speaker_ids(stable_segments)
+    boundary_segments = _split_segments_by_diarization_turns(stable_segments, updated.diarization_turns)
+    normalized = _normalize_speaker_ids(boundary_segments)
     merged = _merge_stable_utterances(_merge_short_speaker_clusters(normalized))
     assignments = _assign_roles_by_speaker(merged)
     assignment_map = {item.speaker_id: item for item in assignments}
@@ -140,6 +141,159 @@ def enhance_speaker_diarization(result: ASRResult) -> ASRResult:
     if updated.needs_review and GLOBAL_REVIEW_WARNING not in updated.warnings:
         updated.warnings.append(GLOBAL_REVIEW_WARNING)
     return updated
+
+
+def _split_segments_by_diarization_turns(
+    segments: list[ASRSegment],
+    turns: list[DiarizationTurn],
+) -> list[ASRSegment]:
+    valid_turns = sorted(
+        [turn for turn in turns if turn.end_time > turn.start_time],
+        key=lambda item: (item.start_time, item.end_time),
+    )
+    if not valid_turns:
+        return segments
+
+    split_segments: list[ASRSegment] = []
+    for segment_index, segment in enumerate(segments):
+        if segment.start_time is None or segment.end_time is None or segment.end_time <= segment.start_time:
+            split_segments.append(segment)
+            continue
+
+        overlaps = _segment_turn_overlaps(segment, valid_turns)
+        if not overlaps:
+            split_segments.append(segment)
+            continue
+
+        speakers = {_normalized_speaker(item["speaker_id"]) for item in overlaps}
+        if len(speakers) <= 1:
+            speaker_id = str(overlaps[0]["speaker_id"])
+            split_segments.append(
+                segment.model_copy(
+                    update={
+                        "speaker": speaker_id,
+                        "speaker_id": speaker_id,
+                        "speaker_confidence": overlaps[0]["confidence"],
+                        "overlap": bool(segment.overlap or overlaps[0]["overlap"]),
+                    }
+                )
+            )
+            continue
+
+        text_chunks = _split_text_by_duration(segment.text, [float(item["duration"]) for item in overlaps])
+        base_id = segment.segment_id or f"segment-{segment_index + 1}"
+        for split_index, (item, text) in enumerate(zip(overlaps, text_chunks, strict=False), start=1):
+            cleaned_text = text.strip()
+            if not cleaned_text:
+                continue
+            speaker_id = str(item["speaker_id"])
+            split_segments.append(
+                segment.model_copy(
+                    update={
+                        "segment_id": f"{base_id}-speaker-{split_index}",
+                        "revision": segment.revision + 1,
+                        "provisional": False,
+                        "speaker": speaker_id,
+                        "speaker_id": speaker_id,
+                        "speaker_confidence": item["confidence"],
+                        "role": None,
+                        "role_confidence": None,
+                        "role_source": "diarization_turn_split",
+                        "role_note": None,
+                        "speaker_turn": None,
+                        "needs_review": False,
+                        "reviewed_by_doctor": False,
+                        "original_text": segment.original_text or segment.text,
+                        "overlap": bool(segment.overlap or item["overlap"]),
+                        "text": cleaned_text,
+                        "start_time": round(float(item["start_time"]), 3),
+                        "end_time": round(float(item["end_time"]), 3),
+                    }
+                )
+            )
+    return split_segments
+
+
+def _segment_turn_overlaps(
+    segment: ASRSegment,
+    turns: list[DiarizationTurn],
+) -> list[dict[str, object]]:
+    assert segment.start_time is not None
+    assert segment.end_time is not None
+    raw_overlaps: list[dict[str, object]] = []
+    for turn in turns:
+        start = max(float(segment.start_time), float(turn.start_time))
+        end = min(float(segment.end_time), float(turn.end_time))
+        duration = end - start
+        if duration < 0.05:
+            continue
+        raw_overlaps.append(
+            {
+                "start_time": start,
+                "end_time": end,
+                "duration": duration,
+                "speaker_id": turn.speaker_id,
+                "confidence": turn.confidence,
+                "overlap": turn.overlap,
+            }
+        )
+    if not raw_overlaps:
+        return []
+
+    merged: list[dict[str, object]] = []
+    for item in raw_overlaps:
+        if (
+            merged
+            and _normalized_speaker(str(merged[-1]["speaker_id"])) == _normalized_speaker(str(item["speaker_id"]))
+            and float(item["start_time"]) - float(merged[-1]["end_time"]) <= 0.15
+            and bool(item["overlap"]) == bool(merged[-1]["overlap"])
+        ):
+            previous = merged[-1]
+            previous["end_time"] = item["end_time"]
+            previous["duration"] = float(previous["duration"]) + float(item["duration"])
+            previous["confidence"] = _minimum_optional(
+                previous["confidence"] if isinstance(previous["confidence"], float) else None,
+                item["confidence"] if isinstance(item["confidence"], float) else None,
+            )
+        else:
+            merged.append(item)
+    return merged
+
+
+def _split_text_by_duration(text: str, durations: list[float]) -> list[str]:
+    if not durations:
+        return [text]
+    cleaned = text.strip()
+    if not cleaned:
+        return ["" for _ in durations]
+    if len(durations) == 1:
+        return [cleaned]
+
+    total = sum(max(0.001, duration) for duration in durations)
+    cursor = 0
+    chunks: list[str] = []
+    for index, duration in enumerate(durations[:-1], start=1):
+        remaining_parts = len(durations) - index
+        target = round(len(cleaned) * sum(max(0.001, value) for value in durations[:index]) / total)
+        target = max(cursor + 1, min(target, len(cleaned) - remaining_parts))
+        target = _nearest_text_boundary(cleaned, target, cursor + 1, len(cleaned) - remaining_parts)
+        chunks.append(cleaned[cursor:target])
+        cursor = target
+    chunks.append(cleaned[cursor:])
+    return chunks
+
+
+def _nearest_text_boundary(text: str, target: int, lower: int, upper: int) -> int:
+    boundary_chars = set(" ,.;:!?，。！？；、")
+    if lower >= upper:
+        return target
+    window = min(12, max(target - lower, upper - target))
+    candidates = []
+    for offset in range(window + 1):
+        for candidate in (target - offset, target + offset):
+            if lower <= candidate <= upper and candidate < len(text) and text[candidate] in boundary_chars:
+                candidates.append(candidate + 1)
+    return min(candidates, key=lambda item: abs(item - target), default=target)
 
 
 def _normalize_speaker_ids(segments: list[ASRSegment]) -> list[ASRSegment]:

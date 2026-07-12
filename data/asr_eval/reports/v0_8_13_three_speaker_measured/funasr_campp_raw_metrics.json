@@ -1,0 +1,15 @@
+{
+  "engine": "funasr_campp",
+  "status": "failed",
+  "reason": "engine returned no diarization turns for a non-empty RTTM reference",
+  "elapsed_seconds": 0.064,
+  "audio_duration_seconds": 240.0,
+  "rtf": 0.0003,
+  "turn_count": 0,
+  "rss_start_mb": 35.0,
+  "rss_peak_mb": 35.48,
+  "rss_delta_mb": 0.48,
+  "cpu_time_seconds": 0.0,
+  "cpu_process_percent": 0.0,
+  "cpu_normalized_percent": 0.0
+}

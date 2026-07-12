@@ -1,0 +1,11 @@
+{
+  "scope": "v0.8.18 diarization-ASR alignment",
+  "status": "skipped",
+  "asr_result": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\data\\asr_eval\\reports\\v0_8_13_three_speaker_measured\\three_speaker_alimeeting_01_funasr_raw_asr_result.json",
+  "turns_report": "data\\asr_eval\\reports\\v0_8_17_true_diarization_compare\\funasr_campp_three_speaker_alimeeting_01.json",
+  "output": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\data\\asr_eval\\reports\\v0_8_18_diarization_asr_alignment\\three_speaker_alimeeting_01_aligned_asr_result.json",
+  "reason": "turns report has no hypothesis_turns; no external diarization boundary to apply",
+  "engine": "funasr_campp",
+  "source_status": "failed",
+  "source_reason": "engine returned no diarization turns for a non-empty RTTM reference"
+}

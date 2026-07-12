@@ -1,6 +1,6 @@
-# Optional research dependencies. Install only in an isolated environment.
-pyannote.audio>=4.0,<5
-pyannote.metrics>=4.0,<5
-
-# 3D-Speaker is configured as an external local checkout through:
-# THREED_SPEAKER_PYTHON and THREED_SPEAKER_SCRIPT.
+# Optional research dependencies for true speaker diarization evaluation.
+# Install in an isolated environment, not in the main runtime by default:
+#   py -3.11 -m venv .venv-diarization
+#   .\.venv-diarization\Scripts\python -m pip install -r requirements-diarization-experimental.txt
+pyannote.audio>=3.1,<4.0
+pyannote.metrics>=3.2,<4.0

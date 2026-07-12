@@ -1,0 +1,38 @@
+{
+  "scope": "v0.8.19 diarization engine bootstrap",
+  "python": {
+    "executable": "C:\\Anaconda\\python.exe",
+    "version": "3.13.5",
+    "implementation": "CPython"
+  },
+  "pyannote": {
+    "status": "blocked",
+    "pyannote_audio_installed": false,
+    "pyannote_metrics_installed": false,
+    "hf_token_present": false,
+    "reason": "pyannote.audio is not installed; HF_TOKEN is not configured"
+  },
+  "three_d_speaker": {
+    "status": "blocked",
+    "python_configured": false,
+    "python_exists": false,
+    "script_configured": false,
+    "script_exists": false,
+    "reason": "THREED_SPEAKER_PYTHON is missing or does not exist; THREED_SPEAKER_SCRIPT is missing or does not exist"
+  },
+  "recommended_commands": {
+    "pyannote_setup": [
+      "py -3.11 -m venv .venv-diarization",
+      ".\\.venv-diarization\\Scripts\\python -m pip install --upgrade pip setuptools wheel",
+      ".\\.venv-diarization\\Scripts\\python -m pip install -r requirements-diarization-experimental.txt",
+      "$env:HF_TOKEN='<your local Hugging Face token>'",
+      ".\\.venv-diarization\\Scripts\\python scripts\\run_diarization_engine_compare.py --engines pyannote --reports-dir data\\asr_eval\\reports\\v0_8_19_pyannote_measured"
+    ],
+    "three_d_speaker_setup": [
+      "$env:THREED_SPEAKER_PYTHON='C:\\path\\to\\3d-speaker\\venv\\Scripts\\python.exe'",
+      "$env:THREED_SPEAKER_SCRIPT='C:\\path\\to\\3d-speaker\\diarize_wrapper.py'",
+      "python scripts\\run_diarization_engine_compare.py --engines three_d_speaker --reports-dir data\\asr_eval\\reports\\v0_8_19_three_d_speaker_measured"
+    ]
+  },
+  "next_decision": "run measured pyannote or 3D-Speaker comparison once one engine is ready"
+}

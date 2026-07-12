@@ -1,0 +1,11 @@
+{
+  "engine": "pyannote_community_1",
+  "requested_engine": "pyannote",
+  "status": "skipped",
+  "reason": "pyannote.audio is not installed",
+  "sample_id": "three_speaker_alimeeting_01",
+  "sample_source": "AliMeeting Eval, CC BY-SA 4.0",
+  "sample_boundary": "public meeting diarization only; not a medical consultation accuracy result",
+  "reference_turn_count": 60,
+  "reference_speaker_count": 4
+}

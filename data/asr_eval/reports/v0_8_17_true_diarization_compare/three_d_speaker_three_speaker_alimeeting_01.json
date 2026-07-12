@@ -1,0 +1,11 @@
+{
+  "engine": "three_d_speaker",
+  "requested_engine": "three_d_speaker",
+  "status": "skipped",
+  "reason": "THREED_SPEAKER_PYTHON is not configured",
+  "sample_id": "three_speaker_alimeeting_01",
+  "sample_source": "AliMeeting Eval, CC BY-SA 4.0",
+  "sample_boundary": "public meeting diarization only; not a medical consultation accuracy result",
+  "reference_turn_count": 60,
+  "reference_speaker_count": 4
+}

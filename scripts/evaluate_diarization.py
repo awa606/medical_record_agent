@@ -7,6 +7,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -143,6 +144,74 @@ def _optional_der_jer(
     return round(der, 4), round(jer, 4)
 
 
+def evaluate_diarization_engine(
+    *,
+    engine_name: str,
+    audio_path: Path,
+    reference_rttm: Path,
+    asr_result: Path | None = None,
+) -> dict[str, Any]:
+    engine = create_diarization_engine(engine_name, asr_result_path=asr_result)
+    available, reason = engine.availability()
+    payload: dict[str, Any] = {
+        "engine": engine.name,
+        "requested_engine": engine_name,
+        "status": "skipped",
+        "reason": reason,
+    }
+    if not available:
+        return payload
+
+    started = time.perf_counter()
+    hypothesis: list[DiarizationTurn] = []
+    try:
+        with _ResourceSampler() as sampler:
+            hypothesis = engine.diarize(audio_path)
+        elapsed = time.perf_counter() - started
+        resources = sampler.metrics(elapsed)
+        ffprobe = find_ffprobe_executable()
+        duration = probe_audio_duration(audio_path, ffprobe) if ffprobe else None
+        reference = parse_rttm(reference_rttm)
+        if reference and not hypothesis:
+            return {
+                "engine": engine.name,
+                "requested_engine": engine_name,
+                "status": "failed",
+                "reason": "engine returned no diarization turns for a non-empty RTTM reference",
+                "elapsed_seconds": round(elapsed, 3),
+                "audio_duration_seconds": duration,
+                "rtf": round(elapsed / duration, 4) if duration else None,
+                "turn_count": 0,
+                **resources,
+            }
+
+        metrics = evaluate_turns(reference, hypothesis)
+        return {
+            "engine": engine.name,
+            "requested_engine": engine_name,
+            "status": "measured",
+            "elapsed_seconds": round(elapsed, 3),
+            "audio_duration_seconds": duration,
+            "rtf": round(elapsed / duration, 4) if duration else None,
+            "turn_count": len(hypothesis),
+            "hypothesis_turns": [
+                turn.model_dump(mode="json") for turn in hypothesis
+            ],
+            **resources,
+            **metrics.__dict__,
+        }
+    except Exception as exc:  # pragma: no cover - integration failure path
+        elapsed = time.perf_counter() - started
+        return {
+            "engine": engine.name,
+            "requested_engine": engine_name,
+            "status": "failed",
+            "reason": f"{type(exc).__name__}: {exc}",
+            "elapsed_seconds": round(elapsed, 3),
+            "turn_count": len(hypothesis),
+        }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate one diarization engine against human RTTM")
     parser.add_argument("--engine", required=True)
@@ -152,41 +221,12 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
-    engine = create_diarization_engine(args.engine, asr_result_path=args.asr_result)
-    available, reason = engine.availability()
-    payload: dict[str, object] = {"engine": engine.name, "status": "skipped", "reason": reason}
-    if available:
-        started = time.perf_counter()
-        with _ResourceSampler() as sampler:
-            hypothesis = engine.diarize(args.audio)
-        resources = sampler.metrics(time.perf_counter() - started)
-        ffprobe = find_ffprobe_executable()
-        duration = probe_audio_duration(args.audio, ffprobe) if ffprobe else None
-        elapsed = time.perf_counter() - started
-        reference = parse_rttm(args.reference_rttm)
-        if reference and not hypothesis:
-            payload = {
-                "engine": engine.name,
-                "status": "failed",
-                "reason": "engine returned no diarization turns for a non-empty RTTM reference",
-                "elapsed_seconds": round(elapsed, 3),
-                "audio_duration_seconds": duration,
-                "rtf": round(elapsed / duration, 4) if duration else None,
-                "turn_count": 0,
-                **resources,
-            }
-        else:
-            metrics = evaluate_turns(reference, hypothesis)
-            payload = {
-                "engine": engine.name,
-                "status": "measured",
-                "elapsed_seconds": round(elapsed, 3),
-                "audio_duration_seconds": duration,
-                "rtf": round(elapsed / duration, 4) if duration else None,
-                "turn_count": len(hypothesis),
-                **resources,
-                **metrics.__dict__,
-            }
+    payload = evaluate_diarization_engine(
+        engine_name=args.engine,
+        audio_path=args.audio,
+        reference_rttm=args.reference_rttm,
+        asr_result=args.asr_result,
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(payload, ensure_ascii=False))

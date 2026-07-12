@@ -38,6 +38,7 @@ DEFAULT_REPORTS_DIR = PROJECT_ROOT / "data" / "asr_eval" / "reports" / "v0_8_18_
 OUTPUT_NAME = "three_speaker_alimeeting_01_aligned_asr_result.json"
 SUMMARY_NAME = "alignment_summary.md"
 SUMMARY_JSON = "alignment_summary.json"
+MAX_ACCEPTABLE_MIXED_UTTERANCE_RATE = 0.30
 
 
 def apply_diarization_turns_to_asr_result(
@@ -53,7 +54,7 @@ def apply_diarization_turns_to_asr_result(
     summary_json_path = reports_dir / SUMMARY_JSON
 
     payload: dict[str, Any] = {
-        "scope": "v0.8.18 diarization-ASR alignment",
+        "scope": "v0.8.22 diarization-ASR alignment quality gate",
         "status": "failed",
         "asr_result": str(asr_result_path),
         "turns_report": str(turns_report_path),
@@ -124,18 +125,22 @@ def _extract_turns(payload: dict[str, Any]) -> list[DiarizationTurn]:
 
 
 def _write_outputs(json_path: Path, markdown_path: Path, payload: dict[str, Any]) -> None:
+    payload["quality_gate"] = _alignment_quality_gate(payload)
     json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     markdown_path.write_text(_render_markdown(payload), encoding="utf-8")
 
 
 def _render_markdown(payload: dict[str, Any]) -> str:
+    gate = payload.get("quality_gate", {})
     lines = [
-        "# v0.8.18 Diarization 与 ASR 对齐报告",
+        "# Diarization-ASR Alignment Report",
         "",
-        f"- 状态：`{payload.get('status')}`",
-        f"- 引擎：`{payload.get('engine', '-')}`",
-        f"- ASRResult：`{payload.get('asr_result')}`",
-        f"- turns 报告：`{payload.get('turns_report')}`",
+        f"- Status: `{payload.get('status')}`",
+        f"- Engine: `{payload.get('engine', '-')}`",
+        f"- ASRResult: `{payload.get('asr_result')}`",
+        f"- Turns report: `{payload.get('turns_report')}`",
+        f"- Quality gate: `{gate.get('decision', '-')}`",
+        f"- Gate reason: {gate.get('reason', '-')}",
     ]
     for key in (
         "reason",
@@ -150,12 +155,51 @@ def _render_markdown(payload: dict[str, Any]) -> str:
         if key in payload:
             lines.append(f"- {key}: `{payload[key]}`")
     if payload.get("before_metrics") or payload.get("after_metrics"):
-        lines.extend(["", "## 指标", ""])
+        lines.extend(["", "## Metrics", ""])
         lines.append(f"- before_metrics: `{payload.get('before_metrics', '-')}`")
         lines.append(f"- after_metrics: `{payload.get('after_metrics', '-')}`")
     lines.append("")
-    lines.append("说明：本报告只验证外部 diarization 边界能否降低 ASR 混合语句，不代表 AliMeeting 会议样本的医疗问诊效果。")
+    lines.append(
+        "Note: this report only checks whether external diarization boundaries reduce mixed ASR utterances. "
+        "It is not medical consultation accuracy evidence."
+    )
     return "\n".join(lines) + "\n"
+
+
+def _alignment_quality_gate(payload: dict[str, Any]) -> dict[str, Any]:
+    if payload.get("status") != "measured":
+        return {
+            "status": "not_evaluated",
+            "decision": "blocked",
+            "reason": payload.get("reason") or "alignment did not produce a measured result",
+        }
+
+    after_metrics = payload.get("after_metrics")
+    if not isinstance(after_metrics, dict):
+        return {
+            "status": "not_evaluated",
+            "decision": "blocked",
+            "reason": "after_metrics is missing",
+        }
+
+    mixed = after_metrics.get("mixed_utterance_rate")
+    passed = mixed is not None and mixed <= MAX_ACCEPTABLE_MIXED_UTTERANCE_RATE
+    return {
+        "status": "evaluated",
+        "decision": "candidate_for_role_mapping" if passed else "reject_for_role_mapping",
+        "reason": (
+            "mixed utterance rate passed alignment gate"
+            if passed
+            else f"mixed_utterance_rate exceeds {MAX_ACCEPTABLE_MIXED_UTTERANCE_RATE}"
+        ),
+        "checks": {
+            "mixed_utterance_rate": {
+                "value": mixed,
+                "threshold": MAX_ACCEPTABLE_MIXED_UTTERANCE_RATE,
+                "passed": passed,
+            }
+        },
+    }
 
 
 def parse_args() -> argparse.Namespace:

@@ -1,0 +1,26 @@
+{
+  "engine": "funasr_campp",
+  "requested_engine": "funasr_campp",
+  "status": "failed",
+  "reason": "engine returned no diarization turns for a non-empty RTTM reference",
+  "elapsed_seconds": 0.025,
+  "audio_duration_seconds": 240.0,
+  "rtf": 0.0001,
+  "turn_count": 0,
+  "rss_start_mb": 41.38,
+  "rss_peak_mb": 42.09,
+  "rss_delta_mb": 0.71,
+  "cpu_time_seconds": 0.0,
+  "cpu_process_percent": 0.0,
+  "cpu_normalized_percent": 0.0,
+  "sample_id": "three_speaker_alimeeting_01",
+  "sample_source": "AliMeeting Eval, CC BY-SA 4.0",
+  "sample_boundary": "public meeting diarization only; not a medical consultation accuracy result",
+  "reference_turn_count": 60,
+  "reference_speaker_count": 4,
+  "quality_gate": {
+    "status": "not_evaluated",
+    "decision": "blocked",
+    "reason": "engine returned no diarization turns for a non-empty RTTM reference"
+  }
+}

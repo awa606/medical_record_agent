@@ -1,0 +1,16 @@
+{
+  "scope": "v0.8.22 diarization-ASR alignment quality gate",
+  "status": "skipped",
+  "asr_result": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\data\\asr_eval\\reports\\v0_8_13_three_speaker_measured\\three_speaker_alimeeting_01_funasr_raw_asr_result.json",
+  "turns_report": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\data\\asr_eval\\reports\\v0_8_17_true_diarization_compare\\pyannote_three_speaker_alimeeting_01.json",
+  "output": "data\\asr_eval\\reports\\v0_8_22_alignment_quality_gate\\three_speaker_alimeeting_01_aligned_asr_result.json",
+  "reason": "turns report has no hypothesis_turns; no external diarization boundary to apply",
+  "engine": "pyannote_community_1",
+  "source_status": "skipped",
+  "source_reason": "pyannote.audio is not installed",
+  "quality_gate": {
+    "status": "not_evaluated",
+    "decision": "blocked",
+    "reason": "turns report has no hypothesis_turns; no external diarization boundary to apply"
+  }
+}

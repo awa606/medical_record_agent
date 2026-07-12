@@ -57,6 +57,7 @@ def test_apply_diarization_turns_splits_mixed_asr_segment(tmp_path):
     assert payload["segment_count_before"] == 1
     assert payload["segment_count_after"] >= 2
     assert payload["after_metrics"]["mixed_utterance_rate"] == 0.0
+    assert payload["quality_gate"]["decision"] == "candidate_for_role_mapping"
     aligned = json.loads((tmp_path / "reports" / "three_speaker_alimeeting_01_aligned_asr_result.json").read_text(encoding="utf-8"))
     assert len(aligned["segments"]) >= 2
 
@@ -82,4 +83,5 @@ def test_apply_diarization_turns_skips_report_without_turns(tmp_path):
 
     assert payload["status"] == "skipped"
     assert "no hypothesis_turns" in payload["reason"]
+    assert payload["quality_gate"]["decision"] == "blocked"
     assert (tmp_path / "reports" / "alignment_summary.md").exists()

@@ -35,6 +35,10 @@ DEFAULT_ENGINES = ("funasr_campp", "pyannote", "three_d_speaker")
 SUMMARY_JSON = "diarization_engine_compare_summary.json"
 SUMMARY_MD = "diarization_engine_compare_summary.md"
 
+MAX_ACCEPTABLE_MIXED_UTTERANCE_RATE = 0.30
+MIN_ACCEPTABLE_BOUNDARY_F1 = 0.50
+MAX_ACCEPTABLE_SPEAKER_COUNT_ERROR = 1
+
 
 Evaluator = Callable[..., dict[str, Any]]
 
@@ -69,13 +73,14 @@ def run_diarization_engine_compare(
                 "reference_speaker_count": len({turn.speaker_id for turn in reference_turns}),
             }
         )
+        payload["quality_gate"] = _quality_gate(payload)
         output = reports_dir / f"{_safe_name(engine)}_three_speaker_alimeeting_01.json"
         output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         payload["report_path"] = str(output)
         results.append(payload)
 
     summary = {
-        "scope": "v0.8.17 true diarization engine comparison",
+        "scope": "v0.8.22 diarization quality gate",
         "sample_id": audio_path.stem,
         "sample_source": "AliMeeting Eval, CC BY-SA 4.0",
         "sample_boundary": "AliMeeting is a public meeting sample; it is used only to test multi-speaker diarization.",
@@ -84,6 +89,12 @@ def run_diarization_engine_compare(
         "asr_result": str(asr_result) if asr_result else None,
         "reference_turn_count": len(reference_turns),
         "reference_speaker_count": len({turn.speaker_id for turn in reference_turns}),
+        "quality_gate_policy": {
+            "max_mixed_utterance_rate": MAX_ACCEPTABLE_MIXED_UTTERANCE_RATE,
+            "min_boundary_f1": MIN_ACCEPTABLE_BOUNDARY_F1,
+            "max_speaker_count_error": MAX_ACCEPTABLE_SPEAKER_COUNT_ERROR,
+            "decision_note": "Only engines passing this gate may be used as candidates for automatic speaker-role mapping.",
+        },
         "results": results,
         "best_candidate": _best_candidate(results),
     }
@@ -96,23 +107,29 @@ def run_diarization_engine_compare(
 
 
 def render_markdown(summary: dict[str, Any]) -> str:
+    policy = summary.get("quality_gate_policy", {})
     lines = [
-        "# v0.8.17 真实多说话人 Diarization 引擎对比",
+        "# Diarization Engine Comparison With Quality Gate",
         "",
-        f"- 样本：`{summary['sample_id']}`",
-        f"- 来源：{summary['sample_source']}",
-        f"- 边界：{summary['sample_boundary']}",
-        f"- 人工 RTTM speaker 数：`{summary['reference_speaker_count']}`",
-        f"- 人工 RTTM turn 数：`{summary['reference_turn_count']}`",
+        f"- Sample: `{summary['sample_id']}`",
+        f"- Source: {summary['sample_source']}",
+        f"- Boundary: {summary['sample_boundary']}",
+        f"- Reference speaker count: `{summary['reference_speaker_count']}`",
+        f"- Reference turn count: `{summary['reference_turn_count']}`",
+        f"- Quality gate: mixed_utterance_rate <= `{policy.get('max_mixed_utterance_rate')}`, "
+        f"boundary_f1 >= `{policy.get('min_boundary_f1')}`, "
+        f"speaker_count_error <= `{policy.get('max_speaker_count_error')}`",
         "",
-        "| 引擎 | 状态 | turn 数 | speaker_count_error | boundary_f1 | mixed_utterance_rate | role_consistency | DER | JER | RTF | RSS 峰值 MB | 说明 |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        "| Engine | Status | Gate | Turns | speaker_count_error | boundary_f1 | mixed_utterance_rate | role_consistency | DER | JER | RTF | RSS peak MB | Reason |",
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
     ]
     for item in summary["results"]:
+        gate = item.get("quality_gate", {})
         lines.append(
-            "| {engine} | `{status}` | {turns} | {speaker_error} | {boundary} | {mixed} | {role} | {der} | {jer} | {rtf} | {rss} | {reason} |".format(
+            "| {engine} | `{status}` | `{gate}` | {turns} | {speaker_error} | {boundary} | {mixed} | {role} | {der} | {jer} | {rtf} | {rss} | {reason} |".format(
                 engine=item.get("engine") or item.get("requested_engine"),
                 status=item.get("status"),
+                gate=gate.get("decision", "-"),
                 turns=_display(item.get("turn_count")),
                 speaker_error=_display(item.get("speaker_count_error")),
                 boundary=_display(item.get("boundary_f1")),
@@ -122,28 +139,33 @@ def render_markdown(summary: dict[str, Any]) -> str:
                 jer=_display(item.get("jer")),
                 rtf=_display(item.get("rtf")),
                 rss=_display(item.get("rss_peak_mb")),
-                reason=(item.get("reason") or item.get("error") or "-").replace("|", "/"),
+                reason=(item.get("reason") or item.get("error") or gate.get("reason") or "-").replace("|", "/"),
             )
         )
 
     best = summary.get("best_candidate")
-    lines.extend(["", "## 结论", ""])
+    lines.extend(["", "## Conclusion", ""])
     if best:
         lines.append(
-            f"- 当前最佳候选：`{best['engine']}`，选择依据是 mixed utterance rate、boundary F1 和资源占用。"
+            f"- Best current candidate: `{best['engine']}`. It passed the quality gate and was selected by mixed utterance rate, boundary F1, speaker count error, and RSS."
         )
     else:
-        lines.append("- 当前没有 measured 引擎；缺依赖或失败只说明本机环境未完成，不代表模型效果差。")
-    lines.append("- 会议样本只用于多说话人分离评测，不能作为中文医患问诊准确率结论。")
+        lines.append("- No measured engine passed the quality gate. Do not use these results for automatic doctor/patient role mapping.")
+    lines.append("- This public meeting sample is only diarization evidence. It is not medical consultation accuracy evidence.")
     return "\n".join(lines) + "\n"
 
 
 def _best_candidate(results: list[dict[str, Any]]) -> dict[str, Any] | None:
-    measured = [item for item in results if item.get("status") == "measured"]
-    if not measured:
+    candidates = [
+        item
+        for item in results
+        if item.get("status") == "measured"
+        and item.get("quality_gate", {}).get("decision") == "candidate_for_role_mapping"
+    ]
+    if not candidates:
         return None
     return sorted(
-        measured,
+        candidates,
         key=lambda item: (
             item.get("mixed_utterance_rate", 1.0),
             -(item.get("boundary_f1") or 0.0),
@@ -151,6 +173,50 @@ def _best_candidate(results: list[dict[str, Any]]) -> dict[str, Any] | None:
             item.get("rss_peak_mb") or float("inf"),
         ),
     )[0]
+
+
+def _quality_gate(item: dict[str, Any]) -> dict[str, Any]:
+    if item.get("status") != "measured":
+        return {
+            "status": "not_evaluated",
+            "decision": "blocked",
+            "reason": item.get("reason") or item.get("error") or "engine did not produce a measured result",
+        }
+
+    mixed = item.get("mixed_utterance_rate")
+    boundary = item.get("boundary_f1")
+    speaker_error = item.get("speaker_count_error")
+    checks = {
+        "mixed_utterance_rate": {
+            "value": mixed,
+            "threshold": MAX_ACCEPTABLE_MIXED_UTTERANCE_RATE,
+            "passed": mixed is not None and mixed <= MAX_ACCEPTABLE_MIXED_UTTERANCE_RATE,
+        },
+        "boundary_f1": {
+            "value": boundary,
+            "threshold": MIN_ACCEPTABLE_BOUNDARY_F1,
+            "passed": boundary is not None and boundary >= MIN_ACCEPTABLE_BOUNDARY_F1,
+        },
+        "speaker_count_error": {
+            "value": speaker_error,
+            "threshold": MAX_ACCEPTABLE_SPEAKER_COUNT_ERROR,
+            "passed": speaker_error is not None and abs(speaker_error) <= MAX_ACCEPTABLE_SPEAKER_COUNT_ERROR,
+        },
+    }
+    failed = [name for name, check in checks.items() if not check["passed"]]
+    if failed:
+        return {
+            "status": "evaluated",
+            "decision": "reject_for_role_mapping",
+            "reason": "failed checks: " + ", ".join(failed),
+            "checks": checks,
+        }
+    return {
+        "status": "evaluated",
+        "decision": "candidate_for_role_mapping",
+        "reason": "passed all quality gate checks",
+        "checks": checks,
+    }
 
 
 def _display(value: Any) -> str:

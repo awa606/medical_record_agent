@@ -1,0 +1,81 @@
+{
+  "scope": "v0.8.22 diarization quality gate",
+  "sample_id": "three_speaker_alimeeting_01",
+  "sample_source": "AliMeeting Eval, CC BY-SA 4.0",
+  "sample_boundary": "AliMeeting is a public meeting sample; it is used only to test multi-speaker diarization.",
+  "audio_path_local_only": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\data\\asr_eval\\public_diarization\\audio\\three_speaker_alimeeting_01.wav",
+  "reference_rttm": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\data\\asr_eval\\diarization_ground_truth\\three_speaker_alimeeting_01.rttm",
+  "asr_result": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\data\\asr_eval\\reports\\v0_8_13_three_speaker_measured\\three_speaker_alimeeting_01_funasr_enhanced_asr_result.json",
+  "reference_turn_count": 60,
+  "reference_speaker_count": 4,
+  "quality_gate_policy": {
+    "max_mixed_utterance_rate": 0.3,
+    "min_boundary_f1": 0.5,
+    "max_speaker_count_error": 1,
+    "decision_note": "Only engines passing this gate may be used as candidates for automatic speaker-role mapping."
+  },
+  "results": [
+    {
+      "engine": "funasr_campp",
+      "requested_engine": "funasr_campp",
+      "status": "failed",
+      "reason": "engine returned no diarization turns for a non-empty RTTM reference",
+      "elapsed_seconds": 0.025,
+      "audio_duration_seconds": 240.0,
+      "rtf": 0.0001,
+      "turn_count": 0,
+      "rss_start_mb": 41.38,
+      "rss_peak_mb": 42.09,
+      "rss_delta_mb": 0.71,
+      "cpu_time_seconds": 0.0,
+      "cpu_process_percent": 0.0,
+      "cpu_normalized_percent": 0.0,
+      "sample_id": "three_speaker_alimeeting_01",
+      "sample_source": "AliMeeting Eval, CC BY-SA 4.0",
+      "sample_boundary": "public meeting diarization only; not a medical consultation accuracy result",
+      "reference_turn_count": 60,
+      "reference_speaker_count": 4,
+      "quality_gate": {
+        "status": "not_evaluated",
+        "decision": "blocked",
+        "reason": "engine returned no diarization turns for a non-empty RTTM reference"
+      },
+      "report_path": "data\\asr_eval\\reports\\v0_8_22_quality_gate\\funasr_campp_three_speaker_alimeeting_01.json"
+    },
+    {
+      "engine": "pyannote_community_1",
+      "requested_engine": "pyannote",
+      "status": "skipped",
+      "reason": "pyannote.audio is not installed",
+      "sample_id": "three_speaker_alimeeting_01",
+      "sample_source": "AliMeeting Eval, CC BY-SA 4.0",
+      "sample_boundary": "public meeting diarization only; not a medical consultation accuracy result",
+      "reference_turn_count": 60,
+      "reference_speaker_count": 4,
+      "quality_gate": {
+        "status": "not_evaluated",
+        "decision": "blocked",
+        "reason": "pyannote.audio is not installed"
+      },
+      "report_path": "data\\asr_eval\\reports\\v0_8_22_quality_gate\\pyannote_three_speaker_alimeeting_01.json"
+    },
+    {
+      "engine": "three_d_speaker",
+      "requested_engine": "three_d_speaker",
+      "status": "skipped",
+      "reason": "THREED_SPEAKER_PYTHON is not configured",
+      "sample_id": "three_speaker_alimeeting_01",
+      "sample_source": "AliMeeting Eval, CC BY-SA 4.0",
+      "sample_boundary": "public meeting diarization only; not a medical consultation accuracy result",
+      "reference_turn_count": 60,
+      "reference_speaker_count": 4,
+      "quality_gate": {
+        "status": "not_evaluated",
+        "decision": "blocked",
+        "reason": "THREED_SPEAKER_PYTHON is not configured"
+      },
+      "report_path": "data\\asr_eval\\reports\\v0_8_22_quality_gate\\three_d_speaker_three_speaker_alimeeting_01.json"
+    }
+  ],
+  "best_candidate": null
+}

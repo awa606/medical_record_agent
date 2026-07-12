@@ -4,6 +4,7 @@
 .venv/
 .venv-asr/
 .venv-qwen-asr/
+.venv-diarization/
 venv/
 __pycache__/
 *.pyc

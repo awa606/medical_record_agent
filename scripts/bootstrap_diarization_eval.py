@@ -13,12 +13,13 @@ import os
 import platform
 import sys
 from pathlib import Path
-from typing import Callable, Mapping
+from typing import Any, Callable, Mapping
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPORTS_DIR = PROJECT_ROOT / "data" / "asr_eval" / "reports" / "v0_8_19_diarization_bootstrap"
 
 ModuleChecker = Callable[[str], bool]
+ModuleProbe = Callable[[str], dict[str, Any]]
 PathExists = Callable[[str], bool]
 
 
@@ -26,16 +27,27 @@ def collect_bootstrap_status(
     *,
     env: Mapping[str, str] | None = None,
     module_checker: ModuleChecker | None = None,
+    module_probe: ModuleProbe | None = None,
     path_exists: PathExists | None = None,
 ) -> dict[str, object]:
     env = env or os.environ
     module_checker = module_checker or module_available
+    module_probe = module_probe or probe_module
     path_exists = path_exists or (lambda value: Path(value).exists())
 
     hf_token_present = bool(env.get("HF_TOKEN"))
     pyannote_audio = module_checker("pyannote.audio")
     pyannote_metrics = module_checker("pyannote.metrics")
-    pyannote_ready = pyannote_audio and hf_token_present
+    pyannote_audio_probe = module_probe("pyannote.audio") if pyannote_audio else {"import_ok": False, "reason": "not installed"}
+    pyannote_metrics_probe = (
+        module_probe("pyannote.metrics") if pyannote_metrics else {"import_ok": False, "reason": "not installed"}
+    )
+    torch_probe = module_probe("torch") if module_checker("torch") else {"import_ok": False, "reason": "not installed"}
+    torchaudio_probe = (
+        module_probe("torchaudio") if module_checker("torchaudio") else {"import_ok": False, "reason": "not installed"}
+    )
+    numpy_probe = module_probe("numpy") if module_checker("numpy") else {"import_ok": False, "reason": "not installed"}
+    pyannote_ready = bool(pyannote_audio_probe.get("import_ok") and hf_token_present)
 
     speaker_python = env.get("THREED_SPEAKER_PYTHON", "")
     speaker_script = env.get("THREED_SPEAKER_SCRIPT", "")
@@ -53,9 +65,14 @@ def collect_bootstrap_status(
         "pyannote": {
             "status": "ready" if pyannote_ready else "blocked",
             "pyannote_audio_installed": pyannote_audio,
+            "pyannote_audio_import": pyannote_audio_probe,
             "pyannote_metrics_installed": pyannote_metrics,
+            "pyannote_metrics_import": pyannote_metrics_probe,
+            "torch_import": torch_probe,
+            "torchaudio_import": torchaudio_probe,
+            "numpy_import": numpy_probe,
             "hf_token_present": hf_token_present,
-            "reason": pyannote_reason(pyannote_audio, hf_token_present),
+            "reason": pyannote_reason(bool(pyannote_audio_probe.get("import_ok")), hf_token_present),
         },
         "three_d_speaker": {
             "status": "ready" if threed_ready else "blocked",
@@ -78,10 +95,22 @@ def module_available(name: str) -> bool:
         return False
 
 
-def pyannote_reason(pyannote_audio: bool, hf_token_present: bool) -> str:
+def probe_module(name: str) -> dict[str, Any]:
+    try:
+        module = __import__(name, fromlist=["__name__"])
+    except Exception as exc:  # pragma: no cover - exercised in integration reports
+        return {"import_ok": False, "reason": f"{type(exc).__name__}: {exc}"}
+    version = getattr(module, "__version__", None)
+    payload: dict[str, Any] = {"import_ok": True, "version": version}
+    if name == "torchaudio":
+        payload["has_audio_metadata"] = hasattr(module, "AudioMetaData")
+    return payload
+
+
+def pyannote_reason(pyannote_audio_import_ok: bool, hf_token_present: bool) -> str:
     missing = []
-    if not pyannote_audio:
-        missing.append("pyannote.audio is not installed")
+    if not pyannote_audio_import_ok:
+        missing.append("pyannote.audio is not importable")
     if not hf_token_present:
         missing.append("HF_TOKEN is not configured")
     return "; ".join(missing) if missing else "pyannote dependency and HF_TOKEN are ready"
@@ -102,8 +131,9 @@ def recommended_commands() -> dict[str, list[str]]:
             "py -3.11 -m venv .venv-diarization",
             ".\\.venv-diarization\\Scripts\\python -m pip install --upgrade pip setuptools wheel",
             ".\\.venv-diarization\\Scripts\\python -m pip install -r requirements-diarization-experimental.txt",
+            ".\\.venv-diarization\\Scripts\\python -m pip install -r requirements.txt",
             "$env:HF_TOKEN='<your local Hugging Face token>'",
-            ".\\.venv-diarization\\Scripts\\python scripts\\run_diarization_engine_compare.py --engines pyannote --reports-dir data\\asr_eval\\reports\\v0_8_19_pyannote_measured",
+            ".\\.venv-diarization\\Scripts\\python scripts\\run_diarization_engine_compare.py --engines pyannote --reports-dir data\\asr_eval\\reports\\v0_8_20_pyannote_measured",
         ],
         "three_d_speaker_setup": [
             "$env:THREED_SPEAKER_PYTHON='C:\\path\\to\\3d-speaker\\venv\\Scripts\\python.exe'",

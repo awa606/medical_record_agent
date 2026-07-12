@@ -2,5 +2,11 @@
 # Install in an isolated environment, not in the main runtime by default:
 #   py -3.11 -m venv .venv-diarization
 #   .\.venv-diarization\Scripts\python -m pip install -r requirements-diarization-experimental.txt
-pyannote.audio>=3.1,<4.0
+#
+# Keep torch/torchaudio pinned together. Newer torchaudio builds can remove
+# APIs still used by pyannote.audio 3.x, such as torchaudio.AudioMetaData.
+torch==2.2.2
+torchaudio==2.2.2
+numpy<2
+pyannote.audio==3.4.0
 pyannote.metrics>=3.2,<4.0

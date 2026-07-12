@@ -1,0 +1,26 @@
+{
+  "scope": "v0.8.17 true diarization engine comparison",
+  "sample_id": "three_speaker_alimeeting_01",
+  "sample_source": "AliMeeting Eval, CC BY-SA 4.0",
+  "sample_boundary": "AliMeeting is a public meeting sample; it is used only to test multi-speaker diarization.",
+  "audio_path_local_only": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\data\\asr_eval\\public_diarization\\audio\\three_speaker_alimeeting_01.wav",
+  "reference_rttm": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\data\\asr_eval\\diarization_ground_truth\\three_speaker_alimeeting_01.rttm",
+  "asr_result": "C:\\Users\\AWA007\\Desktop\\开题报告\\病历\\medical_record_agent\\data\\asr_eval\\reports\\v0_8_13_three_speaker_measured\\three_speaker_alimeeting_01_funasr_enhanced_asr_result.json",
+  "reference_turn_count": 60,
+  "reference_speaker_count": 4,
+  "results": [
+    {
+      "engine": "pyannote_community_1",
+      "requested_engine": "pyannote",
+      "status": "skipped",
+      "reason": "HF_TOKEN is required for pyannote Community-1",
+      "sample_id": "three_speaker_alimeeting_01",
+      "sample_source": "AliMeeting Eval, CC BY-SA 4.0",
+      "sample_boundary": "public meeting diarization only; not a medical consultation accuracy result",
+      "reference_turn_count": 60,
+      "reference_speaker_count": 4,
+      "report_path": "data\\asr_eval\\reports\\v0_8_20_pyannote_env\\pyannote_three_speaker_alimeeting_01.json"
+    }
+  ],
+  "best_candidate": null
+}

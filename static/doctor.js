@@ -57,6 +57,8 @@ const appState = {
   doctorProfileEnrollmentBusy: false,
   lastActionError: "",
   inputMenuOpen: false,
+  settingsOpen: false,
+  compactDoctorMode: true,
   recordPreview: null,
   recordPreviewStatus: "idle",
   recordPreviewUpdatedAt: "",
@@ -371,6 +373,17 @@ function fieldQualityBadgeClass(label) {
   return "low";
 }
 
+function fieldQualityItem(key) {
+  const quality = activeQualityReport();
+  return (quality?.field_quality || []).find((item) => item.key === key) || null;
+}
+
+function fieldWeightClass(key) {
+  if (["present_illness", "physical_exam", "treatment_plan"].includes(key)) return "weight-high";
+  if (["past_history", "allergy_history"].includes(key)) return "weight-low";
+  return "weight-medium";
+}
+
 function previewTreatmentText() {
   const plan = appState.recordPreview?.treatment_plan;
   if (!isRecordPreviewActive() || !plan) return "";
@@ -469,6 +482,27 @@ function renderInputMethodMenu() {
   menu.hidden = !appState.inputMenuOpen;
 }
 
+function renderDisplaySettingsMenu() {
+  const button = $("displaySettingsButton");
+  const menu = $("displaySettingsMenu");
+  if (!button || !menu) return;
+  button.classList.toggle("active", appState.settingsOpen);
+  button.setAttribute("aria-expanded", appState.settingsOpen ? "true" : "false");
+  menu.hidden = !appState.settingsOpen;
+}
+
+function closeDisplaySettingsMenu() {
+  appState.settingsOpen = false;
+  renderDisplaySettingsMenu();
+}
+
+function toggleDisplaySettingsMenu() {
+  appState.settingsOpen = !appState.settingsOpen;
+  if (appState.settingsOpen) appState.inputMenuOpen = false;
+  renderInputMethodMenu();
+  renderDisplaySettingsMenu();
+}
+
 function closeInputMethodMenu() {
   appState.inputMenuOpen = false;
   renderInputMethodMenu();
@@ -476,7 +510,9 @@ function closeInputMethodMenu() {
 
 function toggleInputMethodMenu() {
   appState.inputMenuOpen = !appState.inputMenuOpen;
+  if (appState.inputMenuOpen) appState.settingsOpen = false;
   renderInputMethodMenu();
+  renderDisplaySettingsMenu();
 }
 
 function renderStartGuide() {
@@ -693,6 +729,7 @@ function renderNextActionPanel() {
 
 function openDrawer(panelId, title) {
   closeInputMethodMenu();
+  closeDisplaySettingsMenu();
   $("drawerTitle").textContent = title;
   $("drawerBackdrop").classList.add("active");
   $("drawer").classList.add("active");
@@ -737,7 +774,8 @@ function renderPatientBar() {
 
 function renderAsrPrewarmStatus() {
   const target = $("asrModelStatus");
-  if (!target) return;
+  const settingsTarget = $("settingsAsrModelStatus");
+  if (!target && !settingsTarget) return;
   const status = appState.asrPrewarmStatus?.status || "idle";
   let label = "按需加载";
   let tone = "neutral";
@@ -755,9 +793,11 @@ function renderAsrPrewarmStatus() {
   } else if (status === "idle") {
     label = "启动后自动预热";
   }
-  target.textContent = label;
-  target.className = `model-status ${tone}`;
-  target.title = appState.asrPrewarmStatus?.last_error || "";
+  [target, settingsTarget].filter(Boolean).forEach((node) => {
+    node.textContent = label;
+    node.className = `model-status ${tone}`;
+    node.title = appState.asrPrewarmStatus?.last_error || "";
+  });
 }
 
 async function refreshAsrPrewarmStatus() {
@@ -954,6 +994,7 @@ function renderFieldDetailContent(key) {
   const field = fields[key] || null;
   const status = fieldStatus(field, key);
   const confidence = key === "treatment_plan" ? null : field?.confidence;
+  const qualityItem = fieldQualityItem(key);
   return `
     ${detailSection(title, `
       <div class="detail-kv">
@@ -966,6 +1007,11 @@ function renderFieldDetailContent(key) {
       </div>
       <div class="detail-text">${escapeHtml(fieldValue(fields, key))}</div>
     `)}
+    ${qualityItem ? detailSection("质量判断", `
+      <div class="detail-kv"><span>质量状态</span><strong>${escapeHtml(fieldQualityLabel(key))}</strong></div>
+      <div class="detail-kv"><span>证据数量</span><strong>${escapeHtml(String(qualityItem.evidence_count ?? 0))}</strong></div>
+      <div class="detail-text">${escapeHtml(qualityItem.reason || qualityItem.suggested_action || "暂无进一步说明。")}</div>
+    `) : ""}
     ${detailSection("证据片段", `<div class="detail-text">${escapeHtml(fieldEvidence(field, key))}</div>`)}
   `;
 }
@@ -1037,20 +1083,30 @@ function renderFields() {
     const confidence = appState.viewMode === "doctor"
       ? draftFieldConfidence(fields, key)
       : key === "treatment_plan" ? "需医生复核" : fields?.[key]?.confidence == null ? "需医生复核" : `置信度 ${Math.round(fields[key].confidence * 100)}%`;
-    const meta = fields ? `
+    const compactStatusText = [status.label, qualityLabel].filter(Boolean).join(" · ");
+    const meta = fields
+      ? appState.viewMode === "doctor"
+        ? `
+        <div class="field-meta compact-field-meta">
+          ${detailButton(`field:${key}`, "详情")}
+        </div>
+        `
+        : `
         <div class="field-meta">
           <span class="confidence">${escapeHtml(confidence)}</span>
           <button type="button" data-evidence-toggle>证据</button>
           ${detailButton(`field:${key}`, "详情")}
         </div>
         <div class="field-evidence">${escapeHtml(evidence)}</div>
-    ` : "";
+    `
+      : "";
     return `
-      <article class="field-card ${status.key} ${value ? "has-value" : "is-empty"}" data-field="${key}">
+      <article class="field-card ${status.key} ${fieldWeightClass(key)} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}">
         <div class="field-head">
           <span class="field-title">${escapeHtml(title)}</span>
-          <span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>
-          ${qualityLabel ? `<span class="status-badge ${fieldQualityBadgeClass(qualityLabel)}">${escapeHtml(qualityLabel)}</span>` : ""}
+          ${appState.viewMode === "doctor"
+            ? `<span class="status-dot-label ${status.key}" title="${escapeHtml(compactStatusText || "待生成")}"></span>`
+            : `<span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>${qualityLabel ? `<span class="status-badge ${fieldQualityBadgeClass(qualityLabel)}">${escapeHtml(qualityLabel)}</span>` : ""}`}
         </div>
         <div class="field-value">${value ? escapeHtml(value) : `<span class="draft-placeholder" aria-hidden="true">&nbsp;</span>`}</div>
         ${meta}
@@ -2264,6 +2320,33 @@ function renderQualitySummaryCard() {
   });
 }
 
+function renderQualityStatusLine() {
+  const quality = activeQualityReport();
+  if (!quality) {
+    return `
+      <button type="button" class="assist-quality-line neutral" data-open-detail="assist:quality">
+        <span>质量：待生成</span>
+        <strong>详情</strong>
+      </button>
+    `;
+  }
+  const missingCount = (quality.missing_fields || []).length;
+  const lowCount = (quality.low_confidence_fields || []).length;
+  const evidenceMissingCount = (quality.evidence_missing_fields || []).length;
+  const parts = [
+    missingCount ? `需补充 ${missingCount} 项` : "",
+    lowCount ? `低置信度 ${lowCount} 项` : "",
+    evidenceMissingCount ? `证据不足 ${evidenceMissingCount} 项` : "",
+  ].filter(Boolean);
+  const text = parts.length ? parts.join(" · ") : "质量可进入医生审核";
+  return `
+    <button type="button" class="assist-quality-line ${quality.ready_for_doctor_review ? "confirmed" : "warning"}" data-open-detail="assist:quality">
+      <span>质量：${escapeHtml(text)}</span>
+      <strong>详情</strong>
+    </button>
+  `;
+}
+
 function renderSafetyResultCard({ safety, missing, warnings, errors }) {
   const rows = [
     {
@@ -2406,7 +2489,7 @@ function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
     <div class="doctor-assist-overview">
       ${previewNotice}
       ${previewError}
-      ${renderQualitySummaryCard()}
+      ${renderQualityStatusLine()}
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}
       ${renderEvidenceCard(evidence, diagnoses)}
@@ -2564,7 +2647,11 @@ function renderFooter() {
   $("regenerateButton").disabled = appState.busy || !(appState.currentAsrResult || appState.currentInputText);
   $("saveDraftButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
   $("confirmFieldsButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
-  $("exportButton").disabled = appState.busy || !appState.currentTaskId || !isApprovedForExport();
+  const exportBlocked = !appState.currentTaskId || !isApprovedForExport();
+  $("exportButton").disabled = appState.busy || !appState.currentTaskId;
+  $("exportButton").classList.toggle("blocked-action", Boolean(appState.currentTaskId && !isApprovedForExport()));
+  $("exportButton").setAttribute("aria-disabled", exportBlocked ? "true" : "false");
+  $("exportButton").title = exportBlocked ? "点击查看暂不可导出的原因" : "确认导出病历";
 }
 
 function openWorkbenchDetail(target = "") {
@@ -2593,6 +2680,7 @@ function openWorkbenchDetail(target = "") {
       candidates: "候选诊断详情",
       treatment: "治疗方案推荐详情",
       evidence: "判断证据详情",
+      quality: "病历质量摘要",
       safety: "安全校验结果详情",
     };
     openDetailDrawer(titleMap[value] || "AI 辅助详情", renderAssistDetailContent(value));
@@ -2606,6 +2694,7 @@ function isApprovedForExport() {
 function renderAll() {
   renderMode();
   renderInputMethodMenu();
+  renderDisplaySettingsMenu();
   renderPatientBar();
   renderRunContext();
   renderStartGuide();
@@ -3473,6 +3562,10 @@ async function confirmFields() {
 async function exportRecord() {
   try {
     if (!appState.currentTaskId) throw new Error("暂无可导出的任务");
+    if (!isApprovedForExport()) {
+      openDetailDrawer("暂不可导出", renderAssistDetailContent("safety"));
+      return;
+    }
     setBusy(true, "正在导出...");
     const result = await api(`/api/tasks/${appState.currentTaskId}/export`, { method: "POST" });
     appState.taskStatus = "EXPORTED";
@@ -3650,14 +3743,22 @@ function bindEvents() {
     event.stopPropagation();
     toggleInputMethodMenu();
   });
+  $("displaySettingsButton").addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleDisplaySettingsMenu();
+  });
   $("inputMethodMenu").addEventListener("click", (event) => {
     const button = event.target.closest("[data-input-method]");
     if (!button) return;
     handleInputMethod(button.dataset.inputMethod);
   });
   document.addEventListener("click", (event) => {
-    if (!appState.inputMenuOpen || event.target.closest(".input-method-menu")) return;
-    closeInputMethodMenu();
+    if (appState.inputMenuOpen && !event.target.closest(".input-method-menu")) {
+      closeInputMethodMenu();
+    }
+    if (appState.settingsOpen && !event.target.closest(".display-settings-menu")) {
+      closeDisplaySettingsMenu();
+    }
   });
   $("openAudioTranscribeButton").addEventListener("click", openAudioTranscribe);
   $("guideUploadAudioButton").addEventListener("click", openAudioGenerate);

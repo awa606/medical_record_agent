@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>医生端工作台 - AI生成式电子病历辅助系统</title>
-    <link rel="stylesheet" href="./doctor.css?v=2026071001" />
+    <link rel="stylesheet" href="./doctor.css?v=2026071301" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -66,14 +66,6 @@
         </section>
         <nav class="top-actions" aria-label="全局操作">
           <a href="./index.html">首页</a>
-          <div class="mode-switch" aria-label="显示模式">
-            <button type="button" id="doctorModeButton" class="active">医生模式</button>
-            <button type="button" id="debugModeButton">调试模式</button>
-          </div>
-          <div class="capture-switch" aria-label="截图显示模式">
-            <button type="button" id="demoModeButton" class="active">演示模式</button>
-            <button type="button" id="screenshotModeButton">截图模式</button>
-          </div>
           <div class="input-method-menu">
             <button type="button" class="primary-action" id="inputMethodButton" aria-expanded="false" aria-controls="inputMethodMenu">输入方式</button>
             <div id="inputMethodMenu" class="input-method-popover" hidden>
@@ -82,9 +74,35 @@
               <button type="button" data-input-method="text">文本生成</button>
             </div>
           </div>
-          <div class="display-scale-switch" aria-label="显示字号">
-            <button type="button" id="standardModeButton" class="active">标准版</button>
-            <button type="button" id="careModeButton">关怀版</button>
+          <div class="display-settings-menu">
+            <button type="button" id="displaySettingsButton" aria-expanded="false" aria-controls="displaySettingsMenu">显示设置</button>
+            <div id="displaySettingsMenu" class="display-settings-popover" hidden>
+              <section>
+                <span class="settings-label">工作模式</span>
+                <div class="settings-button-row mode-switch" aria-label="显示模式">
+                  <button type="button" id="doctorModeButton" class="active">医生模式</button>
+                  <button type="button" id="debugModeButton">调试模式</button>
+                </div>
+              </section>
+              <section>
+                <span class="settings-label">截图显示</span>
+                <div class="settings-button-row capture-switch" aria-label="截图显示模式">
+                  <button type="button" id="demoModeButton" class="active">演示模式</button>
+                  <button type="button" id="screenshotModeButton">截图模式</button>
+                </div>
+              </section>
+              <section>
+                <span class="settings-label">字号布局</span>
+                <div class="settings-button-row display-scale-switch" aria-label="显示字号">
+                  <button type="button" id="standardModeButton" class="active">标准版</button>
+                  <button type="button" id="careModeButton">关怀版</button>
+                </div>
+              </section>
+              <section>
+                <span class="settings-label">模型状态</span>
+                <strong id="settingsAsrModelStatus">模型状态未知</strong>
+              </section>
+            </div>
           </div>
           <details id="debugTools" class="debug-tools debug-only">
             <summary>调试工具</summary>

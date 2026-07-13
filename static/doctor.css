@@ -5057,3 +5057,290 @@ body.care-mode .transcript-pace-control button {
     flex-direction: column;
   }
 }
+
+/* v0.9.3: final compact doctor workspace. Default view shows summaries;
+   full evidence, quality details, ASR internals and display controls move into drawers/popovers. */
+.display-settings-menu {
+  position: relative;
+  z-index: 90;
+}
+
+.display-settings-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  display: grid;
+  gap: 12px;
+  border: 1px solid #dbe5f1;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16);
+}
+
+.display-settings-popover[hidden] {
+  display: none;
+}
+
+.display-settings-popover section {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-label {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.settings-button-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.settings-button-row button {
+  min-height: 32px;
+  border: 1px solid #d6dee9;
+  border-radius: 7px;
+  background: #fff;
+  color: #334155;
+  font-weight: 900;
+}
+
+.settings-button-row button.active {
+  border-color: #2563eb;
+  background: #eaf3ff;
+  color: #1d4ed8;
+}
+
+body.doctor-mode .patient-bar .model-status {
+  display: none;
+}
+
+body.doctor-mode .process-hint,
+body.doctor-mode #stepPrompt {
+  display: none;
+}
+
+body.doctor-mode .next-action-panel {
+  min-height: 44px;
+  padding: 8px 14px;
+}
+
+body.doctor-mode .next-action-panel p {
+  display: none !important;
+}
+
+body.doctor-mode .next-action-panel strong {
+  font-size: 16px;
+}
+
+body.doctor-mode .workbench {
+  min-height: 0;
+  grid-template-columns: minmax(360px, 1fr) minmax(520px, 1.2fr) minmax(360px, 0.95fr);
+}
+
+body.doctor-mode .field-list {
+  display: grid;
+  grid-template-rows: minmax(78px, 0.72fr) minmax(124px, 1.35fr) minmax(62px, 0.56fr) minmax(62px, 0.56fr) minmax(112px, 1.2fr) minmax(82px, 0.76fr) minmax(112px, 1.2fr) auto auto;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+body.doctor-mode .field-card.doctor-summary-card {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 7px;
+  padding: 11px 13px;
+}
+
+body.doctor-mode .field-card.weight-high {
+  min-height: 112px;
+}
+
+body.doctor-mode .field-card.weight-medium {
+  min-height: 78px;
+}
+
+body.doctor-mode .field-card.weight-low {
+  min-height: 62px;
+}
+
+body.doctor-mode .field-card .field-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+body.doctor-mode .field-card .field-title {
+  font-size: 15px;
+}
+
+.status-dot-label,
+.field-status-point {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px #fff7ed;
+}
+
+.status-dot-label.confirmed,
+.field-status-point.confirmed {
+  background: #20b26b;
+  box-shadow: 0 0 0 3px #e8f8ef;
+}
+
+.status-dot-label.missing,
+.field-status-point.missing {
+  background: #df3f3f;
+  box-shadow: 0 0 0 3px #feecec;
+}
+
+.status-dot-label.low,
+.field-status-point.low,
+.status-dot-label.candidate,
+.field-status-point.candidate {
+  background: #f2b01e;
+  box-shadow: 0 0 0 3px #fff4d6;
+}
+
+body.doctor-mode .field-card .field-value {
+  min-height: 0;
+  overflow-y: auto;
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  scrollbar-width: thin;
+}
+
+body.doctor-mode .field-card.weight-low .field-value {
+  max-height: 38px;
+}
+
+body.doctor-mode .field-card.weight-medium .field-value {
+  max-height: 54px;
+}
+
+body.doctor-mode .field-card.weight-high .field-value {
+  max-height: 84px;
+}
+
+body.doctor-mode .compact-field-meta {
+  min-height: 26px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 0;
+}
+
+body.doctor-mode .compact-field-meta button {
+  min-height: 26px;
+  padding: 3px 9px;
+}
+
+body.doctor-mode .draft-legend {
+  margin-top: 0;
+  padding-top: 4px;
+  font-size: 11px;
+}
+
+body.doctor-mode .transcript-status-panel {
+  display: none;
+}
+
+body.doctor-mode .transcript-table-row {
+  grid-template-columns: 64px 94px minmax(0, 1fr) 42px;
+  min-height: 40px;
+}
+
+body.doctor-mode .transcript-row-link {
+  color: #64748b;
+}
+
+body.doctor-mode .doctor-assist-overview {
+  gap: 10px;
+}
+
+.assist-quality-line {
+  width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #dbe5f1;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #f8fbff;
+  color: #334155;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+}
+
+.assist-quality-line.confirmed {
+  border-color: #c8ead6;
+  background: #f2fbf6;
+  color: #166534;
+}
+
+.assist-quality-line.warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.assist-quality-line strong {
+  color: #1d4ed8;
+  white-space: nowrap;
+}
+
+body.doctor-mode .doctor-assist-card {
+  border-radius: 8px;
+}
+
+body.doctor-mode .doctor-assist-card-body {
+  max-height: 154px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+body.doctor-mode .assist-plan-block strong,
+body.doctor-mode .assist-evidence-quote,
+body.doctor-mode .assist-number-list strong,
+body.doctor-mode .assist-number-list em {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+
+body.doctor-mode .assist-plan-block strong,
+body.doctor-mode .assist-evidence-quote {
+  -webkit-line-clamp: 2;
+}
+
+body.doctor-mode .assist-number-list strong,
+body.doctor-mode .assist-number-list em {
+  -webkit-line-clamp: 1;
+}
+
+body.doctor-mode .operation-heading span {
+  display: none;
+}
+
+body.doctor-mode #exportButton.blocked-action {
+  border-color: #d6dee9;
+  background: #e5e7eb;
+  color: #64748b;
+}

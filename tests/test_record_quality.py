@@ -41,6 +41,9 @@ class RecordQualityTests(unittest.TestCase):
         self.assertFalse(report["export_allowed"])
         self.assertTrue(report["treatment_safety"]["requires_doctor_confirmation"])
         self.assertIn("查体未提及。", report["safety_warnings"])
+        field_quality = {item["key"]: item for item in report["field_quality"]}
+        self.assertEqual(field_quality["present_illness"]["status"], "evidence_missing")
+        self.assertEqual(field_quality["physical_exam"]["status"], "missing")
 
     def test_quality_report_allows_review_but_never_auto_export(self):
         fields = MedicalRecordFields(
@@ -57,15 +60,56 @@ class RecordQualityTests(unittest.TestCase):
                 source_spans=[SourceSpan(text="酒精冲洗了一下。")],
             ),
             past_history=MedicalField(
-                value="未提及",
+                value="既往体健",
                 missing=False,
                 confidence=0.7,
-                source_spans=[SourceSpan(text="之前没有什么病。")],
+                source_spans=[SourceSpan(text="既往体健。")],
             ),
             allergy_history=MedicalField(
                 value="未发现药物过敏史",
                 missing=False,
                 confidence=0.8,
+                source_spans=[SourceSpan(text="没有药物过敏。")],
+            ),
+            physical_exam=MedicalField(
+                value="T 36.8℃，P 96次/分，BP 128/78mmHg。左手手掌可见伤口，局部肿胀。",
+                missing=False,
+                confidence=0.82,
+                source_spans=[SourceSpan(text="T 36.8℃，P 96次/分，BP 128/78mmHg。左手手掌可见伤口，局部肿胀。")],
+            ),
+        )
+
+        report = build_record_quality_report(fields, SafetyCheckResult(passed=True))
+
+        self.assertEqual(report["status"], "ready_for_review")
+        self.assertTrue(report["ready_for_doctor_review"])
+        self.assertFalse(report["export_allowed"])
+        self.assertEqual(report["next_actions"], ["核心字段和证据基本完整，可进入医生审核。"])
+
+    def test_placeholder_physical_exam_is_not_counted_as_complete(self):
+        fields = MedicalRecordFields(
+            chief_complaint=MedicalField(
+                value="发热3天",
+                missing=False,
+                confidence=0.9,
+                source_spans=[SourceSpan(text="我发热三天。")],
+            ),
+            present_illness=MedicalField(
+                value="3天前受凉后发热。",
+                missing=False,
+                confidence=0.86,
+                source_spans=[SourceSpan(text="3天前淋雨受凉后开始发热。")],
+            ),
+            past_history=MedicalField(
+                value="既往体健",
+                missing=False,
+                confidence=0.82,
+                source_spans=[SourceSpan(text="既往体健。")],
+            ),
+            allergy_history=MedicalField(
+                value="未发现药物过敏史",
+                missing=False,
+                confidence=0.82,
                 source_spans=[SourceSpan(text="没有药物过敏。")],
             ),
             physical_exam=MedicalField(
@@ -78,10 +122,9 @@ class RecordQualityTests(unittest.TestCase):
 
         report = build_record_quality_report(fields, SafetyCheckResult(passed=True))
 
-        self.assertEqual(report["status"], "ready_for_review")
-        self.assertTrue(report["ready_for_doctor_review"])
-        self.assertFalse(report["export_allowed"])
-        self.assertEqual(report["next_actions"], ["核心字段和证据基本完整，可进入医生审核。"])
+        self.assertIn("查体", report["missing_core_fields"])
+        field_quality = {item["key"]: item for item in report["field_quality"]}
+        self.assertEqual(field_quality["physical_exam"]["status"], "missing")
 
 
 if __name__ == "__main__":

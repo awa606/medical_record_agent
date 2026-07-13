@@ -21,7 +21,8 @@ class MockLLMFeverTests(unittest.TestCase):
         self.assertEqual(fields.accompanying_symptoms.value, "咳嗽、咳痰、铁锈色痰、食欲不佳")
         self.assertIn("既往体健", fields.past_history.value)
         self.assertEqual(fields.allergy_history.value, "未发现食物或药品过敏史")
-        self.assertEqual(fields.physical_exam.value, "待医生查体补充")
+        self.assertTrue(fields.physical_exam.missing)
+        self.assertEqual(fields.physical_exam.hint, "待医生查体补充")
 
         for field in [
             fields.chief_complaint,
@@ -30,7 +31,6 @@ class MockLLMFeverTests(unittest.TestCase):
             fields.accompanying_symptoms,
             fields.past_history,
             fields.allergy_history,
-            fields.physical_exam,
         ]:
             self.assertGreater(len(field.source_spans), 0)
 

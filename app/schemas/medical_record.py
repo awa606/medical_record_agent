@@ -9,6 +9,7 @@ class SourceSpan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str
+    segment_id: str | None = None
     index: int | None = None
     start_time: float | None = None
     end_time: float | None = None

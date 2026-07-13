@@ -20,6 +20,13 @@ ALL_FIELD_LABELS = {
 }
 
 LOW_CONFIDENCE_THRESHOLD = 0.65
+PLACEHOLDER_VALUES = {
+    "待医生查体补充",
+    "待医生查体补充舌象、脉象、咽部和肺部情况",
+    "未提及",
+    "未提及，待补充",
+    "建议补问",
+}
 
 
 def build_record_quality_report(
@@ -46,10 +53,11 @@ def build_record_quality_report(
     evidence_missing = _evidence_missing_fields(record)
     diagnosis_summary = _diagnosis_summary(record)
     treatment_summary = _treatment_summary(record)
+    field_quality = _field_quality(record)
 
     completed_core = len(CORE_FIELD_LABELS) - len(missing_core)
     core_completeness = round(completed_core / len(CORE_FIELD_LABELS), 2)
-    evidence_total = len([key for key in ALL_FIELD_LABELS if not getattr(record, key).missing])
+    evidence_total = len([key for key in ALL_FIELD_LABELS if _has_real_field_value(getattr(record, key))])
     evidence_covered = evidence_total - len(evidence_missing)
     evidence_coverage = round(evidence_covered / evidence_total, 2) if evidence_total else 0.0
 
@@ -77,6 +85,7 @@ def build_record_quality_report(
         "evidence_missing_fields": evidence_missing,
         "candidate_diagnosis_status": diagnosis_summary,
         "treatment_safety": treatment_summary,
+        "field_quality": field_quality,
         "safety_blocked": blocked,
         "safety_errors": list(safety.errors) if safety else [],
         "safety_warnings": list(safety.warnings) if safety else [],
@@ -110,6 +119,10 @@ def _empty_report() -> dict[str, Any]:
             "auto_prescription": False,
             "medication_notes": ["系统不自动生成处方，治疗和用药必须由医生确认。"],
         },
+        "field_quality": [
+            _field_quality_item(key, label, None)
+            for key, label in ALL_FIELD_LABELS.items()
+        ],
         "safety_blocked": False,
         "safety_errors": [],
         "safety_warnings": [],
@@ -125,7 +138,7 @@ def _missing_fields(record: MedicalRecordFields, labels: dict[str, str]) -> list
     missing: list[str] = []
     for key, label in labels.items():
         field = getattr(record, key)
-        if field.missing or not field.value:
+        if not _has_real_field_value(field):
             missing.append(label)
     return missing
 
@@ -150,15 +163,95 @@ def _evidence_missing_fields(record: MedicalRecordFields) -> list[str]:
     missing: list[str] = []
     for key, label in ALL_FIELD_LABELS.items():
         field = getattr(record, key)
-        if field.missing or not field.value:
+        if not _has_real_field_value(field):
             continue
         if not field.source_spans:
             missing.append(label)
     return missing
 
 
+def _has_real_field_value(field: Any) -> bool:
+    value = (field.value or "").strip() if field is not None else ""
+    if not value:
+        return False
+    if field.missing:
+        return False
+    return value not in PLACEHOLDER_VALUES
+
+
+def _field_quality(record: MedicalRecordFields) -> list[dict[str, Any]]:
+    return [
+        _field_quality_item(key, label, getattr(record, key))
+        for key, label in ALL_FIELD_LABELS.items()
+    ]
+
+
+def _field_quality_item(key: str, label: str, field: Any | None) -> dict[str, Any]:
+    if field is None or not _has_real_field_value(field):
+        return {
+            "key": key,
+            "label": label,
+            "status": "missing",
+            "reason": f"{label}未形成有效内容。",
+            "suggested_action": f"补问或人工填写{label}。",
+            "evidence_count": 0,
+        }
+
+    evidence_count = len(field.source_spans)
+    if evidence_count == 0:
+        return {
+            "key": key,
+            "label": label,
+            "status": "evidence_missing",
+            "reason": f"{label}已有内容但缺少转写证据。",
+            "suggested_action": f"补充{label}对应的原始转写证据。",
+            "evidence_count": 0,
+        }
+    if field.confidence is not None and field.confidence < LOW_CONFIDENCE_THRESHOLD:
+        return {
+            "key": key,
+            "label": label,
+            "status": "low_confidence",
+            "reason": f"{label}置信度低于 {LOW_CONFIDENCE_THRESHOLD:.2f}。",
+            "suggested_action": f"医生复核{label}内容和证据。",
+            "evidence_count": evidence_count,
+        }
+    if not field.confirmed_by_doctor:
+        return {
+            "key": key,
+            "label": label,
+            "status": "needs_doctor_review",
+            "reason": f"{label}来自系统抽取，尚未医生确认。",
+            "suggested_action": f"医生审核并确认{label}。",
+            "evidence_count": evidence_count,
+        }
+    return {
+        "key": key,
+        "label": label,
+        "status": "complete",
+        "reason": f"{label}已有内容和证据。",
+        "suggested_action": "无需额外处理。",
+        "evidence_count": evidence_count,
+    }
+
+
 def _diagnosis_summary(record: MedicalRecordFields) -> dict[str, Any]:
     diagnoses = record.candidate_diagnoses
+    quality_issues: list[dict[str, Any]] = []
+    for diagnosis in diagnoses:
+        missing_items: list[str] = []
+        if not diagnosis.evidence:
+            missing_items.append("依据")
+        if not diagnosis.suggested_checks:
+            missing_items.append("建议检查")
+        if not diagnosis.risk_warnings:
+            missing_items.append("风险提醒")
+        if not diagnosis.medication_notes:
+            missing_items.append("用药边界")
+        if diagnosis.status != "候选/待医生确认" or diagnosis.confirmed_by_doctor:
+            missing_items.append("医生确认边界")
+        if missing_items:
+            quality_issues.append({"name": diagnosis.name, "missing": missing_items})
     return {
         "has_candidates": bool(diagnoses),
         "unconfirmed_count": len([item for item in diagnoses if not item.confirmed_by_doctor]),
@@ -166,6 +259,7 @@ def _diagnosis_summary(record: MedicalRecordFields) -> dict[str, Any]:
         "max_confidence": max((item.confidence or 0.0 for item in diagnoses), default=None),
         "names": [item.name for item in diagnoses],
         "doctor_confirmation_required": bool(diagnoses),
+        "quality_issues": quality_issues,
     }
 
 
@@ -200,6 +294,9 @@ def _next_actions(
         actions.append(f"补充证据来源：{'、'.join(evidence_missing)}。")
     if diagnosis_summary["unconfirmed_count"]:
         actions.append("候选诊断仍需医生确认，不能作为最终诊断。")
+    for issue in diagnosis_summary.get("quality_issues", []):
+        missing_parts = "、".join(issue["missing"])
+        actions.append(f"完善候选诊断“{issue['name']}”：{missing_parts}。")
     if safety and safety.errors:
         actions.append("处理安全校验错误后再进入审核。")
     if not actions:

@@ -8,7 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
 from app.agents import MedicalRecordOrchestrator
-from app.schemas import MedicalRecordFields
+from app.schemas import MedicalRecordFields, SourceSpan
 from app.services import MockLLM
 from app.services.record_quality import build_record_quality_report
 
@@ -58,6 +58,13 @@ FIELD_LABELS = {
 }
 
 VALID_STABLE_ROLES = {"医生", "患者", "其他"}
+PLACEHOLDER_FIELD_VALUES = {
+    "待医生查体补充",
+    "待医生查体补充舌象、脉象、咽部和肺部情况",
+    "未提及",
+    "未提及，待补充",
+    "建议补问",
+}
 
 
 def run_record_generation_task(task_id: int, conversation_text: str) -> None:
@@ -68,9 +75,16 @@ def _missing_items(fields: MedicalRecordFields) -> list[str]:
     items: list[str] = []
     for key, label in FIELD_LABELS.items():
         field = getattr(fields, key)
-        if field.missing or not field.value:
+        if not _has_real_field_value(field):
             items.append(label)
     return items
+
+
+def _has_real_field_value(field: Any) -> bool:
+    value = (field.value or "").strip() if field is not None else ""
+    if not value or field.missing:
+        return False
+    return value not in PLACEHOLDER_FIELD_VALUES
 
 
 def _diagnosis_evidence(fields: MedicalRecordFields) -> list[str]:
@@ -134,6 +148,7 @@ def _matching_source_segments(
         matches.append(
             {
                 "segment_id": segment.get("segment_id") or f"segment-{index}",
+                "index": index,
                 "start_time": segment.get("start_time"),
                 "end_time": segment.get("end_time"),
                 "speaker_id": segment.get("speaker_id") or segment.get("speaker"),
@@ -144,12 +159,82 @@ def _matching_source_segments(
     return matches
 
 
+def _segment_lookup(segments: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {
+        str(segment.get("segment_id") or f"segment-{index}"): {
+            "segment_id": segment.get("segment_id") or f"segment-{index}",
+            "index": index,
+            "start_time": segment.get("start_time"),
+            "end_time": segment.get("end_time"),
+            "speaker_id": segment.get("speaker_id") or segment.get("speaker"),
+            "role": segment.get("role"),
+            "text": segment.get("text") or "",
+        }
+        for index, segment in enumerate(segments)
+    }
+
+
+def _matches_for_span(
+    span: SourceSpan,
+    segments: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if span.segment_id:
+        match = _segment_lookup(segments).get(str(span.segment_id))
+        if match:
+            return [match]
+    return _matching_source_segments(span.text, segments)
+
+
+def _source_segment_ids_for_span(span: SourceSpan, segments: list[dict[str, Any]]) -> list[str]:
+    return [
+        str(item["segment_id"])
+        for item in _matches_for_span(span, segments)
+        if item.get("segment_id")
+    ]
+
+
 def _source_segment_ids(source_text: str, segments: list[dict[str, Any]]) -> list[str]:
     return [
         str(item["segment_id"])
         for item in _matching_source_segments(source_text, segments)
         if item.get("segment_id")
     ]
+
+
+def _enrich_span(span: SourceSpan, segments: list[dict[str, Any]]) -> SourceSpan:
+    if span.segment_id:
+        return span
+    matches = _matching_source_segments(span.text, segments)
+    if not matches:
+        return span
+    match = matches[0]
+    return span.model_copy(
+        update={
+            "segment_id": match.get("segment_id"),
+            "index": span.index if span.index is not None else match.get("index"),
+            "start_time": span.start_time if span.start_time is not None else match.get("start_time"),
+            "end_time": span.end_time if span.end_time is not None else match.get("end_time"),
+        }
+    )
+
+
+def _enrich_spans(spans: list[SourceSpan], segments: list[dict[str, Any]]) -> list[SourceSpan]:
+    return [_enrich_span(span, segments) for span in spans]
+
+
+def _enrich_field_evidence(
+    fields: MedicalRecordFields,
+    segments: list[dict[str, Any]],
+) -> MedicalRecordFields:
+    if not segments:
+        return fields
+    enriched = fields.model_copy(deep=True)
+    for key in FIELD_LABELS:
+        field = getattr(enriched, key)
+        field.source_spans = _enrich_spans(field.source_spans, segments)
+    for diagnosis in enriched.candidate_diagnoses:
+        diagnosis.evidence = _enrich_spans(diagnosis.evidence, segments)
+    return enriched
 
 
 def _structured_updates(
@@ -161,15 +246,20 @@ def _structured_updates(
         field = getattr(fields, key)
         value = field.value or ""
         source_text = field.source_spans[0].text if field.source_spans else ""
+        source_segment_ids = (
+            _source_segment_ids_for_span(field.source_spans[0], segments)
+            if field.source_spans
+            else []
+        )
         updates.append(
             {
                 "key": key,
                 "label": label,
-                "status": "missing" if field.missing or not value else "preview",
+                "status": "missing" if not _has_real_field_value(field) else "preview",
                 "value_preview": value[:120],
                 "confidence": field.confidence,
                 "source_text": source_text,
-                "source_segment_ids": _source_segment_ids(source_text, segments),
+                "source_segment_ids": source_segment_ids or _source_segment_ids(source_text, segments),
                 "notice": "实时预览，需医生确认",
             }
         )
@@ -206,7 +296,7 @@ def _evidence_links(
     for key, label in FIELD_LABELS.items():
         field = getattr(fields, key)
         for span in field.source_spans:
-            for match in _matching_source_segments(span.text, segments):
+            for match in _matches_for_span(span, segments):
                 identity = (label, str(match.get("segment_id") or ""))
                 if identity in seen:
                     continue
@@ -214,7 +304,7 @@ def _evidence_links(
                 links.append({"label": label, "evidence": span.text, **match})
     for diagnosis in fields.candidate_diagnoses:
         for span in diagnosis.evidence:
-            for match in _matching_source_segments(span.text, segments):
+            for match in _matches_for_span(span, segments):
                 label = f"候选诊断：{diagnosis.name}"
                 identity = (label, str(match.get("segment_id") or ""))
                 if identity in seen:
@@ -228,7 +318,7 @@ def _preview_stage(fields: MedicalRecordFields) -> str:
     if fields.candidate_diagnoses:
         return "diagnosis_preview"
     if any(
-        not getattr(fields, key).missing and getattr(fields, key).value
+        _has_real_field_value(getattr(fields, key))
         for key in FIELD_LABELS
     ):
         return "structured_preview"
@@ -237,8 +327,8 @@ def _preview_stage(fields: MedicalRecordFields) -> str:
 
 def _ready_for_formal_generation(fields: MedicalRecordFields, conversation_text: str) -> bool:
     has_core_fields = (
-        bool(fields.chief_complaint.value)
-        and bool(fields.present_illness.value)
+        _has_real_field_value(fields.chief_complaint)
+        and _has_real_field_value(fields.present_illness)
     )
     return has_core_fields or len(conversation_text.strip()) >= 120
 
@@ -288,6 +378,7 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
     conversation_text, stable_segments = _stable_preview_input(payload)
     llm = MockLLM()
     fields = llm.extract_fields(conversation_text)
+    fields = _enrich_field_evidence(fields, stable_segments)
     draft = llm.generate_draft(fields)
     safety = llm.safety_check(draft, fields, allow_export=False)
     updates = _structured_updates(fields, stable_segments)

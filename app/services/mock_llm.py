@@ -60,6 +60,30 @@ def _required_spans(segments: list[str], keywords: list[str], conversation: str)
     return [SourceSpan(index=0, text=fallback_text)]
 
 
+def _extract_physical_exam_field(segments: list[str]) -> MedicalField:
+    spans = _source_spans(
+        segments,
+        [
+            "查体",
+            "T ",
+            "P ",
+            "R ",
+            "BP",
+            "血压",
+            "脉搏",
+            "呼吸",
+            "神清",
+            "心肺",
+            "可见",
+            "压痛",
+        ],
+    )
+    if not spans:
+        return MedicalField.missing_field("待医生查体补充")
+    value = "；".join(span.text for span in spans[:2])
+    return _field(value, spans, 0.72)
+
+
 def _is_fever_case(conversation: str) -> bool:
     return _contains(conversation, ["体温", "铁锈色痰", "布洛芬", "反复发热", "淋雨受凉"])
 
@@ -90,11 +114,6 @@ def _extract_fever_fields(conversation: str, segments: list[str]) -> MedicalReco
         ["过敏", "食物", "药品"],
         conversation,
     )
-    physical_exam_spans = _required_spans(
-        segments,
-        ["查体", "体温", "发热"],
-        conversation,
-    )
     diagnosis_spans = _merge_spans(fever_spans, symptom_spans, treatment_spans)
 
     return MedicalRecordFields(
@@ -114,7 +133,7 @@ def _extract_fever_fields(conversation: str, segments: list[str]) -> MedicalReco
             0.84,
         ),
         allergy_history=_field("未发现食物或药品过敏史", allergy_spans, 0.84),
-        physical_exam=_field("待医生查体补充", physical_exam_spans, 0.6),
+        physical_exam=_extract_physical_exam_field(segments),
         candidate_diagnoses=[
             CandidateDiagnosis(
                 name="发热待查",

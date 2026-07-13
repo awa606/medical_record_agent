@@ -95,11 +95,14 @@ class RecordsApiTests(unittest.TestCase):
         self.assertIsInstance(response.ready_for_formal_generation, bool)
         self.assertTrue(any(item["status"] == "preview" for item in response.structured_updates))
         self.assertGreater(len(response.candidate_diagnoses), 0)
+        chief_spans = response.fields_preview["chief_complaint"]["source_spans"]
+        self.assertTrue(any(span.get("segment_id") == "seg-patient-1" for span in chief_spans))
         self.assertTrue(any(item["segment_id"] == "seg-patient-1" for item in response.evidence_links))
         self.assertTrue(
             any("seg-patient-1" in item["source_segment_ids"] for item in response.structured_updates)
         )
         self.assertGreater(response.quality_preview["core_completeness"], 0)
+        self.assertTrue(response.quality_preview["field_quality"])
         self.assertFalse(response.quality_preview["export_allowed"])
         self.assertNotIn("task_id", response_data)
         self.assertNotIn("events_url", response_data)

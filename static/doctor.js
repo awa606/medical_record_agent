@@ -336,6 +336,17 @@ function activeQualityReport() {
 function fieldQualityLabel(key) {
   const quality = activeQualityReport();
   if (!quality) return "";
+  const fieldQuality = (quality.field_quality || []).find((item) => item.key === key);
+  if (fieldQuality) {
+    const statusLabels = {
+      complete: "质量可用",
+      missing: "需补充",
+      low_confidence: "低置信度",
+      evidence_missing: "证据不足",
+      needs_doctor_review: "待医生确认",
+    };
+    return statusLabels[fieldQuality.status] || "需复核";
+  }
   const low = quality.low_confidence_fields || [];
   if (low.some((item) => item.key === key)) return "低置信度";
   const evidenceMissing = quality.evidence_missing_fields || [];
@@ -351,6 +362,13 @@ function fieldQualityLabel(key) {
   if (evidenceMissing.includes(labelMap[key])) return "证据不足";
   if ((quality.missing_fields || []).includes(labelMap[key])) return "需补充";
   return "质量可用";
+}
+
+function fieldQualityBadgeClass(label) {
+  if (label === "质量可用") return "confirmed";
+  if (label === "需补充") return "missing";
+  if (label === "证据不足") return "warning";
+  return "low";
 }
 
 function previewTreatmentText() {
@@ -1032,7 +1050,7 @@ function renderFields() {
         <div class="field-head">
           <span class="field-title">${escapeHtml(title)}</span>
           <span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>
-          ${qualityLabel ? `<span class="status-badge ${qualityLabel === "质量可用" ? "confirmed" : qualityLabel === "需补充" ? "missing" : "low"}">${escapeHtml(qualityLabel)}</span>` : ""}
+          ${qualityLabel ? `<span class="status-badge ${fieldQualityBadgeClass(qualityLabel)}">${escapeHtml(qualityLabel)}</span>` : ""}
         </div>
         <div class="field-value">${value ? escapeHtml(value) : `<span class="draft-placeholder" aria-hidden="true">&nbsp;</span>`}</div>
         ${meta}
@@ -2295,6 +2313,18 @@ function renderAssistDetailContent(section) {
   if (section === "quality") {
     const quality = activeQualityReport();
     if (!quality) return `<div class="empty-state">暂无病历质量报告。</div>`;
+    const fieldRows = (quality.field_quality || []).map((item) => {
+      const statusLabels = {
+        complete: "质量可用",
+        missing: "需补充",
+        low_confidence: "低置信度",
+        evidence_missing: "证据不足",
+        needs_doctor_review: "待医生确认",
+      };
+      const status = statusLabels[item.status] || item.status || "需复核";
+      const evidenceCount = item.evidence_count == null ? 0 : item.evidence_count;
+      return `${item.label}：${status}；证据 ${evidenceCount} 条；${item.suggested_action || item.reason || ""}`;
+    });
     const rows = [
       `核心字段完整度：${Math.round((quality.core_completeness || 0) * 100)}%`,
       `证据覆盖率：${Math.round((quality.evidence_coverage || 0) * 100)}%`,
@@ -2302,6 +2332,7 @@ function renderAssistDetailContent(section) {
       `低置信度字段：${(quality.low_confidence_fields || []).map((item) => item.label).join("、") || "无"}`,
       `证据不足字段：${(quality.evidence_missing_fields || []).join("、") || "无"}`,
       `是否可进入医生审核：${quality.ready_for_doctor_review ? "是" : "否"}`,
+      ...fieldRows,
       ...((quality.next_actions || []).map((item) => `下一步：${item}`)),
     ];
     return detailSection("病历质量摘要", `

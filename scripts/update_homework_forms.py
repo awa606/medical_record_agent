@@ -342,7 +342,7 @@ def add_personal_contribution(doc: Document, template: bool = False) -> None:
         set_cell_text(table.rows[0].cells[i], h, True)
     rows = [["待补充", "待补充", "待补充"], ["待补充", "待补充", "待补充"], ["待补充", "待补充", "待补充"]]
     if not template:
-        rows[0] = ["项目自评", "96/100", "已完成 v0.8.5 原生流式转写、播放器、CAM++ 校准与实时病历预览；补充 v0.8.8 两说话人人工 RTTM 评测、Docker 2601 前端复测和 v1.0 终答辩冻结材料。第二/三周稳定性与产品化计划已落档，三说话人样本明确待补。"]
+        rows[0] = ["项目自评", "96/100", "已完成 v0.8.5 原生流式转写、播放器、CAM++ 校准与实时病历预览；补充 v0.8.8 两说话人人工 RTTM 评测、v0.8.17-v0.8.18 真实多说话人对比与对齐脚本、v0.8.19-v0.8.20 pyannote 隔离环境门禁，以及 Docker 2601 前端复测和 v1.0 冻结材料。当前真实阻塞收敛到 HF_TOKEN、3D-Speaker 运行区和医院 PC 复测。"]
     for r, row in enumerate(rows, start=1):
         for c, value in enumerate(row):
             set_cell_text(table.rows[r].cells[c], value)
@@ -360,8 +360,8 @@ def add_kanban(doc: Document, template: bool = False) -> None:
     for i, h in enumerate(headers):
         set_cell_text(table.rows[0].cells[i], h, True)
     rows = [
-        ["三说话人样本与 RTTM", "第二周稳定性与评测补强", "第一周 v0.8.8 可演示/可评测冻结"],
-        ["SSE 断连恢复与长音频稳定性", "FunASR 预热与普通医院 PC 复测", "两说话人 RTTM 与 Docker 2601 前端验收"],
+        ["pyannote HF_TOKEN 与 3D-Speaker 运行区", "第二周稳定性与评测补强", "第一周 v0.8.8 可演示/可评测冻结"],
+        ["SSE 断连恢复与普通医院 PC 复测", "pyannote measured turns 与 ASR 对齐复测", "两说话人 RTTM、v0.8.17-v0.8.20 说话人分离准备、Docker 2601 前端验收"],
         ["最终演示视频", "第三周产品化交付加固", "终答辩冻结清单、PPT 大纲、讲稿和 runbook"],
     ]
     if template:
@@ -390,6 +390,8 @@ def add_feature_list(doc: Document, template: bool = False) -> None:
         ["F08", "医生声纹注册与整位角色分类", "登记本机医生声纹，结合 CAM++ 与本地模型做整位说话人角色判定", "P1", "否", "是", MEMBER_NAME, "v0.8.7"],
         ["F09", "说话人分离依赖检查与 RTTM 评测", "检查 pyannote/3D-Speaker/FunASR CAM++ 依赖状态，建立人工 RTTM 评测脚本", "P1", "否", "是", MEMBER_NAME, "v0.8.7"],
         ["F10", "两说话人 RTTM 实测与终答辩冻结", "完成 fever_01、chest_pain_01 人工 RTTM、FunASR CAM++ 评测汇总和 Docker 2601 前端复测", "P1", "否", "是", MEMBER_NAME, "v0.8.8"],
+        ["F11", "真实多说话人分离对比与对齐", "补齐 AliMeeting 公开样本、统一比较脚本、ASR-diarization 对齐脚本与真实 failed/skipped 结论", "P1", "否", "是", MEMBER_NAME, "v0.8.18"],
+        ["F12", "pyannote 隔离环境与门禁检查", "创建 .venv-diarization、固定 pyannote 依赖版本，并把阻塞收敛到 HF_TOKEN 门禁", "P1", "否", "是", MEMBER_NAME, "v0.8.20"],
     ]
     add_table(doc, rows)
     doc.add_heading("二、优先级建议", level=2)
@@ -486,7 +488,8 @@ def add_poc_check(doc: Document, template: bool = False) -> None:
         ["中文医患样本多模型对比", "是", "v0.5.7 已完成 FunASR、SenseVoice、Qwen3 同口径主评测，并补充 CPU/RSS 指标。"],
         ["16/30 分钟长音频稳定性", "是", "v0.5.9 已完成切片稳定性修复与 16/30 分钟样本记录，当前待医院 PC 和真实 ASR 环境复测。"],
         ["医生声纹注册与整位角色分类", "是", "已完成医生声纹注册接口、CAM++ 嵌入匹配和整位说话人角色分类逻辑。"],
-        ["两说话人 RTTM 评测与汇总", "是", "已完成 fever_01、chest_pain_01 人工 RTTM、FunASR CAM++ 评测和 summary.md/json；三说话人样本待补。"],
+        ["两说话人 RTTM 评测与汇总", "是", "已完成 fever_01、chest_pain_01 人工 RTTM、FunASR CAM++ 评测和 summary.md/json。"],
+        ["真实多说话人对比与 pyannote 环境", "是", "已完成 v0.8.17-v0.8.20 脚本、报告和 .venv-diarization 安装；当前阻塞为 HF_TOKEN 与 3D-Speaker 运行区。"],
         ["Docker 2601 前端复测与 v1.0 冻结", "是", "已完成文本生成、Mock ASR、FunASR 短音频、播放器 Range、角色统一校正、证据面板和冻结清单。"],
     ]
     doc.add_heading("一、核心功能完成情况", level=2)
@@ -494,10 +497,10 @@ def add_poc_check(doc: Document, template: bool = False) -> None:
     add_list_section(doc, "二、系统运行情况", ["☑ 可正常运行" if not template else "□ 可正常运行", "□ 偶发错误", "□ 不稳定"])
     add_list_section(doc, "三、演示情况", ["☑ 可完整演示" if not template else "□ 可完整演示", "□ 部分演示", "□ 无法演示"])
     add_list_section(doc, "四、问题清单（Top5）", [
-        "1. 两说话人 RTTM 评测已完成，但三说话人实测与 SSE 断连恢复仍需补验证。",
+        "1. 两说话人 RTTM 评测已完成，真实多说话人链路已推进到 pyannote 隔离环境就绪，但 measured turns 仍缺 HF_TOKEN 门禁放行。",
         "2. Qwen3-ASR 可用于角色上下文分类研究，但 CPU-only 资源占用不适合作为默认交付模型。",
         "3. 普通医院 Windows 办公 PC 实机配置与实测数据仍待采集。",
-        "4. pyannote 需要隔离环境和 HF_TOKEN，3D-Speaker 需要独立运行区，当前记录为 skipped。",
+        "4. pyannote 隔离环境已装好但仍需要 HF_TOKEN，3D-Speaker 仍需要独立运行区和 wrapper 脚本。",
         "5. 第二/三周计划已明确优先级，但仍需用真实样本、断连验收和 PC 复测证据闭环风险。",
     ] if not template else ["1.", "2.", "3.", "4.", "5."])
     add_list_section(doc, "五、结论", ["☑ 达到阶段性 POC 要求" if not template else "□ 达到POC要求", "□ 未达到POC要求"])
@@ -508,8 +511,8 @@ def add_bug_list(doc: Document, template: bool = False) -> None:
     rows = [["编号", "问题描述", "类型", "严重程度", "状态", "负责人"]]
     rows += [["1", "", "功能/性能/稳定", "高/中/低", "未解决/处理中/已解决", ""], ["2", "", "功能/性能/稳定", "高/中/低", "未解决/处理中/已解决", ""]] if template else [
         ["1", "普通医院 Windows 办公 PC 的真实硬件配置与实测数据尚未采集", "流程", "中", "处理中", MEMBER_NAME],
-        ["2", "pyannote 依赖 Hugging Face 令牌和隔离环境，当前只完成 skipped 状态检查", "环境", "中", "已记录", MEMBER_NAME],
-        ["3", "三说话人样本、SSE 断连恢复和长音频流式稳定性仍缺最终验收", "稳定性", "中", "处理中", MEMBER_NAME],
+        ["2", "pyannote 隔离环境已完成安装，但真实 measured 评测仍缺 Hugging Face 令牌授权", "环境", "中", "已记录", MEMBER_NAME],
+        ["3", "3D-Speaker 独立运行区、SSE 断连恢复和普通医院 PC 复测仍缺最终验收", "稳定性", "中", "处理中", MEMBER_NAME],
         ["4", "FunASR 首次冷启动和模型下载可能导致前端等待首段超过 150 秒", "环境", "中", "已记录", MEMBER_NAME],
     ]
     add_table(doc, rows)
@@ -518,26 +521,26 @@ def add_bug_list(doc: Document, template: bool = False) -> None:
 
 def add_test_record(doc: Document, template: bool = False) -> None:
     add_meta(doc, member="测试负责人", day="Day15")
-    add_list_section(doc, "一、测试目标", ["验证成果手册表单刷新、v0.8.5 实时病历预览主线未回退，以及 v0.8.8 两说话人 RTTM 评测、Docker 2601 前端复测和 v1.0 冻结材料可追踪。"] if not template else ["（如稳定性/精度/功耗）"])
+    add_list_section(doc, "一、测试目标", ["验证成果手册表单刷新、v0.8.5 实时病历预览主线未回退，以及 v0.8.8 两说话人 RTTM 评测、v0.8.17-v0.8.20 说话人分离脚本与环境推进、Docker 2601 前端复测和 v1.0 冻结材料可追踪。"] if not template else ["（如稳定性/精度/功耗）"])
     doc.add_heading("二、测试方案", level=2)
     rows = [["测试项", "方法", "指标"]]
     rows += [["", "", ""], ["", "", ""]] if template else [
-        ["说话人链路定向回归", "pytest -q tests/test_diarization_evaluator.py tests/test_speaker_profiles.py tests/test_speaker_role_classifier.py tests/test_asr_sessions_api.py tests/test_funasr_streaming_engine.py tests/test_records_api.py tests/test_speaker_diarization.py", "32 passed"],
+        ["说话人链路定向回归", "pytest -q tests/test_diarization_evaluator.py tests/test_speaker_profiles.py tests/test_speaker_role_classifier.py tests/test_asr_sessions_api.py tests/test_funasr_streaming_engine.py tests/test_records_api.py tests/test_speaker_diarization.py tests/test_run_diarization_engine_compare.py tests/test_apply_diarization_turns_to_asr_result.py tests/test_bootstrap_diarization_eval.py", "37 passed"],
         ["依赖与语法检查", "py_compile + node --check", "通过"],
-        ["说话人分离依赖报告", "python scripts/check_diarization_dependencies.py", "生成 dependency_status.md/json"],
+        ["说话人分离依赖报告", "python scripts/check_diarization_dependencies.py && .\\.venv-diarization\\Scripts\\python scripts\\bootstrap_diarization_eval.py", "生成 dependency_status.md/json 和 bootstrap_status.md/json"],
     ]
     add_table(doc, rows)
     doc.add_heading("三、测试结果", level=2)
     rows = [["测试项", "结果", "是否达标"]]
     rows += [["", "", "是/否"], ["", "", "是/否"]] if template else [
         ["表单脚本与定向回归", "py_compile + pytest 定向用例 + update_homework_forms.py", "是"],
-        ["说话人链路定向测试", "32 passed（2026-07-10）", "是"],
+        ["说话人链路定向测试", "37 passed（含 v0.8.17-v0.8.20 新增脚本用例）", "是"],
         ["两说话人 RTTM 评测", "fever_01/chest_pain_01 measured，summary.md/json 已生成", "是"],
         ["Docker 2601 前端复测", "文本、Mock ASR、FunASR 短音频、Range、角色校正截图已生成", "是"],
     ]
     add_table(doc, rows)
-    add_list_section(doc, "四、问题分析", ["课程样本、原生流式、说话人链路、两说话人 RTTM 和 Docker 2601 前端复测证据已具备；普通医院 PC 实机复测、三说话人样本验收和 SSE 断连恢复仍未完成。"] if not template else ["1.", "2."])
-    add_list_section(doc, "五、改进措施", ["按第二/三周计划优先补主流程稳定、三说话人真实边界、SSE 断连恢复、普通医院 PC 复测和最终演示视频；提交时排除模型缓存、运行时音频和私密配置。"] if not template else ["1.", "2."])
+    add_list_section(doc, "四、问题分析", ["课程样本、原生流式、说话人链路、两说话人 RTTM、v0.8.17-v0.8.20 说话人分离脚本/环境证据和 Docker 2601 前端复测证据已具备；普通医院 PC 实机复测、HF_TOKEN 门禁放行、3D-Speaker 运行区和 SSE 断连恢复仍未完成。"] if not template else ["1.", "2."])
+    add_list_section(doc, "五、改进措施", ["按第二/三周计划优先补 pyannote measured turns、ASR 对齐复测、SSE 断连恢复、普通医院 PC 复测和最终演示视频；提交时排除模型缓存、运行时音频、HF_TOKEN 和私密配置。"] if not template else ["1.", "2."])
 
 
 def add_evt_check(doc: Document, template: bool = False) -> None:
@@ -557,7 +560,7 @@ def add_final_score(doc: Document, template: bool = False) -> None:
     add_meta(doc, day="Day20")
     rows = [["类别", "分值", "当前填写"]]
     rows += [["POC实现", "50", ""], ["工程能力", "20", ""], ["文档", "15", ""], ["展示答辩", "15", ""]] if template else [
-        ["POC实现", "50", "已完成 SSE、角色校正、病历生成闭环、v0.5.7 中文医患样本多模型 ASR 对比、v0.5.9 长音频切片稳定性修复，以及 v0.8.5 实时病历预览与证据回放、v0.8.8 两说话人 RTTM 评测和 v1.0 前端验收，建议 48/50。"],
+        ["POC实现", "50", "已完成 SSE、角色校正、病历生成闭环、v0.5.7 中文医患样本多模型 ASR 对比、v0.5.9 长音频切片稳定性修复，以及 v0.8.5 实时病历预览与证据回放、v0.8.8 两说话人 RTTM 评测、v0.8.17-v0.8.20 真实多说话人分离脚本/环境推进和 v1.0 前端验收，建议 48/50。"],
         ["工程能力", "20", "工程结构、测试、版本、日志、评测脚本和表单自动化完整，建议 19/20。"],
         ["文档", "15", "README、版本、架构、模型路线、日报、能力矩阵和周评审材料已更新，建议 14/15。"],
         ["展示答辩", "15", "PPT 大纲、讲稿、runbook、验收文档和冻结清单已补齐，待录制最终演示视频，暂填 13/15。"],
@@ -572,9 +575,9 @@ def add_evt_bonus(doc: Document, template: bool = False) -> None:
     rows = [["项目", "最高分", "当前情况"]]
     rows += [["多样机", "5", ""], ["测试能力", "5", ""], ["FMEA", "5", ""], ["工程优化", "5", ""]] if template else [
         ["多样机", "5", "当前为软件原型，暂不申请多样机加分。"],
-        ["测试能力", "5", "已有 pytest、JS 检查、服务烟测、Qwen3 同口径补测、16/30 分钟长音频稳定性测试入口、两说话人 RTTM 实测和 Docker 2601 前端验收。"],
-        ["FMEA", "5", "已在冻结清单中列出真实患者数据、API Key、模型缓存、大文件和三说话人待补等风险边界。"],
-        ["工程优化", "5", "已完成 SSE、角色校正、证据回放、评测脚本、表单自动化和冻结清单，建议申请部分加分。"],
+        ["测试能力", "5", "已有 pytest、JS 检查、服务烟测、Qwen3 同口径补测、16/30 分钟长音频稳定性测试入口、两说话人 RTTM 实测、真实多说话人分离对比/对齐脚本和 Docker 2601 前端验收。"],
+        ["FMEA", "5", "已在冻结清单中列出真实患者数据、API Key、模型缓存、大文件、HF_TOKEN/3D-Speaker 门禁和普通医院 PC 待补等风险边界。"],
+        ["工程优化", "5", "已完成 SSE、角色校正、证据回放、评测脚本、pyannote 隔离环境准备、表单自动化和冻结清单，建议申请部分加分。"],
     ]
     add_table(doc, rows)
     doc.add_paragraph("加分：" + ("" if template else "建议 3-5/20，待教师确认"))

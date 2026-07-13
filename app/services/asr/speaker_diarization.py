@@ -10,7 +10,6 @@ from app.schemas.asr import (
     DiarizationTurn,
     SpeakerRoleAssignment,
 )
-from app.services.asr.role_strategy import conversation_from_segments
 
 
 ROLE_DOCTOR = "医生"
@@ -31,7 +30,7 @@ DOCTOR_KEYWORDS = (
     "多长时间",
     "有没有",
     "是否",
-    "怎么了",
+    "怎么",
     "多大",
     "多少岁",
     "做什么工作",
@@ -41,9 +40,10 @@ DOCTOR_KEYWORDS = (
     "做过检查",
     "还有其他",
     "既往",
+    "范围",
+    "下降吗",
 )
 PATIENT_KEYWORDS = (
-    "我发烧",
     "我发热",
     "我咳嗽",
     "我头晕",
@@ -51,16 +51,20 @@ PATIENT_KEYWORDS = (
     "我疼",
     "我痛",
     "不舒服",
+    "难受",
     "吃了",
     "用了",
     "天前",
     "小时前",
     "一直",
     "症状",
+    "没有工作",
+    "在读大学",
+    "不清楚",
 )
-FILLER_PATTERN = re.compile(r"[嗯呃哦啊对是好的没有]+[，。！？,.!?\s]*")
+FILLER_ONLY_PATTERN = re.compile(r"^[嗯呃哦啊额呢呀哈哎对是好]+[，。！？,.!?\s]*$")
 GLOBAL_REVIEW_WARNING = (
-    "Speaker identities are acoustically grouped; uncertain clinical roles require one global mapping confirmation."
+    "说话人已按声学特征聚类；低置信度临床角色需要一次全局确认。"
 )
 
 
@@ -78,11 +82,7 @@ class _SpeakerStats:
 
 
 def enhance_speaker_diarization(result: ASRResult) -> ASRResult:
-    """Normalize acoustic speakers and assign roles once per speaker.
-
-    Streaming windows are deliberately excluded: without a VAD/speaker boundary
-    they may contain multiple people and must not enter medical previews.
-    """
+    """Normalize acoustic speakers and assign one clinical role per speaker."""
     updated = result.model_copy(deep=True)
     raw_segments = updated.segments or [
         ASRSegment(speaker="speaker_0", speaker_id="speaker_0", text=updated.text)
@@ -122,7 +122,7 @@ def enhance_speaker_diarization(result: ASRResult) -> ASRResult:
                     "role": role,
                     "role_confidence": confidence if role else None,
                     "role_source": role_source,
-                    "role_note": assignment.reason if assignment else "需要确认整位说话人的角色",
+                    "role_note": assignment.reason if assignment else "需要确认整位说话人的角色。",
                     "needs_review": requires_confirmation,
                 }
             )
@@ -272,7 +272,7 @@ def _split_text_by_duration(text: str, durations: list[float]) -> list[str]:
     total = sum(max(0.001, duration) for duration in durations)
     cursor = 0
     chunks: list[str] = []
-    for index, duration in enumerate(durations[:-1], start=1):
+    for index, _duration in enumerate(durations[:-1], start=1):
         remaining_parts = len(durations) - index
         target = round(len(cleaned) * sum(max(0.001, value) for value in durations[:index]) / total)
         target = max(cursor + 1, min(target, len(cleaned) - remaining_parts))
@@ -325,8 +325,8 @@ def _merge_short_speaker_clusters(segments: list[ASRSegment]) -> list[ASRSegment
             item.duration < 3.0
             or item.max_turn_duration < 1.0 and item.duration < 5.0
             or (
-                12 <= item.text_length <= 40
-                and item.meaningful_length / max(item.text_length, 1) <= 0.25
+                1 <= item.text_length <= 40
+                and item.meaningful_length / max(item.text_length, 1) <= 0.35
             )
         )
     }
@@ -350,7 +350,7 @@ def _merge_short_speaker_clusters(segments: list[ASRSegment]) -> list[ASRSegment
                     "speaker": replacement,
                     "speaker_id": replacement,
                     "speaker_confidence": min(segment.speaker_confidence or 0.65, 0.65),
-                    "role_note": "短促声纹簇已按相邻稳定说话人合并",
+                    "role_note": "短口头语声纹簇已按相邻稳定说话人合并。",
                 }
             )
         )
@@ -375,15 +375,17 @@ def _merge_stable_utterances(segments: list[ASRSegment]) -> list[ASRSegment]:
             if segment.end_time is not None and previous.start_time is not None
             else float("inf")
         )
-        combined_text = f"{previous.text}{segment.text}".strip()
-        if (
+        combined_text = _join_utterance_text(previous.text, segment.text)
+        should_merge = (
             same_speaker
             and not previous.overlap
             and not segment.overlap
-            and 0.0 <= gap <= 0.8
-            and combined_duration <= 8.0
-            and len(combined_text) <= 100
-        ):
+            and 0.0 <= gap <= 1.2
+            and combined_duration <= 10.0
+            and len(combined_text) <= 120
+            and (_is_filler_text(previous.text) or _is_filler_text(segment.text) or not _ends_sentence(previous.text))
+        )
+        if should_merge:
             merged[-1] = previous.model_copy(
                 update={
                     "text": combined_text,
@@ -405,8 +407,9 @@ def _nearest_substantial_speaker(
     index: int,
     substantial: set[str],
 ) -> str | None:
+    current = segments[index]
     for distance in range(1, len(segments)):
-        candidates: list[tuple[float, str]] = []
+        candidates: list[tuple[float, int, str]] = []
         for candidate_index in (index - distance, index + distance):
             if candidate_index < 0 or candidate_index >= len(segments):
                 continue
@@ -414,11 +417,21 @@ def _nearest_substantial_speaker(
             speaker = _normalized_speaker(candidate.speaker_id or candidate.speaker)
             if speaker not in substantial:
                 continue
-            temporal_gap = _temporal_gap(segments[index], candidate)
-            candidates.append((temporal_gap, speaker))
-        if candidates:
-            candidates.sort(key=lambda item: item[0])
-            return candidates[0][1]
+            temporal_gap = _temporal_gap(current, candidate)
+            candidates.append((temporal_gap, candidate_index, speaker))
+        if not candidates:
+            continue
+
+        previous = [item for item in candidates if item[1] < index]
+        following = [item for item in candidates if item[1] > index]
+        if _is_filler_text(current.text) and previous and following:
+            previous_segment = segments[previous[0][1]]
+            following_segment = segments[following[0][1]]
+            if _ends_question(previous_segment.text) or _looks_patient_answer(following_segment.text):
+                return following[0][2]
+
+        candidates.sort(key=lambda item: (item[0], abs(item[1] - index)))
+        return candidates[0][2]
     return None
 
 
@@ -446,7 +459,7 @@ def _assign_roles_by_speaker(segments: list[ASRSegment]) -> list[SpeakerRoleAssi
                     role=manual_roles[speaker],
                     confidence=0.99,
                     source="manual",
-                    reason="医生已确认整位说话人的角色",
+                    reason="医生已确认整位说话人的角色。",
                 )
             ]
         return [
@@ -455,7 +468,7 @@ def _assign_roles_by_speaker(segments: list[ASRSegment]) -> list[SpeakerRoleAssi
                 role=None,
                 confidence=0.0,
                 source="single_speaker",
-                reason="仅检测到一位真实说话人，不能伪造成医生和患者两人",
+                reason="仅检测到一位真实说话人，不能伪造成医生和患者两个人。",
                 requires_confirmation=True,
             )
         ]
@@ -468,7 +481,7 @@ def _assign_roles_by_speaker(segments: list[ASRSegment]) -> list[SpeakerRoleAssi
             role=role,
             confidence=0.99,
             source="manual",
-            reason="医生已确认整位说话人的角色",
+            reason="医生已确认整位说话人的角色。",
         )
 
     doctor_candidates = [speaker for speaker in ordered_speakers if speaker not in assignments]
@@ -491,20 +504,20 @@ def _assign_roles_by_speaker(segments: list[ASRSegment]) -> list[SpeakerRoleAssi
                 role=ROLE_DOCTOR,
                 confidence=round(confidence, 4),
                 source="speaker_context_rules",
-                reason="整位说话人的问诊提问和医生身份表达占主导",
+                reason="整位说话人的问诊提问和医生身份表达占主导。",
                 requires_confirmation=confidence < 0.75,
             )
 
     remaining = [speaker for speaker in ordered_speakers if speaker not in assignments]
     if remaining and not any(item.role == ROLE_PATIENT for item in assignments.values()):
-        if len(remaining) == 1:
+        if len(remaining) == 1 and any(item.role == ROLE_DOCTOR for item in assignments.values()):
             patient = remaining[0]
             assignments[patient] = SpeakerRoleAssignment(
                 speaker_id=patient,
                 role=ROLE_PATIENT,
                 confidence=0.86,
                 source="global_two_party_constraint",
-                reason="已锁定医生，唯一剩余主要说话人按患者处理",
+                reason="已锁定医生，唯一剩余主要说话人按患者处理。",
             )
             remaining = []
         else:
@@ -530,7 +543,7 @@ def _assign_roles_by_speaker(segments: list[ASRSegment]) -> list[SpeakerRoleAssi
                 role=ROLE_PATIENT,
                 confidence=confidence,
                 source="speaker_context_rules",
-                reason="整位说话人的症状和个人经历叙述占主导",
+                reason="整位说话人的症状和个人经历叙述占主导。",
                 requires_confirmation=confidence < 0.75,
             )
             remaining = [speaker for speaker in remaining if speaker != patient]
@@ -541,7 +554,7 @@ def _assign_roles_by_speaker(segments: list[ASRSegment]) -> list[SpeakerRoleAssi
             role=ROLE_OTHER,
             confidence=0.55,
             source="multi_speaker_fallback",
-            reason="检测到第三位及以上说话人，需一次全局映射确认其身份",
+            reason="检测到第三位及以上说话人，需要一次全局映射确认其身份。",
             requires_confirmation=True,
         )
 
@@ -552,7 +565,7 @@ def _assign_roles_by_speaker(segments: list[ASRSegment]) -> list[SpeakerRoleAssi
                 role=None,
                 confidence=0.0,
                 source="unassigned",
-                reason="上下文不足，需一次全局映射确认",
+                reason="上下文不足，需要一次全局映射确认。",
                 requires_confirmation=True,
             )
     return [assignments[speaker] for speaker in ordered_speakers]
@@ -565,12 +578,12 @@ def _speaker_stats(speaker: str, segments: list[ASRSegment]) -> _SpeakerStats:
         for segment in segments
         if segment.start_time is not None and segment.end_time is not None
     ]
-    meaningful = FILLER_PATTERN.sub("", text)
+    meaningful = _meaningful_text(text)
     doctor_score = sum(text.count(keyword) for keyword in DOCTOR_KEYWORDS)
     doctor_score += sum(text.count(anchor) * 4 for anchor in DOCTOR_ANCHORS)
     doctor_score += min(text.count("？") + text.count("?"), 8) * 0.6
     patient_score = sum(text.count(keyword) for keyword in PATIENT_KEYWORDS)
-    patient_score += min(len(re.findall(r"(?:^|[。！？])我[^，。！？]{1,20}", text)), 6) * 0.6
+    patient_score += min(len(re.findall(r"(?:^|[。！？?])我[^，。！？?]{1,20}", text)), 6) * 0.6
     return _SpeakerStats(
         speaker_id=speaker,
         text=text,
@@ -611,6 +624,44 @@ def _conversation_with_speaker_fallback(segments: list[ASRSegment]) -> str:
         if segment.text.strip():
             lines.append(f"[{label}] {segment.text.strip()}")
     return "\n".join(lines)
+
+
+def _join_utterance_text(left: str, right: str) -> str:
+    left_clean = (left or "").strip()
+    right_clean = (right or "").strip()
+    if not left_clean:
+        return right_clean
+    if not right_clean:
+        return left_clean
+    if _is_filler_text(left_clean):
+        return f"{left_clean}{right_clean}"
+    if _is_filler_text(right_clean):
+        return f"{left_clean}{right_clean}"
+    return f"{left_clean}{right_clean}"
+
+
+def _is_filler_text(text: str | None) -> bool:
+    cleaned = re.sub(r"\s+", "", text or "")
+    return bool(cleaned) and bool(FILLER_ONLY_PATTERN.fullmatch(cleaned))
+
+
+def _meaningful_text(text: str) -> str:
+    cleaned = re.sub(r"[嗯呃哦啊额呢呀哈哎]+", "", text)
+    return cleaned
+
+
+def _ends_sentence(text: str | None) -> bool:
+    return bool(re.search(r"[。！？!?]$", (text or "").strip()))
+
+
+def _ends_question(text: str | None) -> bool:
+    cleaned = (text or "").strip()
+    return cleaned.endswith(("？", "?")) or any(keyword in cleaned for keyword in DOCTOR_KEYWORDS)
+
+
+def _looks_patient_answer(text: str | None) -> bool:
+    cleaned = text or ""
+    return any(keyword in cleaned for keyword in PATIENT_KEYWORDS) or cleaned.startswith(("我", "没有", "二十", "三十", "四十"))
 
 
 def _temporal_gap(left: ASRSegment, right: ASRSegment) -> float:

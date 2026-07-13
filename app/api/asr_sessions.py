@@ -349,7 +349,10 @@ def _apply_segment_corrections(
     updated.text = _plain_text_from_segments(updated.segments)
     updated.conversation_text = _conversation_from_segments(updated.segments)
     updated.role_strategy = "manual_reviewed"
-    assignment_review_pending = any(
+    all_segments_reviewed = bool(updated.segments) and all(
+        segment.reviewed_by_doctor and segment.role != "待确认" for segment in updated.segments
+    )
+    assignment_review_pending = False if payload.segments and all_segments_reviewed else any(
         assignment.requires_confirmation for assignment in updated.speaker_assignments
     )
     updated.reviewed_by_doctor = all(segment.reviewed_by_doctor for segment in updated.segments)

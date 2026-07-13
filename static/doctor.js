@@ -1805,7 +1805,7 @@ function renderTranscript() {
           <span class="transcript-row-time">${escapeHtml(item.time)}</span>
           <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount, speakerAliases))}】</span>
           <span class="transcript-row-text">${escapeHtml(item.text || "（无文本）")}</span>
-          <button type="button" class="transcript-row-link" data-open-detail="transcript:${item.index}" data-busy-allowed="true">查看原文</button>
+          <button type="button" class="transcript-row-link" data-open-detail="transcript:${item.index}" data-busy-allowed="true">详情</button>
         </div>
       `).join("")}
     </div>

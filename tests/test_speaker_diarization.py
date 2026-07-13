@@ -77,6 +77,25 @@ class SpeakerDiarizationAssistTests(unittest.TestCase):
         self.assertEqual({item.role for item in enhanced.speaker_assignments}, {"医生", "患者"})
         self.assertNotIn("待确认", {segment.role for segment in enhanced.segments})
 
+    def test_same_speaker_short_filler_and_answer_are_merged(self):
+        result = ASRResult(
+            audio_id="demo_audio",
+            engine="funasr",
+            text="您今年多少岁？嗯，二十四岁。",
+            conversation_text="",
+            segments=[
+                ASRSegment(speaker="spk0", text="您今年多少岁？", start_time=0.0, end_time=2.0),
+                ASRSegment(speaker="spk1", text="嗯，", start_time=2.1, end_time=2.3),
+                ASRSegment(speaker="spk1", text="二十四岁。", start_time=2.3, end_time=3.0),
+            ],
+        )
+
+        enhanced = enhance_speaker_diarization(result)
+        patient_turns = [segment for segment in enhanced.segments if segment.role == "患者"]
+
+        self.assertEqual(len(patient_turns), 1)
+        self.assertEqual(patient_turns[0].text, "嗯，二十四岁。")
+
     def test_manual_role_correction_is_marked_as_doctor_reviewed(self):
         result = ASRResult(
             audio_id="demo_audio",

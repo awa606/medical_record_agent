@@ -6,7 +6,7 @@ from app.services.mock_llm import MockLLM, mock_generate_draft
 
 class KnowledgeRuleTests(unittest.TestCase):
     def test_wind_cold_rule_outputs_explainable_candidate(self):
-        conversation = "患者发热、怕冷明显、清鼻涕、基本不出汗、全身酸痛。"
+        conversation = "患者发热、怕冷明显、清涕、基本不出汗、全身酸痛。"
 
         candidates = infer_common_cold_candidates(conversation)
 
@@ -33,7 +33,7 @@ class KnowledgeRuleTests(unittest.TestCase):
         self.assertGreater(len(top.suggested_checks), 0)
 
     def test_mock_llm_uses_knowledge_rule_candidate_in_draft(self):
-        conversation = "患者发热、怕冷明显、清鼻涕、基本不出汗、全身酸痛。"
+        conversation = "患者发热、怕冷明显、清涕、基本不出汗、全身酸痛。"
 
         fields = MockLLM().extract_fields(conversation)
         draft = mock_generate_draft(fields)

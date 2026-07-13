@@ -23,7 +23,7 @@ class MedicalRecordSchemaTests(unittest.TestCase):
     def test_medical_field_with_source_span(self):
         source = SourceSpan(
             index=1,
-            text="左手手掌被咬了，大概两个小时左右。",
+            text="左手手掌被咬伤，大约两个小时左右。",
             start_time=0.0,
             end_time=5.5,
         )

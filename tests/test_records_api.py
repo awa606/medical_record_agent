@@ -1,9 +1,8 @@
 import os
 import tempfile
 import unittest
-from fastapi import HTTPException
 
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, HTTPException
 
 from app.agents import MedicalRecordOrchestrator
 from app.api.records import (
@@ -30,7 +29,7 @@ class RecordsApiTests(unittest.TestCase):
 
     def test_generate_record_creates_task_for_background_execution(self):
         payload = GenerateRecordRequest(
-            conversation_text="左手手掌被咬了，大概两个小时左右，用酒精冲洗，牙龈出血。"
+            conversation_text="左手手掌被咬了，大约两个小时左右，用酒精冲洗，牙龈出血。"
         )
 
         response = generate_record(payload, BackgroundTasks())
@@ -51,7 +50,7 @@ class RecordsApiTests(unittest.TestCase):
         completed_task = read_task(response["task_id"])
         self.assertEqual(completed_task["status"], MedicalRecordOrchestrator.STATUS_WAITING_DOCTOR_REVIEW)
         self.assertIn("门诊病历草稿", completed_task["result_json"]["draft"])
-
+        self.assertIn("quality_report", completed_task["result_json"])
 
     def test_preview_record_returns_non_persistent_preview(self):
         payload = PreviewRecordRequest(
@@ -91,6 +90,7 @@ class RecordsApiTests(unittest.TestCase):
         self.assertIn("treatment_plan", response_data)
         self.assertIn("structured_updates", response_data)
         self.assertIn("evidence_links", response_data)
+        self.assertIn("quality_preview", response_data)
         self.assertIn(response.preview_stage, {"collecting", "structured_preview", "diagnosis_preview"})
         self.assertIsInstance(response.ready_for_formal_generation, bool)
         self.assertTrue(any(item["status"] == "preview" for item in response.structured_updates))
@@ -99,6 +99,8 @@ class RecordsApiTests(unittest.TestCase):
         self.assertTrue(
             any("seg-patient-1" in item["source_segment_ids"] for item in response.structured_updates)
         )
+        self.assertGreater(response.quality_preview["core_completeness"], 0)
+        self.assertFalse(response.quality_preview["export_allowed"])
         self.assertNotIn("task_id", response_data)
         self.assertNotIn("events_url", response_data)
 
@@ -114,6 +116,7 @@ class RecordsApiTests(unittest.TestCase):
         self.assertGreater(len(response.missing_items), 0)
         self.assertIn("实时预览", response.preview_notice)
         self.assertTrue(response.structured_updates)
+        self.assertEqual(response.quality_preview["status"], "needs_review")
         self.assertNotIn("task_id", response.model_dump())
 
     def test_preview_ignores_provisional_windows_and_uses_stable_mapped_turns(self):
@@ -145,7 +148,7 @@ class RecordsApiTests(unittest.TestCase):
         with self.assertRaises(HTTPException) as raised:
             preview_record(
                 PreviewRecordRequest(
-                    conversation_text="[说话人 A] 我发热三天。",
+                    conversation_text="[说话人A] 我发热三天。",
                     source="asr_partial",
                     segments=[
                         {
@@ -159,6 +162,7 @@ class RecordsApiTests(unittest.TestCase):
                 )
             )
         self.assertEqual(raised.exception.status_code, 409)
+        self.assertIn("角色映射", raised.exception.detail)
 
 
 if __name__ == "__main__":

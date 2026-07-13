@@ -13,8 +13,8 @@ from app.services.knowledge_rules import infer_common_cold_candidates
 
 
 def _split_segments(conversation: str) -> list[str]:
-    parts = re.split(r"[。！？?!；;\n]+", conversation)
-    return [part.strip(" ，,：:") for part in parts if part.strip(" ，,：:")]
+    parts = re.split(r"[。！？!?\n]+", conversation)
+    return [part.strip(" ，,") for part in parts if part.strip(" ，,")]
 
 
 def _contains(text: str, keywords: list[str]) -> bool:
@@ -61,13 +61,13 @@ def _required_spans(segments: list[str], keywords: list[str], conversation: str)
 
 
 def _is_fever_case(conversation: str) -> bool:
-    return _contains(conversation, ["铁锈色痰", "布洛芬", "39", "40", "卫生院", "反复发热"])
+    return _contains(conversation, ["体温", "铁锈色痰", "布洛芬", "反复发热", "淋雨受凉"])
 
 
 def _extract_fever_fields(conversation: str, segments: list[str]) -> MedicalRecordFields:
     fever_spans = _required_spans(
         segments,
-        ["发烧", "发热", "体温", "40", "39", "淋雨", "受凉"],
+        ["发热", "发烧", "体温", "40", "39", "淋雨", "受凉"],
         conversation,
     )
     treatment_spans = _required_spans(
@@ -100,7 +100,7 @@ def _extract_fever_fields(conversation: str, segments: list[str]) -> MedicalReco
     return MedicalRecordFields(
         chief_complaint=_field("发热3天", fever_spans, 0.9),
         present_illness=_field(
-            "3天前淋雨受凉后发热，最高体温40℃，体温多在39~40℃，伴咳嗽、咳痰，"
+            "3天前淋雨受凉后发热，最高体温约40℃，体温多在39~40℃，伴咳嗽、咳痰，"
             "曾有铁锈色痰；当地卫生院考虑感冒，服用布洛芬后可退热但反复发热；"
             "病程中食欲不佳，睡眠尚可，大小便正常。",
             _merge_spans(fever_spans, treatment_spans, symptom_spans),
@@ -119,7 +119,7 @@ def _extract_fever_fields(conversation: str, segments: list[str]) -> MedicalReco
             CandidateDiagnosis(
                 name="发热待查",
                 evidence=diagnosis_spans,
-                reason="反复发热、体温最高约40℃，需医生结合查体和检查进一步明确原因。",
+                reason="反复发热、最高体温约40℃，需医生结合查体和检查进一步明确原因。",
                 rule_id="FEVER_WORKUP_001",
                 confidence=0.72,
                 suggested_checks=[
@@ -215,7 +215,7 @@ def mock_extract_fields(conversation: str) -> MedicalRecordFields:
 
     bite_spans = _source_spans(segments, ["咬", "肿痛", "两个小时", "两小时", "2小时"])
     treatment_spans = _source_spans(segments, ["酒精", "绷带", "包扎", "季德胜", "蛇药"])
-    symptom_spans = _source_spans(segments, ["畏寒", "胃寒", "寒战", "头晕", "胸闷", "心慌", "牙龈", "出血"])
+    symptom_spans = _source_spans(segments, ["畏寒", "寒战", "头晕", "胸闷", "心慌", "牙龈", "出血"])
 
     has_bite = _contains(conversation, ["咬"])
     has_hand = _contains(conversation, ["左手", "手掌"])
@@ -306,8 +306,8 @@ def _field_text(field: MedicalField, *, physical_exam: bool = False) -> str:
     if field.missing:
         if physical_exam:
             return "待医生查体补充"
-        return "未提及/待补充"
-    return field.value or "未提及/待补充"
+        return "未提及，待补充"
+    return field.value or "未提及，待补充"
 
 
 def _items_text(items: list[str]) -> str:
@@ -336,7 +336,7 @@ def mock_generate_draft(fields: MedicalRecordFields | dict) -> str:
             line_parts.append(f"  建议补问：{follow_up_questions}")
         diagnosis_lines.append("\n".join(line_parts))
 
-    candidate_text = "\n".join(diagnosis_lines) if diagnosis_lines else "未提及/待医生确认"
+    candidate_text = "\n".join(diagnosis_lines) if diagnosis_lines else "未提及，待医生确认"
 
     return "\n".join(
         [
@@ -371,7 +371,7 @@ def mock_safety_check(
     errors: list[str] = []
     warnings: list[str] = []
 
-    allergy_line = _line_for("过敏史", draft_text)
+    allergy_line = _line_for("过敏史：", draft_text)
     if record.allergy_history.missing and re.search(r"(无|否认)", allergy_line):
         errors.append("过敏史未提及时不得写成“无”或“否认”。")
 

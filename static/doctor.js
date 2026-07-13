@@ -11,6 +11,7 @@ const appState = {
   currentRecordFields: null,
   currentDraft: "",
   currentSafetyCheck: null,
+  currentQualityReport: null,
   currentAgentTrace: null,
   currentLlmStatus: null,
   currentInputText: "",
@@ -326,6 +327,30 @@ function activeDraftText() {
 
 function activeSafetyCheck() {
   return appState.currentSafetyCheck || appState.recordPreview?.safety_preview || null;
+}
+
+function activeQualityReport() {
+  return appState.currentQualityReport || appState.recordPreview?.quality_preview || null;
+}
+
+function fieldQualityLabel(key) {
+  const quality = activeQualityReport();
+  if (!quality) return "";
+  const low = quality.low_confidence_fields || [];
+  if (low.some((item) => item.key === key)) return "低置信度";
+  const evidenceMissing = quality.evidence_missing_fields || [];
+  const labelMap = {
+    chief_complaint: "主诉",
+    present_illness: "现病史",
+    previous_treatment: "既往处理",
+    accompanying_symptoms: "伴随症状",
+    past_history: "既往史",
+    allergy_history: "过敏史",
+    physical_exam: "查体",
+  };
+  if (evidenceMissing.includes(labelMap[key])) return "证据不足";
+  if ((quality.missing_fields || []).includes(labelMap[key])) return "需补充";
+  return "质量可用";
 }
 
 function previewTreatmentText() {
@@ -990,6 +1015,7 @@ function renderFields() {
     if (status.key === "missing") missingCount += 1;
     const value = appState.viewMode === "doctor" ? draftFieldValue(fields, key) : fieldValue(fields, key);
     const evidence = appState.viewMode === "doctor" ? draftFieldEvidence(fields, key) : fieldEvidence(fields?.[key] || null, key);
+    const qualityLabel = fieldQualityLabel(key);
     const confidence = appState.viewMode === "doctor"
       ? draftFieldConfidence(fields, key)
       : key === "treatment_plan" ? "需医生复核" : fields?.[key]?.confidence == null ? "需医生复核" : `置信度 ${Math.round(fields[key].confidence * 100)}%`;
@@ -1006,6 +1032,7 @@ function renderFields() {
         <div class="field-head">
           <span class="field-title">${escapeHtml(title)}</span>
           <span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>
+          ${qualityLabel ? `<span class="status-badge ${qualityLabel === "质量可用" ? "confirmed" : qualityLabel === "需补充" ? "missing" : "low"}">${escapeHtml(qualityLabel)}</span>` : ""}
         </div>
         <div class="field-value">${value ? escapeHtml(value) : `<span class="draft-placeholder" aria-hidden="true">&nbsp;</span>`}</div>
         ${meta}
@@ -2179,6 +2206,46 @@ function renderEvidenceCard(evidence, diagnoses) {
   });
 }
 
+function renderQualitySummaryCard() {
+  const quality = activeQualityReport();
+  if (!quality) {
+    return assistCard({
+      title: "病历质量摘要",
+      badgeClass: "neutral",
+      badgeText: "待生成",
+      body: `<div class="empty-state">生成预览或正式病历后，将显示完整度、证据覆盖和下一步建议。</div>`,
+    });
+  }
+  const percent = Math.round((quality.core_completeness || 0) * 100);
+  const nextActions = quality.next_actions || [];
+  const lowCount = (quality.low_confidence_fields || []).length;
+  const evidenceMissingCount = (quality.evidence_missing_fields || []).length;
+  const badgeClass = quality.ready_for_doctor_review ? "confirmed" : "missing";
+  const badgeText = quality.ready_for_doctor_review ? "可审核" : "需复核";
+  return assistCard({
+    title: "病历质量摘要",
+    badgeClass,
+    badgeText,
+    detailTarget: "assist:quality",
+    body: `
+      <div class="assist-mini-grid">
+        <div><span>核心完整度</span><strong>${percent}%</strong></div>
+        <div><span>证据覆盖</span><strong>${Math.round((quality.evidence_coverage || 0) * 100)}%</strong></div>
+        <div><span>低置信度</span><strong>${lowCount} 项</strong></div>
+        <div><span>证据不足</span><strong>${evidenceMissingCount} 项</strong></div>
+      </div>
+      <div class="assist-check-list">
+        ${listPreview(nextActions, 3).visible.map((item) => `
+          <div class="assist-check-row ${quality.ready_for_doctor_review ? "success" : "warning"}">
+            <span></span>
+            <strong>${escapeHtml(item)}</strong>
+          </div>
+        `).join("")}
+      </div>
+    `,
+  });
+}
+
 function renderSafetyResultCard({ safety, missing, warnings, errors }) {
   const rows = [
     {
@@ -2224,6 +2291,25 @@ function renderAssistDetailContent(section) {
     warnings.unshift("医生/患者角色需人工校正");
   }
   const errors = risk.errors;
+
+  if (section === "quality") {
+    const quality = activeQualityReport();
+    if (!quality) return `<div class="empty-state">暂无病历质量报告。</div>`;
+    const rows = [
+      `核心字段完整度：${Math.round((quality.core_completeness || 0) * 100)}%`,
+      `证据覆盖率：${Math.round((quality.evidence_coverage || 0) * 100)}%`,
+      `缺失字段：${(quality.missing_fields || []).join("、") || "无"}`,
+      `低置信度字段：${(quality.low_confidence_fields || []).map((item) => item.label).join("、") || "无"}`,
+      `证据不足字段：${(quality.evidence_missing_fields || []).join("、") || "无"}`,
+      `是否可进入医生审核：${quality.ready_for_doctor_review ? "是" : "否"}`,
+      ...((quality.next_actions || []).map((item) => `下一步：${item}`)),
+    ];
+    return detailSection("病历质量摘要", `
+      <div class="detail-evidence-list">
+        ${rows.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")}
+      </div>
+    `);
+  }
 
   if (section === "candidates") {
     return diagnoses.length
@@ -2289,6 +2375,7 @@ function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
     <div class="doctor-assist-overview">
       ${previewNotice}
       ${previewError}
+      ${renderQualitySummaryCard()}
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}
       ${renderEvidenceCard(evidence, diagnoses)}
@@ -2542,6 +2629,7 @@ function resetTaskState({ keepAsr = false } = {}) {
   appState.currentRecordFields = null;
   appState.currentDraft = "";
   appState.currentSafetyCheck = null;
+  appState.currentQualityReport = null;
   appState.currentAgentTrace = null;
   appState.currentInputText = "";
   appState.taskStatus = "CREATED";
@@ -2588,6 +2676,7 @@ async function refreshTask(taskId, taskFromEvent = null) {
   appState.currentRecordFields = result.fields || appState.currentRecordFields;
   appState.currentDraft = result.draft || appState.currentDraft;
   appState.currentSafetyCheck = result.safety_check || appState.currentSafetyCheck;
+  appState.currentQualityReport = result.quality_report || appState.currentQualityReport;
   await refreshAgentTrace(appState.currentTaskId);
   renderAll();
 }

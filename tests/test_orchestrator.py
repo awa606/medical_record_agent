@@ -7,13 +7,10 @@ from app.db import get_audit_logs, get_task, get_task_steps
 
 
 SNAKE_BITE_CONVERSATION = """
-你好，哪里不好，你是哪里被咬了吗？我是左手手掌被咬了。现在什么感受？
-感觉这里有点肿痛。大概被咬了多久了？大概咬了两个小时左右。
-你被咬了后做没做过什么处理，用酒精冲洗了一下，有没有包扎伤口，
-我这伤口这里绑了绷带，你有没有吃过什么药？
-吃的季德胜蛇药片。你是直接来我们医院还是去过其他医院？直接来咱们医院的。
-现在除了咬伤部位不舒服，还有什么其他难受的？
-我现在有一些胃寒，未能寒战，然后还有一些头晕胸闷，严重的时候还有心慌，
+你好，哪里不舒服，你是哪里被咬了吗？我是左手手掌被咬了。现在什么感受？
+感觉这里有点肿痛。大概被咬了多久了？大概咬了两个小时左右。你被咬了后做没做过什么处理，酒精冲洗了一下，有没有包扎伤口，
+我这伤口这里绑了绷带，你有没有吃过什么药？吃的季德胜蛇药片。你是直接来我们医院还是去过其他医院？直接来咱们医院的。
+现在除了咬伤部位不舒服，还有什么其他难受的？我现在有一些畏寒，还有一些头晕胸闷，严重的时候还有心慌，
 然后我感觉我的牙龈也有一些出血。
 """
 
@@ -64,6 +61,12 @@ class MedicalRecordOrchestratorTests(unittest.TestCase):
         self.assertTrue(safety_check.passed)
         self.assertFalse(safety_check.blocked)
 
+        quality = result["quality_report"]
+        self.assertIsNotNone(quality)
+        self.assertIn("core_completeness", quality)
+        self.assertFalse(quality["export_allowed"])
+        self.assertTrue(quality["doctor_confirmation_required"])
+
         logs = result["step_logs"]
         succeeded_steps = [log["step"] for log in logs if log["event"] == "succeeded"]
         self.assertEqual(
@@ -91,6 +94,7 @@ class MedicalRecordOrchestratorTests(unittest.TestCase):
         self.assertEqual(task["retry_count"], 0)
         self.assertIsNotNone(task["completed_at"])
         self.assertIn("门诊病历草稿", task["result_json"])
+        self.assertIn("quality_report", task["result_json"])
 
         steps = get_task_steps(result["task_id"])
         self.assertEqual(
@@ -117,15 +121,16 @@ class MedicalRecordOrchestratorTests(unittest.TestCase):
         self.assertTrue(result["degraded"])
         self.assertTrue(result["fields"].degraded)
         self.assertTrue(result["fields"].chief_complaint.missing)
-        self.assertEqual(result["fields"].chief_complaint.hint, "降级生成，建议人工填写")
+        self.assertEqual(result["fields"].chief_complaint.hint, "降级生成，建议人工补充")
         self.assertIn("降级生成，建议人工填写", result["draft"])
         self.assertFalse(result["safety_check"].passed)
         self.assertTrue(result["safety_check"].blocked)
+        self.assertEqual(result["quality_report"]["status"], "needs_review")
 
         task = get_task(result["task_id"])
         self.assertEqual(task["status"], MedicalRecordOrchestrator.STATUS_WAITING_DOCTOR_REVIEW)
         self.assertGreaterEqual(task["retry_count"], 3)
-        self.assertIn("降级生成，建议人工填写", task["result_json"])
+        self.assertIn("降级生成，建议人工补充", task["result_json"])
 
         steps = get_task_steps(result["task_id"])
         self.assertEqual(

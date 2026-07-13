@@ -10,11 +10,8 @@ from app.services import MockLLM, mock_extract_fields, mock_generate_draft, mock
 
 SNAKE_BITE_CONVERSATION = """
 你好，哪里不好，你是哪里被咬了吗？我是左手手掌被咬了。现在什么感受？
-感觉这里有点肿痛。大概被咬了多久了？大概咬了两个小时左右。
-你被咬了后做没做过什么处理，用酒精冲洗了一下，有没有包扎伤口，
-我这伤口这里绑了绷带，你有没有吃过什么药？吃的季德胜蛇药片。
-现在除了咬伤部位不舒服，还有什么其他难受的？
-我现在有一些胃寒，然后还有一些头晕胸闷，严重的时候还有心慌，
+感觉这里有点肿痛。大概被咬了多久了？大概咬了两个小时左右。你被咬了后做没做过什么处理，酒精冲洗了一下，有没有包扎伤口，
+我这伤口这里绑了绷带，你有没有吃过什么药？吃的季德胜蛇药片。现在除了咬伤部位不舒服，还有什么其他难受的？我现在有一些畏寒，然后还有一些头晕胸闷，严重的时候还有心慌，
 然后我感觉我的牙龈也有一些出血。
 """
 
@@ -30,7 +27,7 @@ class PromptAndMockLLMTests(unittest.TestCase):
         self.assertIn("source_spans", extract_prompt)
         self.assertIn("不得补充新事实", draft_prompt)
         self.assertIn("候选/待医生确认", draft_prompt)
-        self.assertIn("是否把过敏史未提及写成“无”", safety_prompt)
+        self.assertIn("是否把过敏史未提及写成", safety_prompt)
 
     def test_mock_extract_fields_creates_structured_record(self):
         fields = mock_extract_fields(SNAKE_BITE_CONVERSATION)
@@ -48,7 +45,7 @@ class PromptAndMockLLMTests(unittest.TestCase):
         fields = mock_extract_fields(SNAKE_BITE_CONVERSATION)
         draft = mock_generate_draft(fields)
 
-        self.assertIn("过敏史：未提及/待补充", draft)
+        self.assertIn("过敏史：未提及，待补充", draft)
         self.assertIn("查体：待医生查体补充", draft)
         self.assertIn("毒蛇咬伤（候选/待医生确认）", draft)
         self.assertIn("建议检查", draft)

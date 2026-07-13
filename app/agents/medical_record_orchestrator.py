@@ -15,6 +15,7 @@ from app.db import (
 )
 from app.schemas import MedicalRecordFields, SafetyCheckResult
 from app.services import create_llm_record_generator
+from app.services.record_quality import build_record_quality_report
 
 
 T = TypeVar("T")
@@ -39,6 +40,7 @@ class MedicalRecordOrchestrator:
         self.fields: MedicalRecordFields | None = None
         self.draft: str | None = None
         self.safety_check: SafetyCheckResult | None = None
+        self.quality_report: dict[str, Any] | None = None
         self.llm_trace: dict[str, Any] | None = None
         self.task_id: int | None = None
         self.conversation_text: str | None = None
@@ -107,6 +109,11 @@ class MedicalRecordOrchestrator:
                     "fields": self._snapshot(self.fields),
                 },
             )
+            self.quality_report = build_record_quality_report(
+                self.fields,
+                self.safety_check,
+                draft=self.draft,
+            )
             self._persist_result()
 
             self._set_status(self.STATUS_WAITING_DOCTOR_REVIEW, "doctor_review")
@@ -133,6 +140,7 @@ class MedicalRecordOrchestrator:
         self.fields = None
         self.draft = None
         self.safety_check = None
+        self.quality_report = None
         self.llm_trace = None
         self.task_id = None
         self.conversation_text = None
@@ -280,7 +288,7 @@ class MedicalRecordOrchestrator:
     def _degraded_fields(self) -> MedicalRecordFields:
         fields = MedicalRecordFields(degraded=True)
         for field in self._medical_fields(fields):
-            field.hint = "降级生成，建议人工填写"
+            field.hint = "降级生成，建议人工补充"
         return fields
 
     def _rule_based_draft(self, fields: MedicalRecordFields | None) -> str:
@@ -297,7 +305,7 @@ class MedicalRecordOrchestrator:
                 f"既往史：{self._field_value(record.past_history)}",
                 f"过敏史：{self._field_value(record.allergy_history)}",
                 "查体：待医生查体补充",
-                "候选诊断：未提及/待医生确认",
+                "候选诊断：未提及，待医生确认",
             ]
         )
 
@@ -311,8 +319,8 @@ class MedicalRecordOrchestrator:
 
     def _field_value(self, field: Any) -> str:
         if field is None or field.missing:
-            return "未提及/待补充"
-        return field.value or "未提及/待补充"
+            return "未提及，待补充"
+        return field.value or "未提及，待补充"
 
     def _snapshot(self, value: Any) -> Any:
         if value is None:
@@ -342,6 +350,7 @@ class MedicalRecordOrchestrator:
             "fields": self.fields.model_dump() if self.fields else None,
             "draft": self.draft,
             "safety_check": self.safety_check.model_dump() if self.safety_check else None,
+            "quality_report": self.quality_report,
             "llm_trace": self.llm_trace,
             "step_logs": self.step_logs,
             "error_message": self.error_message,
@@ -356,6 +365,7 @@ class MedicalRecordOrchestrator:
             "fields": self.fields,
             "draft": self.draft,
             "safety_check": self.safety_check,
+            "quality_report": self.quality_report,
             "llm_trace": self.llm_trace,
             "step_logs": self.step_logs,
             "error_message": self.error_message,

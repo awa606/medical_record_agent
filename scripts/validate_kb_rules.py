@@ -26,6 +26,7 @@ DEFAULT_CASES = KB_DIR / "rule_validation_cases.json"
 DEFAULT_JSON_REPORT = KB_DIR / "rule_validation_report.json"
 DEFAULT_MD_REPORT = KB_DIR / "rule_validation_report.md"
 FORBIDDEN_OUTPUT_TERMS = ["最终诊断", "确诊", "自动处方"]
+EXPECTED_CANDIDATE_STATUS = "候选/待医生确认"
 
 
 def validate_rule_cases(cases_path: Path = DEFAULT_CASES) -> dict[str, Any]:
@@ -71,7 +72,7 @@ def _validate_case(case: dict[str, Any]) -> dict[str, Any]:
     ]
     bad_status = [
         candidate.name for candidate in candidates
-        if candidate.status != "候选/待医生确认"
+        if candidate.status != EXPECTED_CANDIDATE_STATUS
     ]
     no_candidate_failure = bool(case.get("expect_no_candidates")) and bool(candidates)
 
@@ -168,7 +169,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
             "python scripts/validate_kb_rules.py",
             "```",
             "",
-            "如果后续导入教材、指南或书籍知识，应先补充来源元数据和人工审核状态，再新增验证样例。",
+            "后续如导入教材、指南或书籍知识，应先补充来源元数据和人工审核状态，再新增验证样例。",
             "",
         ]
     )

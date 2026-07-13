@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from app.agents import MedicalRecordOrchestrator
 from app.schemas import MedicalRecordFields
 from app.services import MockLLM
+from app.services.record_quality import build_record_quality_report
 
 
 router = APIRouter(prefix="/records", tags=["records"])
@@ -43,6 +44,7 @@ class PreviewRecordResponse(BaseModel):
     structured_updates: list[dict[str, Any]]
     missing_items: list[str]
     safety_preview: dict[str, Any]
+    quality_preview: dict[str, Any]
 
 
 FIELD_LABELS = {
@@ -54,6 +56,8 @@ FIELD_LABELS = {
     "allergy_history": "过敏史",
     "physical_exam": "查体",
 }
+
+VALID_STABLE_ROLES = {"医生", "患者", "其他"}
 
 
 def run_record_generation_task(task_id: int, conversation_text: str) -> None:
@@ -98,7 +102,7 @@ def _treatment_plan(fields: MedicalRecordFields) -> dict[str, list[str]]:
     return {
         "suggested_checks": list(dict.fromkeys(suggested_checks)),
         "medication_notes": list(dict.fromkeys(medication_notes))
-        or ["不自动生成处方，需医生确认。"],
+        or ["系统不自动生成处方，治疗和用药必须由医生确认。"],
         "risk_warnings": list(dict.fromkeys(risk_warnings)),
         "follow_up_questions": list(dict.fromkeys(follow_up_questions)),
     }
@@ -110,7 +114,7 @@ def _matching_source_segments(
 ) -> list[dict[str, Any]]:
     def normalize(value: str) -> str:
         without_role = re.sub(r"^\s*\[[^\]]+\]\s*", "", value or "")
-        return re.sub(r"[\s，。！？?!；;：:,、]+", "", without_role)
+        return re.sub(r"[\s，。！？!?、,]+", "", without_role)
 
     normalized_source = normalize(source_text)
     if not normalized_source:
@@ -246,12 +250,12 @@ def _stable_preview_input(payload: PreviewRecordRequest) -> tuple[str, list[dict
     mapped = [
         segment
         for segment in stable
-        if segment.get("role") in {"医生", "患者", "其他"}
+        if segment.get("role") in VALID_STABLE_ROLES
     ]
     if not mapped:
         raise HTTPException(
             status_code=409,
-            detail="Stable speaker-role mapping is required before structured preview",
+            detail="结构化预览需要先完成稳定的说话人角色映射。",
         )
     conversation = "\n".join(
         f"[{segment['role']}] {str(segment.get('text') or '').strip()}"
@@ -259,7 +263,7 @@ def _stable_preview_input(payload: PreviewRecordRequest) -> tuple[str, list[dict
         if str(segment.get("text") or "").strip()
     )
     if not conversation:
-        raise HTTPException(status_code=409, detail="No stable transcript is available for preview")
+        raise HTTPException(status_code=409, detail="暂无可用于预览的稳定转写文本。")
     return conversation, mapped
 
 
@@ -287,6 +291,7 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
     draft = llm.generate_draft(fields)
     safety = llm.safety_check(draft, fields, allow_export=False)
     updates = _structured_updates(fields, stable_segments)
+    quality_preview = build_record_quality_report(fields, safety, draft=draft)
 
     return PreviewRecordResponse(
         status="preview_ready",
@@ -309,4 +314,5 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
         structured_updates=updates,
         missing_items=_missing_items(fields),
         safety_preview=safety.model_dump(mode="json"),
+        quality_preview=quality_preview,
     )

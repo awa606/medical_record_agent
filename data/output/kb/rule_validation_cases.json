@@ -2,7 +2,7 @@
   {
     "case_id": "KB_VAL_WIND_COLD_001",
     "title": "风寒束表证典型样例",
-    "conversation": "患者发热较轻、怕冷明显、清鼻涕、基本不出汗、全身酸痛。",
+    "conversation": "患者发热较轻，怕冷明显，清涕，基本不出汗，全身酸痛。",
     "expected_rule_ids": ["R_WIND_COLD_001"],
     "forbidden_rule_ids": ["R_WIND_HEAT_001"],
     "expect_no_candidates": false
@@ -17,7 +17,7 @@
   },
   {
     "case_id": "KB_VAL_SUMMER_DAMP_001",
-    "title": "暑湿伤表证典型样例",
+    "title": "暑湿困表证典型样例",
     "conversation": "患者发热，头身困重，胸闷恶心，舌苔腻。",
     "expected_rule_ids": ["R_SUMMER_DAMP_001"],
     "forbidden_rule_ids": [],
@@ -25,9 +25,9 @@
   },
   {
     "case_id": "KB_VAL_QI_DEF_001",
-    "title": "气虚感冒证典型样例",
+    "title": "气虚外感证典型样例",
     "conversation": "患者反复感冒，乏力气短，容易出汗，舌淡。",
-    "expected_rule_ids": ["R_QI_DEF_001"],
+    "expected_rule_ids": ["R_QI_DEFICIENCY_001"],
     "forbidden_rule_ids": ["R_WIND_HEAT_001"],
     "expect_no_candidates": false
   },
@@ -36,7 +36,12 @@
     "title": "非感冒负例",
     "conversation": "患者右膝扭伤后疼痛三天，活动受限，局部轻度肿胀。",
     "expected_rule_ids": [],
-    "forbidden_rule_ids": ["R_WIND_COLD_001", "R_WIND_HEAT_001", "R_SUMMER_DAMP_001", "R_QI_DEF_001"],
+    "forbidden_rule_ids": [
+      "R_WIND_COLD_001",
+      "R_WIND_HEAT_001",
+      "R_SUMMER_DAMP_001",
+      "R_QI_DEFICIENCY_001"
+    ],
     "expect_no_candidates": true
   },
   {
@@ -46,6 +51,6 @@
     "expected_rule_ids": ["R_WIND_HEAT_001"],
     "forbidden_rule_ids": [],
     "expect_no_candidates": false,
-    "expected_warning_terms": ["医生进一步评估"]
+    "expected_warning_terms": ["医生复评"]
   }
 ]

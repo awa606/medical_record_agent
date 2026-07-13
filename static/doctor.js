@@ -12,6 +12,8 @@ const appState = {
   currentDraft: "",
   currentSafetyCheck: null,
   currentQualityReport: null,
+  currentExportReadiness: null,
+  currentExports: null,
   currentAgentTrace: null,
   currentLlmStatus: null,
   currentInputText: "",
@@ -229,10 +231,51 @@ async function api(path, options = {}) {
   if (!response.ok) {
     const detail = data.detail;
     if (typeof detail === "string") throw new Error(detail);
-    if (detail?.errors) throw new Error(detail.errors.join(" "));
+    if (detail?.errors) {
+      const error = new Error(detail.errors.join(" "));
+      error.detail = detail;
+      throw error;
+    }
     throw new Error(JSON.stringify(detail || data));
   }
   return data;
+}
+
+async function refreshExportReadiness() {
+  if (!appState.currentTaskId) return null;
+  try {
+    const readiness = await api(`/api/tasks/${appState.currentTaskId}/export-readiness`);
+    appState.currentExportReadiness = readiness;
+    if (readiness?.exports) {
+      appState.currentExports = readiness.exports;
+    }
+    return readiness;
+  } catch (error) {
+    appState.currentExportReadiness = null;
+    return null;
+  }
+}
+
+function renderExportReadinessDetail(readiness = appState.currentExportReadiness) {
+  const exports = appState.currentExports || readiness?.exports || null;
+  const rows = [];
+  if (readiness) {
+    rows.push(readiness.ready ? "导出状态：可以导出。" : "导出状态：暂不可导出。");
+    (readiness.errors || []).forEach((item) => rows.push(`阻断原因：${item}`));
+    if (readiness.next_action) rows.push(`下一步：${readiness.next_action}`);
+  } else {
+    rows.push("导出状态：尚未获取导出就绪状态。");
+  }
+
+  const exportRows = exports
+    ? Object.entries(exports).map(([key, value]) => `${key}：${value}`)
+    : [];
+
+  return detailSection("导出状态与文件", `
+    <div class="detail-evidence-list">
+      ${[...rows, ...exportRows].map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")}
+    </div>
+  `);
 }
 
 function renderJson(element, value) {
@@ -2498,9 +2541,22 @@ function renderAssistDetailContent(section) {
     ...warnings,
     ...errors,
   ];
+  const readiness = appState.currentExportReadiness;
+  const exports = appState.currentExports || readiness?.exports || null;
+  const exportRows = readiness
+    ? [
+        readiness.ready ? "导出状态：可以导出。" : "导出状态：暂不可导出。",
+        ...(readiness.errors || []).map((item) => `导出阻断：${item}`),
+        readiness.next_action ? `下一步：${readiness.next_action}` : "",
+      ].filter(Boolean)
+    : [];
+  const exportedRows = exports
+    ? Object.entries(exports).map(([key, value]) => `导出文件 ${key}：${value}`)
+    : [];
+  const detailRows = [...rows, ...exportRows, ...exportedRows];
   return detailSection("安全校验结果", `
     <div class="detail-evidence-list">
-      ${rows.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")}
+      ${detailRows.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")}
     </div>
   `);
 }
@@ -2777,6 +2833,8 @@ function resetTaskState({ keepAsr = false } = {}) {
   appState.currentDraft = "";
   appState.currentSafetyCheck = null;
   appState.currentQualityReport = null;
+  appState.currentExportReadiness = null;
+  appState.currentExports = null;
   appState.currentAgentTrace = null;
   appState.currentInputText = "";
   appState.taskStatus = "CREATED";
@@ -2824,6 +2882,7 @@ async function refreshTask(taskId, taskFromEvent = null) {
   appState.currentDraft = result.draft || appState.currentDraft;
   appState.currentSafetyCheck = result.safety_check || appState.currentSafetyCheck;
   appState.currentQualityReport = result.quality_report || appState.currentQualityReport;
+  appState.currentExports = result.exports || appState.currentExports;
   await refreshAgentTrace(appState.currentTaskId);
   renderAll();
 }
@@ -3590,16 +3649,42 @@ async function exportRecord() {
   try {
     if (!appState.currentTaskId) throw new Error("暂无可导出的任务");
     if (!isApprovedForExport()) {
-      openDetailDrawer("暂不可导出", renderAssistDetailContent("safety"));
+      const readiness = await refreshExportReadiness();
+      openDetailDrawer(
+        "暂不可导出",
+        readiness ? renderExportReadinessDetail(readiness) : renderAssistDetailContent("safety"),
+      );
       return;
     }
     setBusy(true, "正在导出...");
     const result = await api(`/api/tasks/${appState.currentTaskId}/export`, { method: "POST" });
+    appState.currentExports = result.exports || {};
+    appState.currentExportReadiness = result.export_readiness || {
+      task_id: appState.currentTaskId,
+      ready: true,
+      blocked: false,
+      errors: [],
+      next_action: "导出已完成。",
+      exports: appState.currentExports,
+    };
+    appState.currentTask = {
+      ...(appState.currentTask || {}),
+      current_stage: "exported",
+      result_json: {
+        ...((appState.currentTask || {}).result_json || {}),
+        exports: appState.currentExports,
+      },
+    };
     appState.taskStatus = "EXPORTED";
     renderAll();
     setBusy(false);
+    openDetailDrawer("导出完成", renderExportReadinessDetail(appState.currentExportReadiness));
     showToast(`导出完成：${Object.values(result.exports || {}).join(" / ")}`);
   } catch (error) {
+    if (error.detail?.errors) {
+      appState.currentExportReadiness = error.detail;
+      openDetailDrawer("暂不可导出", renderExportReadinessDetail(error.detail));
+    }
     setBusy(false);
     reportActionError(error);
   }

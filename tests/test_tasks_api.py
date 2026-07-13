@@ -14,6 +14,7 @@ from app.api.tasks import (
     approve_task,
     export_task,
     read_task_agent_trace,
+    read_export_readiness,
     read_task,
     read_task_steps,
     review_task,
@@ -47,6 +48,7 @@ class TaskApiTests(unittest.TestCase):
         self.assertIn("/api/tasks/{task_id}/steps", route_paths)
         self.assertIn("/api/tasks/{task_id}/trace", route_paths)
         self.assertIn("/api/tasks/{task_id}/events", route_paths)
+        self.assertIn("/api/tasks/{task_id}/export-readiness", route_paths)
         self.assertIn("/api/records/generate", route_paths)
 
     def test_read_task_and_steps(self):
@@ -126,13 +128,27 @@ class TaskApiTests(unittest.TestCase):
         with self.assertRaises(HTTPException) as blocked:
             export_task(task_id)
         self.assertEqual(blocked.exception.status_code, 400)
+        self.assertFalse(blocked.exception.detail["ready"])
+        self.assertTrue(blocked.exception.detail["blocked"])
+        self.assertIn("errors", blocked.exception.detail)
+
+        readiness_before_approval = read_export_readiness(task_id)
+        self.assertFalse(readiness_before_approval.ready)
+        self.assertTrue(readiness_before_approval.blocked)
+        self.assertIn("医生确认", readiness_before_approval.next_action)
 
         approved = approve_task(task_id)
         approved_fields = approved["result_json"]["fields"]
         self.assertTrue(approved_fields["chief_complaint"]["confirmed_by_doctor"])
         self.assertTrue(approved_fields["candidate_diagnoses"][0]["confirmed_by_doctor"])
 
+        readiness_after_approval = read_export_readiness(task_id)
+        self.assertTrue(readiness_after_approval.ready)
+        self.assertFalse(readiness_after_approval.blocked)
+
         exported = export_task(task_id)
+        self.assertIn("export_readiness", exported)
+        self.assertTrue(exported["export_readiness"]["ready"])
         markdown_path = Path(exported["exports"]["markdown_path"])
         word_path = Path(exported["exports"]["word_path"])
 

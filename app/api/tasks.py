@@ -22,6 +22,16 @@ class ReviewRequest(BaseModel):
     fields: MedicalRecordFields
 
 
+class ExportReadinessResponse(BaseModel):
+    task_id: int
+    ready: bool
+    blocked: bool
+    errors: list[str]
+    next_action: str
+    current_stage: str | None = None
+    exports: dict[str, str] | None = None
+
+
 def _decode_result_json(task: dict[str, Any]) -> dict[str, Any]:
     result_json = task.get("result_json")
     if result_json:
@@ -151,9 +161,13 @@ def approve_task(task_id: int) -> dict[str, Any]:
 @router.post("/{task_id}/export")
 def export_task(task_id: int) -> dict[str, Any]:
     task, result = _load_task_result(task_id)
-    errors = _validate_export_ready(result)
-    if errors:
-        raise HTTPException(status_code=400, detail={"errors": errors})
+    readiness = _build_export_readiness(
+        task_id,
+        result,
+        current_stage=task.get("current_stage"),
+    )
+    if readiness["errors"]:
+        raise HTTPException(status_code=400, detail=readiness)
 
     try:
         exports = export_record(task_id, result)
@@ -175,7 +189,24 @@ def export_task(task_id: int) -> dict[str, Any]:
     )
     task["result_json"] = result
     task["current_stage"] = "exported"
-    return {"task_id": task_id, "exports": exports}
+    export_readiness = _build_export_readiness(
+        task_id,
+        result,
+        current_stage="exported",
+    )
+    return {"task_id": task_id, "exports": exports, "export_readiness": export_readiness}
+
+
+@router.get("/{task_id}/export-readiness", response_model=ExportReadinessResponse)
+def read_export_readiness(task_id: int) -> ExportReadinessResponse:
+    task, result = _load_task_result(task_id)
+    return ExportReadinessResponse(
+        **_build_export_readiness(
+            task_id,
+            result,
+            current_stage=task.get("current_stage"),
+        )
+    )
 
 
 def _iter_medical_fields(fields: MedicalRecordFields):
@@ -221,6 +252,28 @@ def _validate_export_ready(result: dict[str, Any]) -> list[str]:
         errors.append(f"存在未确认候选诊断：{'、'.join(unconfirmed_diagnoses)}。")
 
     return errors
+
+
+def _build_export_readiness(
+    task_id: int,
+    result: dict[str, Any],
+    *,
+    current_stage: str | None = None,
+) -> dict[str, Any]:
+    errors = _validate_export_ready(result)
+    exports = result.get("exports")
+    if not isinstance(exports, dict):
+        exports = None
+
+    return {
+        "task_id": task_id,
+        "ready": not errors,
+        "blocked": bool(errors),
+        "errors": errors,
+        "next_action": "可以导出。" if not errors else "请先完成医生确认和安全校验，再导出。",
+        "current_stage": current_stage,
+        "exports": exports,
+    }
 
 
 def _decode_event_detail(event_detail: str | None) -> dict[str, Any]:

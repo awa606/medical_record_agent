@@ -342,7 +342,7 @@ def add_personal_contribution(doc: Document, template: bool = False) -> None:
         set_cell_text(table.rows[0].cells[i], h, True)
     rows = [["待补充", "待补充", "待补充"], ["待补充", "待补充", "待补充"], ["待补充", "待补充", "待补充"]]
     if not template:
-        rows[0] = ["项目自评", "96/100", "已完成 v0.8.5 原生流式转写、播放器、CAM++ 校准与实时病历预览；补充 v0.8.8 两说话人人工 RTTM 评测、v0.8.17-v0.8.18 真实多说话人对比与对齐脚本、v0.8.19-v0.8.20 pyannote 隔离环境门禁，以及 Docker 2601 前端复测和 v1.0 冻结材料。当前真实阻塞收敛到 HF_TOKEN、3D-Speaker 运行区和医院 PC 复测。"]
+        rows[0] = ["项目自评", "97/100", "已完成原生流式转写、播放器、CAM++ 校准、实时病历预览、病历质量评估、字段证据定位，以及 v0.9.4 候选诊断/治疗建议质量收口与 SSE 断连恢复复验；当前主要待补证据为 HF_TOKEN 放行后的 pyannote measured turns、3D-Speaker 运行区与普通医院 PC 复测。"]
     for r, row in enumerate(rows, start=1):
         for c, value in enumerate(row):
             set_cell_text(table.rows[r].cells[c], value)
@@ -360,9 +360,9 @@ def add_kanban(doc: Document, template: bool = False) -> None:
     for i, h in enumerate(headers):
         set_cell_text(table.rows[0].cells[i], h, True)
     rows = [
-        ["pyannote HF_TOKEN 与 3D-Speaker 运行区", "第二周稳定性与评测补强", "第一周 v0.8.8 可演示/可评测冻结"],
-        ["SSE 断连恢复与普通医院 PC 复测", "pyannote measured turns 与 ASR 对齐复测", "两说话人 RTTM、v0.8.17-v0.8.20 说话人分离准备、Docker 2601 前端验收"],
-        ["最终演示视频", "第三周产品化交付加固", "终答辩冻结清单、PPT 大纲、讲稿和 runbook"],
+        ["pyannote HF_TOKEN 放行与 3D-Speaker 运行区", "v0.9.4 候选诊断与治疗建议质量优化", "v0.9.3 医生端前端冻结与病历质量主线"],
+        ["普通医院 PC 复测与 SSE 断连恢复", "pyannote measured turns 与 ASR 对齐复测", "v0.9.2 字段质量、证据定位与质量摘要"],
+        ["最终演示视频与导出复盘", "v0.9.5 最终演示数据和稳定性加固", "两说话人 RTTM、v0.8.17-v0.8.20 说话人分离准备、Docker 2626 前端验收"],
     ]
     if template:
         rows = [["", "", ""], ["", "", ""], ["", "", ""]]
@@ -392,6 +392,8 @@ def add_feature_list(doc: Document, template: bool = False) -> None:
         ["F10", "两说话人 RTTM 实测与终答辩冻结", "完成 fever_01、chest_pain_01 人工 RTTM、FunASR CAM++ 评测汇总和 Docker 2601 前端复测", "P1", "否", "是", MEMBER_NAME, "v0.8.8"],
         ["F11", "真实多说话人分离对比与对齐", "补齐 AliMeeting 公开样本、统一比较脚本、ASR-diarization 对齐脚本与真实 failed/skipped 结论", "P1", "否", "是", MEMBER_NAME, "v0.8.18"],
         ["F12", "pyannote 隔离环境与门禁检查", "创建 .venv-diarization、固定 pyannote 依赖版本，并把阻塞收敛到 HF_TOKEN 门禁", "P1", "否", "是", MEMBER_NAME, "v0.8.20"],
+        ["F13", "病历质量评估与字段证据定位", "输出字段完整度、低置信度、证据覆盖和建议动作，并把字段证据映射到稳定转写段", "P1", "否", "是", MEMBER_NAME, "v0.9.2"],
+        ["F14", "医生端前端冻结与摘要化展示", "默认界面只保留摘要和主操作，完整质量原因、证据和阻断原因进入详情抽屉", "P1", "否", "是", MEMBER_NAME, "v0.9.3"],
     ]
     add_table(doc, rows)
     doc.add_heading("二、优先级建议", level=2)
@@ -490,7 +492,9 @@ def add_poc_check(doc: Document, template: bool = False) -> None:
         ["医生声纹注册与整位角色分类", "是", "已完成医生声纹注册接口、CAM++ 嵌入匹配和整位说话人角色分类逻辑。"],
         ["两说话人 RTTM 评测与汇总", "是", "已完成 fever_01、chest_pain_01 人工 RTTM、FunASR CAM++ 评测和 summary.md/json。"],
         ["真实多说话人对比与 pyannote 环境", "是", "已完成 v0.8.17-v0.8.20 脚本、报告和 .venv-diarization 安装；当前阻塞为 HF_TOKEN 与 3D-Speaker 运行区。"],
-        ["Docker 2601 前端复测与 v1.0 冻结", "是", "已完成文本生成、Mock ASR、FunASR 短音频、播放器 Range、角色统一校正、证据面板和冻结清单。"],
+        ["病历质量评估与字段证据定位", "是", "已完成 v0.9.0-v0.9.2 质量评估服务、字段质量状态、segment_id 证据定位与前端质量摘要展示。"],
+        ["医生端前端冻结与最终收敛", "是", "已完成 v0.9.3 默认摘要化展示、详情抽屉、导出阻断原因提示和 frontend-freeze 规则。"],
+        ["候选诊断/治疗建议质量与 SSE 复验", "是", "已完成 v0.9.4 diagnosis_quality、treatment_safety、建议补问详情展示和 SSE Last-Event-ID 复验；普通医院 PC 复测仍阻塞。"],
     ]
     doc.add_heading("一、核心功能完成情况", level=2)
     add_table(doc, rows)
@@ -501,7 +505,7 @@ def add_poc_check(doc: Document, template: bool = False) -> None:
         "2. Qwen3-ASR 可用于角色上下文分类研究，但 CPU-only 资源占用不适合作为默认交付模型。",
         "3. 普通医院 Windows 办公 PC 实机配置与实测数据仍待采集。",
         "4. pyannote 隔离环境已装好但仍需要 HF_TOKEN，3D-Speaker 仍需要独立运行区和 wrapper 脚本。",
-        "5. 第二/三周计划已明确优先级，但仍需用真实样本、断连验收和 PC 复测证据闭环风险。",
+        "5. v0.9.3 已冻结前端主界面，v0.9.4 已在冻结约束下补齐候选诊断与治疗建议质量；剩余风险集中在普通医院 PC 复测和多说话人环境阻塞。",
     ] if not template else ["1.", "2.", "3.", "4.", "5."])
     add_list_section(doc, "五、结论", ["☑ 达到阶段性 POC 要求" if not template else "□ 达到POC要求", "□ 未达到POC要求"])
 
@@ -513,7 +517,8 @@ def add_bug_list(doc: Document, template: bool = False) -> None:
         ["1", "普通医院 Windows 办公 PC 的真实硬件配置与实测数据尚未采集", "流程", "中", "处理中", MEMBER_NAME],
         ["2", "pyannote 隔离环境已完成安装，但真实 measured 评测仍缺 Hugging Face 令牌授权", "环境", "中", "已记录", MEMBER_NAME],
         ["3", "3D-Speaker 独立运行区、SSE 断连恢复和普通医院 PC 复测仍缺最终验收", "稳定性", "中", "处理中", MEMBER_NAME],
-        ["4", "FunASR 首次冷启动和模型下载可能导致前端等待首段超过 150 秒", "环境", "中", "已记录", MEMBER_NAME],
+        ["4", "frontend-freeze 生效后，候选诊断和治疗建议质量优化只能通过最小展示适配推进", "流程", "低", "处理中", MEMBER_NAME],
+        ["5", "FunASR 首次冷启动和模型下载可能导致前端等待首段超过 150 秒", "环境", "中", "已记录", MEMBER_NAME],
     ]
     add_table(doc, rows)
     add_list_section(doc, "说明", ["高 = 系统不能运行/影响系统运行", "中 = 功能受影响/影响体验", "低 = 优化项"])
@@ -521,11 +526,12 @@ def add_bug_list(doc: Document, template: bool = False) -> None:
 
 def add_test_record(doc: Document, template: bool = False) -> None:
     add_meta(doc, member="测试负责人", day="Day15")
-    add_list_section(doc, "一、测试目标", ["验证成果手册表单刷新、v0.8.5 实时病历预览主线未回退，以及 v0.8.8 两说话人 RTTM 评测、v0.8.17-v0.8.20 说话人分离脚本与环境推进、Docker 2601 前端复测和 v1.0 冻结材料可追踪。"] if not template else ["（如稳定性/精度/功耗）"])
+    add_list_section(doc, "一、测试目标", ["验证成果手册表单刷新、v0.9.4 候选诊断/治疗建议质量主线未回退、v0.9.3 前端冻结状态可追踪，并补 SSE 断连恢复复验证据。"] if not template else ["（如稳定性/精度/功耗）"])
     doc.add_heading("二、测试方案", level=2)
     rows = [["测试项", "方法", "指标"]]
     rows += [["", "", ""], ["", "", ""]] if template else [
         ["说话人链路定向回归", "pytest -q tests/test_diarization_evaluator.py tests/test_speaker_profiles.py tests/test_speaker_role_classifier.py tests/test_asr_sessions_api.py tests/test_funasr_streaming_engine.py tests/test_records_api.py tests/test_speaker_diarization.py tests/test_run_diarization_engine_compare.py tests/test_apply_diarization_turns_to_asr_result.py tests/test_bootstrap_diarization_eval.py", "37 passed"],
+        ["病历质量定向回归", "pytest -q tests/test_record_quality.py tests/test_records_api.py", "通过"],
         ["依赖与语法检查", "py_compile + node --check", "通过"],
         ["说话人分离依赖报告", "python scripts/check_diarization_dependencies.py && .\\.venv-diarization\\Scripts\\python scripts\\bootstrap_diarization_eval.py", "生成 dependency_status.md/json 和 bootstrap_status.md/json"],
     ]
@@ -535,12 +541,13 @@ def add_test_record(doc: Document, template: bool = False) -> None:
     rows += [["", "", "是/否"], ["", "", "是/否"]] if template else [
         ["表单脚本与定向回归", "py_compile + pytest 定向用例 + update_homework_forms.py", "是"],
         ["说话人链路定向测试", "37 passed（含 v0.8.17-v0.8.20 新增脚本用例）", "是"],
+        ["病历质量定向测试", "tests/test_record_quality.py 与 tests/test_records_api.py 通过", "是"],
         ["两说话人 RTTM 评测", "fever_01/chest_pain_01 measured，summary.md/json 已生成", "是"],
-        ["Docker 2601 前端复测", "文本、Mock ASR、FunASR 短音频、Range、角色校正截图已生成", "是"],
+        ["Docker 2626 前端复测", "文本、Mock ASR、质量摘要、详情抽屉与导出阻断原因已验收", "是"],
     ]
     add_table(doc, rows)
-    add_list_section(doc, "四、问题分析", ["课程样本、原生流式、说话人链路、两说话人 RTTM、v0.8.17-v0.8.20 说话人分离脚本/环境证据和 Docker 2601 前端复测证据已具备；普通医院 PC 实机复测、HF_TOKEN 门禁放行、3D-Speaker 运行区和 SSE 断连恢复仍未完成。"] if not template else ["1.", "2."])
-    add_list_section(doc, "五、改进措施", ["按第二/三周计划优先补 pyannote measured turns、ASR 对齐复测、SSE 断连恢复、普通医院 PC 复测和最终演示视频；提交时排除模型缓存、运行时音频、HF_TOKEN 和私密配置。"] if not template else ["1.", "2."])
+    add_list_section(doc, "四、问题分析", ["v0.9.4 候选诊断/治疗建议质量和 SSE 断连恢复复验证据已具备；普通医院 PC 实机复测、HF_TOKEN 门禁放行和 3D-Speaker 运行区仍未完成，且前端冻结后只能做最小展示改动。"] if not template else ["1.", "2."])
+    add_list_section(doc, "五、改进措施", ["按 v0.9.5 计划在 frontend-freeze 约束下优先补普通医院 PC 复测、pyannote measured turns、ASR 对齐复测和最终演示视频；提交时排除模型缓存、运行时音频、HF_TOKEN 和私密配置。"] if not template else ["1.", "2."])
 
 
 def add_evt_check(doc: Document, template: bool = False) -> None:
@@ -560,13 +567,13 @@ def add_final_score(doc: Document, template: bool = False) -> None:
     add_meta(doc, day="Day20")
     rows = [["类别", "分值", "当前填写"]]
     rows += [["POC实现", "50", ""], ["工程能力", "20", ""], ["文档", "15", ""], ["展示答辩", "15", ""]] if template else [
-        ["POC实现", "50", "已完成 SSE、角色校正、病历生成闭环、v0.5.7 中文医患样本多模型 ASR 对比、v0.5.9 长音频切片稳定性修复，以及 v0.8.5 实时病历预览与证据回放、v0.8.8 两说话人 RTTM 评测、v0.8.17-v0.8.20 真实多说话人分离脚本/环境推进和 v1.0 前端验收，建议 48/50。"],
-        ["工程能力", "20", "工程结构、测试、版本、日志、评测脚本和表单自动化完整，建议 19/20。"],
+        ["POC实现", "50", "已完成 SSE、角色校正、病历生成闭环、病历质量评估、字段证据定位，以及 v0.9.4 候选诊断/治疗建议质量收口与 SSE 复验；保留 v0.8.8 与 v0.8.17-v0.8.20 说话人分离评测证据，建议 49/50。"],
+        ["工程能力", "20", "工程结构、测试、版本、日志、评测脚本和表单自动化完整，且已形成 frontend-freeze 规则与质量回归闭环，建议 19/20。"],
         ["文档", "15", "README、版本、架构、模型路线、日报、能力矩阵和周评审材料已更新，建议 14/15。"],
-        ["展示答辩", "15", "PPT 大纲、讲稿、runbook、验收文档和冻结清单已补齐，待录制最终演示视频，暂填 13/15。"],
+        ["展示答辩", "15", "前端冻结说明、验收文档、runbook 和周评审材料已补齐，待录制最终演示视频并补普通医院 PC 复测，暂填 13/15。"],
     ]
     add_table(doc, rows)
-    doc.add_paragraph("总分：" + ("" if template else "建议自评 94/100，待教师确认"))
+    doc.add_paragraph("总分：" + ("" if template else "建议自评 95/100，待教师确认"))
     doc.add_paragraph("评委：" + ("" if template else "待教师评分"))
 
 

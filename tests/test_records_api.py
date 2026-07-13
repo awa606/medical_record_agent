@@ -104,6 +104,11 @@ class RecordsApiTests(unittest.TestCase):
         self.assertGreater(response.quality_preview["core_completeness"], 0)
         self.assertTrue(response.quality_preview["field_quality"])
         self.assertFalse(response.quality_preview["export_allowed"])
+        self.assertIn("candidate_diagnosis_status", response.quality_preview)
+        self.assertIn("diagnosis_quality", response.quality_preview["candidate_diagnosis_status"])
+        self.assertIn("treatment_safety", response.quality_preview)
+        self.assertIn("status", response.quality_preview["treatment_safety"])
+        self.assertIn("quality_issues", response.quality_preview["treatment_safety"])
         self.assertNotIn("task_id", response_data)
         self.assertNotIn("events_url", response_data)
 

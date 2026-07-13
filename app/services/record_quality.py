@@ -70,6 +70,7 @@ def build_record_quality_report(
         low_confidence=low_confidence,
         evidence_missing=evidence_missing,
         diagnosis_summary=diagnosis_summary,
+        treatment_summary=treatment_summary,
         safety=safety,
     )
 
@@ -118,6 +119,11 @@ def _empty_report() -> dict[str, Any]:
             "requires_doctor_confirmation": True,
             "auto_prescription": False,
             "medication_notes": ["系统不自动生成处方，治疗和用药必须由医生确认。"],
+            "suggested_checks": [],
+            "risk_warnings": [],
+            "follow_up_questions": [],
+            "status": "needs_review",
+            "quality_issues": ["建议检查", "风险提醒", "补问建议"],
         },
         "field_quality": [
             _field_quality_item(key, label, None)
@@ -238,6 +244,8 @@ def _field_quality_item(key: str, label: str, field: Any | None) -> dict[str, An
 def _diagnosis_summary(record: MedicalRecordFields) -> dict[str, Any]:
     diagnoses = record.candidate_diagnoses
     quality_issues: list[dict[str, Any]] = []
+    diagnosis_quality: list[dict[str, Any]] = []
+    missing_total = 0
     for diagnosis in diagnoses:
         missing_items: list[str] = []
         if not diagnosis.evidence:
@@ -248,10 +256,40 @@ def _diagnosis_summary(record: MedicalRecordFields) -> dict[str, Any]:
             missing_items.append("风险提醒")
         if not diagnosis.medication_notes:
             missing_items.append("用药边界")
+        if not diagnosis.follow_up_questions:
+            missing_items.append("补问建议")
         if diagnosis.status != "候选/待医生确认" or diagnosis.confirmed_by_doctor:
             missing_items.append("医生确认边界")
+        missing_total += len(missing_items)
+        diagnosis_quality.append(
+            {
+                "name": diagnosis.name,
+                "status": "needs_review" if missing_items else "complete",
+                "missing": missing_items,
+                "has_evidence": bool(diagnosis.evidence),
+                "has_suggested_checks": bool(diagnosis.suggested_checks),
+                "has_risk_warnings": bool(diagnosis.risk_warnings),
+                "has_medication_boundary": bool(diagnosis.medication_notes),
+                "has_follow_up_questions": bool(diagnosis.follow_up_questions),
+                "doctor_confirmation_required": (
+                    diagnosis.status == "候选/待医生确认"
+                    and not diagnosis.confirmed_by_doctor
+                ),
+                "suggested_action": (
+                    f"补充{ '、'.join(missing_items) }。"
+                    if missing_items
+                    else "候选诊断信息完整，等待医生确认。"
+                ),
+            }
+        )
         if missing_items:
             quality_issues.append({"name": diagnosis.name, "missing": missing_items})
+    total_requirements = max(len(diagnoses) * 6, 1)
+    quality_score = (
+        round(max(0.0, 1 - missing_total / total_requirements), 2)
+        if diagnoses
+        else 0.0
+    )
     return {
         "has_candidates": bool(diagnoses),
         "unconfirmed_count": len([item for item in diagnoses if not item.confirmed_by_doctor]),
@@ -260,19 +298,73 @@ def _diagnosis_summary(record: MedicalRecordFields) -> dict[str, Any]:
         "names": [item.name for item in diagnoses],
         "doctor_confirmation_required": bool(diagnoses),
         "quality_issues": quality_issues,
+        "diagnosis_quality": diagnosis_quality,
+        "quality_score": quality_score,
     }
 
 
 def _treatment_summary(record: MedicalRecordFields) -> dict[str, Any]:
+    if not record.candidate_diagnoses:
+        return {
+            "requires_doctor_confirmation": True,
+            "auto_prescription": False,
+            "medication_notes": ["系统不自动生成处方，治疗和用药必须由医生确认。"],
+            "suggested_checks": [],
+            "risk_warnings": [],
+            "follow_up_questions": [],
+            "has_suggested_checks": False,
+            "has_risk_warnings": False,
+            "has_follow_up_questions": False,
+            "has_medication_boundary": True,
+            "status": "not_applicable",
+            "quality_issues": [],
+            "next_actions": [],
+        }
+    suggested_checks: list[str] = []
     notes: list[str] = []
+    risk_warnings: list[str] = []
+    follow_up_questions: list[str] = []
     for diagnosis in record.candidate_diagnoses:
+        suggested_checks.extend(diagnosis.suggested_checks)
         notes.extend(diagnosis.medication_notes)
+        risk_warnings.extend(diagnosis.risk_warnings)
+        follow_up_questions.extend(diagnosis.follow_up_questions)
+    suggested_checks = _unique(suggested_checks)
+    risk_warnings = _unique(risk_warnings)
+    follow_up_questions = _unique(follow_up_questions)
     if not notes:
         notes = ["系统不自动生成处方，治疗和用药必须由医生确认。"]
+    medication_notes = _unique(notes)
+    has_medication_boundary = any(
+        "医生确认" in note or "不自动" in note or "系统不" in note
+        for note in medication_notes
+    )
+    quality_issues: list[str] = []
+    if not suggested_checks:
+        quality_issues.append("建议检查")
+    if not risk_warnings:
+        quality_issues.append("风险提醒")
+    if not follow_up_questions:
+        quality_issues.append("补问建议")
+    if not has_medication_boundary:
+        quality_issues.append("用药边界")
     return {
         "requires_doctor_confirmation": True,
         "auto_prescription": False,
-        "medication_notes": list(dict.fromkeys(notes)),
+        "medication_notes": medication_notes,
+        "suggested_checks": suggested_checks,
+        "risk_warnings": risk_warnings,
+        "follow_up_questions": follow_up_questions,
+        "has_suggested_checks": bool(suggested_checks),
+        "has_risk_warnings": bool(risk_warnings),
+        "has_follow_up_questions": bool(follow_up_questions),
+        "has_medication_boundary": has_medication_boundary,
+        "status": "needs_review" if quality_issues else "complete",
+        "quality_issues": quality_issues,
+        "next_actions": [
+            f"补充治疗建议中的{item}。"
+            for item in quality_issues
+        ],
     }
 
 
@@ -282,6 +374,7 @@ def _next_actions(
     low_confidence: list[dict[str, Any]],
     evidence_missing: list[str],
     diagnosis_summary: dict[str, Any],
+    treatment_summary: dict[str, Any],
     safety: SafetyCheckResult | None,
 ) -> list[str]:
     actions: list[str] = []
@@ -297,8 +390,14 @@ def _next_actions(
     for issue in diagnosis_summary.get("quality_issues", []):
         missing_parts = "、".join(issue["missing"])
         actions.append(f"完善候选诊断“{issue['name']}”：{missing_parts}。")
+    for item in treatment_summary.get("quality_issues", []):
+        actions.append(f"完善治疗建议：{item}。")
     if safety and safety.errors:
         actions.append("处理安全校验错误后再进入审核。")
     if not actions:
         actions.append("核心字段和证据基本完整，可进入医生审核。")
     return actions
+
+
+def _unique(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(item for item in values if item))

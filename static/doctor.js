@@ -1019,6 +1019,7 @@ function renderFieldDetailContent(key) {
 function renderDiagnosisDetailContent(index) {
   const diagnosis = activeRecordFields()?.candidate_diagnoses?.[index];
   if (!diagnosis) return `<div class="empty-state">暂无候选诊断详情。</div>`;
+  const diagnosisQuality = activeQualityReport()?.candidate_diagnosis_status?.diagnosis_quality?.[index] || null;
   return `
     ${detailSection(diagnosis.name || "候选诊断", `
       <div class="detail-kv">
@@ -1031,6 +1032,15 @@ function renderDiagnosisDetailContent(index) {
       </div>
       <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
     `)}
+    ${diagnosisQuality ? detailSection("质量判断", `
+      <div class="detail-kv"><span>质量状态</span><strong>${escapeHtml(diagnosisQuality.status === "complete" ? "质量可用" : "需完善")}</strong></div>
+      <div class="detail-kv"><span>医生确认</span><strong>${escapeHtml(diagnosisQuality.doctor_confirmation_required ? "仍需确认" : "已满足边界")}</strong></div>
+      <div class="detail-text">${escapeHtml(
+        diagnosisQuality.missing?.length
+          ? `缺项：${diagnosisQuality.missing.join("、")}。${diagnosisQuality.suggested_action || ""}`
+          : (diagnosisQuality.suggested_action || "候选诊断结构完整，等待医生确认。")
+      )}</div>
+    `) : ""}
     ${detailSection("诊断证据", `<div class="detail-text">${escapeHtml((diagnosis.evidence || []).map((item) => item.text).filter(Boolean).join("\n") || "暂无候选诊断证据。")}</div>`)}
   `;
 }
@@ -2396,6 +2406,14 @@ function renderAssistDetailContent(section) {
   if (section === "quality") {
     const quality = activeQualityReport();
     if (!quality) return `<div class="empty-state">暂无病历质量报告。</div>`;
+    const treatment = quality.treatment_safety || {};
+    const treatmentRows = [
+      `治疗建议状态：${treatment.status === "complete" ? "完整" : treatment.status === "not_applicable" ? "暂无候选诊断，暂不适用" : "需完善"}`,
+      `建议检查：${(treatment.suggested_checks || []).join("、") || "暂无"}`,
+      `风险提醒：${(treatment.risk_warnings || []).join("、") || "暂无"}`,
+      `建议补问：${(treatment.follow_up_questions || []).join("、") || "暂无"}`,
+      `治疗建议缺项：${(treatment.quality_issues || []).join("、") || "无"}`,
+    ];
     const fieldRows = (quality.field_quality || []).map((item) => {
       const statusLabels = {
         complete: "质量可用",
@@ -2415,6 +2433,7 @@ function renderAssistDetailContent(section) {
       `低置信度字段：${(quality.low_confidence_fields || []).map((item) => item.label).join("、") || "无"}`,
       `证据不足字段：${(quality.evidence_missing_fields || []).join("、") || "无"}`,
       `是否可进入医生审核：${quality.ready_for_doctor_review ? "是" : "否"}`,
+      ...treatmentRows,
       ...fieldRows,
       ...((quality.next_actions || []).map((item) => `下一步：${item}`)),
     ];
@@ -2426,12 +2445,18 @@ function renderAssistDetailContent(section) {
   }
 
   if (section === "candidates") {
+    const diagnosisQuality = activeQualityReport()?.candidate_diagnosis_status?.diagnosis_quality || [];
     return diagnoses.length
       ? diagnoses.map((diagnosis, index) => `
           ${detailSection(`候选诊断 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
             <div class="detail-kv"><span>状态</span><strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong></div>
             <div class="detail-kv"><span>规则置信度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
             <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
+            ${diagnosisQuality[index] ? `<div class="detail-text">${escapeHtml(
+              diagnosisQuality[index].missing?.length
+                ? `缺项：${diagnosisQuality[index].missing.join("、")}。${diagnosisQuality[index].suggested_action || ""}`
+                : (diagnosisQuality[index].suggested_action || "候选诊断结构完整，等待医生确认。")
+            )}</div>` : ""}
           `)}
         `).join("")
       : `<div class="empty-state">暂无候选诊断。</div>`;
@@ -2443,11 +2468,13 @@ function renderAssistDetailContent(section) {
     const suggestedChecks = uniqueDiagnosisItems(diagnoses, "suggested_checks");
     const medicationNotes = uniqueDiagnosisItems(diagnoses, "medication_notes");
     const riskWarnings = uniqueDiagnosisItems(diagnoses, "risk_warnings");
+    const followUpQuestions = uniqueDiagnosisItems(diagnoses, "follow_up_questions");
     return `
       ${detailSection("处理建议", `<div class="detail-text">${escapeHtml(treatmentText)}</div>`)}
       ${detailSection("建议检查", `<div class="detail-text">${escapeHtml(suggestedChecks.join("\n") || "暂无结构化建议检查。")}</div>`)}
       ${detailSection("用药提示", `<div class="detail-text">${escapeHtml(medicationNotes.join("\n") || "不自动处方，需医生确认。")}</div>`)}
       ${detailSection("风险提醒", `<div class="detail-text">${escapeHtml(riskWarnings.join("\n") || "暂无结构化风险提醒。")}</div>`)}
+      ${detailSection("建议补问", `<div class="detail-text">${escapeHtml(followUpQuestions.join("\n") || "暂无结构化补问建议。")}</div>`)}
     `;
   }
 

@@ -2,7 +2,7 @@
   "status": "passed",
   "total_events": 501,
   "expected_total_events": 501,
-  "full_stream_elapsed_seconds": 0.0268,
+  "full_stream_elapsed_seconds": 0.0294,
   "resume_after_id": 451,
   "resumed_events": 50,
   "expected_resumed_events": 50,

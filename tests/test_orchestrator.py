@@ -66,6 +66,11 @@ class MedicalRecordOrchestratorTests(unittest.TestCase):
         self.assertIn("core_completeness", quality)
         self.assertFalse(quality["export_allowed"])
         self.assertTrue(quality["doctor_confirmation_required"])
+        self.assertIn("candidate_diagnosis_status", quality)
+        self.assertIn("diagnosis_quality", quality["candidate_diagnosis_status"])
+        self.assertIn("treatment_safety", quality)
+        self.assertIn("status", quality["treatment_safety"])
+        self.assertIn("next_actions", quality["treatment_safety"])
 
         logs = result["step_logs"]
         succeeded_steps = [log["step"] for log in logs if log["event"] == "succeeded"]

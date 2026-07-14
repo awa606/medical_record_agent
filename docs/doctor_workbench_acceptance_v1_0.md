@@ -1,53 +1,51 @@
 # 医生端工作台 v1.0 验收记录
 
-验收日期：2026-07-11  
-验收入口：`http://127.0.0.1:2601/static/doctor.html`  
-运行方式：`docker compose up -d --build medical-record-agent`  
-验收样本：文本内置 fever clean、`video/snakebite_01.wav`  
+验收日期：2026-07-14
+验收入口：`http://127.0.0.1:<实际端口>/static/doctor.html`
+运行方式：`docker compose up -d --build`
+当前实测端口：`2644`
+验收性质：课程工程交付版验收，不声明临床可用。
 
 ## 结论
 
-医生端 v1.0 主流程可用于终答辩演示：文本生成、Mock ASR、FunASR 短音频恢复展示、播放器、说话人统一角色映射、证据面板和正式生成入口均可见。FunASR 首次复测出现模型下载/冷启动超过 150 秒的情况，后端随后完成识别；该问题归类为真实 ASR 模型运行时耗时，不归类为前端流程失败。
+医生端 v1.0 主流程可以用于课程展示：文本生成、病历草稿摘要、候选诊断、治疗方案、诊断证据、详情抽屉、字段确认、导出阻断和导出成功路径已形成闭环。真实 ASR 仍建议提前预热；现场保底路线为 Mock ASR。
 
-## 验收项
+## 验收项目
 
 | 项目 | 结果 | 证据 |
 | --- | --- | --- |
-| 服务健康检查 | 通过 | `Invoke-RestMethod http://127.0.0.1:2601/health` 返回 `ok` |
-| 文本生成病历 | 通过 | `docs/final_report/images/v1_0_frontend_acceptance/02_text_generation_record.png` |
-| 证据面板 | 通过 | `docs/final_report/images/v1_0_frontend_acceptance/03_evidence_panel.png` |
-| Mock ASR 前端流程 | 通过 | `docs/final_report/images/v1_0_frontend_acceptance/04_mock_asr_transcript.png` |
-| FunASR 短音频流程 | 通过，需预热 | 完成后恢复 session，显示 38 条转写段 |
-| 播放器 Range | 通过 | `206 Partial Content`，`Content-Range: bytes 0-1023/895437` |
-| 说话人统一角色映射 | 通过 | 单说话人样本要求人工映射，不伪造医生/患者两人 |
-| 正式生成链路 | 通过 | 文本主链路可生成病历；音频链路在角色确认后进入生成 |
+| Docker 端口预检 | 通过 | `python scripts/check_docker_port.py --start 2600 --end 2699 --format env` 输出 `MRA_HOST_PORT=2644` |
+| 服务健康检查 | 通过 | `curl http://127.0.0.1:2644/health` 返回 `ok` |
+| 医生端页面访问 | 通过 | `curl -I http://127.0.0.1:2644/static/doctor.html` 返回 200 |
+| 文本生成病历 | 通过 | 可展示病历字段、质量状态、候选诊断和治疗建议 |
+| 详情抽屉 | 通过 | 可展示字段质量、证据、导出阻断等详细信息 |
+| 未确认导出阻断 | 通过 | 未确认字段时导出不可直接完成 |
+| 确认后导出 | 通过 | 确认字段后可生成导出结果路径 |
+| Mock ASR 保底 | 通过 | 可用于展示 SSE 和角色校正主流程 |
+| FunASR 真实音频 | 可选通过 | 需提前预热，首次模型加载可能较慢 |
 
-## 截图清单
+## 截图证据
 
-- `docs/final_report/images/v1_0_frontend_acceptance/01_doctor_workbench_home.png`
-- `docs/final_report/images/v1_0_frontend_acceptance/02_text_generation_record.png`
-- `docs/final_report/images/v1_0_frontend_acceptance/03_evidence_panel.png`
-- `docs/final_report/images/v1_0_frontend_acceptance/04_mock_asr_transcript.png`
-- `docs/final_report/images/v1_0_frontend_acceptance/05_funasr_short_audio_completed.png`
-- `docs/final_report/images/v1_0_frontend_acceptance/06_role_unified_correction.png`
-- `docs/final_report/images/v1_0_frontend_acceptance/frontend_acceptance_evidence.json`
+- `docs/final_report/images/v0_9_6_frontend_polish/01_empty_1366x768.png`
+- `docs/final_report/images/v0_9_6_frontend_polish/02_empty_1920x1080.png`
+- `docs/final_report/images/v0_9_6_frontend_polish/03_text_generated_1366x768.png`
+- `docs/final_report/images/v0_9_6_frontend_polish/04_quality_detail_drawer_1366x768.png`
 
 ## 已知边界
 
-- `snakebite_01.wav` 是单人朗读样本，只用于真实 ASR 和前端流程复测，不纳入 diarization 成绩。
-- FunASR 首次冷启动或缓存补齐会显著慢于已预热状态；答辩演示应先预热模型或先走 Mock ASR 保底流程。
-- 单说话人样本会提示“仅检测到一位真实说话人，不能伪造成医生和患者两人”，需要医生人工确认角色。
-- 三说话人样本仍为待补，不输出三说话人成绩。
+- 当前没有医院真实 PC 实机复测。
+- 边缘端真实部署暂缓，不阻塞课程交付。
+- 自动角色识别不是最终事实，仍需要医生校正。
+- 候选诊断和治疗建议必须医生确认。
 
 ## 复测命令
 
 ```powershell
-docker compose up -d --build medical-record-agent
-Invoke-RestMethod http://127.0.0.1:2601/health
-node --check static/doctor.js
-curl.exe -s -D - -H "Range: bytes=0-1023" -o NUL "http://127.0.0.1:2601/api/audio/556c3a5bcac8476aa8b17c78dec48c90/media"
+python scripts\check_docker_port.py --start 2600 --end 2699 --format env
+$env:MRA_HOST_PORT = "2644"
+docker compose up -d --build
+curl.exe http://127.0.0.1:$env:MRA_HOST_PORT/health
+curl.exe -I http://127.0.0.1:$env:MRA_HOST_PORT/static/doctor.html
+pytest -q
+node --check static\doctor.js
 ```
-
-## Debug 记录
-
-FunASR 首次等待超时记录见：`logs/debug/2026-07-11_funasr_frontend_cold_start_timeout.md`。

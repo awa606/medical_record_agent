@@ -1,67 +1,76 @@
-# v1.0 终答辩冻结清单
+# v1.0 最终冻结检查清单
 
-冻结日期：2026-07-11  
-冻结范围：报告、PPT/讲稿、runbook、验收文档、表单、证据矩阵、版本记录、RTTM 评测证据。  
+冻结日期：2026-07-14
+冻结范围：课程工程交付版，不声明临床可用。
 
-## 可提交文件
+## 当前版本定位
+
+- 发布版本：`v1.0`
+- 基线来源：`v0.9.8 Release Candidate`
+- 交付形态：本机 Docker + 局域网演示 + GitHub Release + 周评审材料
+- 边缘端：暂不真实部署，仅保留配置建议和后续实机复测计划
+
+## 可提交材料
 
 - `README.md`
 - `docs/版本演进记录.md`
-- `docs/四周迭代执行计划.md`
 - `docs/能力证据追踪矩阵.md`
-- `docs/asr_streaming_player_diarization_v0_8_5.md`
-- `docs/doctor_workbench_acceptance_v1_0.md`
-- `docs/final_report/AI生成式电子病历辅助系统_期末报告_正式版.md`
-- `docs/final_report/AI生成式电子病历辅助系统_期末报告_正式版.docx`
-- `docs/final_report/images/v1_0_frontend_acceptance/`
-- `docs/scoring/v1_0_final_defense_ppt_outline.md`
-- `docs/scoring/v1_0_final_defense_talk_track.md`
-- `docs/scoring/v1_0_final_demo_runbook.md`
+- `docs/docker_local_deploy.md`
+- `docs/scoring/v0_9_8_week_review_material.md`
+- `docs/scoring/v0_9_8_week_review_talk_track.md`
+- `docs/scoring/v0_9_8_claude_design_ppt_prompt.md`
 - `docs/scoring/v1_0_final_freeze_checklist.md`
-- `data/asr_eval/diarization_ground_truth/fever_01.rttm`
-- `data/asr_eval/diarization_ground_truth/chest_pain_01.rttm`
-- `data/asr_eval/reports/v0_8_8_diarization/diarization_summary.md`
-- `data/asr_eval/reports/v0_8_8_diarization/diarization_summary.json`
-- `homework/` 与 `report/appendix_form_templates/` 下由脚本生成的课程表单。
+- `docs/scoring/v1_0_final_demo_runbook.md`
+- `docs/doctor_workbench_acceptance_v1_0.md`
+- `docs/final_report/images/v0_9_6_frontend_polish/`
+- GitHub Issues、tags、Releases
 
-## 不可提交文件
+本地课程材料：
 
-- 真实患者病历、真实患者音频、真实身份证明材料。
+- `homework/Medical_Record_Agent_v0.9.8_week_review_package.docx`
+
+说明：`homework/` 按 `.gitignore` 保留为本地课程材料，不默认上传 GitHub。
+
+## 不可提交材料
+
+- 真实患者病历、真实患者音频、身份信息。
 - API Key、Token、`.env` 私密配置。
 - 模型权重、模型缓存、`data/asr_model_cache/`。
-- Docker 运行时缓存、`data/docker_runtime/`。
-- `.venv/`、`.venv-asr/`、`__pycache__/`。
-- 原始课程手册大文件或未脱敏外部资料。
-- 未经确认的大体积新增音频、视频录屏和临时调试文件。
+- Docker 运行数据、`data/docker_runtime/`。
+- 虚拟环境、`__pycache__`、临时调试文件。
+- 未确认的大体积音频、视频录屏。
 
-## 验证命令
+## 最终验证命令
 
 ```powershell
-py -3.11 -m pytest -q tests/test_diarization_evaluator.py tests/test_summarize_diarization_results.py tests/test_speaker_profiles.py tests/test_speaker_role_classifier.py tests/test_asr_sessions_api.py tests/test_funasr_streaming_engine.py tests/test_records_api.py tests/test_speaker_diarization.py
-node --check static/doctor.js
-py -3.11 -m py_compile scripts/evaluate_diarization.py scripts/check_diarization_dependencies.py scripts/summarize_diarization_results.py scripts/update_homework_forms.py
-docker compose up -d --build medical-record-agent
-Invoke-RestMethod http://127.0.0.1:2601/health
-.\.venv\Scripts\python.exe scripts\update_homework_forms.py
-.\.venv\Scripts\python.exe scripts\export_final_report_docx.py
+python scripts\check_docker_port.py --start 2600 --end 2699 --format env
+$env:MRA_HOST_PORT = "2644"
+docker compose up -d --build
+curl.exe http://127.0.0.1:$env:MRA_HOST_PORT/health
+curl.exe -I http://127.0.0.1:$env:MRA_HOST_PORT/static/doctor.html
+
+$env:PYTHONPATH = (Get-Location).Path
+pytest -q
+node --check static\doctor.js
+git diff --check
 git status --short
 ```
 
 ## 已知边界
 
-- 本轮只发布两说话人 diarization 评测：`fever_01`、`chest_pain_01`。
-- 三说话人样本为 `pending_sample`，不得展示或填写伪三说话人成绩。
-- `snakebite_01` 是单人朗读样本，只能用于 ASR/前端流程复测。
-- DER/JER 因本机缺少 `pyannote.metrics` 记录为 `not_available`，不得留空或编造。
-- `pyannote`、`3D-Speaker` 当前为 `skipped`，原因是依赖/运行区未配置。
-- FunASR 首次冷启动可能触发模型下载和长时间等待，答辩前必须预热。
-- AI 只生成病历草稿、候选诊断和安全提醒，导出前必须由医生确认。
+- 当前系统是课程工程原型，不声明临床诊断有效性。
+- 候选诊断、治疗建议和导出结果必须医生确认。
+- 自动角色识别不是 100% 准确，系统保留人工校正和质量门禁。
+- 医院真实 PC 未实机复测，当前配置建议来自本机测试和公开资料推断。
+- 边缘端真实部署放到 `v1.1` 或后续扩展。
+- 本地仍存在未纳入 v1.0 的后端字段抽取实验改动，未进入本次 Release。
 
-## 演示顺序
+## 最终演示顺序
 
-1. 打开 2601 医生端，展示首页、三栏工作台和医生审核边界。
-2. 走文本生成主链路，展示病历字段、候选诊断、证据和安全校验。
-3. 切换 Mock ASR，展示 SSE 分段追加和说话人/角色校正抽屉。
-4. 展示已预热 FunASR 短音频 session，说明播放器、Range、CAM++ 校准和单说话人边界。
-5. 展示两说话人 RTTM 评测汇总，只引用 `fever_01` 与 `chest_pain_01`。
-6. 展示冻结清单、能力证据矩阵、版本记录和课程表单。
+1. 展示 GitHub Release 和版本记录，说明当前是课程工程交付版。
+2. 运行端口预检脚本，选择实际可用端口。
+3. 打开医生端页面，展示三栏工作台。
+4. 走文本生成主链路：字段、质量、候选诊断、治疗建议、证据。
+5. 展示导出阻断和确认字段后的导出成功路径。
+6. 展示 ASR 能力：Mock ASR 保底，FunASR 真实音频作为可选演示。
+7. 展示周评审材料和后续边缘端/医院实机计划。

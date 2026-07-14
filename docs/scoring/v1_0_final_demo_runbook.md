@@ -1,58 +1,56 @@
-# v1.0 终答辩演示 Runbook
+# v1.0 最终演示 Runbook
 
 ## 0. 开场前检查
 
 ```powershell
-docker compose up -d --build medical-record-agent
-Invoke-RestMethod http://127.0.0.1:2601/health
-node --check static/doctor.js
+python scripts\check_docker_port.py --start 2600 --end 2699 --format env
+$env:MRA_HOST_PORT = "2644"
+docker compose up -d --build
+curl.exe http://127.0.0.1:$env:MRA_HOST_PORT/health
+node --check static\doctor.js
 ```
 
 预期结果：
 
-- `medical-record-agent` 为 `running` / `healthy`。
+- Docker 容器正在运行。
 - `/health` 返回 `ok`。
-- 浏览器打开 `http://127.0.0.1:2601/static/doctor.html`。
+- 浏览器可以打开 `http://127.0.0.1:<实际端口>/static/doctor.html`。
 
-## 1. 预热
+## 1. 推荐演示主线
 
-1. 打开医生端。
-2. 先用 `snakebite_01.wav` 走一次 FunASR，等待模型加载完成。
-3. 如果模型下载或初始化超过 2 分钟，切换到 Mock ASR 继续录屏主线。
-4. 不删除 `data/asr_model_cache/` 和 `data/docker_runtime/`。
+1. 展示 GitHub Release：说明当前是 `v1.0` 课程工程交付版。
+2. 打开医生端页面，说明三栏结构：病历草稿、对话转写、AI 辅助。
+3. 点击“输入方式 -> 文本生成”，生成病历草稿。
+4. 展示字段摘要、质量标签、候选诊断、治疗方案和诊断证据。
+5. 打开详情抽屉，展示证据、质量原因和导出阻断原因。
+6. 点击“确认导出”，先展示未确认字段时被阻断。
+7. 点击“确认字段”，再展示导出成功路径。
+8. 如时间允许，切换 Mock ASR 展示 SSE 转写和角色校正。
+9. 如模型已预热，再展示 FunASR 真实音频；否则说明真实 ASR 已有评测和截图证据。
 
-## 2. 主演示顺序
+## 2. 现场话术
 
-1. 展示首页和医生审核边界。
-2. 点击“文本生成”，用默认 fever clean 文本生成病历。
-3. 展示左侧病历字段、右侧候选诊断、治疗方案和证据面板。
-4. 切换 Mock ASR，上传 `snakebite_01.wav`，展示 SSE 分段追加。
-5. 打开“显示设置”，展示按说话人统一校正和逐段文本校正。
-6. 展示已完成的 FunASR session：38 条转写段、播放器、倍速、拖动和 Range。
-7. 展示 RTTM 评测汇总：`fever_01` 与 `chest_pain_01` 两条两说话人结果。
-8. 展示冻结清单和不可提交文件边界。
+- “本系统是课程工程原型，不是临床自动诊断产品。”
+- “系统输出的是病历草稿、候选诊断、治疗建议和风险提醒，导出前必须医生确认。”
+- “本周重点是把工程闭环做完整：ASR、病历质量、导出、Docker、GitHub Release 和评审材料。”
+- “医院真实 PC 和边缘端部署还没有实机条件，所以目前只做配置建议和后续计划。”
+- “现场如果真实 ASR 首次加载较慢，会使用 Mock ASR 保底展示主流程。”
 
-## 3. 现场话术
-
-- “Mock ASR 是保底演示路线，用于证明 SSE、前端和病历 Agent 闭环。”
-- “FunASR 是真实本地 ASR 路线，首次冷启动可能下载和初始化模型，所以答辩前需要预热。”
-- “`snakebite_01` 是单人朗读，只用于 ASR 流程，不作为 diarization 成绩。”
-- “本轮只发布两说话人 RTTM 结果，三说话人样本明确待补。”
-- “AI 输出必须经过医生确认，系统不是临床自动诊断产品。”
-
-## 4. 卡住时处理
+## 3. 卡住时处理
 
 | 现象 | 处理 |
 | --- | --- |
-| FunASR 长时间等待首段 | 说明模型冷启动，切回 Mock ASR 主线 |
-| 页面显示旧 UI | 强制刷新，确认 Docker 已重新 build |
-| 音频不播放 | 展示 Range 命令和截图证据，不现场调浏览器策略 |
-| 角色映射待确认 | 现场选择医生/患者或说明单人样本不能伪造两人 |
-| 评委问三说话人成绩 | 回答待补，不展示伪成绩 |
+| 端口无法访问 | 重新运行端口预检，换用脚本推荐端口 |
+| FunASR 首次加载慢 | 切回 Mock ASR，说明真实模型需要预热 |
+| 页面缓存旧样式 | 强制刷新页面或重建 Docker |
+| 导出按钮不可用 | 打开详情抽屉，展示阻断原因和医生确认边界 |
+| 被问到边缘端部署 | 回答已形成配置建议，但需要医院设备和合规条件确认后再实机部署 |
 
-## 5. 收尾文件
+## 4. 收尾文件
 
-- `docs/doctor_workbench_acceptance_v1_0.md`
+- `docs/scoring/v0_9_8_week_review_material.md`
+- `docs/scoring/v0_9_8_week_review_talk_track.md`
+- `docs/scoring/v0_9_8_claude_design_ppt_prompt.md`
 - `docs/scoring/v1_0_final_freeze_checklist.md`
-- `data/asr_eval/reports/v0_8_8_diarization/diarization_summary.md`
-- `docs/final_report/images/v1_0_frontend_acceptance/frontend_acceptance_evidence.json`
+- `docs/doctor_workbench_acceptance_v1_0.md`
+- `homework/Medical_Record_Agent_v0.9.8_week_review_package.docx`

@@ -41,6 +41,31 @@ class PromptAndMockLLMTests(unittest.TestCase):
         self.assertEqual(fields.physical_exam.hint, "待医生查体补充")
         self.assertGreaterEqual(len(fields.chief_complaint.source_spans), 1)
 
+    def test_physical_exam_does_not_use_questions_or_history(self):
+        conversation = """
+        [医生] 有没有胸痛、呼吸困难之类的吗？
+        [患者] 没有，我母亲有糖尿病和高血压，我自己其他都好。
+        [医生] 之前身体怎么样？有没有过敏？
+        [患者] 身体挺好，没有过敏。
+        """
+
+        fields = mock_extract_fields(conversation)
+
+        self.assertTrue(fields.physical_exam.missing)
+        self.assertEqual(fields.physical_exam.hint, "待医生查体补充")
+
+    def test_physical_exam_accepts_real_vitals_and_findings(self):
+        conversation = """
+        [医生] 查体见患者神清，咽部充血，双肺呼吸音粗。
+        [医生] T 38.6℃，P 96次/分，R 20次/分，BP 128/78mmHg。
+        """
+
+        fields = mock_extract_fields(conversation)
+
+        self.assertFalse(fields.physical_exam.missing)
+        self.assertIn("T 38.6", fields.physical_exam.value)
+        self.assertGreaterEqual(len(fields.physical_exam.source_spans), 1)
+
     def test_mock_generate_draft_marks_candidate_diagnosis(self):
         fields = mock_extract_fields(SNAKE_BITE_CONVERSATION)
         draft = mock_generate_draft(fields)

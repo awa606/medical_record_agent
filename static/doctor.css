@@ -5680,3 +5680,87 @@ body.doctor-mode .field-card.has-value .field-value {
 body.doctor-mode .field-card.has-value.weight-high .field-value {
   max-height: 72px;
 }
+
+/* v1.3.0 usability fixes: keep the topbar unchanged, but make the workflow,
+   assist panel, and detail drawer stable at 1366px and 1920px widths. */
+body.doctor-mode .workflow-panel {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+body.doctor-mode .workflow-steps {
+  min-width: 900px;
+  grid-template-columns: repeat(6, minmax(116px, 1fr));
+}
+
+body.doctor-mode .workflow-step {
+  min-width: 0;
+}
+
+body.doctor-mode .workflow-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.doctor-mode .assist-column {
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.doctor-mode .assist-column .assist-list {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+  scrollbar-width: thin;
+}
+
+body.doctor-mode .doctor-assist-overview {
+  min-height: 0;
+  height: auto;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  gap: 8px;
+}
+
+body.doctor-mode .doctor-assist-card {
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.doctor-mode .doctor-assist-card-body {
+  min-height: 0;
+  overflow-y: auto;
+  max-height: 220px;
+  scrollbar-width: thin;
+}
+
+body.doctor-mode .assist-column .bottom-actions {
+  flex: 0 0 auto;
+}
+
+.drawer {
+  width: min(520px, 38vw);
+  min-width: 420px;
+}
+
+.drawer-panel {
+  min-height: 0;
+}
+
+.drawer-panel.active {
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .drawer {
+    width: 100vw;
+    min-width: 0;
+  }
+
+  body.doctor-mode .workflow-steps {
+    min-width: 760px;
+  }
+}

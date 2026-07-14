@@ -916,7 +916,7 @@ function fieldStatus(field, key) {
 function fieldValue(fields, key) {
   if (key === "treatment_plan") {
     return previewTreatmentText()
-      || (activeDraftText() ? "处理建议已生成，需医生确认后写入正式病历。" : "待医生补充处理建议");
+      || (activeDraftText() ? "暂无明确处理建议，需医生结合问诊、查体和检查结果确认。" : "待医生补充处理建议");
   }
   const field = fields?.[key];
   return field?.value || field?.hint || "暂无内容";
@@ -2249,7 +2249,7 @@ function renderCandidateDiagnosisCard(diagnoses) {
     detailTarget: "assist:candidates",
     body: `
       <ol class="assist-number-list">
-        ${listPreview(diagnoses, 2).visible.map((diagnosis, index) => `
+        ${listPreview(diagnoses, 1).visible.map((diagnosis, index) => `
           <li>
             <span>${index + 1}</span>
             <div>
@@ -2259,7 +2259,7 @@ function renderCandidateDiagnosisCard(diagnoses) {
           </li>
         `).join("")}
       </ol>
-      ${diagnoses.length > 2 ? `<div class="summary-note">另有 ${diagnoses.length - 2} 条候选诊断，点击详情查看。</div>` : ""}
+      ${diagnoses.length > 1 ? `<div class="summary-note">另有 ${diagnoses.length - 1} 条候选诊断，点击详情查看。</div>` : ""}
     `,
   });
 }
@@ -2325,10 +2325,10 @@ function renderEvidenceCard(evidence, diagnoses) {
     badgeText: items.length ? "可追溯" : "暂无",
     detailTarget: "assist:evidence",
     body: items.length
-      ? listPreview(items, 3).visible.map((item) => item.segmentId
+      ? listPreview(items, 2).visible.map((item) => item.segmentId
         ? `<button type="button" class="assist-evidence-quote linked" data-evidence-segment-id="${escapeHtml(item.segmentId)}" ${item.startTime != null ? `data-evidence-start="${item.startTime}"` : ""}>${escapeHtml(item.text)}<span>播放证据</span></button>`
         : `<div class="assist-evidence-quote">${escapeHtml(item.text)}</div>`).join("")
-        + (items.length > 3 ? `<div class="summary-note">另有 ${items.length - 3} 条证据，点击详情查看。</div>` : "")
+        + (items.length > 2 ? `<div class="summary-note">另有 ${items.length - 2} 条证据，点击详情查看。</div>` : "")
       : `<div class="empty-state">暂无诊断证据。</div>`,
   });
 }

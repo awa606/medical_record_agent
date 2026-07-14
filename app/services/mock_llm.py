@@ -60,24 +60,79 @@ def _required_spans(segments: list[str], keywords: list[str], conversation: str)
     return [SourceSpan(index=0, text=fallback_text)]
 
 
+_PHYSICAL_EXAM_REQUIRED_PATTERNS = [
+    re.compile(r"\bT\s*\d", re.IGNORECASE),
+    re.compile(r"\bP\s*\d", re.IGNORECASE),
+    re.compile(r"\bR\s*\d", re.IGNORECASE),
+    re.compile(r"\bBP\s*\d", re.IGNORECASE),
+    re.compile(r"(体温|血压|脉搏|心率|呼吸)\s*[:：]?\s*\d"),
+]
+
+_PHYSICAL_EXAM_FINDING_KEYWORDS = [
+    "查体见",
+    "查体提示",
+    "体格检查",
+    "生命体征",
+    "神清",
+    "咽部",
+    "双肺",
+    "心肺",
+    "心律",
+    "压痛",
+    "反跳痛",
+    "肿胀",
+    "可见伤口",
+    "局部",
+    "皮温",
+    "瞳孔",
+    "意识",
+]
+
+_PHYSICAL_EXAM_REJECT_KEYWORDS = [
+    "请问",
+    "有没有",
+    "是否",
+    "什么",
+    "哪里",
+    "之前",
+    "既往",
+    "过敏",
+    "糖尿病",
+    "高血压",
+    "家里人",
+    "工作",
+    "年龄",
+    "胸痛",
+    "呼吸困难",
+]
+
+_SUBJECTIVE_TEMPERATURE_KEYWORDS = ["最高体温", "体温多", "发热", "退热", "反复发热"]
+_OBJECTIVE_EXAM_ANCHORS = ["查体", "体格检查", "生命体征", "T ", "P ", "R ", "BP"]
+
+
+def _looks_like_physical_exam(text: str) -> bool:
+    if not text:
+        return False
+    normalized = re.sub(r"\s+", "", text)
+    if "？" in text or "?" in text:
+        return False
+    if any(keyword in normalized for keyword in _SUBJECTIVE_TEMPERATURE_KEYWORDS):
+        if not any(anchor.replace(" ", "") in normalized for anchor in _OBJECTIVE_EXAM_ANCHORS):
+            return False
+    if any(keyword in normalized for keyword in _PHYSICAL_EXAM_REJECT_KEYWORDS):
+        if not any(pattern.search(text) for pattern in _PHYSICAL_EXAM_REQUIRED_PATTERNS):
+            return False
+    if any(pattern.search(text) for pattern in _PHYSICAL_EXAM_REQUIRED_PATTERNS):
+        return True
+    return any(keyword in normalized for keyword in _PHYSICAL_EXAM_FINDING_KEYWORDS)
+
+
 def _extract_physical_exam_field(segments: list[str]) -> MedicalField:
-    spans = _source_spans(
-        segments,
-        [
-            "查体",
-            "T ",
-            "P ",
-            "R ",
-            "BP",
-            "血压",
-            "脉搏",
-            "呼吸",
-            "神清",
-            "心肺",
-            "可见",
-            "压痛",
-        ],
-    )
+    spans = [
+        SourceSpan(index=index, text=segment)
+        for index, segment in enumerate(segments)
+        if _looks_like_physical_exam(segment)
+    ]
     if not spans:
         return MedicalField.missing_field("待医生查体补充")
     value = "；".join(span.text for span in spans[:2])
@@ -316,7 +371,7 @@ def mock_extract_fields(conversation: str) -> MedicalRecordFields:
         accompanying_symptoms=accompanying_symptoms,
         allergy_history=MedicalField.missing_field(),
         past_history=MedicalField.missing_field(),
-        physical_exam=MedicalField.missing_field("待医生查体补充"),
+        physical_exam=_extract_physical_exam_field(segments),
         candidate_diagnoses=candidate_diagnoses,
     )
 

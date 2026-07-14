@@ -84,3 +84,15 @@ pytest -q
 node --check static\doctor.js
 git diff --check
 ```
+
+## v1.2 实际执行修订：接口化收敛优先
+
+原计划中 v1.2 主要描述为“病历字段抽取增强”。实际实施时，优先级调整为“接口化收敛 + 字段抽取实验清理”。原因是当前系统已经具备医生端闭环，但核心能力仍主要绑定在医生端完整流程中，不利于后续迁移到其他领域或其他前端。
+
+本轮 v1.2 的实际目标：
+- 删除未提交的 `medical_field_extractor/` 实验目录，避免正式程序依赖临时实验包。
+- 新增 `GET /api/capabilities`，让外部系统能发现当前可复用能力。
+- 新增 `POST /api/records/extract-fields`、`POST /api/records/build-draft`、`POST /api/records/quality`，把字段抽取、草稿构建和质量评估拆成无副作用接口。
+- 保持医生端、ASR、审核和导出流程兼容，不改 UI。
+
+后续 v1.3 调整为“接口迁移增强与示例补齐”：补 API 示例请求/响应、跨领域迁移示例、接口契约测试和外部调用说明。更深的医疗字段抽取质量增强继续保留为后续后端质量迭代，不阻塞 v1.2 发布。

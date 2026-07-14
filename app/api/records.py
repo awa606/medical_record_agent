@@ -8,7 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
 from app.agents import MedicalRecordOrchestrator
-from app.schemas import MedicalRecordFields, SourceSpan
+from app.schemas import MedicalRecordFields, SafetyCheckResult, SourceSpan
 from app.services import MockLLM
 from app.services.record_quality import build_record_quality_report
 
@@ -45,6 +45,52 @@ class PreviewRecordResponse(BaseModel):
     missing_items: list[str]
     safety_preview: dict[str, Any]
     quality_preview: dict[str, Any]
+
+
+class ExtractFieldsRequest(BaseModel):
+    conversation_text: str = Field(min_length=1)
+    source: str = "external_api"
+    segments: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ExtractFieldsResponse(BaseModel):
+    status: str
+    source: str
+    character_count: int
+    segment_count: int
+    fields: dict[str, Any]
+    candidate_diagnoses: list[dict[str, Any]]
+    treatment_plan: dict[str, list[str]]
+    diagnosis_evidence: list[str]
+    evidence_links: list[dict[str, Any]]
+    quality_report: dict[str, Any]
+    creates_task: bool = False
+
+
+class BuildDraftRequest(BaseModel):
+    fields: MedicalRecordFields
+    allow_export: bool = False
+
+
+class BuildDraftResponse(BaseModel):
+    status: str
+    draft: str
+    safety_check: dict[str, Any]
+    quality_report: dict[str, Any]
+    creates_task: bool = False
+    export_allowed: bool = False
+
+
+class QualityRequest(BaseModel):
+    fields: MedicalRecordFields
+    draft: str | None = None
+    safety_check: SafetyCheckResult | None = None
+
+
+class QualityResponse(BaseModel):
+    status: str
+    quality_report: dict[str, Any]
+    creates_task: bool = False
 
 
 FIELD_LABELS = {
@@ -355,6 +401,71 @@ def _stable_preview_input(payload: PreviewRecordRequest) -> tuple[str, list[dict
     if not conversation:
         raise HTTPException(status_code=409, detail="暂无可用于预览的稳定转写文本。")
     return conversation, mapped
+
+
+def _stable_segments_for_external_api(segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [segment for segment in segments if not segment.get("provisional")]
+
+
+def _extract_fields_for_service(
+    conversation_text: str,
+    segments: list[dict[str, Any]],
+) -> MedicalRecordFields:
+    fields = MockLLM().extract_fields(conversation_text)
+    return _enrich_field_evidence(fields, _stable_segments_for_external_api(segments))
+
+
+@router.post("/extract-fields", response_model=ExtractFieldsResponse)
+def extract_fields(payload: ExtractFieldsRequest) -> ExtractFieldsResponse:
+    stable_segments = _stable_segments_for_external_api(payload.segments)
+    fields = _extract_fields_for_service(payload.conversation_text, stable_segments)
+    quality_report = build_record_quality_report(fields)
+    return ExtractFieldsResponse(
+        status="fields_extracted",
+        source=payload.source,
+        character_count=len(payload.conversation_text),
+        segment_count=len(stable_segments),
+        fields=fields.model_dump(mode="json"),
+        candidate_diagnoses=[
+            diagnosis.model_dump(mode="json")
+            for diagnosis in fields.candidate_diagnoses
+        ],
+        treatment_plan=_treatment_plan(fields),
+        diagnosis_evidence=_diagnosis_evidence(fields),
+        evidence_links=_evidence_links(fields, stable_segments),
+        quality_report=quality_report,
+    )
+
+
+@router.post("/build-draft", response_model=BuildDraftResponse)
+def build_draft(payload: BuildDraftRequest) -> BuildDraftResponse:
+    llm = MockLLM()
+    draft = llm.generate_draft(payload.fields)
+    safety = llm.safety_check(draft, payload.fields, allow_export=payload.allow_export)
+    quality_report = build_record_quality_report(payload.fields, safety, draft=draft)
+    return BuildDraftResponse(
+        status="draft_built",
+        draft=draft,
+        safety_check=safety.model_dump(mode="json"),
+        quality_report=quality_report,
+        export_allowed=False,
+    )
+
+
+@router.post("/quality", response_model=QualityResponse)
+def evaluate_record_quality(payload: QualityRequest) -> QualityResponse:
+    safety = payload.safety_check
+    if safety is None and payload.draft:
+        safety = MockLLM().safety_check(payload.draft, payload.fields)
+    quality_report = build_record_quality_report(
+        payload.fields,
+        safety,
+        draft=payload.draft,
+    )
+    return QualityResponse(
+        status=quality_report["status"],
+        quality_report=quality_report,
+    )
 
 
 @router.post("/generate")

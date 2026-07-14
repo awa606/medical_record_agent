@@ -6,8 +6,14 @@ from fastapi import BackgroundTasks, HTTPException
 
 from app.agents import MedicalRecordOrchestrator
 from app.api.records import (
+    BuildDraftRequest,
+    ExtractFieldsRequest,
     GenerateRecordRequest,
     PreviewRecordRequest,
+    QualityRequest,
+    build_draft,
+    evaluate_record_quality,
+    extract_fields,
     generate_record,
     preview_record,
     run_record_generation_task,
@@ -51,6 +57,50 @@ class RecordsApiTests(unittest.TestCase):
         self.assertEqual(completed_task["status"], MedicalRecordOrchestrator.STATUS_WAITING_DOCTOR_REVIEW)
         self.assertIn("门诊病历草稿", completed_task["result_json"]["draft"])
         self.assertIn("quality_report", completed_task["result_json"])
+
+    def test_reusable_record_service_interfaces_do_not_create_task(self):
+        extracted = extract_fields(
+            ExtractFieldsRequest(
+                conversation_text=(
+                    "[doctor] hello, what is wrong?\n"
+                    "[patient] fever for three days and cough.\n"
+                    "[doctor] did you take any medicine?\n"
+                    "[patient] ibuprofen, but fever returned."
+                ),
+                source="external_api",
+                segments=[
+                    {
+                        "segment_id": "seg-patient-1",
+                        "role": "patient",
+                        "text": "fever for three days and cough.",
+                    }
+                ],
+            )
+        )
+
+        self.assertEqual(extracted.status, "fields_extracted")
+        self.assertFalse(extracted.creates_task)
+        self.assertIn("chief_complaint", extracted.fields)
+        self.assertIn("quality_report", extracted.model_dump())
+        self.assertIn("candidate_diagnoses", extracted.model_dump())
+        self.assertNotIn("task_id", extracted.model_dump())
+
+        draft_result = build_draft(BuildDraftRequest(fields=extracted.fields))
+
+        self.assertEqual(draft_result.status, "draft_built")
+        self.assertFalse(draft_result.creates_task)
+        self.assertFalse(draft_result.export_allowed)
+        self.assertIn("draft", draft_result.model_dump())
+        self.assertIn("safety_check", draft_result.model_dump())
+        self.assertIn("quality_report", draft_result.model_dump())
+
+        quality = evaluate_record_quality(
+            QualityRequest(fields=extracted.fields, draft=draft_result.draft)
+        )
+
+        self.assertIn(quality.status, {"needs_review", "ready_for_review"})
+        self.assertFalse(quality.creates_task)
+        self.assertIn("field_quality", quality.quality_report)
 
     def test_preview_record_returns_non_persistent_preview(self):
         payload = PreviewRecordRequest(

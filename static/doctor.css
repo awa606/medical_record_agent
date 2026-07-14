@@ -5344,3 +5344,337 @@ body.doctor-mode #exportButton.blocked-action {
   background: #e5e7eb;
   color: #64748b;
 }
+
+/* v0.9.6 final product polish: keep the topbar stable and simplify the
+   doctor-facing workbench. Engineering details remain available in drawers. */
+body.doctor-mode .workbench {
+  grid-template-columns: minmax(310px, 0.95fr) minmax(420px, 1.2fr) minmax(340px, 1fr);
+  gap: 10px;
+}
+
+body.doctor-mode .column {
+  border-color: #d9e2ef;
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+}
+
+body.doctor-mode .panel-header {
+  min-height: 48px;
+  padding: 10px 12px;
+}
+
+body.doctor-mode .panel-header p {
+  display: none;
+}
+
+body.doctor-mode .panel-header h2 {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+body.doctor-mode .field-list {
+  grid-template-rows:
+    minmax(52px, 0.7fr)
+    minmax(86px, 1.25fr)
+    minmax(46px, 0.55fr)
+    minmax(46px, 0.55fr)
+    minmax(76px, 1fr)
+    minmax(58px, 0.72fr)
+    minmax(78px, 1fr)
+    auto auto;
+  gap: 8px;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+body.doctor-mode .field-card.doctor-summary-card {
+  min-height: 0;
+  max-height: none;
+  border-color: #dbe5f2;
+  border-left-width: 3px;
+  border-radius: 8px;
+  padding: 9px 11px;
+  gap: 5px;
+}
+
+body.doctor-mode .field-card.weight-high,
+body.doctor-mode .field-card.weight-medium,
+body.doctor-mode .field-card.weight-low {
+  min-height: 0;
+}
+
+body.doctor-mode .field-card.is-empty {
+  background: #fcfdff;
+}
+
+body.doctor-mode .field-card.is-empty .field-value {
+  display: none;
+}
+
+body.doctor-mode .field-card .field-title {
+  font-size: 14px;
+}
+
+body.doctor-mode .field-card .field-value {
+  font-size: 13px;
+  line-height: 1.45;
+  scrollbar-width: none;
+}
+
+body.doctor-mode .field-card .field-value::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+body.doctor-mode .compact-field-meta {
+  min-height: 22px;
+}
+
+body.doctor-mode .compact-field-meta button,
+body.doctor-mode .detail-link {
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+body.doctor-mode .draft-legend {
+  gap: 8px 10px;
+  padding-top: 2px;
+  font-size: 11px;
+}
+
+body.doctor-mode .transcript-list {
+  padding: 10px 12px;
+}
+
+body.doctor-mode .transcript-empty {
+  min-height: 64px;
+  padding: 18px 16px;
+}
+
+body.doctor-mode .transcript-table-row {
+  grid-template-columns: 58px 88px minmax(0, 1fr) 36px;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+body.doctor-mode .transcript-row-text {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+body.doctor-mode .transcript-row-link {
+  font-size: 12px;
+}
+
+body.doctor-mode .assist-column {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  row-gap: 8px;
+}
+
+body.doctor-mode .assist-column .assist-list {
+  padding: 10px 10px 0;
+  overflow: hidden;
+}
+
+body.doctor-mode .doctor-assist-overview {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(72px, 0.72fr) minmax(108px, 1fr) minmax(100px, 0.9fr);
+  gap: 8px;
+}
+
+body.doctor-mode .assist-quality-line {
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+body.doctor-mode .doctor-assist-card {
+  border-color: #dbe5f2;
+  border-radius: 8px;
+}
+
+body.doctor-mode .doctor-assist-card-head {
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
+body.doctor-mode .doctor-assist-card-head h3 {
+  font-size: 14px;
+}
+
+body.doctor-mode .doctor-assist-card-body {
+  padding: 8px 10px 10px;
+  gap: 6px;
+  overflow: hidden;
+}
+
+body.doctor-mode .doctor-assist-card .empty-state {
+  min-height: 0;
+  padding: 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+body.doctor-mode .assist-plan-block,
+body.doctor-mode .assist-mini-grid > div,
+body.doctor-mode .assist-evidence-quote {
+  padding: 7px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+body.doctor-mode .assist-mini-grid {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+body.doctor-mode .assist-number-list {
+  gap: 6px;
+}
+
+body.doctor-mode .assist-number-list li {
+  min-height: 30px;
+  gap: 7px;
+}
+
+body.doctor-mode .assist-number-list li > span {
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+}
+
+body.doctor-mode .assist-column .bottom-actions {
+  margin: 0 10px 10px;
+  padding: 10px;
+  border-color: #dbe5f2;
+}
+
+body.doctor-mode .assist-column .bottom-actions strong {
+  font-size: 15px;
+}
+
+body.doctor-mode .assist-column .button-group {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+body.doctor-mode .assist-column .button-group button {
+  min-height: 34px;
+  padding: 5px 7px;
+  font-size: 12px;
+}
+
+body.doctor-mode .assist-column .button-group .danger-action {
+  grid-column: 1 / -1;
+  min-height: 39px;
+}
+
+@media (max-width: 1440px) {
+  body.doctor-mode .doctor-app {
+    padding: 8px 10px 10px;
+    gap: 8px;
+  }
+
+  body.doctor-mode .workbench {
+    grid-template-columns: minmax(300px, 0.9fr) minmax(390px, 1.15fr) minmax(320px, 1fr);
+    gap: 8px;
+  }
+
+  body.doctor-mode .next-action-panel {
+    min-height: 54px;
+    padding: 9px 12px;
+  }
+
+  body.doctor-mode .workflow-panel {
+    min-height: 58px;
+  }
+
+  body.doctor-mode .field-list {
+    grid-template-rows:
+      minmax(42px, 0.6fr)
+      minmax(70px, 1.08fr)
+      minmax(38px, 0.48fr)
+      minmax(38px, 0.48fr)
+      minmax(52px, 0.82fr)
+      minmax(44px, 0.62fr)
+      minmax(54px, 0.84fr)
+      auto auto;
+    gap: 6px;
+    padding: 9px;
+  }
+
+  body.doctor-mode .field-card.doctor-summary-card {
+    padding: 7px 9px;
+  }
+
+  body.doctor-mode .field-card .field-title,
+  body.doctor-mode .doctor-assist-card-head h3 {
+    font-size: 13px;
+  }
+
+  body.doctor-mode .field-card .field-value,
+  body.doctor-mode .transcript-row-text {
+    font-size: 12px;
+  }
+
+  body.doctor-mode .doctor-assist-overview {
+    grid-template-rows: auto minmax(64px, 0.7fr) minmax(96px, 1fr) minmax(86px, 0.85fr);
+    gap: 7px;
+  }
+
+  body.doctor-mode .doctor-assist-card-body {
+    padding: 7px 9px 9px;
+  }
+
+  body.doctor-mode .assist-column .bottom-actions {
+    padding: 9px;
+  }
+}
+
+/* v0.9.6 field density correction: empty state fits in one view; generated
+   state keeps readable summaries and scrolls only when content is real. */
+body.doctor-mode .field-list {
+  display: flex;
+  flex-direction: column;
+}
+
+body.doctor-mode .field-card.doctor-summary-card {
+  flex: 0 0 auto;
+}
+
+body.doctor-mode .field-card.is-empty.weight-high {
+  min-height: 54px;
+}
+
+body.doctor-mode .field-card.is-empty.weight-medium {
+  min-height: 48px;
+}
+
+body.doctor-mode .field-card.is-empty.weight-low {
+  min-height: 42px;
+}
+
+body.doctor-mode .field-card.has-value.weight-high {
+  min-height: 104px;
+}
+
+body.doctor-mode .field-card.has-value.weight-medium {
+  min-height: 68px;
+}
+
+body.doctor-mode .field-card.has-value.weight-low {
+  min-height: 58px;
+}
+
+body.doctor-mode .field-card.has-value .field-value {
+  min-height: 20px;
+  max-height: 58px;
+}
+
+body.doctor-mode .field-card.has-value.weight-high .field-value {
+  max-height: 72px;
+}

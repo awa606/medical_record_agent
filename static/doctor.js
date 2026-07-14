@@ -1184,7 +1184,7 @@ function renderFields() {
   `).join("");
   const hiddenFieldCount = Math.max(0, FIELD_DEFS.length - displayFieldDefs.length);
   const summaryFooter = fields && (hiddenFieldCount || appState.viewMode === "doctor")
-    ? `<button type="button" class="inline-more-button" data-open-detail="fields:all">查看全部字段、证据和候选诊断</button>`
+    ? `<button type="button" class="inline-more-button" data-open-detail="fields:all">完整详情</button>`
     : "";
 
   const draftLegend = appState.viewMode === "doctor" ? `
@@ -1877,7 +1877,7 @@ function renderTranscript() {
 
   if (!rows.length && !asr && !appState.currentAsrSessionId) {
     $("transcriptBadge").textContent = "待转写";
-    $("transcriptList").innerHTML = `<div class="empty-state transcript-empty">暂无对话转写。上传音频后，识别完成的句子会逐行显示。</div>`;
+    $("transcriptList").innerHTML = `<div class="empty-state transcript-empty">暂无对话转写。</div>`;
     return;
   }
 
@@ -1901,9 +1901,9 @@ function renderTranscript() {
         <div class="transcribing-empty-copy">
           <strong>${escapeHtml(asrPhaseLabel())}</strong>
           <span>${appState.asrProgressKind === "actual" ? `已处理 ${formatRelativeTime(appState.asrProcessedAudioSeconds)} / ${formatRelativeTime(appState.asrAudioDurationSeconds)}` : "正在准备本地模型"}</span>
-          ${provisionalText
-            ? `<p class="provisional-transcript-text">${escapeHtml(provisionalText)}</p><small>临时识别结果，仅用于反馈进度；完成说话人切分后才进入正式转写。</small>`
-            : `<small>模型正在输出临时文字；完成说话人切分后会显示稳定转写。</small>`}
+           ${provisionalText
+            ? `<p class="provisional-transcript-text">${escapeHtml(provisionalText)}</p><small>稳定句子会自动进入列表。</small>`
+            : `<small>稳定句子会自动显示在这里。</small>`}
         </div>
       </div>
     `
@@ -1952,7 +1952,7 @@ function renderTranscriptDetailContent(target = "all") {
     ? appState.roleReviewDirty
       ? "存在未保存校正，保存后会用于后续病历生成。"
       : "可在这里校正角色和原文，默认列表保持只读。"
-    : "当前内容来自文本导入或无可保存 ASR 会话，仅展示完整原文。";
+    : "当前内容只读。";
   const actionButtons = `
     <div class="transcript-review-actions">
       ${canEdit ? `<button type="button" class="primary-action" data-save-role-review ${appState.roleReviewSaving ? "disabled" : ""}>${appState.roleReviewSaving ? "保存中" : "保存校正"}</button>` : ""}
@@ -2238,7 +2238,7 @@ function renderCandidateDiagnosisCard(diagnoses) {
       title: "候选诊断",
       badgeClass: "confirmed",
       badgeText: "暂无",
-      body: `<div class="empty-state">暂无候选诊断。生成病历后会在这里显示待医生确认的候选结果。</div>`,
+      body: `<div class="empty-state">暂无候选诊断。</div>`,
     });
   }
 
@@ -2276,7 +2276,7 @@ function uniqueDiagnosisItems(diagnoses, key) {
 
 function renderTreatmentRecommendationCard(fields, diagnoses) {
   const treatment = fields?.treatment_plan;
-  const treatmentText = treatment?.value || treatment?.hint || previewTreatmentText() || "暂无明确处理建议，需医生结合问诊、查体和检查结果补充。";
+  const treatmentText = treatment?.value || treatment?.hint || previewTreatmentText() || "暂无处理建议。";
   const suggestedChecks = uniqueDiagnosisItems(diagnoses, "suggested_checks");
   const medicationNotes = uniqueDiagnosisItems(diagnoses, "medication_notes");
 
@@ -2293,11 +2293,11 @@ function renderTreatmentRecommendationCard(fields, diagnoses) {
       <div class="assist-mini-grid">
         <div>
           <span>建议检查</span>
-          <strong>${escapeHtml(suggestedChecks.slice(0, 3).join("、") || "暂无结构化建议检查")}</strong>
+          <strong>${escapeHtml(suggestedChecks.slice(0, 3).join("、") || "待补充")}</strong>
         </div>
         <div>
           <span>用药提示</span>
-          <strong>${escapeHtml(medicationNotes.slice(0, 3).join("、") || "不自动处方，需医生确认")}</strong>
+          <strong>${escapeHtml(medicationNotes.slice(0, 3).join("、") || "需医生确认")}</strong>
         </div>
       </div>
     `,
@@ -2329,7 +2329,7 @@ function renderEvidenceCard(evidence, diagnoses) {
         ? `<button type="button" class="assist-evidence-quote linked" data-evidence-segment-id="${escapeHtml(item.segmentId)}" ${item.startTime != null ? `data-evidence-start="${item.startTime}"` : ""}>${escapeHtml(item.text)}<span>播放证据</span></button>`
         : `<div class="assist-evidence-quote">${escapeHtml(item.text)}</div>`).join("")
         + (items.length > 3 ? `<div class="summary-note">另有 ${items.length - 3} 条证据，点击详情查看。</div>` : "")
-      : `<div class="empty-state">暂无字段证据。完成转写、角色校正和病历生成后会显示来源片段。</div>`,
+      : `<div class="empty-state">暂无诊断证据。</div>`,
   });
 }
 
@@ -2570,9 +2570,6 @@ function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
     : "";
   return `
     <div class="doctor-assist-overview">
-      ${previewNotice}
-      ${previewError}
-      ${renderQualityStatusLine()}
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}
       ${renderEvidenceCard(evidence, diagnoses)}

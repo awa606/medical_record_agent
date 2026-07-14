@@ -5119,6 +5119,10 @@ body.doctor-mode .patient-bar .model-status {
   display: none;
 }
 
+body.doctor-mode .asr-engine-meta {
+  display: none;
+}
+
 body.doctor-mode .process-hint,
 body.doctor-mode #stepPrompt {
   display: none;
@@ -5248,9 +5252,7 @@ body.doctor-mode .compact-field-meta button {
 }
 
 body.doctor-mode .draft-legend {
-  margin-top: 0;
-  padding-top: 4px;
-  font-size: 11px;
+  display: none;
 }
 
 body.doctor-mode .transcript-status-panel {
@@ -5481,7 +5483,7 @@ body.doctor-mode .assist-column .assist-list {
 body.doctor-mode .doctor-assist-overview {
   height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(72px, 0.72fr) minmax(108px, 1fr) minmax(100px, 0.9fr);
+  grid-template-rows: minmax(92px, 0.85fr) minmax(132px, 1.05fr) minmax(116px, 0.95fr);
   gap: 8px;
 }
 
@@ -5622,7 +5624,7 @@ body.doctor-mode .assist-column .button-group .danger-action {
   }
 
   body.doctor-mode .doctor-assist-overview {
-    grid-template-rows: auto minmax(64px, 0.7fr) minmax(96px, 1fr) minmax(86px, 0.85fr);
+    grid-template-rows: minmax(82px, 0.85fr) minmax(112px, 1.05fr) minmax(96px, 0.95fr);
     gap: 7px;
   }
 

@@ -91,6 +91,7 @@ const RECORD_PREVIEW_MIN_CHARS = 10;
 const RECORD_PREVIEW_MIN_SEGMENTS = 1;
 const RECORD_PREVIEW_MIN_INTERVAL_MS = 2000;
 const RECORD_PREVIEW_DEBOUNCE_MS = 450;
+const ROLE_DISPLAY_CONFIDENCE_THRESHOLD = 0.9;
 
 const FIELD_DEFS = [
   ["chief_complaint", "主诉"],
@@ -1211,7 +1212,8 @@ function renderFields() {
 }
 
 function classifySpeaker(line, segment = {}) {
-  if (isFinalClinicalRole(segment.role)) {
+  if (shouldShowSpeakerAlias(segment)) return "speaker";
+  if (isTrustedClinicalRole(segment)) {
     if (segment.role === "医生") return "doctor";
     if (segment.role === "患者") return "patient";
     return "other";
@@ -1232,6 +1234,28 @@ function classifySpeaker(line, segment = {}) {
 
 function isFinalClinicalRole(role) {
   return ["医生", "患者", "其他"].includes(role);
+}
+
+function hasSpeakerIdentity(segment = {}) {
+  return Boolean(segment.speaker_id || segment.speaker);
+}
+
+function isManualRoleSource(segment = {}) {
+  return String(segment.role_source || "").startsWith("manual") || Boolean(segment.reviewed_by_doctor);
+}
+
+function isTrustedClinicalRole(segment = {}) {
+  if (!isFinalClinicalRole(segment.role)) return false;
+  if (isManualRoleSource(segment)) return true;
+  if (segment.needs_review) return false;
+  if (!hasSpeakerIdentity(segment)) return true;
+  const confidence = Number(segment.role_confidence);
+  if (!Number.isFinite(confidence)) return false;
+  return confidence >= ROLE_DISPLAY_CONFIDENCE_THRESHOLD;
+}
+
+function shouldShowSpeakerAlias(segment = {}) {
+  return hasSpeakerIdentity(segment) && !isTrustedClinicalRole(segment);
 }
 
 function speakerAliasLabelForId(speakerId) {
@@ -1273,6 +1297,19 @@ function segmentWithInferredRole(segment = {}) {
   // ASR speaker roles are assigned once per acoustic speaker on the backend.
   // Per-sentence text guesses caused role oscillation and are intentionally disabled.
   return segment;
+}
+
+function transcriptRoleNeedsReview(segment = {}, label = "") {
+  if (isManualRoleSource(segment)) return false;
+  if (segment.needs_review || label === "待确认") return true;
+  return shouldShowSpeakerAlias(segment);
+}
+
+function speakerAssignmentNeedsReview(item = {}) {
+  if (item.requires_confirmation || !item.role) return true;
+  if (String(item.source || "").startsWith("manual")) return false;
+  const confidence = Number(item.confidence);
+  return Number.isFinite(confidence) && confidence < ROLE_DISPLAY_CONFIDENCE_THRESHOLD;
 }
 
 function speakerClassFromRole(role) {
@@ -1536,7 +1573,7 @@ function transcriptRows() {
         roleConfidence: displaySegment.role_confidence,
         roleSource: displaySegment.role_source,
         roleNote: displaySegment.role_note,
-        needsReview: Boolean(displaySegment.needs_review || label === "待确认"),
+        needsReview: transcriptRoleNeedsReview(displaySegment, label),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
     });
@@ -1563,7 +1600,7 @@ function transcriptRows() {
         roleConfidence: displaySegment.role_confidence,
         roleSource: displaySegment.role_source,
         roleNote: displaySegment.role_note,
-        needsReview: Boolean(displaySegment.needs_review || label === "待确认"),
+        needsReview: transcriptRoleNeedsReview(displaySegment, label),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
     });
@@ -3342,7 +3379,7 @@ function roleReviewRequired() {
   const segments = currentReviewSegments();
   const assignments = asr?.speaker_assignments || appState.speakerAssignments || [];
   if (assignments.length) {
-    return assignments.some((item) => item.requires_confirmation || !item.role)
+    return assignments.some((item) => speakerAssignmentNeedsReview(item))
       || appState.speakerMappingRequired;
   }
   return Boolean(
@@ -3355,7 +3392,7 @@ function roleReviewRequired() {
 function roleReviewPendingCount() {
   const assignments = appState.currentAsrResult?.speaker_assignments || appState.speakerAssignments || [];
   if (assignments.length) {
-    return assignments.filter((item) => item.requires_confirmation || !item.role).length;
+    return assignments.filter((item) => speakerAssignmentNeedsReview(item)).length;
   }
   return currentReviewSegments()
     .filter((segment) => segment.needs_review || !segment.role || segment.role === "待确认")

@@ -156,30 +156,31 @@ $env:ONLINE_ASR_API_KEY = "<set-in-environment-only>"
 
 本项目支持 Docker Desktop 本地部署，镜像包含基础 Web 服务、SQLite、Mock ASR、FunASR 和 SenseVoice CPU 依赖。
 
-Docker 默认对外访问端口为 `2626`，容器内部服务端口仍为 `8000`。如需更换宿主机端口，可在启动前设置 `MRA_HOST_PORT`。
+Docker 默认尝试使用宿主机端口 `2626`，容器内部服务端口仍为 `8000`。Windows 可能保留一段 TCP 端口，演示前建议先扫描 `2600-2699` 并选择可用端口。
 
-构建并启动：
+检查并启动：
 
 ```powershell
+$env:MRA_HOST_PORT = (python scripts\check_docker_port.py --start 2600 --end 2699 --format env).Split("=")[1]
 docker compose up -d --build
 ```
 
-如需临时使用其他端口：
+也可以手动指定其他可用端口：
 
 ```powershell
-$env:MRA_HOST_PORT = "2630"
+$env:MRA_HOST_PORT = "2644"
 docker compose up -d --build
 ```
 
 本机访问：
 
-- 医生端：http://127.0.0.1:2626/static/doctor.html
-- 健康检查：http://127.0.0.1:2626/health
+- 医生端：`http://127.0.0.1:$env:MRA_HOST_PORT/static/doctor.html`
+- 健康检查：`http://127.0.0.1:$env:MRA_HOST_PORT/health`
 
 局域网其他电脑访问时，先用 `ipconfig` 查看本机 IPv4，例如 `192.168.1.23`，然后访问：
 
 ```text
-http://192.168.1.23:2626/static/doctor.html
+http://192.168.1.23:<实际端口>/static/doctor.html
 ```
 
 Docker 运行数据写入 `data/docker_runtime/`，模型缓存写入 `data/asr_model_cache/`，两者均不提交 GitHub。完整说明见 [`docs/docker_local_deploy.md`](docs/docker_local_deploy.md)。

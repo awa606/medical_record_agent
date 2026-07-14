@@ -7,8 +7,8 @@
 - 适合本机演示、课程答辩、同一 Wi-Fi 或同一局域网内访问。
 - Docker 镜像包含基础 Web 服务、SQLite、Mock ASR、FunASR 和 SenseVoice CPU 依赖。
 - 不包含公网暴露、HTTPS、登录认证、GPU/CUDA 或医院生产部署。
-- Docker 默认对外访问端口为 `2626`，容器内部仍监听 `8000`，即 Compose 端口映射为 `${MRA_HOST_PORT:-2626}:8000`。
-- 说明：当前 Windows 本机将 TCP `2526-2625` 设为系统保留端口范围，`2601` 无法绑定，因此本机演示端口切换为最近的可用 `2626`。
+- Docker 默认尝试使用宿主机端口 `2626`，容器内部仍监听 `8000`，即 Compose 端口映射为 `${MRA_HOST_PORT:-2626}:8000`。
+- Windows 可能保留一段 TCP 端口。启动前建议扫描 `2600-2699`，选择脚本推荐的可绑定端口；本机当前示例端口为 `2644`。
 
 ## 前置条件
 
@@ -25,31 +25,31 @@ docker compose version
 
 ## 构建与启动
 
-在项目根目录运行：
+在项目根目录运行，先选择一个可用的 `26xx` 端口：
 
 ```powershell
-python scripts\check_docker_port.py --port 2626
+$env:MRA_HOST_PORT = (python scripts\check_docker_port.py --start 2600 --end 2699 --format env).Split("=")[1]
 docker compose up -d --build
 ```
 
-如需临时使用其他可用端口：
+如需手动指定端口，先检查再启动：
 
 ```powershell
-$env:MRA_HOST_PORT = "2630"
-python scripts\check_docker_port.py --port 2630
+$env:MRA_HOST_PORT = "2644"
+python scripts\check_docker_port.py --port $env:MRA_HOST_PORT
 docker compose up -d --build
 ```
 
 启动后，本机访问：
 
 ```text
-http://127.0.0.1:2626/static/doctor.html
+http://127.0.0.1:<实际端口>/static/doctor.html
 ```
 
 健康检查：
 
 ```powershell
-curl http://127.0.0.1:2626/health
+curl http://127.0.0.1:<实际端口>/health
 ```
 
 预期返回：
@@ -75,20 +75,20 @@ ipconfig
 同一局域网内其他电脑访问：
 
 ```text
-http://192.168.1.23:2626/static/doctor.html
+http://192.168.1.23:<实际端口>/static/doctor.html
 ```
 
 如果其他人无法访问，优先检查：
 
 - 你的电脑和对方是否在同一 Wi-Fi / 局域网。
 - Docker 容器是否正在运行。
-- 端口映射是否为 `${MRA_HOST_PORT:-2626}:8000`。
-- Windows 防火墙是否允许 TCP 2626 入站。
+- 端口映射是否为 `${MRA_HOST_PORT:-2626}:8000`，以及当前 `MRA_HOST_PORT` 是否为真实可用端口。
+- Windows 防火墙是否允许当前实际 TCP 端口入站。
 
 如需添加 Windows 防火墙规则，请用管理员 PowerShell 运行：
 
 ```powershell
-New-NetFirewallRule -DisplayName "Medical Record Agent 2626" -Direction Inbound -Protocol TCP -LocalPort 2626 -Action Allow
+New-NetFirewallRule -DisplayName "Medical Record Agent" -Direction Inbound -Protocol TCP -LocalPort $env:MRA_HOST_PORT -Action Allow
 ```
 
 ## 数据与缓存
@@ -118,7 +118,7 @@ MODELSCOPE_CACHE=/app/model_cache/modelscope
 
 测试步骤：
 
-1. 打开 `http://127.0.0.1:2626/static/doctor.html`。
+1. 打开 `http://127.0.0.1:<实际端口>/static/doctor.html`。
 2. 点击“粘贴问诊文本”，生成病历草稿。
 3. 检查病历字段区、对话转写区、AI 辅助与安全校验区是否正常显示。
 4. 上传短 MP3/WAV，选择 `Mock ASR`，确认 SSE 分段、角色校正和生成病历流程正常。
@@ -141,7 +141,7 @@ MODELSCOPE_CACHE=/app/model_cache/modelscope
 先在本机确认：
 
 ```powershell
-curl http://127.0.0.1:2626/health
+curl http://127.0.0.1:<实际端口>/health
 ```
 
 再确认对方访问的是你的局域网 IPv4，而不是 `127.0.0.1`。`127.0.0.1` 只代表访问者自己的电脑。

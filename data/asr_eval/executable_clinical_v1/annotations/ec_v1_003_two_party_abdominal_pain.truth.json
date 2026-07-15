@@ -1,0 +1,124 @@
+{
+  "sample_id": "ec_v1_003_two_party_abdominal_pain",
+  "annotation_version": "truth-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "Windows local TTS generated from synthetic scripts"
+  },
+  "transcript": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.983,
+      "text": "请问今天哪里不舒服，有没有腹痛或者恶心？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.983,
+      "end_sec": 11.966,
+      "text": "我从昨天开始腹痛，今天还有恶心，感觉不舒服。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk0",
+      "start_sec": 11.966,
+      "end_sec": 17.949,
+      "text": "症状持续多久了，之前有没有用药或者过敏史？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk1",
+      "start_sec": 17.949,
+      "end_sec": 23.932,
+      "text": "大概一天多，没有明显过敏史，暂时没有自己用药。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk0",
+      "start_sec": 23.932,
+      "end_sec": 29.914,
+      "text": "建议先做基础检查，结合病史评估是否为急性胃肠炎待查。",
+      "mixed_utterance": false
+    }
+  ],
+  "speaker_turns": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.983
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.983,
+      "end_sec": 11.966
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk0",
+      "start_sec": 11.966,
+      "end_sec": 17.949
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk1",
+      "start_sec": 17.949,
+      "end_sec": 23.932
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk0",
+      "start_sec": 23.932,
+      "end_sec": 29.914
+    }
+  ],
+  "rttm": [
+    "SPEAKER ec_v1_003_two_party_abdominal_pain 1 0.000 5.983 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_003_two_party_abdominal_pain 1 5.983 5.983 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_003_two_party_abdominal_pain 1 11.966 5.983 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_003_two_party_abdominal_pain 1 17.949 5.983 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_003_two_party_abdominal_pain 1 23.932 5.982 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {
+    "spk0": "doctor",
+    "spk1": "patient"
+  },
+  "medical_keywords": [
+    "恶心",
+    "腹痛",
+    "过敏"
+  ],
+  "medical_record_fields": [
+    {
+      "field": "chief_complaint",
+      "value": "腹痛伴恶心",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    },
+    {
+      "field": "assessment",
+      "value": "急性胃肠炎待查",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    }
+  ],
+  "evidence_spans": [
+    {
+      "field": "chief_complaint",
+      "turn_id": "t02",
+      "quote": "我从昨天开始腹痛，今天还有恶心，感觉不舒服。"
+    }
+  ]
+}

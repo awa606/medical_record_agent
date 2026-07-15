@@ -1,0 +1,270 @@
+{
+  "dataset_version": "executable_clinical_v1",
+  "schema_version": "executable-speaker-role-dataset-v1",
+  "created_at": "2026-07-15T08:57:33.424141+00:00",
+  "audio_storage": "git_lfs",
+  "privacy": {
+    "synthetic_only": true,
+    "contains_real_patient_data": false,
+    "note": "All audio is generated locally from synthetic scripts by Windows TTS."
+  },
+  "split_policy": {
+    "calibration": "May be used for threshold selection in #41.",
+    "test": "Must not be read during calibration; use only for final acceptance."
+  },
+  "samples": [
+    {
+      "sample_id": "ec_v1_001_two_party_fever_cough",
+      "scenario_type": "two_party",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_001_two_party_fever_cough.wav",
+      "sha256": "afd1ff260c44c82e621d337f72dce8c876a36bb688018f0711e5213eff922806",
+      "duration_sec": 30.424,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_001_two_party_fever_cough.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_002_two_party_chest_pain",
+      "scenario_type": "two_party",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_002_two_party_chest_pain.wav",
+      "sha256": "bfb38c6aedce195c28c666ddbe50babe3090ef62cd107308efd8495d18142222",
+      "duration_sec": 29.799,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_002_two_party_chest_pain.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_003_two_party_abdominal_pain",
+      "scenario_type": "two_party",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_003_two_party_abdominal_pain.wav",
+      "sha256": "fd7c424e4bb32f9fab7f8875e7ad1353b286062211f4a41ff049ea1a840723f7",
+      "duration_sec": 29.914,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_003_two_party_abdominal_pain.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_004_two_party_dizziness",
+      "scenario_type": "two_party",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_004_two_party_dizziness.wav",
+      "sha256": "f734a8d054b4666389ade4595feead4fe0904fd25d6f800aa29b99a9129ec2ba",
+      "duration_sec": 29.779,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_004_two_party_dizziness.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_005_two_party_sore_throat",
+      "scenario_type": "two_party",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_005_two_party_sore_throat.wav",
+      "sha256": "faaef625a354cf2921dad09d1bd1069f776b4a3a16d74f7b3756057da0a8b6a1",
+      "duration_sec": 29.204,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_005_two_party_sore_throat.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_006_two_party_asthma",
+      "scenario_type": "two_party",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_006_two_party_asthma.wav",
+      "sha256": "4fdb9df32574d0a70b50572e19ffe8adda374bfcf6e74cb6bf7266abfa496220",
+      "duration_sec": 30.349,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_006_two_party_asthma.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_007_two_party_allergy",
+      "scenario_type": "two_party",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_007_two_party_allergy.wav",
+      "sha256": "7b8cefce69f7c7d434b0d8063e2f74174397e47cb85f1441562643f45e8fb4f2",
+      "duration_sec": 29.664,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_007_two_party_allergy.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_008_two_party_diabetes",
+      "scenario_type": "two_party",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_008_two_party_diabetes.wav",
+      "sha256": "f7c65a8a792a915755c38973f34ed419eea3f33015772ff29d55dc7d55e0e9c0",
+      "duration_sec": 30.454,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_008_two_party_diabetes.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_009_two_party_hypertension",
+      "scenario_type": "two_party",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_009_two_party_hypertension.wav",
+      "sha256": "566459b7772bd336af1cfc21448b94d58ff29312ee2f214941db08c9d35cab63",
+      "duration_sec": 30.089,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_009_two_party_hypertension.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_010_two_party_injury",
+      "scenario_type": "two_party",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_010_two_party_injury.wav",
+      "sha256": "8b5d725a43cdfad80f942dc42c24374617269ac3bd7890b52455746b3dd6c92d",
+      "duration_sec": 29.964,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_010_two_party_injury.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_011_three_party_child_fever",
+      "scenario_type": "three_party_family",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_011_three_party_child_fever.wav",
+      "sha256": "a6127066580e6c17327597bdecd272f5286d2c3c10fefbf0c07a4ef3b9a55ded",
+      "duration_sec": 31.273,
+      "speaker_count": 3,
+      "annotation_path": "annotations/ec_v1_011_three_party_child_fever.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_012_three_party_elder_dizziness",
+      "scenario_type": "three_party_family",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_012_three_party_elder_dizziness.wav",
+      "sha256": "c171135547053f9c7f7fc02887c34b7daf953bd9e509cffeba95c7a59b8350f4",
+      "duration_sec": 32.033,
+      "speaker_count": 3,
+      "annotation_path": "annotations/ec_v1_012_three_party_elder_dizziness.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_013_three_party_mother_chest",
+      "scenario_type": "three_party_family",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_013_three_party_mother_chest.wav",
+      "sha256": "37901c10a222e76ef23a0ea042fcd0c2d93c3475adc85b848177e041523b8888",
+      "duration_sec": 31.558,
+      "speaker_count": 3,
+      "annotation_path": "annotations/ec_v1_013_three_party_mother_chest.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_014_three_party_father_diabetes",
+      "scenario_type": "three_party_family",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_014_three_party_father_diabetes.wav",
+      "sha256": "c8be84afd18d7de283d383c612ff7c458e1432e32e181eb4c79d25611b184aca",
+      "duration_sec": 31.958,
+      "speaker_count": 3,
+      "annotation_path": "annotations/ec_v1_014_three_party_father_diabetes.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_015_three_party_post_injury",
+      "scenario_type": "three_party_family",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_015_three_party_post_injury.wav",
+      "sha256": "9eeb1b975740a0a0bc45ad1675aad247ebfc6fcd5d14b6b62e39b00c49db554b",
+      "duration_sec": 31.618,
+      "speaker_count": 3,
+      "annotation_path": "annotations/ec_v1_015_three_party_post_injury.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_016_single_reader_script_reading",
+      "scenario_type": "single_reader_counterexample",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_016_single_reader_script_reading.wav",
+      "sha256": "5b842682243b421cc6752e5df52070afa8b028430d094ec12a1c14a477bc98e4",
+      "duration_sec": 14.999,
+      "speaker_count": 1,
+      "annotation_path": "annotations/ec_v1_016_single_reader_script_reading.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_017_single_reader_teaching_material",
+      "scenario_type": "single_reader_counterexample",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_017_single_reader_teaching_material.wav",
+      "sha256": "9b9d481a342d1af6c2087d51f0d20e7cbad90092f7272a0b44780c6210c284b6",
+      "duration_sec": 15.294,
+      "speaker_count": 1,
+      "annotation_path": "annotations/ec_v1_017_single_reader_teaching_material.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_018_single_reader_case_summary",
+      "scenario_type": "single_reader_counterexample",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_018_single_reader_case_summary.wav",
+      "sha256": "2427cca0e2232a4ccf5b5980b63ddb9393ad2cb62fe548cf8d35f4cd9d63fc7f",
+      "duration_sec": 15.049,
+      "speaker_count": 1,
+      "annotation_path": "annotations/ec_v1_018_single_reader_case_summary.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_019_challenge_noisy_fever",
+      "scenario_type": "noisy_background",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_019_challenge_noisy_fever.wav",
+      "sha256": "3751fd0e97b32d3faaf11d5318bc026619cb599f55eaae3f8441ffaba6951b15",
+      "duration_sec": 27.4,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_019_challenge_noisy_fever.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_020_challenge_interruption_chest",
+      "scenario_type": "interruption",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_020_challenge_interruption_chest.wav",
+      "sha256": "f48a038146af2d6cd3d573e698baca1704db781aa512807499f7838659706ec4",
+      "duration_sec": 27.565,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_020_challenge_interruption_chest.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_021_challenge_overlap_abdominal",
+      "scenario_type": "overlap",
+      "split": "calibration",
+      "audio_ref": "audio/ec_v1_021_challenge_overlap_abdominal.wav",
+      "sha256": "ff6d263d91d84c414f0fb02453b2b82eec83906197d50b2d3199cc032e3109eb",
+      "duration_sec": 27.46,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_021_challenge_overlap_abdominal.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_022_challenge_noisy_dizziness",
+      "scenario_type": "noisy_background",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_022_challenge_noisy_dizziness.wav",
+      "sha256": "e209c8b8f4d5f8628e95d78b732c03a34ee948013b53897298c68559ef4dbfe4",
+      "duration_sec": 27.59,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_022_challenge_noisy_dizziness.truth.json",
+      "annotation_version": "truth-v1"
+    },
+    {
+      "sample_id": "ec_v1_023_challenge_overlap_noise_allergy",
+      "scenario_type": "noise_interruption_overlap",
+      "split": "test",
+      "audio_ref": "audio/ec_v1_023_challenge_overlap_noise_allergy.wav",
+      "sha256": "f02b595e7bde3c405b4a1344f51c460c7d52ff15f391cbdaec33c1cf0f0ad066",
+      "duration_sec": 27.415,
+      "speaker_count": 2,
+      "annotation_path": "annotations/ec_v1_023_challenge_overlap_noise_allergy.truth.json",
+      "annotation_version": "truth-v1"
+    }
+  ]
+}

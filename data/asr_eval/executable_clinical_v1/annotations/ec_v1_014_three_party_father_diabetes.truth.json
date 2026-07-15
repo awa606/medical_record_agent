@@ -1,0 +1,140 @@
+{
+  "sample_id": "ec_v1_014_three_party_father_diabetes",
+  "annotation_version": "truth-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "Windows local TTS generated from synthetic scripts"
+  },
+  "transcript": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.326,
+      "text": "请问主要问题是什么，糖尿病持续多久？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.326,
+      "end_sec": 10.652,
+      "text": "我有糖尿病和头晕，今天比昨天明显。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk2",
+      "start_sec": 10.652,
+      "end_sec": 15.978,
+      "text": "我是家属，父亲昨晚也说不舒服，我陪他过来。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk0",
+      "start_sec": 15.978,
+      "end_sec": 21.304,
+      "text": "有没有基础病、过敏史或者近期用药？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk2",
+      "start_sec": 21.304,
+      "end_sec": 26.63,
+      "text": "我们家知道的情况是有头晕相关病史，最近没有新药。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t06",
+      "speaker_id": "spk0",
+      "start_sec": 26.63,
+      "end_sec": 31.958,
+      "text": "需要结合查体和检查，先按血糖波动待查处理。",
+      "mixed_utterance": false
+    }
+  ],
+  "speaker_turns": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.326
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.326,
+      "end_sec": 10.652
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk2",
+      "start_sec": 10.652,
+      "end_sec": 15.978
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk0",
+      "start_sec": 15.978,
+      "end_sec": 21.304
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk2",
+      "start_sec": 21.304,
+      "end_sec": 26.63
+    },
+    {
+      "turn_id": "t06",
+      "speaker_id": "spk0",
+      "start_sec": 26.63,
+      "end_sec": 31.958
+    }
+  ],
+  "rttm": [
+    "SPEAKER ec_v1_014_three_party_father_diabetes 1 0.000 5.326 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_014_three_party_father_diabetes 1 5.326 5.326 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_014_three_party_father_diabetes 1 10.652 5.326 <NA> <NA> spk2 <NA> <NA>",
+    "SPEAKER ec_v1_014_three_party_father_diabetes 1 15.978 5.326 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_014_three_party_father_diabetes 1 21.304 5.326 <NA> <NA> spk2 <NA> <NA>",
+    "SPEAKER ec_v1_014_three_party_father_diabetes 1 26.630 5.328 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {
+    "spk0": "doctor",
+    "spk1": "patient",
+    "spk2": "family"
+  },
+  "medical_keywords": [
+    "头晕",
+    "糖尿病",
+    "过敏"
+  ],
+  "medical_record_fields": [
+    {
+      "field": "chief_complaint",
+      "value": "糖尿病伴头晕",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    },
+    {
+      "field": "assessment",
+      "value": "血糖波动待查",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    }
+  ],
+  "evidence_spans": [
+    {
+      "field": "chief_complaint",
+      "turn_id": "t02",
+      "quote": "我有糖尿病和头晕，今天比昨天明显。"
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "sample_id": "ec_v1_018_single_reader_case_summary",
+  "annotation_version": "truth-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "Windows local TTS generated from synthetic scripts"
+  },
+  "transcript": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 7.524,
+      "text": "这是一段单人朗读材料，内容提到腹痛和恶心，不能伪造成医生和患者两人。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk0",
+      "start_sec": 7.524,
+      "end_sec": 15.049,
+      "text": "朗读者继续说明病例摘要，仅用于反例测试和质量门禁。",
+      "mixed_utterance": false
+    }
+  ],
+  "speaker_turns": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 7.524
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk0",
+      "start_sec": 7.524,
+      "end_sec": 15.049
+    }
+  ],
+  "rttm": [
+    "SPEAKER ec_v1_018_single_reader_case_summary 1 0.000 7.524 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_018_single_reader_case_summary 1 7.524 7.525 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {
+    "spk0": "other"
+  },
+  "medical_keywords": [
+    "恶心",
+    "腹痛"
+  ],
+  "medical_record_fields": [
+    {
+      "field": "chief_complaint",
+      "value": "单人朗读包含腹痛和恶心",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    },
+    {
+      "field": "assessment",
+      "value": "非真实医患对话",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    }
+  ],
+  "evidence_spans": [
+    {
+      "field": "chief_complaint",
+      "turn_id": "t02",
+      "quote": "朗读者继续说明病例摘要，仅用于反例测试和质量门禁。"
+    }
+  ]
+}

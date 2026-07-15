@@ -521,6 +521,17 @@ function setDisplayScale(mode) {
 function renderInputMethodMenu() {
   const button = $("inputMethodButton");
   const menu = $("inputMethodMenu");
+  if (!button || !menu) return;
+  button.textContent = "开始生成";
+  const labels = {
+    audio: "上传音频",
+    text: "粘贴文本",
+    record: "Mock 演示",
+  };
+  menu.querySelectorAll("[data-input-method]").forEach((item) => {
+    const method = item.dataset.inputMethod;
+    if (labels[method]) item.textContent = labels[method];
+  });
   button.classList.toggle("active", appState.inputMenuOpen);
   button.setAttribute("aria-expanded", appState.inputMenuOpen ? "true" : "false");
   menu.hidden = !appState.inputMenuOpen;
@@ -3756,7 +3767,14 @@ async function handleWorkflowAction(action) {
 
 function handleInputMethod(method) {
   if (method === "record") {
-    openReservedRecording();
+    closeInputMethodMenu();
+    appState.selectedEngine = "mock";
+    const topSelect = $("topAsrEngineSelect");
+    const audioSelect = $("audioEngineSelect");
+    if (topSelect) topSelect.value = "mock";
+    if (audioSelect) audioSelect.value = "mock";
+    showToast("已切换为 Mock ASR 演示，可上传任意 MP3/WAV 跑通流程");
+    openAudioGenerate();
     return;
   }
   if (method === "audio") {

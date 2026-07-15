@@ -5764,3 +5764,24 @@ body.doctor-mode .assist-column .bottom-actions {
     min-width: 760px;
   }
 }
+
+/* v1.3.3 doctor-facing entry denoise: keep the existing layout, but make the
+   single generation entry read like a product action instead of a debug menu. */
+body.doctor-mode #inputMethodButton {
+  min-width: 96px;
+  font-weight: 900;
+}
+
+body.doctor-mode .input-method-popover {
+  min-width: 156px;
+  padding: 8px;
+  gap: 6px;
+}
+
+body.doctor-mode .input-method-popover button {
+  min-height: 36px;
+  justify-content: flex-start;
+  border-radius: 8px;
+  color: #0f172a;
+  font-weight: 800;
+}

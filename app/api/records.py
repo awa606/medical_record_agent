@@ -8,8 +8,9 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
 from app.agents import MedicalRecordOrchestrator
-from app.schemas import MedicalRecordFields, SafetyCheckResult, SourceSpan
+from app.schemas import ASRResult, ASRSegment, MedicalRecordFields, SafetyCheckResult, SourceSpan
 from app.services import MockLLM
+from app.services.asr.role_quality import build_speaker_role_quality
 from app.services.record_quality import build_record_quality_report
 
 
@@ -407,6 +408,31 @@ def _stable_segments_for_external_api(segments: list[dict[str, Any]]) -> list[di
     return [segment for segment in segments if not segment.get("provisional")]
 
 
+def _require_segments_role_quality(
+    conversation_text: str,
+    segments: list[dict[str, Any]],
+) -> None:
+    if not segments:
+        return
+    asr_segments = [ASRSegment.model_validate(segment) for segment in segments]
+    asr_result = ASRResult(
+        audio_id="external_api",
+        engine="external_api",
+        text="\n".join(segment.text for segment in asr_segments if segment.text.strip()),
+        conversation_text=conversation_text,
+        segments=asr_segments,
+    )
+    quality = build_speaker_role_quality(asr_result)
+    if quality.status != "passed":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Speaker role quality gate did not pass.",
+                "role_quality": quality.model_dump(mode="json"),
+            },
+        )
+
+
 def _extract_fields_for_service(
     conversation_text: str,
     segments: list[dict[str, Any]],
@@ -418,6 +444,7 @@ def _extract_fields_for_service(
 @router.post("/extract-fields", response_model=ExtractFieldsResponse)
 def extract_fields(payload: ExtractFieldsRequest) -> ExtractFieldsResponse:
     stable_segments = _stable_segments_for_external_api(payload.segments)
+    _require_segments_role_quality(payload.conversation_text, stable_segments)
     fields = _extract_fields_for_service(payload.conversation_text, stable_segments)
     quality_report = build_record_quality_report(fields)
     return ExtractFieldsResponse(

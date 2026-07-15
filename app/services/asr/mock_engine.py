@@ -13,6 +13,8 @@ MOCK_SEGMENTS = [
         start_time=0.0,
         end_time=2.0,
         confidence=0.99,
+        role_confidence=0.99,
+        role_source="mock_deterministic",
     ),
     ASRSegment(
         speaker="患者",
@@ -21,6 +23,8 @@ MOCK_SEGMENTS = [
         start_time=2.1,
         end_time=6.8,
         confidence=0.99,
+        role_confidence=0.99,
+        role_source="mock_deterministic",
     ),
     ASRSegment(
         speaker="医生",
@@ -29,6 +33,8 @@ MOCK_SEGMENTS = [
         start_time=6.9,
         end_time=9.4,
         confidence=0.99,
+        role_confidence=0.99,
+        role_source="mock_deterministic",
     ),
     ASRSegment(
         speaker="患者",
@@ -37,6 +43,8 @@ MOCK_SEGMENTS = [
         start_time=9.5,
         end_time=14.8,
         confidence=0.99,
+        role_confidence=0.99,
+        role_source="mock_deterministic",
     ),
     ASRSegment(
         speaker="医生",
@@ -45,6 +53,8 @@ MOCK_SEGMENTS = [
         start_time=14.9,
         end_time=19.2,
         confidence=0.99,
+        role_confidence=0.99,
+        role_source="mock_deterministic",
     ),
     ASRSegment(
         speaker="患者",
@@ -53,6 +63,8 @@ MOCK_SEGMENTS = [
         start_time=19.3,
         end_time=25.0,
         confidence=0.99,
+        role_confidence=0.99,
+        role_source="mock_deterministic",
     ),
 ]
 

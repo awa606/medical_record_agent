@@ -12,6 +12,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.schemas.asr import ASRResult, ASRSegment, SpeakerRoleAssignment
+from app.services.asr.role_quality import (
+    SpeakerRoleQualityPolicy,
+    legacy_speaker_role_quality_report,
+)
 
 
 CLINICAL_ROLES = {"医生", "患者", "其他"}
@@ -24,83 +28,18 @@ def validate_speaker_role_quality(
     expected_roles: dict[str, str] | None = None,
     confidence_threshold: float = 0.9,
     max_manual_confirmation_rate: float = 0.35,
+    max_mixed_utterance_rate: float = 0.05,
 ) -> dict[str, Any]:
-    segments = [segment for segment in asr_result.segments if not segment.provisional]
-    speaker_ids = sorted(
-        {
-            _speaker_id(segment)
-            for segment in segments
-            if _speaker_id(segment)
-        }
+    policy = SpeakerRoleQualityPolicy(
+        confidence_threshold=confidence_threshold,
+        max_manual_confirmation_rate=max_manual_confirmation_rate,
+        max_mixed_utterance_rate=max_mixed_utterance_rate,
     )
-    assignments = {
-        item.speaker_id: item
-        for item in asr_result.speaker_assignments
-    }
-    low_confidence_clinical = [
-        {
-            "segment_id": segment.segment_id,
-            "speaker_id": _speaker_id(segment),
-            "role": segment.role,
-            "role_confidence": segment.role_confidence,
-            "role_source": segment.role_source,
-            "text": _compact(segment.text),
-        }
-        for segment in segments
-        if _is_low_confidence_clinical(segment, confidence_threshold)
-    ]
-    unresolved_assignments = [
-        item.model_dump(mode="json")
-        for item in asr_result.speaker_assignments
-        if item.requires_confirmation or not item.role
-    ]
-    role_accuracy = _role_accuracy(assignments, expected_roles or {})
-    confirmation_rate = len(unresolved_assignments) / max(len(speaker_ids), 1)
-    mixed_utterance_candidates = [
-        {
-            "segment_id": segment.segment_id,
-            "speaker_id": _speaker_id(segment),
-            "text": _compact(segment.text, 140),
-        }
-        for segment in segments
-        if _looks_like_mixed_medical_utterance(segment.text)
-    ]
-    pass_gate = (
-        not low_confidence_clinical
-        and confirmation_rate <= max_manual_confirmation_rate
-        and (role_accuracy is None or role_accuracy >= 0.9)
+    return legacy_speaker_role_quality_report(
+        asr_result,
+        expected_roles=expected_roles,
+        policy=policy,
     )
-    return {
-        "status": "passed" if pass_gate else "needs_review",
-        "summary": {
-            "segment_count": len(segments),
-            "speaker_count": len(speaker_ids),
-            "speaker_ids": speaker_ids,
-            "speaker_assignment_count": len(asr_result.speaker_assignments),
-            "manual_confirmation_rate": round(confirmation_rate, 4),
-            "role_accuracy": role_accuracy,
-            "mixed_utterance_candidate_rate": round(
-                len(mixed_utterance_candidates) / max(len(segments), 1),
-                4,
-            ),
-        },
-        "quality_gate": {
-            "confidence_threshold": confidence_threshold,
-            "max_manual_confirmation_rate": max_manual_confirmation_rate,
-            "low_confidence_clinical_role_count": len(low_confidence_clinical),
-            "unresolved_assignment_count": len(unresolved_assignments),
-            "mixed_utterance_candidate_count": len(mixed_utterance_candidates),
-        },
-        "low_confidence_clinical_roles": low_confidence_clinical,
-        "unresolved_assignments": unresolved_assignments,
-        "mixed_utterance_candidates": mixed_utterance_candidates,
-        "recommendations": _recommendations(
-            low_confidence_clinical,
-            unresolved_assignments,
-            mixed_utterance_candidates,
-            role_accuracy,
-        ),
-    }
 
 
 def _speaker_id(segment: ASRSegment) -> str:
@@ -200,8 +139,9 @@ def _render_markdown(report: dict[str, Any]) -> str:
         "## 门禁项",
         "",
         f"- 低置信度临床角色段：{gate['low_confidence_clinical_role_count']}",
+        f"- 未映射稳定说话人片段：{gate['unmapped_speaker_count']}",
         f"- 未完成说话人映射：{gate['unresolved_assignment_count']}",
-        f"- 疑似混合语句：{gate['mixed_utterance_candidate_count']}",
+        f"- 疑似混合语句：{gate['mixed_utterance_candidate_count']}（阈值 {gate['max_mixed_utterance_rate']}）",
         "",
         "## 建议",
         "",
@@ -218,6 +158,7 @@ def main() -> int:
     parser.add_argument("--output-md", type=Path)
     parser.add_argument("--confidence-threshold", type=float, default=0.9)
     parser.add_argument("--max-manual-confirmation-rate", type=float, default=0.35)
+    parser.add_argument("--max-mixed-utterance-rate", type=float, default=0.05)
     args = parser.parse_args()
 
     payload = json.loads(args.asr_result.read_text(encoding="utf-8"))
@@ -227,6 +168,7 @@ def main() -> int:
         expected_roles=_load_expected_roles(args.expected_roles),
         confidence_threshold=args.confidence_threshold,
         max_manual_confirmation_rate=args.max_manual_confirmation_rate,
+        max_mixed_utterance_rate=args.max_mixed_utterance_rate,
     )
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
     args.output_json.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

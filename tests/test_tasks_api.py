@@ -42,7 +42,7 @@ class TaskApiTests(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_task_routes_are_registered(self):
-        route_paths = {route.path for route in app.routes}
+        route_paths = set(app.openapi()["paths"])
 
         self.assertIn("/api/tasks/{task_id}", route_paths)
         self.assertIn("/api/tasks/{task_id}/steps", route_paths)

@@ -12,6 +12,8 @@ from app.schemas.asr import (
     ASRSessionUploadResponse,
     AudioRecord,
     DiarizationTurn,
+    SpeakerRoleQualityMetrics,
+    SpeakerRoleQualityResult,
     SpeakerRoleAssignment,
 )
 from app.schemas.medical_record import (
@@ -45,6 +47,8 @@ __all__ = [
     "AgentTaskStepResponse",
     "AudioRecord",
     "DiarizationTurn",
+    "SpeakerRoleQualityMetrics",
+    "SpeakerRoleQualityResult",
     "CandidateDiagnosis",
     "DoctorSpeakerProfile",
     "MedicalField",

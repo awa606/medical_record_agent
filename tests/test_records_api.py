@@ -71,7 +71,10 @@ class RecordsApiTests(unittest.TestCase):
                 segments=[
                     {
                         "segment_id": "seg-patient-1",
+                        "speaker_id": "spk1",
                         "role": "patient",
+                        "role_confidence": 0.99,
+                        "role_source": "manual_speaker_map",
                         "text": "fever for three days and cough.",
                     }
                 ],
@@ -221,6 +224,48 @@ class RecordsApiTests(unittest.TestCase):
             )
         self.assertEqual(raised.exception.status_code, 409)
         self.assertIn("角色映射", raised.exception.detail)
+
+    def test_extract_fields_rejects_low_confidence_speaker_role(self):
+        with self.assertRaises(HTTPException) as raised:
+            extract_fields(
+                ExtractFieldsRequest(
+                    conversation_text="[患者] 我发热三天",
+                    source="external_api",
+                    segments=[
+                        {
+                            "segment_id": "stable-1",
+                            "speaker_id": "spk1",
+                            "role": "患者",
+                            "role_confidence": 0.86,
+                            "role_source": "global_two_party_constraint",
+                            "text": "我发热三天",
+                        }
+                    ],
+                )
+            )
+
+        self.assertEqual(raised.exception.status_code, 409)
+        self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
+
+    def test_extract_fields_rejects_unmapped_stable_speaker(self):
+        with self.assertRaises(HTTPException) as raised:
+            extract_fields(
+                ExtractFieldsRequest(
+                    conversation_text="[说话人 A] 我发热三天",
+                    source="external_api",
+                    segments=[
+                        {
+                            "segment_id": "stable-1",
+                            "speaker_id": "spk1",
+                            "role": None,
+                            "text": "我发热三天",
+                        }
+                    ],
+                )
+            )
+
+        self.assertEqual(raised.exception.status_code, 409)
+        self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
 
 
 if __name__ == "__main__":

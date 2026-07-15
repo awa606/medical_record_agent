@@ -45,6 +45,7 @@ from app.services.asr import (
 )
 from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
+from app.services.asr.role_quality import attach_speaker_role_quality
 from app.services.asr.speaker_role_classifier import resolve_speaker_roles
 
 
@@ -361,7 +362,7 @@ def _apply_segment_corrections(
     )
     if updated.reviewed_by_doctor and "ASR segments were manually reviewed by doctor." not in updated.warnings:
         updated.warnings.append("ASR segments were manually reviewed by doctor.")
-    return updated
+    return attach_speaker_role_quality(updated)
 
 
 def _segment_progress(segment: ASRSegment, index: int, total: int, duration: float | None) -> float:
@@ -1146,6 +1147,7 @@ def _reconcile_streaming_result(
         ]
         calibrated.text = _plain_text_from_segments(calibrated.segments)
         calibrated.conversation_text = _conversation_from_segments(calibrated.segments)
+        calibrated = attach_speaker_role_quality(calibrated)
         diarization_events = [
             ASRSessionEvent(
                 id=1,
@@ -1626,6 +1628,7 @@ def _write_transcription_success(
     result: ASRResult,
     emit_segments: bool = True,
 ) -> None:
+    result = attach_speaker_role_quality(result)
     _write_transcript(result)
     _write_session_result(session_id, result)
     ready_session = session.model_copy(

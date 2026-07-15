@@ -7,7 +7,7 @@ from app.main import app
 
 class CapabilitiesApiTests(unittest.TestCase):
     def test_capabilities_route_describes_reusable_interfaces(self):
-        route_paths = {route.path for route in app.routes}
+        route_paths = set(app.openapi()["paths"])
         self.assertIn("/api/capabilities", route_paths)
 
         response = TestClient(app).get("/api/capabilities")

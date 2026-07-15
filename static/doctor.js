@@ -526,7 +526,8 @@ function renderInputMethodMenu() {
   const labels = {
     audio: "上传音频",
     text: "粘贴文本",
-    record: "Mock 演示",
+    record: "录音生成",
+    mock: "Mock 演示",
   };
   menu.querySelectorAll("[data-input-method]").forEach((item) => {
     const method = item.dataset.inputMethod;
@@ -3767,6 +3768,10 @@ async function handleWorkflowAction(action) {
 
 function handleInputMethod(method) {
   if (method === "record") {
+    openReservedRecording();
+    return;
+  }
+  if (method === "mock") {
     closeInputMethodMenu();
     appState.selectedEngine = "mock";
     const topSelect = $("topAsrEngineSelect");

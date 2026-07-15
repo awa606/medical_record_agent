@@ -6,6 +6,7 @@
 
 - 当前工程口径：`v1.4.0`。
 - 默认 Docker 角色分类：`SPEAKER_ROLE_PROVIDER=rules`。
+- 单人维护治理规则：见 [`docs/repository_governance.md`](docs/repository_governance.md)，main 要求 PR 与 `verify`，不要求同账号自审。
 - Mock 演示链路继续保留，用于答辩和端到端稳定演示；真实 ASR/LLM 能力必须用评测数据单独证明。
 - 代码实现、数据证据、未完成事项必须在每个版本中同时说明。
 

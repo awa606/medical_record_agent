@@ -1,0 +1,124 @@
+{
+  "sample_id": "ec_v1_008_two_party_diabetes",
+  "annotation_version": "truth-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "Windows local TTS generated from synthetic scripts"
+  },
+  "transcript": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 6.091,
+      "text": "请问今天哪里不舒服，有没有糖尿病或者头晕？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 6.091,
+      "end_sec": 12.182,
+      "text": "我从昨天开始糖尿病，今天还有头晕，感觉不舒服。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk0",
+      "start_sec": 12.182,
+      "end_sec": 18.273,
+      "text": "症状持续多久了，之前有没有用药或者过敏史？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk1",
+      "start_sec": 18.273,
+      "end_sec": 24.364,
+      "text": "大概一天多，没有明显过敏史，暂时没有自己用药。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk0",
+      "start_sec": 24.364,
+      "end_sec": 30.454,
+      "text": "建议先做基础检查，结合病史评估是否为血糖异常待查。",
+      "mixed_utterance": false
+    }
+  ],
+  "speaker_turns": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 6.091
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 6.091,
+      "end_sec": 12.182
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk0",
+      "start_sec": 12.182,
+      "end_sec": 18.273
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk1",
+      "start_sec": 18.273,
+      "end_sec": 24.364
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk0",
+      "start_sec": 24.364,
+      "end_sec": 30.454
+    }
+  ],
+  "rttm": [
+    "SPEAKER ec_v1_008_two_party_diabetes 1 0.000 6.091 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_008_two_party_diabetes 1 6.091 6.091 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_008_two_party_diabetes 1 12.182 6.091 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_008_two_party_diabetes 1 18.273 6.091 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_008_two_party_diabetes 1 24.364 6.090 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {
+    "spk0": "doctor",
+    "spk1": "patient"
+  },
+  "medical_keywords": [
+    "头晕",
+    "糖尿病",
+    "过敏"
+  ],
+  "medical_record_fields": [
+    {
+      "field": "chief_complaint",
+      "value": "糖尿病伴头晕",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    },
+    {
+      "field": "assessment",
+      "value": "血糖异常待查",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    }
+  ],
+  "evidence_spans": [
+    {
+      "field": "chief_complaint",
+      "turn_id": "t02",
+      "quote": "我从昨天开始糖尿病，今天还有头晕，感觉不舒服。"
+    }
+  ]
+}

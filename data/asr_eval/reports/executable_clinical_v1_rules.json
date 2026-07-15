@@ -1,0 +1,167 @@
+{
+  "dataset_version": "executable_clinical_v1",
+  "schema_version": "executable-speaker-role-dataset-v1",
+  "manifest_path": "data/asr_eval/executable_clinical_v1/manifest.json",
+  "selected_split": "all",
+  "generated_at": "2026-07-15T09:03:22.552983+00:00",
+  "providers": [
+    "rules"
+  ],
+  "provider_reports": {
+    "rules": {
+      "provider": "rules",
+      "provider_versions": [
+        "rules-text-markers-v1"
+      ],
+      "policy_versions": [
+        "executable-clinical-policy-v1"
+      ],
+      "git_commits": [
+        "04ea877-dirty"
+      ],
+      "provider_configs": [
+        {
+          "auto_accept_threshold": 0.9,
+          "review_threshold": 0.65,
+          "role_source": "truth_transcript_text_only",
+          "single_speaker_counterexample_action": "blocked"
+        }
+      ],
+      "counts_as_product_accuracy": true,
+      "sample_count": 23,
+      "split_counts": {
+        "calibration": 12,
+        "test": 11
+      },
+      "scenario_counts": {
+        "two_party": 10,
+        "three_party_family": 5,
+        "single_reader_counterexample": 3,
+        "noisy_background": 2,
+        "interruption": 1,
+        "overlap": 1,
+        "noise_interruption_overlap": 1
+      },
+      "metrics": {
+        "role_accuracy": 1.0,
+        "auto_accept_coverage": 0.5208,
+        "high_confidence_error_count": 0,
+        "manual_confirmation_rate": 0.4792,
+        "speaker_count_accuracy": 1.0,
+        "mixed_utterance_rate": 0.0541,
+        "keyword_recall": 0.9697
+      },
+      "confidence_intervals_95": {
+        "role_accuracy": {
+          "low": 0.9259,
+          "high": 1.0,
+          "numerator": 48,
+          "denominator": 48
+        },
+        "auto_accept_coverage": {
+          "low": 0.3833,
+          "high": 0.6553,
+          "numerator": 25,
+          "denominator": 48
+        },
+        "manual_confirmation_rate": {
+          "low": 0.3447,
+          "high": 0.6167,
+          "numerator": 23,
+          "denominator": 48
+        },
+        "speaker_count_accuracy": {
+          "low": 0.8569,
+          "high": 1.0,
+          "numerator": 23,
+          "denominator": 23
+        },
+        "mixed_utterance_rate": {
+          "low": 0.025,
+          "high": 0.1129,
+          "numerator": 6,
+          "denominator": 111
+        },
+        "keyword_recall": {
+          "low": 0.8961,
+          "high": 0.9917,
+          "numerator": 64,
+          "denominator": 66
+        }
+      },
+      "high_confidence_errors": [],
+      "hash_status": {
+        "verified_count": 23,
+        "failed_count": 0
+      }
+    }
+  },
+  "sample_count": 23,
+  "split_counts": {
+    "calibration": 12,
+    "test": 11
+  },
+  "scenario_counts": {
+    "two_party": 10,
+    "three_party_family": 5,
+    "single_reader_counterexample": 3,
+    "noisy_background": 2,
+    "interruption": 1,
+    "overlap": 1,
+    "noise_interruption_overlap": 1
+  },
+  "metrics": {
+    "role_accuracy": 1.0,
+    "auto_accept_coverage": 0.5208,
+    "high_confidence_error_count": 0,
+    "manual_confirmation_rate": 0.4792,
+    "speaker_count_accuracy": 1.0,
+    "mixed_utterance_rate": 0.0541,
+    "keyword_recall": 0.9697
+  },
+  "confidence_intervals_95": {
+    "role_accuracy": {
+      "low": 0.9259,
+      "high": 1.0,
+      "numerator": 48,
+      "denominator": 48
+    },
+    "auto_accept_coverage": {
+      "low": 0.3833,
+      "high": 0.6553,
+      "numerator": 25,
+      "denominator": 48
+    },
+    "manual_confirmation_rate": {
+      "low": 0.3447,
+      "high": 0.6167,
+      "numerator": 23,
+      "denominator": 48
+    },
+    "speaker_count_accuracy": {
+      "low": 0.8569,
+      "high": 1.0,
+      "numerator": 23,
+      "denominator": 23
+    },
+    "mixed_utterance_rate": {
+      "low": 0.025,
+      "high": 0.1129,
+      "numerator": 6,
+      "denominator": 111
+    },
+    "keyword_recall": {
+      "low": 0.8961,
+      "high": 0.9917,
+      "numerator": 64,
+      "denominator": 66
+    }
+  },
+  "counts_as_product_accuracy": true,
+  "mock_excluded_from_product_metrics": false,
+  "high_confidence_errors": [],
+  "hash_status": {
+    "verified_count": 23,
+    "failed_count": 0
+  }
+}

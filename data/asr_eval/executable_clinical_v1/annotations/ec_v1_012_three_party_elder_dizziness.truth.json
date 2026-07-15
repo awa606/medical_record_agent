@@ -1,0 +1,141 @@
+{
+  "sample_id": "ec_v1_012_three_party_elder_dizziness",
+  "annotation_version": "truth-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "Windows local TTS generated from synthetic scripts"
+  },
+  "transcript": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.339,
+      "text": "请问主要问题是什么，头晕持续多久？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.339,
+      "end_sec": 10.678,
+      "text": "我有头晕和高血压，今天比昨天明显。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk2",
+      "start_sec": 10.678,
+      "end_sec": 16.017,
+      "text": "我是家属，老人昨晚也说不舒服，我陪他过来。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk0",
+      "start_sec": 16.017,
+      "end_sec": 21.356,
+      "text": "有没有基础病、过敏史或者近期用药？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk2",
+      "start_sec": 21.356,
+      "end_sec": 26.695,
+      "text": "我们家知道的情况是有高血压相关病史，最近没有新药。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t06",
+      "speaker_id": "spk0",
+      "start_sec": 26.695,
+      "end_sec": 32.033,
+      "text": "需要结合查体和检查，先按头晕伴血压异常处理。",
+      "mixed_utterance": false
+    }
+  ],
+  "speaker_turns": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.339
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.339,
+      "end_sec": 10.678
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk2",
+      "start_sec": 10.678,
+      "end_sec": 16.017
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk0",
+      "start_sec": 16.017,
+      "end_sec": 21.356
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk2",
+      "start_sec": 21.356,
+      "end_sec": 26.695
+    },
+    {
+      "turn_id": "t06",
+      "speaker_id": "spk0",
+      "start_sec": 26.695,
+      "end_sec": 32.033
+    }
+  ],
+  "rttm": [
+    "SPEAKER ec_v1_012_three_party_elder_dizziness 1 0.000 5.339 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_012_three_party_elder_dizziness 1 5.339 5.339 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_012_three_party_elder_dizziness 1 10.678 5.339 <NA> <NA> spk2 <NA> <NA>",
+    "SPEAKER ec_v1_012_three_party_elder_dizziness 1 16.017 5.339 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_012_three_party_elder_dizziness 1 21.356 5.339 <NA> <NA> spk2 <NA> <NA>",
+    "SPEAKER ec_v1_012_three_party_elder_dizziness 1 26.695 5.338 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {
+    "spk0": "doctor",
+    "spk1": "patient",
+    "spk2": "family"
+  },
+  "medical_keywords": [
+    "头晕",
+    "血压",
+    "过敏",
+    "高血压"
+  ],
+  "medical_record_fields": [
+    {
+      "field": "chief_complaint",
+      "value": "头晕伴高血压",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    },
+    {
+      "field": "assessment",
+      "value": "头晕伴血压异常",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    }
+  ],
+  "evidence_spans": [
+    {
+      "field": "chief_complaint",
+      "turn_id": "t02",
+      "quote": "我有头晕和高血压，今天比昨天明显。"
+    }
+  ]
+}

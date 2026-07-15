@@ -1,0 +1,47 @@
+{
+  "sample_id": "ec_v1_020_challenge_interruption_chest",
+  "provider": "rules",
+  "provider_version": "rules-text-markers-v1",
+  "policy_version": "executable-clinical-policy-v1",
+  "provider_config": {
+    "role_source": "truth_transcript_text_only",
+    "auto_accept_threshold": 0.9,
+    "review_threshold": 0.65,
+    "single_speaker_counterexample_action": "blocked"
+  },
+  "git_commit": "04ea877-dirty",
+  "generated_at": "2026-07-15T09:03:22.539057+00:00",
+  "source": "rules_provider_text_markers",
+  "predicted_speaker_count": 2,
+  "speaker_decisions": [
+    {
+      "speaker_id": "spk0",
+      "predicted_role": "doctor",
+      "provider": "rules",
+      "provider_version": "rules-text-markers-v1",
+      "policy_version": "executable-clinical-policy-v1",
+      "git_commit": "04ea877-dirty",
+      "raw_confidence": 0.895,
+      "calibrated_confidence": 0.895,
+      "reason_code": "rules_doctor_markers",
+      "action": "needs_review"
+    },
+    {
+      "speaker_id": "spk1",
+      "predicted_role": "patient",
+      "provider": "rules",
+      "provider_version": "rules-text-markers-v1",
+      "policy_version": "executable-clinical-policy-v1",
+      "git_commit": "04ea877-dirty",
+      "raw_confidence": 0.895,
+      "calibrated_confidence": 0.895,
+      "reason_code": "rules_patient_markers",
+      "action": "needs_review"
+    }
+  ],
+  "medical_keywords": [
+    "胸痛",
+    "胸闷",
+    "过敏"
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "sample_id": "ec_v1_015_three_party_post_injury",
+  "annotation_version": "truth-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "Windows local TTS generated from synthetic scripts"
+  },
+  "transcript": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.27,
+      "text": "请问主要问题是什么，外伤持续多久？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.27,
+      "end_sec": 10.54,
+      "text": "我有外伤和疼痛，今天比昨天明显。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk2",
+      "start_sec": 10.54,
+      "end_sec": 15.81,
+      "text": "我是家属，他昨晚也说不舒服，我陪他过来。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk0",
+      "start_sec": 15.81,
+      "end_sec": 21.08,
+      "text": "有没有基础病、过敏史或者近期用药？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk2",
+      "start_sec": 21.08,
+      "end_sec": 26.35,
+      "text": "我们家知道的情况是有疼痛相关病史，最近没有新药。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t06",
+      "speaker_id": "spk0",
+      "start_sec": 26.35,
+      "end_sec": 31.618,
+      "text": "需要结合查体和检查，先按外伤后疼痛待查处理。",
+      "mixed_utterance": false
+    }
+  ],
+  "speaker_turns": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.27
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.27,
+      "end_sec": 10.54
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk2",
+      "start_sec": 10.54,
+      "end_sec": 15.81
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk0",
+      "start_sec": 15.81,
+      "end_sec": 21.08
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk2",
+      "start_sec": 21.08,
+      "end_sec": 26.35
+    },
+    {
+      "turn_id": "t06",
+      "speaker_id": "spk0",
+      "start_sec": 26.35,
+      "end_sec": 31.618
+    }
+  ],
+  "rttm": [
+    "SPEAKER ec_v1_015_three_party_post_injury 1 0.000 5.270 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_015_three_party_post_injury 1 5.270 5.270 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_015_three_party_post_injury 1 10.540 5.270 <NA> <NA> spk2 <NA> <NA>",
+    "SPEAKER ec_v1_015_three_party_post_injury 1 15.810 5.270 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_015_three_party_post_injury 1 21.080 5.270 <NA> <NA> spk2 <NA> <NA>",
+    "SPEAKER ec_v1_015_three_party_post_injury 1 26.350 5.268 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {
+    "spk0": "doctor",
+    "spk1": "patient",
+    "spk2": "family"
+  },
+  "medical_keywords": [
+    "外伤",
+    "疼痛",
+    "过敏"
+  ],
+  "medical_record_fields": [
+    {
+      "field": "chief_complaint",
+      "value": "外伤伴疼痛",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    },
+    {
+      "field": "assessment",
+      "value": "外伤后疼痛待查",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    }
+  ],
+  "evidence_spans": [
+    {
+      "field": "chief_complaint",
+      "turn_id": "t02",
+      "quote": "我有外伤和疼痛，今天比昨天明显。"
+    }
+  ]
+}

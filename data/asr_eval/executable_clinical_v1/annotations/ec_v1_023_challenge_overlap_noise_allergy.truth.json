@@ -1,0 +1,123 @@
+{
+  "sample_id": "ec_v1_023_challenge_overlap_noise_allergy",
+  "annotation_version": "truth-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "Windows local TTS generated from synthetic scripts"
+  },
+  "transcript": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.483,
+      "text": "请问现在最明显的症状是过敏还是咳嗽？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.483,
+      "end_sec": 10.966,
+      "text": "我主要是过敏，说话时可能被打断，旁边有背景声音。",
+      "mixed_utterance": true
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk0",
+      "start_sec": 10.966,
+      "end_sec": 16.449,
+      "text": "我需要确认持续时间、用药情况和过敏史。",
+      "mixed_utterance": true
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk1",
+      "start_sec": 16.449,
+      "end_sec": 21.932,
+      "text": "昨天开始明显，今天还有咳嗽，没有自己吃药。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk0",
+      "start_sec": 21.932,
+      "end_sec": 27.415,
+      "text": "建议先完成必要检查，再决定治疗方案。",
+      "mixed_utterance": false
+    }
+  ],
+  "speaker_turns": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.483
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.483,
+      "end_sec": 10.966
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk0",
+      "start_sec": 10.966,
+      "end_sec": 16.449
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk1",
+      "start_sec": 16.449,
+      "end_sec": 21.932
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk0",
+      "start_sec": 21.932,
+      "end_sec": 27.415
+    }
+  ],
+  "rttm": [
+    "SPEAKER ec_v1_023_challenge_overlap_noise_allergy 1 0.000 5.483 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_023_challenge_overlap_noise_allergy 1 5.483 5.483 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_023_challenge_overlap_noise_allergy 1 10.966 5.483 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_023_challenge_overlap_noise_allergy 1 16.449 5.483 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_023_challenge_overlap_noise_allergy 1 21.932 5.483 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {
+    "spk0": "doctor",
+    "spk1": "patient"
+  },
+  "medical_keywords": [
+    "咳嗽",
+    "过敏"
+  ],
+  "medical_record_fields": [
+    {
+      "field": "chief_complaint",
+      "value": "过敏伴咳嗽",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    },
+    {
+      "field": "assessment",
+      "value": "挑战场景下症状待查",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    }
+  ],
+  "evidence_spans": [
+    {
+      "field": "chief_complaint",
+      "turn_id": "t02",
+      "quote": "我主要是过敏，说话时可能被打断，旁边有背景声音。"
+    }
+  ]
+}

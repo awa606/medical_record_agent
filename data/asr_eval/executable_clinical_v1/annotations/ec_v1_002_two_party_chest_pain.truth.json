@@ -1,0 +1,124 @@
+{
+  "sample_id": "ec_v1_002_two_party_chest_pain",
+  "annotation_version": "truth-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "Windows local TTS generated from synthetic scripts"
+  },
+  "transcript": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.96,
+      "text": "请问今天哪里不舒服，有没有胸痛或者胸闷？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.96,
+      "end_sec": 11.92,
+      "text": "我从昨天开始胸痛，今天还有胸闷，感觉不舒服。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk0",
+      "start_sec": 11.92,
+      "end_sec": 17.88,
+      "text": "症状持续多久了，之前有没有用药或者过敏史？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk1",
+      "start_sec": 17.88,
+      "end_sec": 23.84,
+      "text": "大概一天多，没有明显过敏史，暂时没有自己用药。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk0",
+      "start_sec": 23.84,
+      "end_sec": 29.799,
+      "text": "建议先做基础检查，结合病史评估是否为胸痛原因待查。",
+      "mixed_utterance": false
+    }
+  ],
+  "speaker_turns": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.96
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.96,
+      "end_sec": 11.92
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk0",
+      "start_sec": 11.92,
+      "end_sec": 17.88
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk1",
+      "start_sec": 17.88,
+      "end_sec": 23.84
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk0",
+      "start_sec": 23.84,
+      "end_sec": 29.799
+    }
+  ],
+  "rttm": [
+    "SPEAKER ec_v1_002_two_party_chest_pain 1 0.000 5.960 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_002_two_party_chest_pain 1 5.960 5.960 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_002_two_party_chest_pain 1 11.920 5.960 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_002_two_party_chest_pain 1 17.880 5.960 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_002_two_party_chest_pain 1 23.840 5.959 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {
+    "spk0": "doctor",
+    "spk1": "patient"
+  },
+  "medical_keywords": [
+    "胸痛",
+    "胸闷",
+    "过敏"
+  ],
+  "medical_record_fields": [
+    {
+      "field": "chief_complaint",
+      "value": "胸痛伴胸闷",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    },
+    {
+      "field": "assessment",
+      "value": "胸痛原因待查",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    }
+  ],
+  "evidence_spans": [
+    {
+      "field": "chief_complaint",
+      "turn_id": "t02",
+      "quote": "我从昨天开始胸痛，今天还有胸闷，感觉不舒服。"
+    }
+  ]
+}

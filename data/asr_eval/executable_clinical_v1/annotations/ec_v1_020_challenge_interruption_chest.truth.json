@@ -1,0 +1,124 @@
+{
+  "sample_id": "ec_v1_020_challenge_interruption_chest",
+  "annotation_version": "truth-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "Windows local TTS generated from synthetic scripts"
+  },
+  "transcript": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.513,
+      "text": "请问现在最明显的症状是胸痛还是胸闷？",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.513,
+      "end_sec": 11.026,
+      "text": "我主要是胸痛，说话时可能被打断，旁边有背景声音。",
+      "mixed_utterance": true
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk0",
+      "start_sec": 11.026,
+      "end_sec": 16.539,
+      "text": "我需要确认持续时间、用药情况和过敏史。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk1",
+      "start_sec": 16.539,
+      "end_sec": 22.052,
+      "text": "昨天开始明显，今天还有胸闷，没有自己吃药。",
+      "mixed_utterance": false
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk0",
+      "start_sec": 22.052,
+      "end_sec": 27.565,
+      "text": "建议先完成必要检查，再决定治疗方案。",
+      "mixed_utterance": false
+    }
+  ],
+  "speaker_turns": [
+    {
+      "turn_id": "t01",
+      "speaker_id": "spk0",
+      "start_sec": 0.0,
+      "end_sec": 5.513
+    },
+    {
+      "turn_id": "t02",
+      "speaker_id": "spk1",
+      "start_sec": 5.513,
+      "end_sec": 11.026
+    },
+    {
+      "turn_id": "t03",
+      "speaker_id": "spk0",
+      "start_sec": 11.026,
+      "end_sec": 16.539
+    },
+    {
+      "turn_id": "t04",
+      "speaker_id": "spk1",
+      "start_sec": 16.539,
+      "end_sec": 22.052
+    },
+    {
+      "turn_id": "t05",
+      "speaker_id": "spk0",
+      "start_sec": 22.052,
+      "end_sec": 27.565
+    }
+  ],
+  "rttm": [
+    "SPEAKER ec_v1_020_challenge_interruption_chest 1 0.000 5.513 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_020_challenge_interruption_chest 1 5.513 5.513 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_020_challenge_interruption_chest 1 11.026 5.513 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER ec_v1_020_challenge_interruption_chest 1 16.539 5.513 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER ec_v1_020_challenge_interruption_chest 1 22.052 5.513 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {
+    "spk0": "doctor",
+    "spk1": "patient"
+  },
+  "medical_keywords": [
+    "胸痛",
+    "胸闷",
+    "过敏"
+  ],
+  "medical_record_fields": [
+    {
+      "field": "chief_complaint",
+      "value": "胸痛伴胸闷",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    },
+    {
+      "field": "assessment",
+      "value": "挑战场景下症状待查",
+      "evidence_turn_ids": [
+        "t01",
+        "t02"
+      ]
+    }
+  ],
+  "evidence_spans": [
+    {
+      "field": "chief_complaint",
+      "turn_id": "t02",
+      "quote": "我主要是胸痛，说话时可能被打断，旁边有背景声音。"
+    }
+  ]
+}

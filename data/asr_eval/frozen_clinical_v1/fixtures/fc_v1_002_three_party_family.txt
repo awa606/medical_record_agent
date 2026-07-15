@@ -1,0 +1,4 @@
+synthetic fixture audio placeholder
+sample_id=fc_v1_002_three_party_family
+scenario=three_party_family
+no real patient data

@@ -1,0 +1,43 @@
+{
+  "sample_id": "fc_v1_002_three_party_family",
+  "annotation_version": "2026-07-15.frozen-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "scripted simulated outpatient dialogue with family member"
+  },
+  "transcript": [
+    {"segment_id": "s1", "speaker_id": "spk0", "role": "医生", "start_time": 0.0, "end_time": 2.0, "text": "孩子主要是什么症状？"},
+    {"segment_id": "s2", "speaker_id": "spk2", "role": "其他", "start_time": 2.1, "end_time": 5.0, "text": "他妈妈说昨晚开始咳嗽。"},
+    {"segment_id": "s3", "speaker_id": "spk1", "role": "患者", "start_time": 5.1, "end_time": 7.4, "text": "我嗓子疼，也流鼻涕。"},
+    {"segment_id": "s4", "speaker_id": "spk0", "role": "医生", "start_time": 7.5, "end_time": 10.2, "text": "有没有药物过敏？"}
+  ],
+  "speaker_turns": [
+    {"start_time": 0.0, "end_time": 2.0, "speaker_id": "spk0", "overlap": false},
+    {"start_time": 2.1, "end_time": 5.0, "speaker_id": "spk2", "overlap": false},
+    {"start_time": 5.1, "end_time": 7.4, "speaker_id": "spk1", "overlap": false},
+    {"start_time": 7.5, "end_time": 10.2, "speaker_id": "spk0", "overlap": false}
+  ],
+  "rttm": [
+    "SPEAKER fc_v1_002 1 0.00 2.00 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER fc_v1_002 1 2.10 2.90 <NA> <NA> spk2 <NA> <NA>",
+    "SPEAKER fc_v1_002 1 5.10 2.30 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER fc_v1_002 1 7.50 2.70 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {"spk0": "医生", "spk1": "患者", "spk2": "其他"},
+  "medical_keywords": ["咳嗽", "嗓子疼", "流鼻涕", "过敏"],
+  "medical_record_fields": {
+    "chief_complaint": {"value": "咳嗽伴嗓子疼、流鼻涕", "evidence_segment_ids": ["s2", "s3"]},
+    "allergy_history": {"value": "待补充药物过敏史", "evidence_segment_ids": ["s4"]}
+  },
+  "evidence_spans": [
+    {"field": "chief_complaint", "segment_id": "s2", "text": "昨晚开始咳嗽"},
+    {"field": "chief_complaint", "segment_id": "s3", "text": "我嗓子疼，也流鼻涕。"}
+  ],
+  "baseline_prediction": {
+    "speaker_roles": {"spk0": "医生", "spk1": "患者", "spk2": "其他"},
+    "auto_accepted_speakers": ["spk0", "spk1"],
+    "predicted_speaker_count": 3,
+    "medical_keywords": ["咳嗽", "嗓子疼", "流鼻涕", "过敏"]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "sample_id": "fc_v1_003_single_reader_counterexample",
+  "annotation_version": "2026-07-15.frozen-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "single reader counterexample"
+  },
+  "transcript": [
+    {"segment_id": "s1", "speaker_id": "spk0", "role": "其他", "start_time": 0.0, "end_time": 6.0, "text": "以下是一段模拟问诊材料，不能伪造成医生和患者两个人。"},
+    {"segment_id": "s2", "speaker_id": "spk0", "role": "其他", "start_time": 6.1, "end_time": 10.0, "text": "文本里出现医生提问和患者回答，但声音仍然只有一个朗读者。"},
+    {"segment_id": "s3", "speaker_id": "spk0", "role": "其他", "start_time": 10.1, "end_time": 13.0, "text": "评测时应保持为单一说话人其他角色。"}
+  ],
+  "speaker_turns": [
+    {"start_time": 0.0, "end_time": 6.0, "speaker_id": "spk0", "overlap": false},
+    {"start_time": 6.1, "end_time": 10.0, "speaker_id": "spk0", "overlap": false},
+    {"start_time": 10.1, "end_time": 13.0, "speaker_id": "spk0", "overlap": false}
+  ],
+  "rttm": [
+    "SPEAKER fc_v1_003 1 0.00 6.00 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER fc_v1_003 1 6.10 3.90 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER fc_v1_003 1 10.10 2.90 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {"spk0": "其他"},
+  "medical_keywords": ["模拟问诊"],
+  "medical_record_fields": {
+    "chief_complaint": {"value": "无真实患者主诉", "evidence_segment_ids": ["s1"]}
+  },
+  "evidence_spans": [
+    {"field": "chief_complaint", "segment_id": "s1", "text": "不能伪造成医生和患者两个人。"}
+  ],
+  "baseline_prediction": {
+    "speaker_roles": {"spk0": "其他"},
+    "auto_accepted_speakers": ["spk0"],
+    "predicted_speaker_count": 1,
+    "medical_keywords": ["模拟问诊"]
+  }
+}

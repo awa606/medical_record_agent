@@ -5,6 +5,11 @@ from app.services.asr.chunking import AudioChunk, ChunkTranscription, merge_chun
 from app.services.asr.mock_engine import MockASREngine
 from app.services.asr.online_engine import OnlineASREngine, normalize_online_asr_response
 from app.services.asr.qwen3_engine import Qwen3ASREngine
+from app.services.asr.role_quality import (
+    SpeakerRoleQualityPolicy,
+    attach_speaker_role_quality,
+    build_speaker_role_quality,
+)
 from app.services.asr.role_strategy import apply_manifest_role_strategy, load_asr_manifest
 from app.services.asr.sensevoice_engine import SenseVoiceASREngine
 from app.services.asr.speaker_diarization import enhance_speaker_diarization
@@ -20,7 +25,10 @@ __all__ = [
     "Qwen3ASREngine",
     "SenseVoiceASREngine",
     "WhisperASREngine",
+    "SpeakerRoleQualityPolicy",
+    "attach_speaker_role_quality",
     "apply_manifest_role_strategy",
+    "build_speaker_role_quality",
     "create_asr_engine",
     "enhance_speaker_diarization",
     "load_asr_manifest",

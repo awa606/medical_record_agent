@@ -16,6 +16,7 @@ from app.agents import MedicalRecordOrchestrator
 from app.api.records import run_record_generation_task
 from app.schemas import ASREvaluationRequest, ASREvaluationResult, ASRResult, AudioRecord
 from app.services.asr import ASREvaluator, apply_manifest_role_strategy, create_asr_engine
+from app.services.asr.role_quality import attach_speaker_role_quality, build_speaker_role_quality
 from app.services.asr.role_strategy import find_sample_config
 
 
@@ -97,6 +98,19 @@ def _read_transcript(audio_id: str) -> ASRResult:
     return ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
 
 
+def _require_passed_role_quality(result: ASRResult) -> ASRResult:
+    quality = result.role_quality or build_speaker_role_quality(result)
+    if quality.status != "passed":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Speaker role quality gate did not pass.",
+                "role_quality": quality.model_dump(mode="json"),
+            },
+        )
+    return result.model_copy(update={"role_quality": quality})
+
+
 def _sample_id_from_record(record: AudioRecord) -> str:
     return Path(record.filename).stem or record.audio_id
 
@@ -153,6 +167,7 @@ def transcribe_audio(
         asr_engine = create_asr_engine(engine)
         result = asr_engine.transcribe(audio_id, Path(record.path))
         result = apply_manifest_role_strategy(result, _sample_id_from_record(record))
+        result = attach_speaker_role_quality(result)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
@@ -197,6 +212,7 @@ def generate_record_from_audio(
     background_tasks: BackgroundTasks,
 ) -> dict[str, object]:
     result = _read_transcript(audio_id)
+    result = _require_passed_role_quality(result)
     conversation_text = result.conversation_text.strip()
     if not conversation_text:
         raise HTTPException(status_code=400, detail="Transcript conversation_text is empty")

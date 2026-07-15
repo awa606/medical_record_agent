@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -42,6 +44,33 @@ class SpeakerRoleAssignment(BaseModel):
     requires_confirmation: bool = False
 
 
+class SpeakerRoleQualityMetrics(BaseModel):
+    segment_count: int = 0
+    speaker_count: int = 0
+    speaker_ids: list[str] = Field(default_factory=list)
+    speaker_assignment_count: int = 0
+    low_confidence_clinical_role_count: int = 0
+    unmapped_speaker_count: int = 0
+    unresolved_assignment_count: int = 0
+    mixed_utterance_candidate_count: int = 0
+    mixed_utterance_candidate_rate: float = 0.0
+    manual_confirmation_rate: float = 0.0
+    role_accuracy: float | None = None
+    confidence_threshold: float = 0.9
+    max_manual_confirmation_rate: float = 0.35
+    max_mixed_utterance_rate: float = 0.05
+
+
+class SpeakerRoleQualityResult(BaseModel):
+    status: Literal["passed", "needs_review", "blocked"]
+    reasons: list[str] = Field(default_factory=list)
+    metrics: SpeakerRoleQualityMetrics = Field(default_factory=SpeakerRoleQualityMetrics)
+    low_confidence_clinical_roles: list[dict] = Field(default_factory=list)
+    unmapped_speakers: list[dict] = Field(default_factory=list)
+    unresolved_assignments: list[dict] = Field(default_factory=list)
+    mixed_utterance_candidates: list[dict] = Field(default_factory=list)
+
+
 class ASRResult(BaseModel):
     audio_id: str
     engine: str
@@ -60,6 +89,7 @@ class ASRResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     diarization_turns: list[DiarizationTurn] = Field(default_factory=list)
     speaker_assignments: list[SpeakerRoleAssignment] = Field(default_factory=list)
+    role_quality: SpeakerRoleQualityResult | None = None
 
 
 class AudioRecord(BaseModel):

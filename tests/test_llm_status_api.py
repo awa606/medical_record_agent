@@ -30,7 +30,7 @@ class LLMStatusApiTests(unittest.TestCase):
                 os.environ[key] = value
 
     def test_llm_routes_are_registered(self):
-        route_paths = {route.path for route in app.routes}
+        route_paths = set(app.openapi()["paths"])
 
         self.assertIn("/api/llm/status", route_paths)
         self.assertIn("/api/llm/test", route_paths)

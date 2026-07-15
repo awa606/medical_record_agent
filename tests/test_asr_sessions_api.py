@@ -195,7 +195,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_asr_session_routes_are_registered(self):
-        route_paths = {route.path for route in app.routes}
+        route_paths = set(app.openapi()["paths"])
 
         self.assertIn("/api/asr/sessions", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}", route_paths)

@@ -6,6 +6,7 @@ from fastapi import BackgroundTasks, HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.audio import (
+    _write_transcript,
     evaluate_audio,
     generate_record_from_audio,
     read_audio_transcript,
@@ -14,7 +15,11 @@ from app.api.audio import (
 )
 from app.api.tasks import read_task
 from app.main import app
-from app.schemas import ASREvaluationRequest
+from app.schemas import ASREvaluationRequest, ASRResult, ASRSegment, SpeakerRoleAssignment
+
+
+DOCTOR = "\u533b\u751f"
+PATIENT = "\u60a3\u8005"
 
 
 class FakeUploadFile:
@@ -48,7 +53,7 @@ class AudioApiTests(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_audio_routes_are_registered(self):
-        route_paths = {route.path for route in app.routes}
+        route_paths = set(app.openapi()["paths"])
 
         self.assertIn("/api/audio/upload", route_paths)
         self.assertIn("/api/audio/{audio_id}/transcribe", route_paths)
@@ -135,6 +140,88 @@ class AudioApiTests(unittest.TestCase):
         task = read_task(response["task_id"])
         self.assertEqual(task["status"], "CREATED")
         self.assertIn("[医生]", task["input_text"])
+
+    def test_generate_record_from_audio_rejects_unmapped_speaker(self):
+        uploaded = self._upload_sample("sample.wav")
+        _write_transcript(
+            ASRResult(
+                audio_id=uploaded.audio_id,
+                engine="funasr",
+                text="我发热三天",
+                conversation_text="[说话人 A] 我发热三天",
+                segments=[ASRSegment(speaker_id="spk1", role=None, text="我发热三天")],
+                speaker_assignments=[
+                    SpeakerRoleAssignment(speaker_id="spk1", role=None, confidence=0.0, requires_confirmation=True)
+                ],
+            )
+        )
+
+        with self.assertRaises(HTTPException) as raised:
+            generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+
+        self.assertEqual(raised.exception.status_code, 409)
+        self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
+
+    def test_generate_record_from_audio_rejects_low_confidence_role(self):
+        uploaded = self._upload_sample("sample.wav")
+        _write_transcript(
+            ASRResult(
+                audio_id=uploaded.audio_id,
+                engine="funasr",
+                text="我发热三天",
+                conversation_text=f"[{PATIENT}] 我发热三天",
+                segments=[
+                    ASRSegment(
+                        speaker_id="spk1",
+                        role=PATIENT,
+                        role_confidence=0.86,
+                        role_source="global_two_party_constraint",
+                        text="我发热三天",
+                    )
+                ],
+                speaker_assignments=[
+                    SpeakerRoleAssignment(
+                        speaker_id="spk1",
+                        role=PATIENT,
+                        confidence=0.86,
+                        source="global_two_party_constraint",
+                    )
+                ],
+            )
+        )
+
+        with self.assertRaises(HTTPException) as raised:
+            generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+
+        self.assertEqual(raised.exception.status_code, 409)
+        self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
+
+    def test_generate_record_from_audio_rejects_mixed_utterance(self):
+        uploaded = self._upload_sample("sample.wav")
+        mixed_text = "请问哪里不舒服，我发热三天"
+        _write_transcript(
+            ASRResult(
+                audio_id=uploaded.audio_id,
+                engine="funasr",
+                text=mixed_text,
+                conversation_text=f"[{DOCTOR}] {mixed_text}",
+                segments=[
+                    ASRSegment(
+                        speaker_id="spk0",
+                        role=DOCTOR,
+                        role_confidence=0.99,
+                        role_source="speaker_context_rules",
+                        text=mixed_text,
+                    )
+                ],
+            )
+        )
+
+        with self.assertRaises(HTTPException) as raised:
+            generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+
+        self.assertEqual(raised.exception.status_code, 409)
+        self.assertEqual(raised.exception.detail["role_quality"]["status"], "blocked")
 
     def _upload_sample(self, filename: str):
         fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")

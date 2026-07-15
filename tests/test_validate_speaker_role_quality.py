@@ -8,7 +8,7 @@ from scripts.validate_speaker_role_quality import validate_speaker_role_quality
 
 
 class SpeakerRoleQualityGateTests(unittest.TestCase):
-    def test_passes_when_low_confidence_roles_are_not_shown_as_clinical_roles(self):
+    def test_requires_review_when_speakers_are_unresolved(self):
         result = ASRResult(
             audio_id="a1",
             engine="funasr",
@@ -26,7 +26,7 @@ class SpeakerRoleQualityGateTests(unittest.TestCase):
 
         report = validate_speaker_role_quality(result, max_manual_confirmation_rate=1.0)
 
-        self.assertEqual(report["status"], "passed")
+        self.assertEqual(report["status"], "needs_review")
         self.assertEqual(report["quality_gate"]["low_confidence_clinical_role_count"], 0)
         self.assertEqual(report["quality_gate"]["unresolved_assignment_count"], 2)
 
@@ -116,13 +116,13 @@ class SpeakerRoleQualityGateTests(unittest.TestCase):
                     "--max-manual-confirmation-rate",
                     "1",
                 ]
-                self.assertEqual(main(), 0)
+                self.assertEqual(main(), 2)
             finally:
                 sys.argv = old_argv
 
             self.assertTrue(output_path.exists())
             payload = json.loads(output_path.read_text(encoding="utf-8"))
-            self.assertEqual(payload["status"], "passed")
+            self.assertEqual(payload["status"], "needs_review")
 
 
 if __name__ == "__main__":

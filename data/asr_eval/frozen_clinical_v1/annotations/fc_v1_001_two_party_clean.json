@@ -1,0 +1,71 @@
+{
+  "sample_id": "fc_v1_001_two_party_clean",
+  "annotation_version": "2026-07-15.frozen-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "scripted simulated outpatient dialogue"
+  },
+  "transcript": [
+    {
+      "segment_id": "s1",
+      "speaker_id": "spk0",
+      "role": "医生",
+      "start_time": 0.0,
+      "end_time": 2.4,
+      "text": "您好，请问哪里不舒服？"
+    },
+    {
+      "segment_id": "s2",
+      "speaker_id": "spk1",
+      "role": "患者",
+      "start_time": 2.5,
+      "end_time": 6.8,
+      "text": "我发热三天，最高三十八度八，还有咳嗽。"
+    },
+    {
+      "segment_id": "s3",
+      "speaker_id": "spk0",
+      "role": "医生",
+      "start_time": 6.9,
+      "end_time": 9.2,
+      "text": "之前吃过什么药吗？"
+    },
+    {
+      "segment_id": "s4",
+      "speaker_id": "spk1",
+      "role": "患者",
+      "start_time": 9.3,
+      "end_time": 13.0,
+      "text": "吃过布洛芬，退热后又反复。"
+    }
+  ],
+  "speaker_turns": [
+    {"start_time": 0.0, "end_time": 2.4, "speaker_id": "spk0", "overlap": false},
+    {"start_time": 2.5, "end_time": 6.8, "speaker_id": "spk1", "overlap": false},
+    {"start_time": 6.9, "end_time": 9.2, "speaker_id": "spk0", "overlap": false},
+    {"start_time": 9.3, "end_time": 13.0, "speaker_id": "spk1", "overlap": false}
+  ],
+  "rttm": [
+    "SPEAKER fc_v1_001 1 0.00 2.40 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER fc_v1_001 1 2.50 4.30 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER fc_v1_001 1 6.90 2.30 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER fc_v1_001 1 9.30 3.70 <NA> <NA> spk1 <NA> <NA>"
+  ],
+  "speaker_roles": {"spk0": "医生", "spk1": "患者"},
+  "medical_keywords": ["发热", "咳嗽", "布洛芬"],
+  "medical_record_fields": {
+    "chief_complaint": {"value": "发热三天伴咳嗽", "evidence_segment_ids": ["s2"]},
+    "previous_treatment": {"value": "自行服用布洛芬后反复发热", "evidence_segment_ids": ["s4"]}
+  },
+  "evidence_spans": [
+    {"field": "chief_complaint", "segment_id": "s2", "text": "我发热三天，最高三十八度八，还有咳嗽。"},
+    {"field": "previous_treatment", "segment_id": "s4", "text": "吃过布洛芬，退热后又反复。"}
+  ],
+  "baseline_prediction": {
+    "speaker_roles": {"spk0": "医生", "spk1": "患者"},
+    "auto_accepted_speakers": ["spk0", "spk1"],
+    "predicted_speaker_count": 2,
+    "medical_keywords": ["发热", "咳嗽", "布洛芬"]
+  }
+}

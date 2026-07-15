@@ -1,0 +1,74 @@
+{
+  "dataset_version": "frozen_clinical_v1",
+  "schema_version": "speaker_role_eval_manifest_v1",
+  "created_at": "2026-07-15",
+  "privacy_policy": "Synthetic simulation only. Do not include real patient private data.",
+  "samples": [
+    {
+      "sample_id": "fc_v1_001_two_party_clean",
+      "scenario_type": "two_party_clean",
+      "split": "calibration",
+      "audio_ref": "fixtures/fc_v1_001_two_party_clean.txt",
+      "sha256": "2ce171f8b9697029e318e717c6d4613aec88a67d8fddfe4fe4a0e1119698bfbc",
+      "duration_sec": 13.0,
+      "speaker_count": 2,
+      "annotation_path": "annotations/fc_v1_001_two_party_clean.json",
+      "annotation_version": "2026-07-15.frozen-v1"
+    },
+    {
+      "sample_id": "fc_v1_002_three_party_family",
+      "scenario_type": "three_party_family",
+      "split": "calibration",
+      "audio_ref": "fixtures/fc_v1_002_three_party_family.txt",
+      "sha256": "5939ad0d45aca15ea3420cc0704f723d26d3d5e386f685928fc4e6febb3021a3",
+      "duration_sec": 10.2,
+      "speaker_count": 3,
+      "annotation_path": "annotations/fc_v1_002_three_party_family.json",
+      "annotation_version": "2026-07-15.frozen-v1"
+    },
+    {
+      "sample_id": "fc_v1_003_single_reader_counterexample",
+      "scenario_type": "single_reader_counterexample",
+      "split": "calibration",
+      "audio_ref": "fixtures/fc_v1_003_single_reader_counterexample.txt",
+      "sha256": "4d38b68aab2951dd3f14e8e768ede2999b6837c98dd357ebf791b378dbf85ef7",
+      "duration_sec": 13.0,
+      "speaker_count": 1,
+      "annotation_path": "annotations/fc_v1_003_single_reader_counterexample.json",
+      "annotation_version": "2026-07-15.frozen-v1"
+    },
+    {
+      "sample_id": "fc_v1_004_noisy_background",
+      "scenario_type": "noisy_background",
+      "split": "test",
+      "audio_ref": "fixtures/fc_v1_004_noisy_background.txt",
+      "sha256": "5bac8f07977474b9787240d850839a79b4bb0c42c8b1d0aae0f4b55a88bcfca6",
+      "duration_sec": 9.0,
+      "speaker_count": 2,
+      "annotation_path": "annotations/fc_v1_004_noisy_background.json",
+      "annotation_version": "2026-07-15.frozen-v1"
+    },
+    {
+      "sample_id": "fc_v1_005_interruption",
+      "scenario_type": "interruption",
+      "split": "test",
+      "audio_ref": "fixtures/fc_v1_005_interruption.txt",
+      "sha256": "7f603f4297524cf22df59b4b31d8a5eba5383f837a14e736958b96d0ce633659",
+      "duration_sec": 6.0,
+      "speaker_count": 2,
+      "annotation_path": "annotations/fc_v1_005_interruption.json",
+      "annotation_version": "2026-07-15.frozen-v1"
+    },
+    {
+      "sample_id": "fc_v1_006_overlap",
+      "scenario_type": "overlap",
+      "split": "test",
+      "audio_ref": "fixtures/fc_v1_006_overlap.txt",
+      "sha256": "4cf9a390529c68d5554fcc67ab3fa8e4db8989bacbdf74628b6cd6142064db8d",
+      "duration_sec": 5.8,
+      "speaker_count": 2,
+      "annotation_path": "annotations/fc_v1_006_overlap.json",
+      "annotation_version": "2026-07-15.frozen-v1"
+    }
+  ]
+}

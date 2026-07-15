@@ -1,0 +1,4 @@
+synthetic fixture audio placeholder
+sample_id=fc_v1_003_single_reader_counterexample
+scenario=single_reader_counterexample
+no real patient data

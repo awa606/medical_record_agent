@@ -1,0 +1,32 @@
+{
+  "dataset_version": "frozen_clinical_v1",
+  "schema_version": "speaker_role_eval_manifest_v1",
+  "manifest_path": "data/asr_eval/frozen_clinical_v1/manifest.json",
+  "sample_count": 6,
+  "split_counts": {
+    "calibration": 3,
+    "test": 3
+  },
+  "scenario_counts": {
+    "two_party_clean": 1,
+    "three_party_family": 1,
+    "single_reader_counterexample": 1,
+    "noisy_background": 1,
+    "interruption": 1,
+    "overlap": 1
+  },
+  "metrics": {
+    "role_accuracy": 1.0,
+    "auto_accept_coverage": 0.75,
+    "high_confidence_error_count": 0,
+    "manual_confirmation_rate": 0.25,
+    "speaker_count_accuracy": 1.0,
+    "mixed_utterance_rate": 0.05,
+    "keyword_recall": 1.0
+  },
+  "high_confidence_errors": [],
+  "hash_status": {
+    "verified_count": 6,
+    "failed_count": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "sample_id": "fc_v1_004_noisy_background",
+  "annotation_version": "2026-07-15.frozen-v1",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "source": "scripted simulated dialogue with background noise"
+  },
+  "transcript": [
+    {"segment_id": "s1", "speaker_id": "spk0", "role": "医生", "start_time": 0.0, "end_time": 2.2, "text": "胸口痛从什么时候开始？"},
+    {"segment_id": "s2", "speaker_id": "spk1", "role": "患者", "start_time": 2.3, "end_time": 6.7, "text": "昨天晚上开始胸痛，走路时更明显。"},
+    {"segment_id": "s3", "speaker_id": "spk0", "role": "医生", "start_time": 6.8, "end_time": 9.0, "text": "有没有气短或者出汗？"}
+  ],
+  "speaker_turns": [
+    {"start_time": 0.0, "end_time": 2.2, "speaker_id": "spk0", "overlap": false},
+    {"start_time": 2.3, "end_time": 6.7, "speaker_id": "spk1", "overlap": false},
+    {"start_time": 6.8, "end_time": 9.0, "speaker_id": "spk0", "overlap": false}
+  ],
+  "rttm": [
+    "SPEAKER fc_v1_004 1 0.00 2.20 <NA> <NA> spk0 <NA> <NA>",
+    "SPEAKER fc_v1_004 1 2.30 4.40 <NA> <NA> spk1 <NA> <NA>",
+    "SPEAKER fc_v1_004 1 6.80 2.20 <NA> <NA> spk0 <NA> <NA>"
+  ],
+  "speaker_roles": {"spk0": "医生", "spk1": "患者"},
+  "medical_keywords": ["胸痛", "气短", "出汗"],
+  "medical_record_fields": {
+    "chief_complaint": {"value": "胸痛一天，活动后加重", "evidence_segment_ids": ["s2"]},
+    "accompanying_symptoms": {"value": "需追问气短和出汗", "evidence_segment_ids": ["s3"]}
+  },
+  "evidence_spans": [
+    {"field": "chief_complaint", "segment_id": "s2", "text": "昨天晚上开始胸痛，走路时更明显。"}
+  ],
+  "baseline_prediction": {
+    "speaker_roles": {"spk0": "医生", "spk1": "患者"},
+    "auto_accepted_speakers": ["spk0"],
+    "predicted_speaker_count": 2,
+    "medical_keywords": ["胸痛", "气短", "出汗"]
+  }
+}

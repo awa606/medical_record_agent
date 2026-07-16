@@ -311,6 +311,32 @@
         <button type="button" class="primary-action wide-action" id="submitAudioButton">上传</button>
       </section>
 
+      <section id="recordingPanel" class="drawer-panel">
+        <p class="form-help">使用浏览器麦克风录制 60 秒以内 WAV 音频，完成试听后复用 ASR 转写和病历生成流程。</p>
+        <select id="recordingEngineSelect">
+          <option value="funasr" selected>FunASR</option>
+          <option value="sensevoice">SenseVoice Small</option>
+          <option value="whisper">Whisper Base</option>
+          <option value="mock">Mock ASR</option>
+          <option value="qwen3">Qwen3-ASR 0.6B</option>
+          <option value="online">Online ASR</option>
+        </select>
+        <div class="browser-recording-panel" aria-live="polite">
+          <div class="browser-recording-meter">
+            <span id="browserRecordingStatusLabel">等待录音</span>
+            <strong id="browserRecordingTimer">00:00</strong>
+          </div>
+          <div class="recording-actions">
+            <button type="button" class="primary-action" id="startBrowserRecordingButton">开始录音</button>
+            <button type="button" id="stopBrowserRecordingButton">停止</button>
+            <button type="button" class="danger-action" id="cancelBrowserRecordingButton">取消</button>
+          </div>
+          <audio id="browserRecordingPreview" controls preload="metadata"></audio>
+          <div id="browserRecordingMessage" class="recording-message"></div>
+        </div>
+        <button type="button" class="primary-action wide-action" id="submitBrowserRecordingButton">上传并生成病历</button>
+      </section>
+
       <section id="evaluationPanel" class="drawer-panel">
         <p class="form-help">调用 <code>POST /api/audio/{audio_id}/evaluate</code>，展示 CER、keyword_recall、recognized、missing。</p>
         <textarea id="groundTruthInput" placeholder="人工标注文本"></textarea>

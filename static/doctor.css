@@ -4842,8 +4842,66 @@ body.care-mode .transcript-list,
   color: #64748b;
 }
 
+.browser-recording-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #dbe5f1;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fbff;
+}
+
+.browser-recording-meter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+}
+
+.browser-recording-meter span {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.browser-recording-meter strong {
+  color: #172033;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.recording-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.recording-actions button {
+  min-height: 38px;
+  border-radius: 8px;
+}
+
+#browserRecordingPreview {
+  width: 100%;
+}
+
+.recording-message {
+  min-height: 20px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.recording-message.error {
+  color: #b42318;
+}
+
 @media (max-width: 760px) {
   .speaker-profile-enroll-row {
+    grid-template-columns: 1fr;
+  }
+
+  .recording-actions {
     grid-template-columns: 1fr;
   }
 }

@@ -57,6 +57,20 @@ const appState = {
   doctorProfiles: [],
   selectedDoctorProfileId: "",
   doctorProfileEnrollmentBusy: false,
+  browserRecordingStatus: "idle",
+  browserRecordingStartedAt: 0,
+  browserRecordingElapsedSeconds: 0,
+  browserRecordingTimer: null,
+  browserRecordingStream: null,
+  browserRecordingAudioContext: null,
+  browserRecordingSource: null,
+  browserRecordingProcessor: null,
+  browserRecordingChunks: [],
+  browserRecordingSampleRate: 0,
+  browserRecordingObjectUrl: "",
+  browserRecordingFile: null,
+  browserRecordingMessage: "",
+  browserRecordingRequestId: 0,
   lastActionError: "",
   inputMenuOpen: false,
   settingsOpen: false,
@@ -92,6 +106,8 @@ const RECORD_PREVIEW_MIN_SEGMENTS = 1;
 const RECORD_PREVIEW_MIN_INTERVAL_MS = 2000;
 const RECORD_PREVIEW_DEBOUNCE_MS = 450;
 const ROLE_DISPLAY_CONFIDENCE_THRESHOLD = 0.9;
+const MAX_BROWSER_RECORDING_SECONDS = 60;
+const MIN_BROWSER_RECORDING_SECONDS = 0.5;
 
 const FIELD_DEFS = [
   ["chief_complaint", "主诉"],
@@ -795,6 +811,9 @@ function openDrawer(panelId, title) {
 }
 
 function closeDrawer() {
+  if (appState.browserRecordingStatus === "recording" || appState.browserRecordingStatus === "requesting") {
+    cancelBrowserRecording({ silent: true });
+  }
   $("drawerBackdrop").classList.remove("active");
   $("drawer").classList.remove("active");
   $("drawer").setAttribute("aria-hidden", "true");
@@ -821,11 +840,46 @@ function renderPatientBar() {
   $("recordingStatus").textContent = appState.uploadedFilename || "未上传";
   $("topAsrEngineSelect").value = appState.selectedEngine;
   $("audioEngineSelect").value = appState.selectedEngine;
+  const recordingEngineSelect = $("recordingEngineSelect");
+  if (recordingEngineSelect) recordingEngineSelect.value = appState.selectedEngine;
   $("llmProvider").textContent = llm.provider;
   $("llmModel").textContent = llm.model;
   $("llmFallback").textContent = llm.fallbackLabel;
   $("reviewStatus").textContent = STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入";
   renderAsrPrewarmStatus();
+}
+
+function renderBrowserRecordingPanel() {
+  const statusLabel = $("browserRecordingStatusLabel");
+  const timer = $("browserRecordingTimer");
+  const startButton = $("startBrowserRecordingButton");
+  const stopButton = $("stopBrowserRecordingButton");
+  const cancelButton = $("cancelBrowserRecordingButton");
+  const submitButton = $("submitBrowserRecordingButton");
+  const preview = $("browserRecordingPreview");
+  const message = $("browserRecordingMessage");
+  if (!statusLabel || !timer || !startButton || !stopButton || !cancelButton || !submitButton || !preview || !message) return;
+
+  const statusLabels = {
+    idle: "等待录音",
+    requesting: "正在请求麦克风权限",
+    recording: "正在录音",
+    recorded: "录音已就绪",
+    uploading: "正在上传录音",
+    error: "录音异常",
+  };
+  const isRecording = appState.browserRecordingStatus === "recording";
+  const isRequesting = appState.browserRecordingStatus === "requesting";
+  const isUploading = appState.browserRecordingStatus === "uploading";
+  statusLabel.textContent = statusLabels[appState.browserRecordingStatus] || statusLabels.idle;
+  timer.textContent = formatRelativeTime(appState.browserRecordingElapsedSeconds);
+  startButton.disabled = appState.busy || isRequesting || isRecording || isUploading;
+  stopButton.disabled = !isRecording;
+  cancelButton.disabled = isUploading || (appState.browserRecordingStatus === "idle" && !appState.browserRecordingFile);
+  submitButton.disabled = appState.busy || isUploading || !appState.browserRecordingFile;
+  preview.style.display = appState.browserRecordingObjectUrl ? "block" : "none";
+  message.textContent = appState.browserRecordingMessage || "";
+  message.classList.toggle("error", appState.browserRecordingStatus === "error");
 }
 
 function renderAsrPrewarmStatus() {
@@ -2825,6 +2879,7 @@ function renderAll() {
   renderInputMethodMenu();
   renderDisplaySettingsMenu();
   renderPatientBar();
+  renderBrowserRecordingPanel();
   renderRunContext();
   renderStartGuide();
   renderStepPrompt();
@@ -3566,6 +3621,40 @@ async function uploadAndTranscribe(file, engine) {
   });
 }
 
+async function continueGeneratingFromTranscription(transcribed) {
+  if (roleReviewRequired()) {
+    appState.pendingGenerateAfterRoleReview = true;
+    setBusy(false);
+    const pendingCount = roleReviewPendingCount();
+    showToast(pendingCount
+      ? `转写完成，仍有 ${pendingCount} 位说话人需要全局映射`
+      : "转写完成，请确认说话人映射后自动生成病历");
+    focusNextActionPanel();
+    renderAll();
+    return transcribed;
+  }
+  setBusy(true, "正在从转写文本生成病历...");
+  const created = await api(`/api/audio/${transcribed.audio_id}/generate-record`, { method: "POST" });
+  appState.currentTaskId = created.task_id;
+  appState.taskStatus = created.status;
+  appState.currentTask = { id: created.task_id, status: created.status };
+  renderAll();
+  listenForEvents(created.task_id, created.events_url);
+  return created;
+}
+
+async function runAudioWorkflowFromFile(file, engine, mode = appState.audioMode) {
+  resetTaskState();
+  appState.selectedEngine = engine;
+  const transcribed = await uploadAndTranscribe(file, engine);
+  if (mode === "generate") {
+    return continueGeneratingFromTranscription(transcribed);
+  }
+  setBusy(false);
+  renderAll();
+  return transcribed;
+}
+
 async function submitTextImport() {
   try {
     const text = $("conversationInput").value.trim();
@@ -3584,32 +3673,7 @@ async function submitAudio() {
     if (!file) throw new Error("请选择音频文件");
     const engine = $("audioEngineSelect").value;
     closeDrawer();
-    resetTaskState();
-    appState.selectedEngine = engine;
-    const transcribed = await uploadAndTranscribe(file, engine);
-    if (appState.audioMode === "generate") {
-      if (roleReviewRequired()) {
-        appState.pendingGenerateAfterRoleReview = true;
-        setBusy(false);
-        const pendingCount = roleReviewPendingCount();
-        showToast(pendingCount
-          ? `转写完成，仍有 ${pendingCount} 位说话人需要全局映射`
-          : "转写完成，请确认说话人映射后自动生成病历");
-        focusNextActionPanel();
-        renderAll();
-        return;
-      }
-      setBusy(true, "正在从转写文本生成病历...");
-      const created = await api(`/api/audio/${transcribed.audio_id}/generate-record`, { method: "POST" });
-      appState.currentTaskId = created.task_id;
-      appState.taskStatus = created.status;
-      appState.currentTask = { id: created.task_id, status: created.status };
-      renderAll();
-      listenForEvents(created.task_id, created.events_url);
-    } else {
-      setBusy(false);
-      renderAll();
-    }
+    await runAudioWorkflowFromFile(file, engine, appState.audioMode);
   } catch (error) {
     setBusy(false);
     reportActionError(error);
@@ -3867,10 +3931,308 @@ async function enrollDoctorProfile() {
   }
 }
 
+function secureBrowserRecordingContext() {
+  const host = window.location.hostname;
+  return window.isSecureContext || host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function browserRecordingErrorMessage(error) {
+  const name = error?.name || "";
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return "麦克风权限被拒绝，请在浏览器地址栏授权后重试。";
+  }
+  if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+    return "未检测到麦克风输入设备，请连接麦克风后重试。";
+  }
+  if (name === "NotReadableError" || name === "TrackStartError") {
+    return "麦克风正被其他程序占用，请关闭占用程序后重试。";
+  }
+  return error?.message || "浏览器录音失败，请检查麦克风权限和输入设备。";
+}
+
+function releaseBrowserRecordingPreview() {
+  if (appState.browserRecordingObjectUrl) {
+    URL.revokeObjectURL(appState.browserRecordingObjectUrl);
+  }
+  appState.browserRecordingObjectUrl = "";
+  appState.browserRecordingFile = null;
+  const preview = $("browserRecordingPreview");
+  if (preview) {
+    preview.removeAttribute("src");
+    preview.load();
+  }
+}
+
+function cleanupBrowserRecordingCapture() {
+  if (appState.browserRecordingTimer) {
+    window.clearInterval(appState.browserRecordingTimer);
+    appState.browserRecordingTimer = null;
+  }
+  if (appState.browserRecordingProcessor) {
+    appState.browserRecordingProcessor.onaudioprocess = null;
+    try {
+      appState.browserRecordingProcessor.disconnect();
+    } catch (_) {
+      // The node may already be disconnected by the browser.
+    }
+  }
+  if (appState.browserRecordingSource) {
+    try {
+      appState.browserRecordingSource.disconnect();
+    } catch (_) {
+      // The node may already be disconnected by the browser.
+    }
+  }
+  if (appState.browserRecordingStream) {
+    appState.browserRecordingStream.getTracks().forEach((track) => track.stop());
+  }
+  if (appState.browserRecordingAudioContext) {
+    appState.browserRecordingAudioContext.close().catch(() => {});
+  }
+  appState.browserRecordingProcessor = null;
+  appState.browserRecordingSource = null;
+  appState.browserRecordingStream = null;
+  appState.browserRecordingAudioContext = null;
+}
+
+function setBrowserRecordingError(message) {
+  cleanupBrowserRecordingCapture();
+  appState.browserRecordingStatus = "error";
+  appState.browserRecordingMessage = message;
+  appState.browserRecordingStartedAt = 0;
+  renderAll();
+  reportActionError(new Error(message));
+}
+
+function browserRecordingRequestActive(requestId) {
+  return appState.browserRecordingRequestId === requestId && appState.browserRecordingStatus === "requesting";
+}
+
+function updateBrowserRecordingTimer() {
+  if (appState.browserRecordingStatus !== "recording") return;
+  const elapsed = (Date.now() - appState.browserRecordingStartedAt) / 1000;
+  appState.browserRecordingElapsedSeconds = Math.min(elapsed, MAX_BROWSER_RECORDING_SECONDS);
+  if (elapsed >= MAX_BROWSER_RECORDING_SECONDS) {
+    stopBrowserRecording({ auto: true });
+    return;
+  }
+  renderBrowserRecordingPanel();
+}
+
+function mergeBrowserRecordingChunks(chunks = []) {
+  const sampleCount = chunks.reduce((total, chunk) => total + chunk.length, 0);
+  const merged = new Float32Array(sampleCount);
+  let offset = 0;
+  chunks.forEach((chunk) => {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  });
+  return merged;
+}
+
+function writeWavString(view, offset, value) {
+  for (let index = 0; index < value.length; index += 1) {
+    view.setUint8(offset + index, value.charCodeAt(index));
+  }
+}
+
+function encodeWavFromFloat32(chunks, sampleRate) {
+  const samples = mergeBrowserRecordingChunks(chunks);
+  const bytesPerSample = 2;
+  const blockAlign = bytesPerSample;
+  const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+  const view = new DataView(buffer);
+  writeWavString(view, 0, "RIFF");
+  view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+  writeWavString(view, 8, "WAVE");
+  writeWavString(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);
+  writeWavString(view, 36, "data");
+  view.setUint32(40, samples.length * bytesPerSample, true);
+  let offset = 44;
+  for (let index = 0; index < samples.length; index += 1) {
+    const sample = Math.max(-1, Math.min(1, samples[index]));
+    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+    offset += bytesPerSample;
+  }
+  return new Blob([view], { type: "audio/wav" });
+}
+
+async function startBrowserRecording() {
+  clearActionError();
+  releaseBrowserRecordingPreview();
+  appState.browserRecordingChunks = [];
+  appState.browserRecordingElapsedSeconds = 0;
+  appState.browserRecordingMessage = "";
+  const requestId = appState.browserRecordingRequestId + 1;
+  appState.browserRecordingRequestId = requestId;
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setBrowserRecordingError("当前浏览器不支持麦克风录音，请使用最新版 Chrome 或 Edge。");
+    return;
+  }
+  if (!secureBrowserRecordingContext()) {
+    setBrowserRecordingError("浏览器录音需要 HTTPS 或 localhost 环境，请切换安全地址后重试。");
+    return;
+  }
+
+  appState.browserRecordingStatus = "requesting";
+  appState.browserRecordingMessage = "正在请求麦克风权限...";
+  renderAll();
+
+  let stream = null;
+  let audioContext = null;
+  try {
+    if (navigator.mediaDevices.enumerateDevices) {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      if (!browserRecordingRequestActive(requestId)) return;
+      if (devices.length && !devices.some((device) => device.kind === "audioinput")) {
+        throw new DOMException("No audio input device", "NotFoundError");
+      }
+    }
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+    if (!browserRecordingRequestActive(requestId)) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    if (!stream.getAudioTracks().length) {
+      throw new DOMException("No audio input track", "NotFoundError");
+    }
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    audioContext = new AudioContextClass();
+    await audioContext.resume();
+    if (!browserRecordingRequestActive(requestId)) {
+      stream.getTracks().forEach((track) => track.stop());
+      audioContext.close().catch(() => {});
+      return;
+    }
+    const source = audioContext.createMediaStreamSource(stream);
+    const processor = audioContext.createScriptProcessor(4096, Math.max(1, source.channelCount || 1), 1);
+    processor.onaudioprocess = (event) => {
+      const input = event.inputBuffer;
+      const frameCount = input.length;
+      const channelCount = Math.max(1, input.numberOfChannels || 1);
+      const mixed = new Float32Array(frameCount);
+      for (let channel = 0; channel < channelCount; channel += 1) {
+        const data = input.getChannelData(channel);
+        for (let index = 0; index < frameCount; index += 1) {
+          mixed[index] += data[index] / channelCount;
+        }
+      }
+      appState.browserRecordingChunks.push(mixed);
+    };
+    source.connect(processor);
+    processor.connect(audioContext.destination);
+
+    appState.browserRecordingStream = stream;
+    appState.browserRecordingAudioContext = audioContext;
+    appState.browserRecordingSource = source;
+    appState.browserRecordingProcessor = processor;
+    appState.browserRecordingSampleRate = audioContext.sampleRate;
+    appState.browserRecordingStartedAt = Date.now();
+    appState.browserRecordingStatus = "recording";
+    appState.browserRecordingMessage = "录音中，请在 60 秒内完成演示问诊。";
+    appState.browserRecordingTimer = window.setInterval(updateBrowserRecordingTimer, 250);
+    renderAll();
+  } catch (error) {
+    if (browserRecordingRequestActive(requestId)) {
+      if (stream) stream.getTracks().forEach((track) => track.stop());
+      if (audioContext) audioContext.close().catch(() => {});
+      setBrowserRecordingError(browserRecordingErrorMessage(error));
+    }
+  }
+}
+
+function stopBrowserRecording({ auto = false } = {}) {
+  if (appState.browserRecordingStatus !== "recording") return;
+  const elapsed = (Date.now() - appState.browserRecordingStartedAt) / 1000;
+  appState.browserRecordingElapsedSeconds = Math.min(elapsed, MAX_BROWSER_RECORDING_SECONDS);
+  cleanupBrowserRecordingCapture();
+
+  const sampleCount = appState.browserRecordingChunks.reduce((total, chunk) => total + chunk.length, 0);
+  if (sampleCount === 0 || appState.browserRecordingElapsedSeconds < MIN_BROWSER_RECORDING_SECONDS) {
+    releaseBrowserRecordingPreview();
+    appState.browserRecordingStatus = "error";
+    appState.browserRecordingMessage = "未录到有效声音，请重新录制。";
+    renderAll();
+    showToast("未录到有效声音，请重新录制");
+    return;
+  }
+
+  const blob = encodeWavFromFloat32(appState.browserRecordingChunks, appState.browserRecordingSampleRate || 44100);
+  const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
+  const file = new File([blob], `browser-recording-${timestamp}.wav`, { type: "audio/wav" });
+  appState.browserRecordingFile = file;
+  appState.browserRecordingObjectUrl = URL.createObjectURL(blob);
+  const preview = $("browserRecordingPreview");
+  if (preview) {
+    preview.src = appState.browserRecordingObjectUrl;
+    preview.load();
+  }
+  appState.browserRecordingStatus = "recorded";
+  appState.browserRecordingMessage = auto
+    ? "已达到最长 60 秒录音限制，可先试听再上传生成病历。"
+    : "录音已停止，可先试听再上传生成病历。";
+  renderAll();
+  showToast(auto ? "已达到最长 60 秒录音限制" : "录音已停止");
+}
+
+function cancelBrowserRecording({ silent = false } = {}) {
+  appState.browserRecordingRequestId += 1;
+  cleanupBrowserRecordingCapture();
+  releaseBrowserRecordingPreview();
+  appState.browserRecordingChunks = [];
+  appState.browserRecordingStartedAt = 0;
+  appState.browserRecordingElapsedSeconds = 0;
+  appState.browserRecordingSampleRate = 0;
+  appState.browserRecordingStatus = "idle";
+  appState.browserRecordingMessage = silent ? "" : "录音已取消。";
+  renderAll();
+  if (!silent) showToast("录音已取消");
+}
+
+async function submitBrowserRecording() {
+  try {
+    if (!appState.browserRecordingFile) {
+      throw new Error("请先完成录音并试听确认。");
+    }
+    const engine = $("recordingEngineSelect").value;
+    appState.browserRecordingStatus = "uploading";
+    appState.browserRecordingMessage = "正在上传录音并生成病历...";
+    renderAll();
+    closeDrawer();
+    appState.audioMode = "generate";
+    await runAudioWorkflowFromFile(appState.browserRecordingFile, engine, "generate");
+    appState.browserRecordingStatus = "recorded";
+    appState.browserRecordingMessage = "录音已上传，正在等待生成流程。";
+    renderBrowserRecordingPanel();
+  } catch (error) {
+    appState.browserRecordingStatus = appState.browserRecordingFile ? "recorded" : "error";
+    appState.browserRecordingMessage = `上传失败：${error?.message || String(error)}`;
+    setBusy(false);
+    renderAll();
+    reportActionError(error);
+  }
+}
+
 function openReservedRecording() {
   closeInputMethodMenu();
-  setActionError("浏览器麦克风录音暂未接入。本轮请先使用“音频生成”上传 MP3/WAV，后续迭代再接入录音生成。");
-  showToast("录音生成入口已预留，当前请使用音频生成");
+  clearActionError();
+  appState.audioMode = "generate";
+  $("recordingEngineSelect").value = appState.selectedEngine;
+  openDrawer("recordingPanel", "浏览器录音生成病历");
 }
 
 function openEvaluation() {
@@ -3940,6 +4302,10 @@ function bindEvents() {
   $("drawerBackdrop").addEventListener("click", closeDrawer);
   $("submitTextButton").addEventListener("click", submitTextImport);
   $("submitAudioButton").addEventListener("click", submitAudio);
+  $("startBrowserRecordingButton").addEventListener("click", startBrowserRecording);
+  $("stopBrowserRecordingButton").addEventListener("click", () => stopBrowserRecording());
+  $("cancelBrowserRecordingButton").addEventListener("click", () => cancelBrowserRecording());
+  $("submitBrowserRecordingButton").addEventListener("click", submitBrowserRecording);
   $("enrollDoctorProfileButton").addEventListener("click", enrollDoctorProfile);
   $("doctorProfileSelect").addEventListener("change", (event) => {
     appState.selectedDoctorProfileId = event.target.value;
@@ -4015,11 +4381,19 @@ function bindEvents() {
   $("topAsrEngineSelect").addEventListener("change", () => {
     appState.selectedEngine = $("topAsrEngineSelect").value;
     $("audioEngineSelect").value = appState.selectedEngine;
+    $("recordingEngineSelect").value = appState.selectedEngine;
     renderPatientBar();
   });
   $("audioEngineSelect").addEventListener("change", () => {
     appState.selectedEngine = $("audioEngineSelect").value;
     $("topAsrEngineSelect").value = appState.selectedEngine;
+    $("recordingEngineSelect").value = appState.selectedEngine;
+    renderPatientBar();
+  });
+  $("recordingEngineSelect").addEventListener("change", () => {
+    appState.selectedEngine = $("recordingEngineSelect").value;
+    $("topAsrEngineSelect").value = appState.selectedEngine;
+    $("audioEngineSelect").value = appState.selectedEngine;
     renderPatientBar();
   });
   $("recordFields").addEventListener("click", (event) => {

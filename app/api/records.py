@@ -424,10 +424,16 @@ def _require_segments_role_quality(
     )
     quality = build_speaker_role_quality(asr_result)
     if quality.status != "passed":
+        first_pending = quality.pending_confirmation[0] if quality.pending_confirmation else None
         raise HTTPException(
             status_code=409,
             detail={
                 "message": "Speaker role quality gate did not pass.",
+                "policy_version": quality.policy_version,
+                "reason_code": first_pending.reason_code if first_pending else None,
+                "pending_confirmation": [
+                    item.model_dump(mode="json") for item in quality.pending_confirmation
+                ],
                 "role_quality": quality.model_dump(mode="json"),
             },
         )

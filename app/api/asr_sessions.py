@@ -1165,9 +1165,14 @@ def _reconcile_streaming_result(
             )
             for segment in calibrated.segments
         ]
+        pending_confirmation = (
+            calibrated.role_quality.pending_confirmation
+            if calibrated.role_quality
+            else []
+        )
         mapping_event_name = (
             "speaker_mapping_required"
-            if any(item.requires_confirmation for item in calibrated.speaker_assignments)
+            if pending_confirmation
             else "speaker_mapping_update"
         )
         diarization_events.extend(
@@ -1178,6 +1183,12 @@ def _reconcile_streaming_result(
                     data={
                         "status": "mapping_required" if mapping_event_name.endswith("required") else "mapped",
                         "assignments": [item.model_dump() for item in calibrated.speaker_assignments],
+                        "pending_confirmation": [
+                            item.model_dump(mode="json") for item in pending_confirmation
+                        ],
+                        "role_quality": calibrated.role_quality.model_dump(mode="json")
+                        if calibrated.role_quality
+                        else None,
                     },
                     created_at=_now(),
                 ),

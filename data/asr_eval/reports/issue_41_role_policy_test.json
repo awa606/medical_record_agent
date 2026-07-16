@@ -3,11 +3,13 @@
   "schema_version": "executable-speaker-role-dataset-v1",
   "evaluation_mode": "oracle_transcript_role_decision",
   "audio_pipeline_evaluated": false,
-  "evaluation_policy_override": null,
+  "evaluation_policy_override": {
+    "auto_accept_threshold": 0.82
+  },
   "audio_pipeline_note": "WAV/FLAC files are verified for data provenance and future end-to-end evaluation entry points; this report evaluates role decisions from oracle transcripts.",
   "manifest_path": "data/asr_eval/executable_clinical_v1/manifest.json",
-  "selected_split": "all",
-  "generated_at": "2026-07-16T09:03:12.176252+00:00",
+  "selected_split": "test",
+  "generated_at": "2026-07-16T09:03:27.680264+00:00",
   "providers": [
     "rules"
   ],
@@ -16,7 +18,9 @@
       "provider": "rules",
       "evaluation_mode": "oracle_transcript_role_decision",
       "audio_pipeline_evaluated": false,
-      "evaluation_policy_override": null,
+      "evaluation_policy_override": {
+        "auto_accept_threshold": 0.82
+      },
       "provider_versions": [
         "rules-v1"
       ],
@@ -81,154 +85,148 @@
         }
       ],
       "counts_as_product_accuracy": true,
-      "sample_count": 23,
+      "sample_count": 11,
       "split_counts": {
-        "calibration": 12,
         "test": 11
       },
       "scenario_counts": {
-        "two_party": 10,
-        "three_party_family": 5,
-        "single_reader_counterexample": 3,
-        "noisy_background": 2,
-        "interruption": 1,
-        "overlap": 1,
+        "two_party": 5,
+        "three_party_family": 2,
+        "single_reader_counterexample": 2,
+        "noisy_background": 1,
         "noise_interruption_overlap": 1
       },
       "metrics": {
         "role_accuracy": 1.0,
         "auto_accept_accuracy": 1.0,
-        "auto_accept_coverage": 0.1042,
+        "auto_accept_coverage": 0.8636,
         "high_confidence_error_count": 0,
-        "manual_confirmation_rate": 0.8958,
+        "manual_confirmation_rate": 0.1364,
         "speaker_count_accuracy": 1.0,
-        "mixed_utterance_rate": 0.0541,
-        "keyword_recall": 0.9697
+        "mixed_utterance_rate": 0.0588,
+        "keyword_recall": 0.9333
       },
       "confidence_intervals_95": {
         "role_accuracy": {
-          "low": 0.9259,
+          "low": 0.8513,
           "high": 1.0,
-          "numerator": 48,
-          "denominator": 48
+          "numerator": 22,
+          "denominator": 22
         },
         "auto_accept_accuracy": {
-          "low": 0.5655,
+          "low": 0.8318,
           "high": 1.0,
-          "numerator": 5,
-          "denominator": 5
+          "numerator": 19,
+          "denominator": 19
         },
         "auto_accept_coverage": {
-          "low": 0.0453,
-          "high": 0.2217,
-          "numerator": 5,
-          "denominator": 48
+          "low": 0.6666,
+          "high": 0.9525,
+          "numerator": 19,
+          "denominator": 22
         },
         "manual_confirmation_rate": {
-          "low": 0.7783,
-          "high": 0.9547,
-          "numerator": 43,
-          "denominator": 48
+          "low": 0.0475,
+          "high": 0.3334,
+          "numerator": 3,
+          "denominator": 22
         },
         "speaker_count_accuracy": {
-          "low": 0.8569,
+          "low": 0.7412,
           "high": 1.0,
-          "numerator": 23,
-          "denominator": 23
+          "numerator": 11,
+          "denominator": 11
         },
         "mixed_utterance_rate": {
-          "low": 0.025,
-          "high": 0.1129,
-          "numerator": 6,
-          "denominator": 111
+          "low": 0.0202,
+          "high": 0.1592,
+          "numerator": 3,
+          "denominator": 51
         },
         "keyword_recall": {
-          "low": 0.8961,
-          "high": 0.9917,
-          "numerator": 64,
-          "denominator": 66
+          "low": 0.7868,
+          "high": 0.9815,
+          "numerator": 28,
+          "denominator": 30
         }
       },
       "high_confidence_errors": [],
       "hash_status": {
-        "verified_count": 23,
+        "verified_count": 11,
         "failed_count": 0
       }
     }
   },
-  "sample_count": 23,
+  "sample_count": 11,
   "split_counts": {
-    "calibration": 12,
     "test": 11
   },
   "scenario_counts": {
-    "two_party": 10,
-    "three_party_family": 5,
-    "single_reader_counterexample": 3,
-    "noisy_background": 2,
-    "interruption": 1,
-    "overlap": 1,
+    "two_party": 5,
+    "three_party_family": 2,
+    "single_reader_counterexample": 2,
+    "noisy_background": 1,
     "noise_interruption_overlap": 1
   },
   "metrics": {
     "role_accuracy": 1.0,
     "auto_accept_accuracy": 1.0,
-    "auto_accept_coverage": 0.1042,
+    "auto_accept_coverage": 0.8636,
     "high_confidence_error_count": 0,
-    "manual_confirmation_rate": 0.8958,
+    "manual_confirmation_rate": 0.1364,
     "speaker_count_accuracy": 1.0,
-    "mixed_utterance_rate": 0.0541,
-    "keyword_recall": 0.9697
+    "mixed_utterance_rate": 0.0588,
+    "keyword_recall": 0.9333
   },
   "confidence_intervals_95": {
     "role_accuracy": {
-      "low": 0.9259,
+      "low": 0.8513,
       "high": 1.0,
-      "numerator": 48,
-      "denominator": 48
+      "numerator": 22,
+      "denominator": 22
     },
     "auto_accept_accuracy": {
-      "low": 0.5655,
+      "low": 0.8318,
       "high": 1.0,
-      "numerator": 5,
-      "denominator": 5
+      "numerator": 19,
+      "denominator": 19
     },
     "auto_accept_coverage": {
-      "low": 0.0453,
-      "high": 0.2217,
-      "numerator": 5,
-      "denominator": 48
+      "low": 0.6666,
+      "high": 0.9525,
+      "numerator": 19,
+      "denominator": 22
     },
     "manual_confirmation_rate": {
-      "low": 0.7783,
-      "high": 0.9547,
-      "numerator": 43,
-      "denominator": 48
+      "low": 0.0475,
+      "high": 0.3334,
+      "numerator": 3,
+      "denominator": 22
     },
     "speaker_count_accuracy": {
-      "low": 0.8569,
+      "low": 0.7412,
       "high": 1.0,
-      "numerator": 23,
-      "denominator": 23
+      "numerator": 11,
+      "denominator": 11
     },
     "mixed_utterance_rate": {
-      "low": 0.025,
-      "high": 0.1129,
-      "numerator": 6,
-      "denominator": 111
+      "low": 0.0202,
+      "high": 0.1592,
+      "numerator": 3,
+      "denominator": 51
     },
     "keyword_recall": {
-      "low": 0.8961,
-      "high": 0.9917,
-      "numerator": 64,
-      "denominator": 66
+      "low": 0.7868,
+      "high": 0.9815,
+      "numerator": 28,
+      "denominator": 30
     }
   },
   "counts_as_product_accuracy": true,
   "mock_excluded_from_product_metrics": false,
   "high_confidence_errors": [],
   "hash_status": {
-    "verified_count": 23,
+    "verified_count": 11,
     "failed_count": 0
   }
 }

@@ -15,6 +15,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.schemas.asr import ASRResult, ASRSegment
+from app.services.asr.role_quality import attach_speaker_role_quality
+from app.services.asr.speaker_diarization import enhance_speaker_diarization
+from app.services.asr.speaker_role_policy import (
+    CURRENT_SPEAKER_ROLE_POLICY_VERSION,
+    DEFAULT_PROVIDER_POLICIES,
+    provider_config_payload,
+)
+
 
 VALID_SPLITS = {"calibration", "test"}
 VALID_SPLIT_ARGS = {"all", *VALID_SPLITS}
@@ -81,9 +90,9 @@ ROLE_ALIASES = {
     "physician": "doctor",
     "patient": "patient",
     "患者": "patient",
-    "family": "family",
-    "家属": "family",
-    "relative": "family",
+    "family": "other",
+    "家属": "other",
+    "relative": "other",
     "other": "other",
     "其他": "other",
 }
@@ -286,10 +295,11 @@ def generate_rules_prediction_artifacts(
     *,
     prediction_dir: Path,
     git_commit: str | None = None,
-    provider_version: str = "rules-text-markers-v1",
-    policy_version: str = "executable-clinical-policy-v1",
+    provider_version: str | None = None,
+    policy_version: str = CURRENT_SPEAKER_ROLE_POLICY_VERSION,
 ) -> list[Path]:
     git_commit = git_commit or current_git_commit()
+    provider_version = provider_version or DEFAULT_PROVIDER_POLICIES["rules"].provider_version
     generated_paths: list[Path] = []
     for item in dataset["samples"]:
         sample = item["manifest"]
@@ -314,11 +324,17 @@ def evaluate_dataset(
     prediction_dir: Path | None = None,
     verify_hashes: bool = True,
     split: str = "all",
+    auto_accept_threshold: float | None = None,
 ) -> dict[str, Any]:
     dataset = load_dataset(manifest_path, verify_hashes=verify_hashes, split=split)
     prediction_dir = prediction_dir or default_prediction_dir(manifest_path, provider)
     predictions = _load_prediction_artifacts(dataset, prediction_dir=prediction_dir, provider=provider)
-    return evaluate_loaded_dataset(dataset, predictions=predictions, provider=provider)
+    return evaluate_loaded_dataset(
+        dataset,
+        predictions=predictions,
+        provider=provider,
+        auto_accept_threshold=auto_accept_threshold,
+    )
 
 
 def evaluate_loaded_dataset(
@@ -326,10 +342,12 @@ def evaluate_loaded_dataset(
     *,
     predictions: dict[str, dict[str, Any]],
     provider: str,
+    auto_accept_threshold: float | None = None,
 ) -> dict[str, Any]:
     role_total = 0
     role_correct = 0
     auto_accept_total = 0
+    auto_accept_correct = 0
     review_required_total = 0
     high_confidence_errors: list[dict[str, Any]] = []
     speaker_count_correct = 0
@@ -373,10 +391,12 @@ def evaluate_loaded_dataset(
             predicted_role = canonical_role(decision["predicted_role"]) if decision else None
             if predicted_role == truth_role:
                 role_correct += 1
-            action = decision["action"] if decision else "blocked"
+            action = _effective_action(decision, auto_accept_threshold=auto_accept_threshold)
             if action == "auto_accept":
                 auto_accept_total += 1
-                if predicted_role != truth_role:
+                if predicted_role == truth_role:
+                    auto_accept_correct += 1
+                else:
                     high_confidence_errors.append(
                         {
                             "sample_id": sample_id,
@@ -405,6 +425,9 @@ def evaluate_loaded_dataset(
     sample_count = len(dataset["samples"])
     metrics = {
         "role_accuracy": _ratio(role_correct, role_total),
+        "auto_accept_accuracy": _ratio(auto_accept_correct, auto_accept_total)
+        if auto_accept_total
+        else None,
         "auto_accept_coverage": _ratio(auto_accept_total, role_total),
         "high_confidence_error_count": len(high_confidence_errors),
         "manual_confirmation_rate": _ratio(review_required_total, role_total),
@@ -414,6 +437,7 @@ def evaluate_loaded_dataset(
     }
     confidence_intervals = {
         "role_accuracy": _wilson_interval(role_correct, role_total),
+        "auto_accept_accuracy": _wilson_interval(auto_accept_correct, auto_accept_total),
         "auto_accept_coverage": _wilson_interval(auto_accept_total, role_total),
         "manual_confirmation_rate": _wilson_interval(review_required_total, role_total),
         "speaker_count_accuracy": _wilson_interval(speaker_count_correct, sample_count),
@@ -423,6 +447,13 @@ def evaluate_loaded_dataset(
     counts_as_product_accuracy = provider in PRODUCT_PROVIDERS
     provider_report = {
         "provider": provider,
+        "evaluation_mode": "oracle_transcript_role_decision",
+        "audio_pipeline_evaluated": False,
+        "evaluation_policy_override": {
+            "auto_accept_threshold": auto_accept_threshold,
+        }
+        if auto_accept_threshold is not None
+        else None,
         "provider_versions": sorted(provider_versions),
         "policy_versions": sorted(policy_versions),
         "git_commits": sorted(git_commits),
@@ -444,6 +475,17 @@ def evaluate_loaded_dataset(
     return {
         "dataset_version": dataset["dataset_version"],
         "schema_version": dataset["schema_version"],
+        "evaluation_mode": "oracle_transcript_role_decision",
+        "audio_pipeline_evaluated": False,
+        "evaluation_policy_override": {
+            "auto_accept_threshold": auto_accept_threshold,
+        }
+        if auto_accept_threshold is not None
+        else None,
+        "audio_pipeline_note": (
+            "WAV/FLAC files are verified for data provenance and future end-to-end "
+            "evaluation entry points; this report evaluates role decisions from oracle transcripts."
+        ),
         "manifest_path": _display_path(Path(dataset["manifest_path"])),
         "selected_split": dataset["selected_split"],
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -461,6 +503,159 @@ def evaluate_loaded_dataset(
     }
 
 
+def calibrate_loaded_dataset(
+    dataset: dict[str, Any],
+    *,
+    predictions: dict[str, dict[str, Any]],
+    provider: str,
+) -> dict[str, Any]:
+    if dataset["selected_split"] != "calibration":
+        raise ExecutableDatasetValidationError("calibration may only use the calibration split")
+    if provider == "mock":
+        raise ExecutableDatasetValidationError("mock predictions cannot be used for product calibration")
+
+    thresholds = [round(value / 100, 2) for value in range(50, 100)]
+    candidates = [
+        _score_candidate_threshold(dataset, predictions, threshold=threshold)
+        for threshold in thresholds
+    ]
+    safe_candidates = [
+        item
+        for item in candidates
+        if (
+            item["high_confidence_error_count"] == 0
+            and item["auto_accept_accuracy"] is not None
+            and item["auto_accept_accuracy"] >= 0.95
+        )
+    ]
+    if safe_candidates:
+        selected = max(
+            safe_candidates,
+            key=lambda item: (item["auto_accept_coverage"], item["auto_accept_accuracy"], item["threshold"]),
+        )
+        selection_status = "selected_safe_candidate"
+    else:
+        zero_error = [item for item in candidates if item["high_confidence_error_count"] == 0]
+        selected = max(
+            zero_error or candidates,
+            key=lambda item: (
+                item["auto_accept_accuracy"] or 0.0,
+                item["auto_accept_coverage"],
+                item["threshold"],
+            ),
+        )
+        selection_status = "no_candidate_met_all_targets"
+
+    return {
+        "mode": "calibration",
+        "provider": provider,
+        "dataset_version": dataset["dataset_version"],
+        "split": dataset["selected_split"],
+        "test_truth_used": False,
+        "selection_priority": [
+            "high_confidence_error_count == 0",
+            "auto_accept_accuracy >= 0.95",
+            "maximize auto_accept_coverage",
+        ],
+        "targets": {
+            "high_confidence_error_count": 0,
+            "auto_accept_accuracy": 0.95,
+            "auto_accept_coverage": 0.7,
+        },
+        "selection_status": selection_status,
+        "selected_policy": {
+            "provider": provider,
+            "policy_version": CURRENT_SPEAKER_ROLE_POLICY_VERSION,
+            "auto_accept_threshold": selected["threshold"],
+            "review_threshold": DEFAULT_PROVIDER_POLICIES[provider].review_threshold
+            if provider in DEFAULT_PROVIDER_POLICIES
+            else None,
+            "target_auto_accept_coverage_met": selected["auto_accept_coverage"] >= 0.7,
+            "coverage_note": (
+                "Coverage target was not forced because zero high-confidence errors take priority."
+                if selected["auto_accept_coverage"] < 0.7
+                else "Coverage target met under safety constraints."
+            ),
+        },
+        "selected_metrics": selected,
+        "candidate_thresholds": candidates,
+    }
+
+
+def _score_candidate_threshold(
+    dataset: dict[str, Any],
+    predictions: dict[str, dict[str, Any]],
+    *,
+    threshold: float,
+) -> dict[str, Any]:
+    role_total = 0
+    auto_total = 0
+    auto_correct = 0
+    high_confidence_errors = 0
+    review_total = 0
+    blocked_total = 0
+    for item in dataset["samples"]:
+        sample = item["manifest"]
+        annotation = item["annotation"]
+        prediction = predictions[sample["sample_id"]]
+        truth_roles = {
+            str(speaker_id): canonical_role(role)
+            for speaker_id, role in annotation["speaker_roles"].items()
+        }
+        decisions = {
+            str(decision["speaker_id"]): decision
+            for decision in prediction["speaker_decisions"]
+        }
+        for speaker_id, truth_role in truth_roles.items():
+            role_total += 1
+            decision = decisions.get(speaker_id)
+            action = _candidate_action(decision, threshold=threshold)
+            predicted_role = canonical_role(decision["predicted_role"]) if decision else None
+            if action == "auto_accept":
+                auto_total += 1
+                if predicted_role == truth_role:
+                    auto_correct += 1
+                else:
+                    high_confidence_errors += 1
+            elif action == "blocked":
+                blocked_total += 1
+            else:
+                review_total += 1
+    return {
+        "threshold": threshold,
+        "speaker_decision_count": role_total,
+        "auto_accept_count": auto_total,
+        "auto_accept_accuracy": _ratio(auto_correct, auto_total) if auto_total else None,
+        "auto_accept_coverage": _ratio(auto_total, role_total),
+        "manual_confirmation_rate": _ratio(review_total, role_total),
+        "blocked_rate": _ratio(blocked_total, role_total),
+        "high_confidence_error_count": high_confidence_errors,
+    }
+
+
+def _candidate_action(decision: dict[str, Any] | None, *, threshold: float) -> str:
+    if not decision:
+        return "blocked"
+    if decision["action"] == "blocked":
+        return "blocked"
+    if decision["reason_code"] in {"single_speaker_counterexample", "mixed_utterance_candidate"}:
+        return "blocked"
+    calibrated = decision.get("calibrated_confidence")
+    if isinstance(calibrated, (int, float)) and calibrated >= threshold:
+        return "auto_accept"
+    return "needs_review"
+
+
+def _effective_action(
+    decision: dict[str, Any] | None,
+    *,
+    auto_accept_threshold: float | None,
+) -> str:
+    if auto_accept_threshold is None:
+        return decision["action"] if decision else "blocked"
+    return _candidate_action(decision, threshold=auto_accept_threshold)
+
+
 def render_markdown(report: dict[str, Any]) -> str:
     provider = report["providers"][0]
     provider_report = report["provider_reports"][provider]
@@ -471,6 +666,9 @@ def render_markdown(report: dict[str, Any]) -> str:
         "",
         f"- dataset_version: `{report['dataset_version']}`",
         f"- schema_version: `{report['schema_version']}`",
+        f"- evaluation_mode: `{report['evaluation_mode']}`",
+        f"- audio_pipeline_evaluated: `{report['audio_pipeline_evaluated']}`",
+        f"- evaluation_policy_override: `{report.get('evaluation_policy_override')}`",
         f"- provider: `{provider}`",
         f"- product_accuracy: `{provider_report['counts_as_product_accuracy']}`",
         f"- sample_count: {provider_report['sample_count']}",
@@ -483,6 +681,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     ]
     for key in [
         "role_accuracy",
+        "auto_accept_accuracy",
         "auto_accept_coverage",
         "manual_confirmation_rate",
         "speaker_count_accuracy",
@@ -559,56 +758,65 @@ def _build_rules_prediction(
     policy_version: str,
 ) -> dict[str, Any]:
     provider = "rules"
-    transcript = annotation["transcript"]
-    speaker_texts: dict[str, str] = {}
-    for turn in transcript:
-        speaker_id = str(turn["speaker_id"])
-        speaker_texts[speaker_id] = f"{speaker_texts.get(speaker_id, '')} {turn.get('text', '')}"
+    asr_result = _asr_result_from_truth(sample, annotation)
+    asr_result = enhance_speaker_diarization(asr_result)
+    asr_result = attach_speaker_role_quality(asr_result)
+    quality = asr_result.role_quality
+    if quality is None:
+        raise ExecutableDatasetValidationError(f"{sample['sample_id']}: role quality was not generated")
 
-    predicted_speaker_count = len(speaker_texts)
-    mixed_rate = _ratio(sum(1 for turn in transcript if turn.get("mixed_utterance")), len(transcript))
-    decisions: list[dict[str, Any]] = []
-    for speaker_id, text in sorted(speaker_texts.items()):
-        predicted_role, raw_confidence, reason_code = _infer_role_from_text(
-            text,
-            speaker_count=predicted_speaker_count,
-            mixed_rate=mixed_rate,
-        )
-        calibrated_confidence = max(0.0, min(0.99, raw_confidence - (0.05 if mixed_rate >= 0.25 else 0.0)))
-        action = _action_from_confidence(calibrated_confidence, predicted_role, predicted_speaker_count)
-        decisions.append(
-            {
-                "speaker_id": speaker_id,
-                "predicted_role": predicted_role,
-                "provider": provider,
-                "provider_version": provider_version,
-                "policy_version": policy_version,
-                "git_commit": git_commit,
-                "raw_confidence": round(raw_confidence, 4),
-                "calibrated_confidence": round(calibrated_confidence, 4),
-                "reason_code": reason_code,
-                "action": action,
-            }
-        )
+    decisions = []
+    for decision in quality.decisions:
+        item = decision.model_dump(mode="json")
+        item["provider_version"] = provider_version
+        item["policy_version"] = policy_version
+        item["git_commit"] = git_commit
+        decisions.append(item)
 
     return {
         "sample_id": sample["sample_id"],
         "provider": provider,
         "provider_version": provider_version,
         "policy_version": policy_version,
-        "provider_config": {
-            "role_source": "truth_transcript_text_only",
-            "auto_accept_threshold": 0.9,
-            "review_threshold": 0.65,
-            "single_speaker_counterexample_action": "blocked",
-        },
+        "provider_config": provider_config_payload(),
         "git_commit": git_commit,
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-        "source": "rules_provider_text_markers",
-        "predicted_speaker_count": predicted_speaker_count,
+        "source": "production_rules_oracle_transcript",
+        "evaluation_mode": "oracle_transcript_role_decision",
+        "audio_pipeline_evaluated": False,
+        "predicted_speaker_count": quality.metrics.speaker_count,
         "speaker_decisions": decisions,
-        "medical_keywords": sorted(_extract_keywords(" ".join(speaker_texts.values()))),
+        "medical_keywords": sorted(_extract_keywords(asr_result.text)),
     }
+
+
+def _asr_result_from_truth(sample: dict[str, Any], annotation: dict[str, Any]) -> ASRResult:
+    segments = [
+        ASRSegment(
+            segment_id=str(turn.get("turn_id") or f"{sample['sample_id']}-turn-{index:03d}"),
+            speaker=str(turn["speaker_id"]),
+            speaker_id=str(turn["speaker_id"]),
+            text=str(turn.get("text") or ""),
+            start_time=float(turn["start_sec"]),
+            end_time=float(turn["end_sec"]),
+            overlap=bool(turn.get("overlap") or turn.get("mixed_utterance")),
+        )
+        for index, turn in enumerate(annotation["transcript"], start=1)
+    ]
+    text = "\n".join(segment.text for segment in segments if segment.text.strip())
+    conversation_text = "\n".join(
+        f"[{segment.speaker_id}] {segment.text}" for segment in segments if segment.text.strip()
+    )
+    return ASRResult(
+        audio_id=str(sample["sample_id"]),
+        engine="oracle_transcript",
+        text=text,
+        conversation_text=conversation_text,
+        segments=segments,
+        manifest_sample_id=str(sample["sample_id"]),
+        scenario=str(sample["scenario_type"]),
+        speaker_mode="oracle_transcript",
+    )
 
 
 def _infer_role_from_text(text: str, *, speaker_count: int, mixed_rate: float) -> tuple[str, float, str]:
@@ -841,6 +1049,7 @@ def main() -> int:
     parser.add_argument("--skip-hash-check", action="store_true")
     parser.add_argument("--split", choices=sorted(VALID_SPLIT_ARGS), default="all")
     parser.add_argument("--calibrate", action="store_true")
+    parser.add_argument("--auto-accept-threshold", type=float)
     parser.add_argument("--git-commit")
     args = parser.parse_args()
 
@@ -853,6 +1062,9 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+    if args.auto_accept_threshold is not None and not 0 <= args.auto_accept_threshold <= 1:
+        print("--auto-accept-threshold must be between 0 and 1", file=sys.stderr)
+        return 2
 
     prediction_dir = args.prediction_dir or default_prediction_dir(args.manifest, args.provider)
     try:
@@ -864,7 +1076,18 @@ def main() -> int:
                 git_commit=args.git_commit,
             )
         predictions = _load_prediction_artifacts(dataset, prediction_dir=prediction_dir, provider=args.provider)
-        report = evaluate_loaded_dataset(dataset, predictions=predictions, provider=args.provider)
+        report = evaluate_loaded_dataset(
+            dataset,
+            predictions=predictions,
+            provider=args.provider,
+            auto_accept_threshold=args.auto_accept_threshold,
+        )
+        if args.calibrate:
+            report["calibration"] = calibrate_loaded_dataset(
+                dataset,
+                predictions=predictions,
+                provider=args.provider,
+            )
     except ExecutableDatasetValidationError as exc:
         print(f"dataset validation failed: {exc}", file=sys.stderr)
         return 2

@@ -1,42 +1,90 @@
 {
   "sample_id": "ec_v1_005_two_party_sore_throat",
   "provider": "rules",
-  "provider_version": "rules-text-markers-v1",
-  "policy_version": "executable-clinical-policy-v1",
+  "provider_version": "rules-v1",
+  "policy_version": "speaker-role-policy-v1",
   "provider_config": {
-    "role_source": "truth_transcript_text_only",
-    "auto_accept_threshold": 0.9,
-    "review_threshold": 0.65,
-    "single_speaker_counterexample_action": "blocked"
+    "llm": {
+      "provider": "llm",
+      "provider_version": "llm-v1",
+      "policy_version": "speaker-role-policy-v1",
+      "auto_accept_threshold": 0.9,
+      "review_threshold": 0.7,
+      "confidence_mapping": "llm_conservative",
+      "fallback_action": "needs_review",
+      "enabled": true
+    },
+    "manual": {
+      "provider": "manual",
+      "provider_version": "manual-review-v1",
+      "policy_version": "speaker-role-policy-v1",
+      "auto_accept_threshold": 0.0,
+      "review_threshold": 0.0,
+      "confidence_mapping": "identity",
+      "fallback_action": "auto_accept",
+      "enabled": true
+    },
+    "rules": {
+      "provider": "rules",
+      "provider_version": "rules-v1",
+      "policy_version": "speaker-role-policy-v1",
+      "auto_accept_threshold": 0.9,
+      "review_threshold": 0.65,
+      "confidence_mapping": "identity",
+      "fallback_action": "needs_review",
+      "enabled": true
+    },
+    "unknown": {
+      "provider": "unknown",
+      "provider_version": "unknown-v1",
+      "policy_version": "speaker-role-policy-v1",
+      "auto_accept_threshold": 1.01,
+      "review_threshold": 1.01,
+      "confidence_mapping": "identity",
+      "fallback_action": "needs_review",
+      "enabled": false
+    },
+    "voiceprint": {
+      "provider": "voiceprint",
+      "provider_version": "voiceprint-v1",
+      "policy_version": "speaker-role-policy-v1",
+      "auto_accept_threshold": 0.9,
+      "review_threshold": 0.65,
+      "confidence_mapping": "voiceprint_conservative",
+      "fallback_action": "needs_review",
+      "enabled": true
+    }
   },
-  "git_commit": "04ea877-dirty",
-  "generated_at": "2026-07-15T09:03:22.515128+00:00",
-  "source": "rules_provider_text_markers",
+  "git_commit": "1b31db8",
+  "generated_at": "2026-07-16T09:03:12.113657+00:00",
+  "source": "production_rules_oracle_transcript",
+  "evaluation_mode": "oracle_transcript_role_decision",
+  "audio_pipeline_evaluated": false,
   "predicted_speaker_count": 2,
   "speaker_decisions": [
     {
       "speaker_id": "spk0",
-      "predicted_role": "doctor",
       "provider": "rules",
-      "provider_version": "rules-text-markers-v1",
-      "policy_version": "executable-clinical-policy-v1",
-      "git_commit": "04ea877-dirty",
-      "raw_confidence": 0.94,
-      "calibrated_confidence": 0.94,
-      "reason_code": "rules_doctor_markers",
-      "action": "auto_accept"
+      "provider_version": "rules-v1",
+      "policy_version": "speaker-role-policy-v1",
+      "raw_confidence": 0.8614,
+      "calibrated_confidence": 0.8614,
+      "predicted_role": "医生",
+      "reason_code": "rules_speaker_context_rules",
+      "action": "needs_review",
+      "git_commit": "1b31db8"
     },
     {
       "speaker_id": "spk1",
-      "predicted_role": "patient",
       "provider": "rules",
-      "provider_version": "rules-text-markers-v1",
-      "policy_version": "executable-clinical-policy-v1",
-      "git_commit": "04ea877-dirty",
-      "raw_confidence": 0.94,
-      "calibrated_confidence": 0.94,
-      "reason_code": "rules_patient_markers",
-      "action": "auto_accept"
+      "provider_version": "rules-v1",
+      "policy_version": "speaker-role-policy-v1",
+      "raw_confidence": 0.86,
+      "calibrated_confidence": 0.86,
+      "predicted_role": "患者",
+      "reason_code": "rules_global_two_party_constraint",
+      "action": "needs_review",
+      "git_commit": "1b31db8"
     }
   ],
   "medical_keywords": [

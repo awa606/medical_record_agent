@@ -44,6 +44,7 @@ DOCTOR_KEYWORDS = (
     "下降吗",
 )
 PATIENT_KEYWORDS = (
+    "我有",
     "我发热",
     "我咳嗽",
     "我头晕",
@@ -61,6 +62,18 @@ PATIENT_KEYWORDS = (
     "没有工作",
     "在读大学",
     "不清楚",
+)
+FAMILY_KEYWORDS = (
+    "我是家属",
+    "家属",
+    "孩子",
+    "母亲",
+    "父亲",
+    "老人",
+    "我们家",
+    "我妈",
+    "我爸",
+    "陪",
 )
 FILLER_ONLY_PATTERN = re.compile(r"^[嗯呃哦啊额呢呀哈哎对是好]+[，。！？,.!?\s]*$")
 GLOBAL_REVIEW_WARNING = (
@@ -508,6 +521,21 @@ def _assign_roles_by_speaker(segments: list[ASRSegment]) -> list[SpeakerRoleAssi
                 requires_confirmation=confidence < 0.75,
             )
 
+    if len(groups) >= 3:
+        for speaker in ordered_speakers:
+            if speaker in assignments:
+                continue
+            if not _looks_family_speaker(stats[speaker].text):
+                continue
+            assignments[speaker] = SpeakerRoleAssignment(
+                speaker_id=speaker,
+                role=ROLE_OTHER,
+                confidence=0.88,
+                source="speaker_context_rules",
+                reason="检测到家属、陪同或代述表达，按其他角色处理。",
+                requires_confirmation=True,
+            )
+
     remaining = [speaker for speaker in ordered_speakers if speaker not in assignments]
     if remaining and not any(item.role == ROLE_PATIENT for item in assignments.values()):
         if len(remaining) == 1 and any(item.role == ROLE_DOCTOR for item in assignments.values()):
@@ -662,6 +690,11 @@ def _ends_question(text: str | None) -> bool:
 def _looks_patient_answer(text: str | None) -> bool:
     cleaned = text or ""
     return any(keyword in cleaned for keyword in PATIENT_KEYWORDS) or cleaned.startswith(("我", "没有", "二十", "三十", "四十"))
+
+
+def _looks_family_speaker(text: str | None) -> bool:
+    cleaned = text or ""
+    return any(keyword in cleaned for keyword in FAMILY_KEYWORDS)
 
 
 def _temporal_gap(left: ASRSegment, right: ASRSegment) -> float:

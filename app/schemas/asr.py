@@ -44,6 +44,18 @@ class SpeakerRoleAssignment(BaseModel):
     requires_confirmation: bool = False
 
 
+class SpeakerRoleDecision(BaseModel):
+    speaker_id: str
+    provider: str = "unknown"
+    provider_version: str = "unknown-v1"
+    policy_version: str = "speaker-role-policy-v1"
+    raw_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    calibrated_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    predicted_role: str | None = None
+    reason_code: str = "unknown"
+    action: Literal["auto_accept", "needs_review", "blocked"] = "needs_review"
+
+
 class SpeakerRoleQualityMetrics(BaseModel):
     segment_count: int = 0
     speaker_count: int = 0
@@ -56,6 +68,10 @@ class SpeakerRoleQualityMetrics(BaseModel):
     mixed_utterance_candidate_rate: float = 0.0
     manual_confirmation_rate: float = 0.0
     role_accuracy: float | None = None
+    auto_accept_accuracy: float | None = None
+    auto_accept_coverage: float = 0.0
+    auto_accept_count: int = 0
+    high_confidence_error_count: int = 0
     confidence_threshold: float = 0.9
     max_manual_confirmation_rate: float = 0.35
     max_mixed_utterance_rate: float = 0.05
@@ -65,6 +81,9 @@ class SpeakerRoleQualityResult(BaseModel):
     status: Literal["passed", "needs_review", "blocked"]
     reasons: list[str] = Field(default_factory=list)
     metrics: SpeakerRoleQualityMetrics = Field(default_factory=SpeakerRoleQualityMetrics)
+    policy_version: str | None = None
+    decisions: list[SpeakerRoleDecision] = Field(default_factory=list)
+    pending_confirmation: list[SpeakerRoleDecision] = Field(default_factory=list)
     low_confidence_clinical_roles: list[dict] = Field(default_factory=list)
     unmapped_speakers: list[dict] = Field(default_factory=list)
     unresolved_assignments: list[dict] = Field(default_factory=list)

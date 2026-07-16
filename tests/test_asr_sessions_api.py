@@ -13,21 +13,25 @@ from app.api.asr_sessions import (
     _asr_session_event_stream,
     _chunk_seconds_for_duration,
     _read_events,
+    _write_session_result,
     _should_use_realtime_upload_session,
     create_asr_session,
     read_asr_session_result,
     update_asr_session_result,
     upload_asr_session_audio,
 )
-from app.api.audio import read_audio_transcript
+from app.api.audio import _write_transcript, read_audio_transcript
 from app.main import app
 from app.schemas import (
     ASRResult,
     ASRSegment,
     ASRSegmentCorrection,
+    ASRSpeakerRoleCorrection,
     ASRSessionCorrectionRequest,
     ASRSessionEvent,
+    SpeakerRoleAssignment,
 )
+from app.services.asr.role_quality import attach_speaker_role_quality
 from app.services.asr import AudioChunk
 
 
@@ -307,7 +311,10 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("transcribing_progress", event_names)
         self.assertIn("diarization_progress", event_names)
         self.assertIn("speaker_turn", event_names)
-        self.assertIn("speaker_mapping_update", event_names)
+        self.assertIn("speaker_mapping_required", event_names)
+        mapping_events = [event for event in events if event.event == "speaker_mapping_required"]
+        self.assertEqual(len(mapping_events), 1)
+        self.assertEqual(len(mapping_events[-1].data["pending_confirmation"]), 2)
         self.assertIn("diarization_completed", event_names)
         self.assertIn("reconciliation_completed", event_names)
         self.assertEqual(event_names.count("segment"), 1)
@@ -410,6 +417,71 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertTrue(response.asr_result.needs_review)
         self.assertTrue(response.asr_result.segments[0].needs_review)
         self.assertEqual(response.asr_result.segments[0].role, "待确认")
+
+    def test_speaker_role_review_clears_one_global_confirmation_set(self):
+        session = create_asr_session(engine="mock")
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+        try:
+            uploaded = upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+        pending_result = attach_speaker_role_quality(
+            ASRResult(
+                audio_id=uploaded.audio_id,
+                engine="funasr",
+                text="请问哪里不舒服\n我发热三天",
+                conversation_text="[医生] 请问哪里不舒服\n[患者] 我发热三天",
+                segments=[
+                    ASRSegment(
+                        speaker_id="spk0",
+                        role="医生",
+                        role_confidence=0.66,
+                        role_source="speaker_context_rules",
+                        text="请问哪里不舒服",
+                    ),
+                    ASRSegment(
+                        speaker_id="spk1",
+                        role="患者",
+                        role_confidence=0.86,
+                        role_source="global_two_party_constraint",
+                        text="我发热三天",
+                    ),
+                ],
+                speaker_assignments=[
+                    SpeakerRoleAssignment(
+                        speaker_id="spk0",
+                        role="医生",
+                        confidence=0.66,
+                        source="speaker_context_rules",
+                    ),
+                    SpeakerRoleAssignment(
+                        speaker_id="spk1",
+                        role="患者",
+                        confidence=0.86,
+                        source="global_two_party_constraint",
+                    ),
+                ],
+            )
+        )
+        self.assertEqual(pending_result.role_quality.status, "needs_review")
+        self.assertEqual(len(pending_result.role_quality.pending_confirmation), 2)
+        _write_session_result(session.session_id, pending_result)
+        _write_transcript(pending_result)
+
+        response = update_asr_session_result(
+            session.session_id,
+            ASRSessionCorrectionRequest(
+                speaker_roles=[
+                    ASRSpeakerRoleCorrection(speaker_id="spk0", role="医生"),
+                    ASRSpeakerRoleCorrection(speaker_id="spk1", role="患者"),
+                ],
+                reviewer="doctor",
+            ),
+        )
+
+        self.assertEqual(response.asr_result.role_quality.status, "passed")
+        self.assertEqual(response.asr_result.role_quality.pending_confirmation, [])
+        self.assertTrue(response.asr_result.reviewed_by_doctor)
 
     def test_sse_reconnect_skips_sent_events(self):
         session = create_asr_session(engine="mock")

@@ -1,0 +1,768 @@
+{
+  "dataset_version": "executable_clinical_v1",
+  "schema_version": "executable-speaker-role-dataset-v1",
+  "evaluation_mode": "oracle_transcript_role_decision",
+  "audio_pipeline_evaluated": false,
+  "evaluation_policy_override": null,
+  "audio_pipeline_note": "WAV/FLAC files are verified for data provenance and future end-to-end evaluation entry points; this report evaluates role decisions from oracle transcripts.",
+  "manifest_path": "data/asr_eval/executable_clinical_v1/manifest.json",
+  "selected_split": "calibration",
+  "generated_at": "2026-07-16T09:03:27.687728+00:00",
+  "providers": [
+    "rules"
+  ],
+  "provider_reports": {
+    "rules": {
+      "provider": "rules",
+      "evaluation_mode": "oracle_transcript_role_decision",
+      "audio_pipeline_evaluated": false,
+      "evaluation_policy_override": null,
+      "provider_versions": [
+        "rules-v1"
+      ],
+      "policy_versions": [
+        "speaker-role-policy-v1"
+      ],
+      "git_commits": [
+        "1b31db8"
+      ],
+      "provider_configs": [
+        {
+          "llm": {
+            "auto_accept_threshold": 0.9,
+            "confidence_mapping": "llm_conservative",
+            "enabled": true,
+            "fallback_action": "needs_review",
+            "policy_version": "speaker-role-policy-v1",
+            "provider": "llm",
+            "provider_version": "llm-v1",
+            "review_threshold": 0.7
+          },
+          "manual": {
+            "auto_accept_threshold": 0.0,
+            "confidence_mapping": "identity",
+            "enabled": true,
+            "fallback_action": "auto_accept",
+            "policy_version": "speaker-role-policy-v1",
+            "provider": "manual",
+            "provider_version": "manual-review-v1",
+            "review_threshold": 0.0
+          },
+          "rules": {
+            "auto_accept_threshold": 0.9,
+            "confidence_mapping": "identity",
+            "enabled": true,
+            "fallback_action": "needs_review",
+            "policy_version": "speaker-role-policy-v1",
+            "provider": "rules",
+            "provider_version": "rules-v1",
+            "review_threshold": 0.65
+          },
+          "unknown": {
+            "auto_accept_threshold": 1.01,
+            "confidence_mapping": "identity",
+            "enabled": false,
+            "fallback_action": "needs_review",
+            "policy_version": "speaker-role-policy-v1",
+            "provider": "unknown",
+            "provider_version": "unknown-v1",
+            "review_threshold": 1.01
+          },
+          "voiceprint": {
+            "auto_accept_threshold": 0.9,
+            "confidence_mapping": "voiceprint_conservative",
+            "enabled": true,
+            "fallback_action": "needs_review",
+            "policy_version": "speaker-role-policy-v1",
+            "provider": "voiceprint",
+            "provider_version": "voiceprint-v1",
+            "review_threshold": 0.65
+          }
+        }
+      ],
+      "counts_as_product_accuracy": true,
+      "sample_count": 12,
+      "split_counts": {
+        "calibration": 12
+      },
+      "scenario_counts": {
+        "two_party": 5,
+        "three_party_family": 3,
+        "single_reader_counterexample": 1,
+        "noisy_background": 1,
+        "interruption": 1,
+        "overlap": 1
+      },
+      "metrics": {
+        "role_accuracy": 1.0,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.1154,
+        "high_confidence_error_count": 0,
+        "manual_confirmation_rate": 0.8846,
+        "speaker_count_accuracy": 1.0,
+        "mixed_utterance_rate": 0.05,
+        "keyword_recall": 1.0
+      },
+      "confidence_intervals_95": {
+        "role_accuracy": {
+          "low": 0.8713,
+          "high": 1.0,
+          "numerator": 26,
+          "denominator": 26
+        },
+        "auto_accept_accuracy": {
+          "low": 0.4385,
+          "high": 1.0,
+          "numerator": 3,
+          "denominator": 3
+        },
+        "auto_accept_coverage": {
+          "low": 0.04,
+          "high": 0.2898,
+          "numerator": 3,
+          "denominator": 26
+        },
+        "manual_confirmation_rate": {
+          "low": 0.7102,
+          "high": 0.96,
+          "numerator": 23,
+          "denominator": 26
+        },
+        "speaker_count_accuracy": {
+          "low": 0.7575,
+          "high": 1.0,
+          "numerator": 12,
+          "denominator": 12
+        },
+        "mixed_utterance_rate": {
+          "low": 0.0171,
+          "high": 0.137,
+          "numerator": 3,
+          "denominator": 60
+        },
+        "keyword_recall": {
+          "low": 0.9036,
+          "high": 1.0,
+          "numerator": 36,
+          "denominator": 36
+        }
+      },
+      "high_confidence_errors": [],
+      "hash_status": {
+        "verified_count": 12,
+        "failed_count": 0
+      }
+    }
+  },
+  "sample_count": 12,
+  "split_counts": {
+    "calibration": 12
+  },
+  "scenario_counts": {
+    "two_party": 5,
+    "three_party_family": 3,
+    "single_reader_counterexample": 1,
+    "noisy_background": 1,
+    "interruption": 1,
+    "overlap": 1
+  },
+  "metrics": {
+    "role_accuracy": 1.0,
+    "auto_accept_accuracy": 1.0,
+    "auto_accept_coverage": 0.1154,
+    "high_confidence_error_count": 0,
+    "manual_confirmation_rate": 0.8846,
+    "speaker_count_accuracy": 1.0,
+    "mixed_utterance_rate": 0.05,
+    "keyword_recall": 1.0
+  },
+  "confidence_intervals_95": {
+    "role_accuracy": {
+      "low": 0.8713,
+      "high": 1.0,
+      "numerator": 26,
+      "denominator": 26
+    },
+    "auto_accept_accuracy": {
+      "low": 0.4385,
+      "high": 1.0,
+      "numerator": 3,
+      "denominator": 3
+    },
+    "auto_accept_coverage": {
+      "low": 0.04,
+      "high": 0.2898,
+      "numerator": 3,
+      "denominator": 26
+    },
+    "manual_confirmation_rate": {
+      "low": 0.7102,
+      "high": 0.96,
+      "numerator": 23,
+      "denominator": 26
+    },
+    "speaker_count_accuracy": {
+      "low": 0.7575,
+      "high": 1.0,
+      "numerator": 12,
+      "denominator": 12
+    },
+    "mixed_utterance_rate": {
+      "low": 0.0171,
+      "high": 0.137,
+      "numerator": 3,
+      "denominator": 60
+    },
+    "keyword_recall": {
+      "low": 0.9036,
+      "high": 1.0,
+      "numerator": 36,
+      "denominator": 36
+    }
+  },
+  "counts_as_product_accuracy": true,
+  "mock_excluded_from_product_metrics": false,
+  "high_confidence_errors": [],
+  "hash_status": {
+    "verified_count": 12,
+    "failed_count": 0
+  },
+  "calibration": {
+    "mode": "calibration",
+    "provider": "rules",
+    "dataset_version": "executable_clinical_v1",
+    "split": "calibration",
+    "test_truth_used": false,
+    "selection_priority": [
+      "high_confidence_error_count == 0",
+      "auto_accept_accuracy >= 0.95",
+      "maximize auto_accept_coverage"
+    ],
+    "targets": {
+      "high_confidence_error_count": 0,
+      "auto_accept_accuracy": 0.95,
+      "auto_accept_coverage": 0.7
+    },
+    "selection_status": "selected_safe_candidate",
+    "selected_policy": {
+      "provider": "rules",
+      "policy_version": "speaker-role-policy-v1",
+      "auto_accept_threshold": 0.82,
+      "review_threshold": 0.65,
+      "target_auto_accept_coverage_met": true,
+      "coverage_note": "Coverage target met under safety constraints."
+    },
+    "selected_metrics": {
+      "threshold": 0.82,
+      "speaker_decision_count": 26,
+      "auto_accept_count": 25,
+      "auto_accept_accuracy": 1.0,
+      "auto_accept_coverage": 0.9615,
+      "manual_confirmation_rate": 0.0,
+      "blocked_rate": 0.0385,
+      "high_confidence_error_count": 0
+    },
+    "candidate_thresholds": [
+      {
+        "threshold": 0.5,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.51,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.52,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.53,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.54,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.55,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.56,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.57,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.58,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.59,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.6,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.61,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.62,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.63,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.64,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.65,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.66,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.67,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.68,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.69,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.7,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.71,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.72,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.73,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.74,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.75,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.76,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.77,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.78,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.79,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.8,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.81,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.82,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 25,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.9615,
+        "manual_confirmation_rate": 0.0,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.83,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 22,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.8462,
+        "manual_confirmation_rate": 0.1154,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.84,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 22,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.8462,
+        "manual_confirmation_rate": 0.1154,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.85,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 22,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.8462,
+        "manual_confirmation_rate": 0.1154,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.86,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 22,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.8462,
+        "manual_confirmation_rate": 0.1154,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.87,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 6,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.2308,
+        "manual_confirmation_rate": 0.7308,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.88,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 6,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.2308,
+        "manual_confirmation_rate": 0.7308,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.89,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 3,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.1154,
+        "manual_confirmation_rate": 0.8462,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.9,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 3,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.1154,
+        "manual_confirmation_rate": 0.8462,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.91,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 3,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.1154,
+        "manual_confirmation_rate": 0.8462,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.92,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 3,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.1154,
+        "manual_confirmation_rate": 0.8462,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.93,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 3,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.1154,
+        "manual_confirmation_rate": 0.8462,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.94,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 3,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.1154,
+        "manual_confirmation_rate": 0.8462,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.95,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 0,
+        "auto_accept_accuracy": null,
+        "auto_accept_coverage": 0.0,
+        "manual_confirmation_rate": 0.9615,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.96,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 0,
+        "auto_accept_accuracy": null,
+        "auto_accept_coverage": 0.0,
+        "manual_confirmation_rate": 0.9615,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.97,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 0,
+        "auto_accept_accuracy": null,
+        "auto_accept_coverage": 0.0,
+        "manual_confirmation_rate": 0.9615,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.98,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 0,
+        "auto_accept_accuracy": null,
+        "auto_accept_coverage": 0.0,
+        "manual_confirmation_rate": 0.9615,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      },
+      {
+        "threshold": 0.99,
+        "speaker_decision_count": 26,
+        "auto_accept_count": 0,
+        "auto_accept_accuracy": null,
+        "auto_accept_coverage": 0.0,
+        "manual_confirmation_rate": 0.9615,
+        "blocked_rate": 0.0385,
+        "high_confidence_error_count": 0
+      }
+    ]
+  }
+}

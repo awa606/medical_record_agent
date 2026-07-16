@@ -161,6 +161,10 @@ class AudioApiTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 409)
         self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
+        self.assertEqual(raised.exception.detail["policy_version"], "speaker-role-policy-v1")
+        self.assertEqual(raised.exception.detail["reason_code"], "unmapped_speaker")
+        self.assertEqual(len(raised.exception.detail["pending_confirmation"]), 1)
+        self.assertIn("decisions", raised.exception.detail["role_quality"])
 
     def test_generate_record_from_audio_rejects_low_confidence_role(self):
         uploaded = self._upload_sample("sample.wav")
@@ -195,6 +199,12 @@ class AudioApiTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 409)
         self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
+        self.assertEqual(raised.exception.detail["policy_version"], "speaker-role-policy-v1")
+        self.assertEqual(
+            raised.exception.detail["reason_code"],
+            "rules_global_two_party_constraint",
+        )
+        self.assertEqual(len(raised.exception.detail["pending_confirmation"]), 1)
 
     def test_generate_record_from_audio_rejects_mixed_utterance(self):
         uploaded = self._upload_sample("sample.wav")
@@ -222,6 +232,112 @@ class AudioApiTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 409)
         self.assertEqual(raised.exception.detail["role_quality"]["status"], "blocked")
+        self.assertEqual(raised.exception.detail["reason_code"], "mixed_utterance_candidate")
+
+    def test_manual_speaker_map_allows_generation_after_review(self):
+        uploaded = self._upload_sample("sample.wav")
+        _write_transcript(
+            ASRResult(
+                audio_id=uploaded.audio_id,
+                engine="funasr",
+                text=(
+                    "\u8bf7\u95ee\u54ea\u91cc\u4e0d\u8212\u670d\n"
+                    "\u6211\u53d1\u70ed\u4e09\u5929"
+                ),
+                conversation_text=(
+                    f"[{DOCTOR}] \u8bf7\u95ee\u54ea\u91cc\u4e0d\u8212\u670d\n"
+                    f"[{PATIENT}] \u6211\u53d1\u70ed\u4e09\u5929"
+                ),
+                segments=[
+                    ASRSegment(
+                        speaker_id="spk0",
+                        role=DOCTOR,
+                        role_confidence=0.98,
+                        role_source="manual_speaker_map",
+                        reviewed_by_doctor=True,
+                        text="\u8bf7\u95ee\u54ea\u91cc\u4e0d\u8212\u670d",
+                    ),
+                    ASRSegment(
+                        speaker_id="spk1",
+                        role=PATIENT,
+                        role_confidence=0.98,
+                        role_source="manual_speaker_map",
+                        reviewed_by_doctor=True,
+                        text="\u6211\u53d1\u70ed\u4e09\u5929",
+                    ),
+                ],
+                speaker_assignments=[
+                    SpeakerRoleAssignment(
+                        speaker_id="spk0",
+                        role=DOCTOR,
+                        confidence=0.98,
+                        source="manual_speaker_map",
+                    ),
+                    SpeakerRoleAssignment(
+                        speaker_id="spk1",
+                        role=PATIENT,
+                        confidence=0.98,
+                        source="manual_speaker_map",
+                    ),
+                ],
+            )
+        )
+
+        response = generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+
+        self.assertEqual(response["status"], "CREATED")
+
+    def test_legacy_transcript_without_role_quality_is_recomputed(self):
+        uploaded = self._upload_sample("sample.wav")
+        _write_transcript(
+            ASRResult(
+                audio_id=uploaded.audio_id,
+                engine="funasr",
+                text=(
+                    "\u8bf7\u95ee\u54ea\u91cc\u4e0d\u8212\u670d\n"
+                    "\u6211\u53d1\u70ed\u4e09\u5929"
+                ),
+                conversation_text=(
+                    f"[{DOCTOR}] \u8bf7\u95ee\u54ea\u91cc\u4e0d\u8212\u670d\n"
+                    f"[{PATIENT}] \u6211\u53d1\u70ed\u4e09\u5929"
+                ),
+                segments=[
+                    ASRSegment(
+                        speaker_id="spk0",
+                        role=DOCTOR,
+                        role_confidence=0.96,
+                        role_source="speaker_context_rules",
+                        text="\u8bf7\u95ee\u54ea\u91cc\u4e0d\u8212\u670d",
+                    ),
+                    ASRSegment(
+                        speaker_id="spk1",
+                        role=PATIENT,
+                        role_confidence=0.93,
+                        role_source="speaker_context_rules",
+                        text="\u6211\u53d1\u70ed\u4e09\u5929",
+                    ),
+                ],
+                speaker_assignments=[
+                    SpeakerRoleAssignment(
+                        speaker_id="spk0",
+                        role=DOCTOR,
+                        confidence=0.96,
+                        source="speaker_context_rules",
+                    ),
+                    SpeakerRoleAssignment(
+                        speaker_id="spk1",
+                        role=PATIENT,
+                        confidence=0.93,
+                        source="speaker_context_rules",
+                    ),
+                ],
+                role_quality=None,
+            )
+        )
+
+        response = generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+
+        self.assertEqual(response["status"], "CREATED")
 
     def _upload_sample(self, filename: str):
         fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")

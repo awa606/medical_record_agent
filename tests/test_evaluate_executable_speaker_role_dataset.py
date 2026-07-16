@@ -56,11 +56,15 @@ class ExecutableClinicalSpeakerRoleDatasetTests(unittest.TestCase):
         report = evaluate_dataset(MANIFEST, provider="rules")
 
         self.assertEqual(report["sample_count"], 23)
+        self.assertEqual(report["evaluation_mode"], "oracle_transcript_role_decision")
+        self.assertFalse(report["audio_pipeline_evaluated"])
         self.assertIn("rules", report["provider_reports"])
         self.assertTrue(report["provider_reports"]["rules"]["counts_as_product_accuracy"])
+        self.assertIn("auto_accept_accuracy", report["metrics"])
         self.assertEqual(report["metrics"]["high_confidence_error_count"], 0)
         self.assertGreaterEqual(report["metrics"]["role_accuracy"], 0.95)
         self.assertIn("role_accuracy", report["confidence_intervals_95"])
+        self.assertIn("auto_accept_accuracy", report["confidence_intervals_95"])
         self.assertEqual(report["hash_status"]["verified_count"], 23)
 
     def test_cli_generates_independent_prediction_artifacts_and_report(self):
@@ -89,6 +93,9 @@ class ExecutableClinicalSpeakerRoleDatasetTests(unittest.TestCase):
             self.assertTrue(output.with_suffix(".md").exists())
             generated_predictions = list(prediction_dir.glob("*.prediction.json"))
             self.assertEqual(len(generated_predictions), 23)
+            first_prediction = json.loads(generated_predictions[0].read_text(encoding="utf-8"))
+            self.assertEqual(first_prediction["source"], "production_rules_oracle_transcript")
+            self.assertFalse(first_prediction["audio_pipeline_evaluated"])
 
     def test_audio_paths_are_scoped_to_lfs_attributes(self):
         gitattributes = (PROJECT_ROOT / ".gitattributes").read_text(encoding="utf-8")
@@ -197,6 +204,41 @@ class ExecutableClinicalSpeakerRoleDatasetTests(unittest.TestCase):
                 self.assertEqual(main(), 2)
             finally:
                 sys.argv = old_argv
+
+    def test_calibration_report_uses_calibration_split_only(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "calibration.json"
+            old_argv = sys.argv
+            try:
+                sys.argv = [
+                    "evaluate_executable_speaker_role_dataset.py",
+                    "--manifest",
+                    str(MANIFEST),
+                    "--provider",
+                    "rules",
+                    "--split",
+                    "calibration",
+                    "--calibrate",
+                    "--output",
+                    str(output),
+                ]
+                self.assertEqual(main(), 0)
+            finally:
+                sys.argv = old_argv
+
+            report = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(report["selected_split"], "calibration")
+            self.assertIn("calibration", report)
+            self.assertFalse(report["calibration"]["test_truth_used"])
+            self.assertEqual(report["calibration"]["selected_policy"]["provider"], "rules")
+
+    def test_candidate_threshold_override_recomputes_report_actions(self):
+        report = evaluate_dataset(MANIFEST, provider="rules", split="test", auto_accept_threshold=0.82)
+
+        self.assertEqual(report["selected_split"], "test")
+        self.assertEqual(report["evaluation_policy_override"]["auto_accept_threshold"], 0.82)
+        self.assertGreater(report["metrics"]["auto_accept_coverage"], 0.7)
+        self.assertEqual(report["metrics"]["high_confidence_error_count"], 0)
 
 
 def _write_absolute_manifest(temp_dir: Path) -> Path:

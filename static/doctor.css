@@ -4771,6 +4771,14 @@ body.care-mode .transcript-list,
   background: #f8fbff;
 }
 
+.speaker-merge-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .speaker-role-group > span {
   min-width: 0;
   display: grid;
@@ -4790,6 +4798,10 @@ body.care-mode .transcript-list,
   padding: 5px 8px;
   background: #fff;
   font-weight: 900;
+}
+
+.speaker-merge-controls select {
+  min-width: 132px;
 }
 
 body.care-mode .transcript-table-row {

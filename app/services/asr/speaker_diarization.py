@@ -14,8 +14,10 @@ from app.schemas.asr import (
 
 ROLE_DOCTOR = "医生"
 ROLE_PATIENT = "患者"
+ROLE_COMPANION = "陪同人员"
 ROLE_OTHER = "其他"
-FINAL_ROLES = {ROLE_DOCTOR, ROLE_PATIENT, ROLE_OTHER}
+SPEAKER_UNASSIGNED = "speaker_unassigned"
+FINAL_ROLES = {ROLE_DOCTOR, ROLE_PATIENT, ROLE_COMPANION, ROLE_OTHER}
 
 DOCTOR_ANCHORS = (
     "我是医生",
@@ -302,10 +304,19 @@ def _normalize_speaker_ids(segments: list[ASRSegment]) -> list[ASRSegment]:
     for segment in segments:
         raw = _normalized_speaker(segment.speaker_id or segment.speaker)
         if not raw:
-            raw = "speaker_0"
+            raw = SPEAKER_UNASSIGNED
         aliases.setdefault(raw, raw)
         normalized.append(
-            segment.model_copy(update={"speaker": aliases[raw], "speaker_id": aliases[raw]})
+            segment.model_copy(
+                update={
+                    "speaker": aliases[raw],
+                    "speaker_id": aliases[raw],
+                    "speaker_normalized": aliases[raw],
+                    "diarization_source": segment.diarization_source or (
+                        "missing_label" if aliases[raw] == SPEAKER_UNASSIGNED else None
+                    ),
+                }
+            )
         )
     return normalized
 

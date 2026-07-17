@@ -49,24 +49,39 @@ def build_record_quality_report(
 
     missing_core = _missing_fields(record, CORE_FIELD_LABELS)
     missing_all = _missing_fields(record, ALL_FIELD_LABELS)
+    partial_core = _partial_fields(record, CORE_FIELD_LABELS)
+    partial_all = _partial_fields(record, ALL_FIELD_LABELS)
+    negative_core = _negative_fields(record, CORE_FIELD_LABELS)
+    negative_all = _negative_fields(record, ALL_FIELD_LABELS)
+    conflicting_core = _conflicting_fields(record, CORE_FIELD_LABELS)
+    conflicting_all = _conflicting_fields(record, ALL_FIELD_LABELS)
     low_confidence = _low_confidence_fields(record)
     evidence_missing = _evidence_missing_fields(record)
     diagnosis_summary = _diagnosis_summary(record)
     treatment_summary = _treatment_summary(record)
     field_quality = _field_quality(record)
 
-    completed_core = len(CORE_FIELD_LABELS) - len(missing_core)
+    completed_core = len([key for key in CORE_FIELD_LABELS if _is_complete_field(getattr(record, key))])
     core_completeness = round(completed_core / len(CORE_FIELD_LABELS), 2)
     evidence_total = len([key for key in ALL_FIELD_LABELS if _has_real_field_value(getattr(record, key))])
     evidence_covered = evidence_total - len(evidence_missing)
     evidence_coverage = round(evidence_covered / evidence_total, 2) if evidence_total else 0.0
 
     blocked = bool(safety and (safety.blocked or not safety.passed))
-    ready_for_doctor_review = not blocked and not missing_core
+    ready_for_doctor_review = (
+        not blocked
+        and not missing_core
+        and not partial_core
+        and not negative_core
+        and not conflicting_core
+    )
     export_allowed = False
 
     next_actions = _next_actions(
         missing_core=missing_core,
+        partial_core=partial_core,
+        negative_core=negative_core,
+        conflicting_core=conflicting_core,
         low_confidence=low_confidence,
         evidence_missing=evidence_missing,
         diagnosis_summary=diagnosis_summary,
@@ -81,6 +96,12 @@ def build_record_quality_report(
         "core_fields_completed": completed_core,
         "missing_fields": missing_all,
         "missing_core_fields": missing_core,
+        "partial_fields": partial_all,
+        "partial_core_fields": partial_core,
+        "negative_fields": negative_all,
+        "negative_core_fields": negative_core,
+        "conflicting_fields": conflicting_all,
+        "conflicting_core_fields": conflicting_core,
         "low_confidence_fields": low_confidence,
         "evidence_coverage": evidence_coverage,
         "evidence_missing_fields": evidence_missing,
@@ -106,6 +127,12 @@ def _empty_report() -> dict[str, Any]:
         "core_fields_completed": 0,
         "missing_fields": list(ALL_FIELD_LABELS.values()),
         "missing_core_fields": list(CORE_FIELD_LABELS.values()),
+        "partial_fields": [],
+        "partial_core_fields": [],
+        "negative_fields": [],
+        "negative_core_fields": [],
+        "conflicting_fields": [],
+        "conflicting_core_fields": [],
         "low_confidence_fields": [],
         "evidence_coverage": 0.0,
         "evidence_missing_fields": [],
@@ -147,6 +174,41 @@ def _missing_fields(record: MedicalRecordFields, labels: dict[str, str]) -> list
         if not _has_real_field_value(field):
             missing.append(label)
     return missing
+
+
+def _partial_fields(record: MedicalRecordFields, labels: dict[str, str]) -> list[str]:
+    partial: list[str] = []
+    for key, label in labels.items():
+        field = getattr(record, key)
+        if getattr(field, "status", None) == "partial":
+            partial.append(label)
+    return partial
+
+
+def _conflicting_fields(record: MedicalRecordFields, labels: dict[str, str]) -> list[str]:
+    conflicting: list[str] = []
+    for key, label in labels.items():
+        field = getattr(record, key)
+        if getattr(field, "status", None) == "conflicting":
+            conflicting.append(label)
+    return conflicting
+
+
+def _negative_fields(record: MedicalRecordFields, labels: dict[str, str]) -> list[str]:
+    negative: list[str] = []
+    for key, label in labels.items():
+        field = getattr(record, key)
+        if getattr(field, "status", None) == "negative":
+            negative.append(label)
+    return negative
+
+
+def _is_complete_field(field: Any) -> bool:
+    return (
+        _has_real_field_value(field)
+        and getattr(field, "status", "complete") == "complete"
+        and bool(getattr(field, "source_spans", []))
+    )
 
 
 def _low_confidence_fields(record: MedicalRecordFields) -> list[dict[str, Any]]:
@@ -204,6 +266,34 @@ def _field_quality_item(key: str, label: str, field: Any | None) -> dict[str, An
         }
 
     evidence_count = len(field.source_spans)
+    if getattr(field, "status", None) == "conflicting":
+        return {
+            "key": key,
+            "label": label,
+            "status": "conflicting",
+            "reason": field.hint or f"{label}内容与原文证据冲突。",
+            "suggested_action": f"请根据原始转写复核{label}。",
+            "evidence_count": evidence_count,
+        }
+    if getattr(field, "status", None) == "partial":
+        missing = "、".join(getattr(field, "missing_elements", []) or ["待补充信息"])
+        return {
+            "key": key,
+            "label": label,
+            "status": "partial",
+            "reason": f"{label}已形成部分内容，仍缺少：{missing}。",
+            "suggested_action": field.hint or f"继续补问{label}相关信息。",
+            "evidence_count": evidence_count,
+        }
+    if getattr(field, "status", None) == "negative":
+        return {
+            "key": key,
+            "label": label,
+            "status": "negative",
+            "reason": f"{label}包含患者明确否认的信息。",
+            "suggested_action": field.hint or "继续补问是否存在其他主要症状。",
+            "evidence_count": evidence_count,
+        }
     if evidence_count == 0:
         return {
             "key": key,
@@ -371,6 +461,9 @@ def _treatment_summary(record: MedicalRecordFields) -> dict[str, Any]:
 def _next_actions(
     *,
     missing_core: list[str],
+    partial_core: list[str] | None = None,
+    negative_core: list[str] | None = None,
+    conflicting_core: list[str] | None = None,
     low_confidence: list[dict[str, Any]],
     evidence_missing: list[str],
     diagnosis_summary: dict[str, Any],
@@ -378,8 +471,17 @@ def _next_actions(
     safety: SafetyCheckResult | None,
 ) -> list[str]:
     actions: list[str] = []
+    partial_core = partial_core or []
+    negative_core = negative_core or []
+    conflicting_core = conflicting_core or []
     if missing_core:
         actions.append(f"补问核心字段：{'、'.join(missing_core)}。")
+    if partial_core:
+        actions.append(f"完善部分完成字段：{'、'.join(partial_core)}。")
+    if negative_core:
+        actions.append(f"继续补问阴性字段相关主诉：{'、'.join(negative_core)}。")
+    if conflicting_core:
+        actions.append(f"复核证据冲突字段：{'、'.join(conflicting_core)}。")
     if low_confidence:
         labels = "、".join(item["label"] for item in low_confidence[:4])
         actions.append(f"复核低置信度字段：{labels}。")

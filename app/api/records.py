@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.agents import MedicalRecordOrchestrator
 from app.schemas import ASRResult, ASRSegment, MedicalRecordFields, SafetyCheckResult, SourceSpan
-from app.services import MockLLM
+from app.services import MockLLM, create_llm_record_generator
 from app.services.asr.role_quality import build_speaker_role_quality
 from app.services.record_quality import build_record_quality_report
 
@@ -46,6 +46,7 @@ class PreviewRecordResponse(BaseModel):
     missing_items: list[str]
     safety_preview: dict[str, Any]
     quality_preview: dict[str, Any]
+    extraction_info: dict[str, Any]
 
 
 class ExtractFieldsRequest(BaseModel):
@@ -65,6 +66,7 @@ class ExtractFieldsResponse(BaseModel):
     diagnosis_evidence: list[str]
     evidence_links: list[dict[str, Any]]
     quality_report: dict[str, Any]
+    extraction_info: dict[str, Any]
     creates_task: bool = False
 
 
@@ -122,7 +124,10 @@ def _missing_items(fields: MedicalRecordFields) -> list[str]:
     items: list[str] = []
     for key, label in FIELD_LABELS.items():
         field = getattr(fields, key)
-        if not _has_real_field_value(field):
+        if (
+            not _has_real_field_value(field)
+            or field.status in {"partial", "negative", "conflicting"}
+        ):
             items.append(label)
     return items
 
@@ -302,7 +307,11 @@ def _structured_updates(
             {
                 "key": key,
                 "label": label,
-                "status": "missing" if not _has_real_field_value(field) else "preview",
+                "status": (
+                    "missing"
+                    if not _has_real_field_value(field)
+                    else "preview" if field.status == "complete" else field.status
+                ),
                 "value_preview": value[:120],
                 "confidence": field.confidence,
                 "source_text": source_text,
@@ -436,16 +445,30 @@ def _require_segments_role_quality(
 def _extract_fields_for_service(
     conversation_text: str,
     segments: list[dict[str, Any]],
-) -> MedicalRecordFields:
-    fields = MockLLM().extract_fields(conversation_text)
-    return _enrich_field_evidence(fields, _stable_segments_for_external_api(segments))
+) -> tuple[MedicalRecordFields, dict[str, Any]]:
+    generator = create_llm_record_generator()
+    fields = generator.extract_fields(conversation_text)
+    fields = _enrich_field_evidence(fields, _stable_segments_for_external_api(segments))
+    return fields, _extraction_info(generator.get_trace())
+
+
+def _extraction_info(trace: dict[str, Any] | None) -> dict[str, Any]:
+    trace = trace or {}
+    return {
+        "requested_provider": trace.get("llm_provider") or "mock",
+        "actual_provider": trace.get("actual_provider") or trace.get("llm_provider") or "mock",
+        "model": trace.get("model") or "mock-deterministic-extractor",
+        "fallback": bool(trace.get("fallback", False)),
+        "fallback_reason": trace.get("fallback_reason"),
+        "extraction_mode": "clinical_fact_rules_v1",
+    }
 
 
 @router.post("/extract-fields", response_model=ExtractFieldsResponse)
 def extract_fields(payload: ExtractFieldsRequest) -> ExtractFieldsResponse:
     stable_segments = _stable_segments_for_external_api(payload.segments)
     _require_segments_role_quality(payload.conversation_text, stable_segments)
-    fields = _extract_fields_for_service(payload.conversation_text, stable_segments)
+    fields, extraction_info = _extract_fields_for_service(payload.conversation_text, stable_segments)
     quality_report = build_record_quality_report(fields)
     return ExtractFieldsResponse(
         status="fields_extracted",
@@ -461,6 +484,7 @@ def extract_fields(payload: ExtractFieldsRequest) -> ExtractFieldsResponse:
         diagnosis_evidence=_diagnosis_evidence(fields),
         evidence_links=_evidence_links(fields, stable_segments),
         quality_report=quality_report,
+        extraction_info=extraction_info,
     )
 
 
@@ -514,9 +538,11 @@ def generate_record(
 @router.post("/preview", response_model=PreviewRecordResponse)
 def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
     conversation_text, stable_segments = _stable_preview_input(payload)
-    llm = MockLLM()
-    fields = llm.extract_fields(conversation_text)
+    generator = create_llm_record_generator()
+    fields = generator.extract_fields(conversation_text)
     fields = _enrich_field_evidence(fields, stable_segments)
+    extraction_info = _extraction_info(generator.get_trace())
+    llm = MockLLM()
     draft = llm.generate_draft(fields)
     safety = llm.safety_check(draft, fields, allow_export=False)
     updates = _structured_updates(fields, stable_segments)
@@ -544,4 +570,5 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
         missing_items=_missing_items(fields),
         safety_preview=safety.model_dump(mode="json"),
         quality_preview=quality_preview,
+        extraction_info=extraction_info,
     )

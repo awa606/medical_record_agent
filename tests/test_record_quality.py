@@ -33,7 +33,7 @@ class RecordQualityTests(unittest.TestCase):
         report = build_record_quality_report(fields, safety, draft="门诊病历草稿")
 
         self.assertEqual(report["status"], "needs_review")
-        self.assertEqual(report["core_fields_completed"], 2)
+        self.assertEqual(report["core_fields_completed"], 1)
         self.assertIn("既往史", report["missing_core_fields"])
         self.assertEqual(report["low_confidence_fields"][0]["label"], "现病史")
         self.assertIn("现病史", report["evidence_missing_fields"])

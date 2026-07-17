@@ -8,7 +8,7 @@ from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, S
 
 
 FactType = Literal["symptom", "measurement", "duration", "treatment"]
-Assertion = Literal["present", "absent", "resolved"]
+Assertion = Literal["present", "absent", "resolved", "uncertain"]
 
 
 @dataclass(frozen=True)
@@ -324,7 +324,7 @@ def _build_present_illness(
             "患者否认" + "、".join(_unique_names(absent_symptoms)) + "。",
             absent_symptoms,
             confidence=0.78,
-            status="negative",
+            status="complete",
             missing_elements=[],
             hint="如仍有其他不适，请继续补问主要症状。",
         )
@@ -378,7 +378,7 @@ def _field_from_facts(
     facts: list[ClinicalFact],
     *,
     confidence: float,
-    status: Literal["complete", "partial", "negative", "conflicting"],
+    status: Literal["complete", "partial", "conflicting"],
     missing_elements: list[str] | None = None,
     hint: str | None = None,
 ) -> MedicalField:

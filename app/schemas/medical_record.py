@@ -20,7 +20,7 @@ class MedicalField(BaseModel):
 
     value: str | None = None
     missing: bool = False
-    status: Literal["complete", "partial", "missing", "negative", "conflicting"] = "complete"
+    status: Literal["complete", "partial", "missing", "conflicting"] = "complete"
     hint: str | None = None
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     source_spans: list[SourceSpan] = Field(default_factory=list)

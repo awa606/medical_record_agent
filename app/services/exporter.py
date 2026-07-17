@@ -41,8 +41,6 @@ def render_markdown(fields: MedicalRecordFields, safety_check: SafetyCheckResult
         if getattr(field, "status", None) == "partial" and value != "未提及/待补充":
             missing = "、".join(field.missing_elements or ["待补充信息"])
             value = f"{value}\n\n> 部分完成，仍需补充：{missing}"
-        if getattr(field, "status", None) == "negative" and value != "未提及/待补充":
-            value = f"{value}\n\n> 阴性信息，仍需结合其他主诉继续问诊"
         if getattr(field, "status", None) == "conflicting" and value != "未提及/待补充":
             value = f"{value}\n\n> 证据冲突，需医生复核：{field.hint or '请核对原始转写'}"
         lines.extend([f"## {label}", value, ""])

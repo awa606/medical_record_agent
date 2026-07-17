@@ -52,8 +52,10 @@ class ClinicalFactExtractionTests(unittest.TestCase):
         self.assertEqual(negative.chief_complaint.value, "头痛（病程待补问）")
         self.assertIn("患者否认发热", negative.present_illness.value)
         self.assertTrue(answered_no.chief_complaint.missing)
-        self.assertEqual(answered_no.present_illness.status, "negative")
+        self.assertEqual(answered_no.present_illness.status, "complete")
         self.assertIn("患者否认发热", answered_no.present_illness.value)
+        answered_no_facts = extract_clinical_facts("医生：有没有发热？患者：没有")
+        self.assertTrue(any(fact.name == "发热" and fact.assertion == "absent" for fact in answered_no_facts))
         self.assertIn("曾有发热", resolved.chief_complaint.value)
         self.assertIn("目前已缓解", resolved.present_illness.value)
 
@@ -74,12 +76,13 @@ class ClinicalFactExtractionTests(unittest.TestCase):
         self.assertEqual(report["core_completeness"], 0.0)
         self.assertFalse(report["ready_for_doctor_review"])
 
-    def test_negative_fields_do_not_count_as_complete_quality(self):
+    def test_absent_facts_are_not_field_completion_status(self):
         fields = MockLLM().extract_fields("医生：有没有发热？患者：没有")
         report = build_record_quality_report(fields)
 
-        self.assertIn("现病史", report["negative_fields"])
-        self.assertEqual(report["core_completeness"], 0.0)
+        self.assertEqual(fields.present_illness.status, "complete")
+        self.assertNotIn("negative_fields", report)
+        self.assertEqual(report["core_completeness"], 0.2)
         self.assertFalse(report["ready_for_doctor_review"])
 
     def test_has_extractable_clinical_fact_accepts_short_medical_text(self):
@@ -88,6 +91,13 @@ class ClinicalFactExtractionTests(unittest.TestCase):
 
         self.assertTrue(any(fact.name == "发热" for fact in facts))
         self.assertTrue(any(fact.name == "体温" and fact.value == "39℃" for fact in facts))
+
+    def test_generated_fields_keep_source_spans_and_fact_ids(self):
+        fields = MockLLM().extract_fields("我感觉我发烧了，头很痛，39°C")
+
+        for field in [fields.chief_complaint, fields.present_illness, fields.accompanying_symptoms]:
+            self.assertTrue(field.source_spans)
+            self.assertTrue(field.fact_ids)
 
 
 class ClinicalFactFormalGenerationTests(unittest.TestCase):

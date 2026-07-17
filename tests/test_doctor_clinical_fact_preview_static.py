@@ -17,14 +17,12 @@ def test_doctor_fields_show_partial_and_evidence_labels() -> None:
     css = (ROOT / "static" / "doctor.css").read_text(encoding="utf-8")
 
     assert 'field.status === "partial"' in script
-    assert 'field.status === "negative"' in script
     assert "部分完成" in script
-    assert "阴性" in script
     assert "证据冲突" in script
     assert "查看原文证据" in script
     assert "field-status-text" in script
     assert ".status-badge.partial" in css
-    assert ".status-badge.negative" in css
+    assert ".status-badge.negative" not in css
     assert ".status-dot-label.partial" in css
 
 

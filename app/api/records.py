@@ -126,7 +126,7 @@ def _missing_items(fields: MedicalRecordFields) -> list[str]:
         field = getattr(fields, key)
         if (
             not _has_real_field_value(field)
-            or field.status in {"partial", "negative", "conflicting"}
+            or field.status in {"partial", "conflicting"}
         ):
             items.append(label)
     return items

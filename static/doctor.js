@@ -418,7 +418,6 @@ function fieldQualityLabel(key) {
       complete: "质量可用",
       missing: "需补充",
       partial: "部分完成",
-      negative: "阴性",
       conflicting: "证据冲突",
       low_confidence: "低置信度",
       evidence_missing: "证据不足",
@@ -447,7 +446,6 @@ function fieldQualityBadgeClass(label) {
   if (label === "质量可用") return "confirmed";
   if (label === "需补充") return "missing";
   if (label === "部分完成") return "partial";
-  if (label === "阴性") return "negative";
   if (label === "证据冲突") return "conflicting";
   if (label === "证据不足") return "warning";
   return "low";
@@ -1002,7 +1000,6 @@ function fieldStatus(field, key) {
   }
   if (!field || field.missing || (!field.value && field.hint)) return { key: "missing", label: "待补充" };
   if (field.status === "partial") return { key: "partial", label: "部分完成" };
-  if (field.status === "negative") return { key: "negative", label: "阴性" };
   if (field.status === "conflicting") return { key: "conflicting", label: "证据冲突" };
   if (field.confirmed_by_doctor) return { key: "confirmed", label: "已确认" };
   if (typeof field.confidence === "number" && field.confidence < 0.7) return { key: "low", label: "低置信度" };

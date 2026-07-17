@@ -51,8 +51,6 @@ def build_record_quality_report(
     missing_all = _missing_fields(record, ALL_FIELD_LABELS)
     partial_core = _partial_fields(record, CORE_FIELD_LABELS)
     partial_all = _partial_fields(record, ALL_FIELD_LABELS)
-    negative_core = _negative_fields(record, CORE_FIELD_LABELS)
-    negative_all = _negative_fields(record, ALL_FIELD_LABELS)
     conflicting_core = _conflicting_fields(record, CORE_FIELD_LABELS)
     conflicting_all = _conflicting_fields(record, ALL_FIELD_LABELS)
     low_confidence = _low_confidence_fields(record)
@@ -72,7 +70,6 @@ def build_record_quality_report(
         not blocked
         and not missing_core
         and not partial_core
-        and not negative_core
         and not conflicting_core
     )
     export_allowed = False
@@ -80,7 +77,6 @@ def build_record_quality_report(
     next_actions = _next_actions(
         missing_core=missing_core,
         partial_core=partial_core,
-        negative_core=negative_core,
         conflicting_core=conflicting_core,
         low_confidence=low_confidence,
         evidence_missing=evidence_missing,
@@ -98,8 +94,6 @@ def build_record_quality_report(
         "missing_core_fields": missing_core,
         "partial_fields": partial_all,
         "partial_core_fields": partial_core,
-        "negative_fields": negative_all,
-        "negative_core_fields": negative_core,
         "conflicting_fields": conflicting_all,
         "conflicting_core_fields": conflicting_core,
         "low_confidence_fields": low_confidence,
@@ -129,8 +123,6 @@ def _empty_report() -> dict[str, Any]:
         "missing_core_fields": list(CORE_FIELD_LABELS.values()),
         "partial_fields": [],
         "partial_core_fields": [],
-        "negative_fields": [],
-        "negative_core_fields": [],
         "conflicting_fields": [],
         "conflicting_core_fields": [],
         "low_confidence_fields": [],
@@ -192,15 +184,6 @@ def _conflicting_fields(record: MedicalRecordFields, labels: dict[str, str]) -> 
         if getattr(field, "status", None) == "conflicting":
             conflicting.append(label)
     return conflicting
-
-
-def _negative_fields(record: MedicalRecordFields, labels: dict[str, str]) -> list[str]:
-    negative: list[str] = []
-    for key, label in labels.items():
-        field = getattr(record, key)
-        if getattr(field, "status", None) == "negative":
-            negative.append(label)
-    return negative
 
 
 def _is_complete_field(field: Any) -> bool:
@@ -283,15 +266,6 @@ def _field_quality_item(key: str, label: str, field: Any | None) -> dict[str, An
             "status": "partial",
             "reason": f"{label}已形成部分内容，仍缺少：{missing}。",
             "suggested_action": field.hint or f"继续补问{label}相关信息。",
-            "evidence_count": evidence_count,
-        }
-    if getattr(field, "status", None) == "negative":
-        return {
-            "key": key,
-            "label": label,
-            "status": "negative",
-            "reason": f"{label}包含患者明确否认的信息。",
-            "suggested_action": field.hint or "继续补问是否存在其他主要症状。",
             "evidence_count": evidence_count,
         }
     if evidence_count == 0:
@@ -462,7 +436,6 @@ def _next_actions(
     *,
     missing_core: list[str],
     partial_core: list[str] | None = None,
-    negative_core: list[str] | None = None,
     conflicting_core: list[str] | None = None,
     low_confidence: list[dict[str, Any]],
     evidence_missing: list[str],
@@ -472,14 +445,11 @@ def _next_actions(
 ) -> list[str]:
     actions: list[str] = []
     partial_core = partial_core or []
-    negative_core = negative_core or []
     conflicting_core = conflicting_core or []
     if missing_core:
         actions.append(f"补问核心字段：{'、'.join(missing_core)}。")
     if partial_core:
         actions.append(f"完善部分完成字段：{'、'.join(partial_core)}。")
-    if negative_core:
-        actions.append(f"继续补问阴性字段相关主诉：{'、'.join(negative_core)}。")
     if conflicting_core:
         actions.append(f"复核证据冲突字段：{'、'.join(conflicting_core)}。")
     if low_confidence:

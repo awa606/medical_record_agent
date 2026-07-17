@@ -1864,11 +1864,6 @@ body.doctor-mode .start-guide {
   color: #1f5fbf;
 }
 
-.status-badge.negative {
-  background: #f1f5f9;
-  color: #475569;
-}
-
 .status-badge.conflicting {
   background: #fff0f0;
   color: #b42318;
@@ -1892,11 +1887,6 @@ body.doctor-mode .start-guide {
 .field-card.partial {
   border-left-color: #2f80ed;
   background: #f8fbff;
-}
-
-.field-card.negative {
-  border-left-color: #64748b;
-  background: #f8fafc;
 }
 
 .field-card.conflicting {
@@ -5332,12 +5322,6 @@ body.doctor-mode .field-card .field-title {
 .field-status-point.partial {
   background: #2f80ed;
   box-shadow: 0 0 0 3px #eaf2ff;
-}
-
-.status-dot-label.negative,
-.field-status-point.negative {
-  background: #64748b;
-  box-shadow: 0 0 0 3px #f1f5f9;
 }
 
 .status-dot-label.conflicting,

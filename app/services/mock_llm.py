@@ -414,8 +414,6 @@ def _field_text(field: MedicalField, *, physical_exam: bool = False) -> str:
     if field.status == "partial" and field.value:
         missing = "、".join(field.missing_elements or ["待补充信息"])
         return f"{field.value}（部分完成，仍需补充：{missing}）"
-    if field.status == "negative" and field.value:
-        return f"{field.value}（阴性信息，需结合其他主诉继续问诊）"
     if field.status == "conflicting" and field.value:
         return f"{field.value}（证据冲突，需医生复核）"
     return field.value or "未提及，待补充"

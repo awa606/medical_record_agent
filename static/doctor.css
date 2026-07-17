@@ -2138,6 +2138,18 @@ body.doctor-mode .start-guide {
   line-height: 1.4;
 }
 
+.assist-diagnosis-summary {
+  display: grid;
+  gap: 4px;
+}
+
+.assist-diagnosis-summary p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .assist-plan-block,
 .assist-mini-grid > div,
 .assist-evidence-quote {

@@ -140,24 +140,23 @@ const DRAFT_FIELD_DEFS = [
 ];
 
 const WORKFLOW_STEPS = [
-  { key: "INPUT", label: "1.输入" },
-  { key: "TRANSCRIBING", label: "2.实时转写" },
-  { key: "ROLE_REVIEW", label: "3.角色校正" },
-  { key: "GENERATE_RECORD", label: "4.生成病历" },
-  { key: "DOCTOR_REVIEW", label: "5.医生审核" },
-  { key: "EXPORT", label: "6.导出" },
+  { key: "INPUT", label: "1.开始问诊" },
+  { key: "TRANSCRIBING", label: "2.智能转写" },
+  { key: "GENERATE_RECORD", label: "3.生成病历" },
+  { key: "DOCTOR_REVIEW", label: "4.医生审核" },
+  { key: "EXPORT", label: "5.导出" },
 ];
 
 const STATUS_TO_STEP = {
   CREATED: "INPUT",
   TRANSCRIBING: "TRANSCRIBING",
-  TRANSCRIBED: "ROLE_REVIEW",
+  TRANSCRIBED: "GENERATE_RECORD",
   EXTRACTING_FIELDS: "GENERATE_RECORD",
   GENERATING_DRAFT: "GENERATE_RECORD",
   SAFETY_CHECKING: "GENERATE_RECORD",
   WAITING_DOCTOR_REVIEW: "DOCTOR_REVIEW",
   doctor_review: "DOCTOR_REVIEW",
-  FAILED: "ROLE_REVIEW",
+  FAILED: "GENERATE_RECORD",
   reviewed: "DOCTOR_REVIEW",
   approved: "EXPORT",
   EXPORTED: "EXPORT",
@@ -174,8 +173,8 @@ const STATUS_LABELS = {
   WAITING_DOCTOR_REVIEW: "等待医生审核",
   doctor_review: "等待医生审核",
   FAILED: "任务失败",
-  reviewed: "草稿已保存",
-  approved: "字段已确认",
+  reviewed: "修改已保存",
+  approved: "病历审核已完成",
   EXPORTED: "已导出",
   exported: "已导出",
 };
@@ -248,12 +247,12 @@ async function api(path, options = {}) {
   if (!response.ok) {
     const detail = data.detail;
     if (typeof detail === "string") throw new Error(detail);
-    if (detail?.errors) {
-      const error = new Error(detail.errors.join(" "));
-      error.detail = detail;
-      throw error;
-    }
-    throw new Error(JSON.stringify(detail || data));
+    const errorMessage = detail?.message
+      || (Array.isArray(detail?.errors) ? detail.errors.join(" ") : "")
+      || JSON.stringify(detail || data);
+    const error = new Error(errorMessage);
+    error.detail = detail || data;
+    throw error;
   }
   return data;
 }
@@ -603,11 +602,11 @@ function renderStepPrompt() {
     text = "请优先处理红色/黄色提示。";
     tone = risk.hasError ? "danger" : "risk";
   } else if (appState.taskStatus === "WAITING_DOCTOR_REVIEW" || appState.taskStatus === "reviewed" || appState.taskStatus === "approved") {
-    text = "请确认字段和候选诊断，确认后才能导出。";
+    text = "请核对病历内容及鉴别诊断参考，完成医生审核后方可导出。";
   } else if (appState.currentDraft || appState.taskStatus === "GENERATING_DRAFT" || appState.taskStatus === "SAFETY_CHECKING") {
-    text = "病历草稿已生成，请逐项核对字段。";
+    text = "病历草稿已生成，请审核病历内容。";
   } else if (appState.taskStatus === "TRANSCRIBED" || appState.currentAsrResult) {
-    text = "对话已转写，请核对医生/患者角色。";
+    text = roleReviewRequired() ? "说话人身份需要确认后才能生成病历。" : "对话已转写，说话人角色已自动识别。";
   }
 
   prompt.textContent = text;
@@ -620,7 +619,7 @@ function workflowStepKey() {
   if (appState.currentRecordFields || appState.currentDraft) return "DOCTOR_REVIEW";
   if (appState.currentTaskId) return "GENERATE_RECORD";
   if (appState.currentAsrResult) {
-    return roleReviewRequired() || appState.roleReviewDirty ? "ROLE_REVIEW" : "GENERATE_RECORD";
+    return "GENERATE_RECORD";
   }
   if (appState.taskStatus === "TRANSCRIBING" || appState.currentAsrSessionId || appState.liveTranscriptSegments.length) {
     return "TRANSCRIBING";
@@ -696,19 +695,19 @@ function nextActionState() {
   if (appState.currentAsrResult && (rolePending || appState.roleReviewDirty)) {
     const pendingCount = roleReviewPendingCount();
     const pendingText = pendingCount
-      ? `仍有 ${pendingCount} 位说话人需要映射，请一次确认说话人 A/B/C 的角色。`
-      : "角色已逐段确认，请保存校正结果。";
+      ? `仍有 ${pendingCount} 位说话人需要确认；已可靠识别的说话人不会重复要求确认。`
+      : (roleQualityReasonText() || "身份确认已完成，请保存结果。");
     const resumeText = appState.pendingGenerateAfterRoleReview
       ? "保存后将自动继续生成病历。"
       : "保存后可继续生成病历。";
     return {
       tone: "warning",
-      title: rolePending ? "请完成说话人全局角色映射" : "请保存角色映射",
+      title: rolePending ? "请确认说话人身份" : "请保存身份确认",
       detail: `${pendingText}${resumeText}`,
       actions: [
         workflowAction({
-          key: "save-role-review",
-          label: appState.roleReviewSaving ? "保存中" : "确认全局映射",
+          key: rolePending ? "open-role-review" : "save-role-review",
+          label: appState.roleReviewSaving ? "保存中" : rolePending ? "确认说话人身份" : "保存身份确认",
           tone: "primary",
           disabled: appState.roleReviewSaving,
         }),
@@ -720,9 +719,9 @@ function nextActionState() {
     return {
       tone: "ready",
       title: "转写已完成",
-      detail: "角色已确认，可以用当前对话生成病历草稿。",
+      detail: "说话人角色已自动识别，可以用当前对话生成病历草稿。",
       actions: [
-        workflowAction({ key: "generate-record", label: "用校正文本生成病历", tone: "primary" }),
+        workflowAction({ key: "generate-record", label: "生成病历", tone: "primary" }),
       ],
     };
   }
@@ -752,8 +751,8 @@ function nextActionState() {
   if (isApprovedForExport()) {
     return {
       tone: "ready",
-      title: "字段已确认，可以导出",
-      detail: "导出前请确认候选诊断和安全校验提示已由医生审核。",
+      title: "病历审核已完成，可以导出",
+      detail: "导出前请确认鉴别诊断参考和安全校验提示已由医生审核。",
       actions: [
         workflowAction({ key: "export-record", label: "确认导出", tone: "primary" }),
       ],
@@ -761,14 +760,14 @@ function nextActionState() {
   }
 
   if (appState.currentRecordFields) {
-    const missingText = risk.missing.length ? `缺失项：${risk.missing.join("、")}。` : "字段已生成。";
+    const missingText = risk.missing.length ? `缺失项：${risk.missing.join("、")}。` : "病历草稿已生成。";
     return {
       tone: risk.hasError ? "danger" : risk.hasRisk ? "warning" : "ready",
-      title: "请审核病历字段",
-      detail: `${missingText} 保存草稿后确认字段，确认后才能导出。`,
+      title: "请审核病历内容",
+      detail: `${missingText} 保存修改后完成病历审核，完成医生审核后方可导出。`,
       actions: [
-        workflowAction({ key: "save-draft", label: "保存草稿" }),
-        workflowAction({ key: "confirm-fields", label: "确认字段", tone: "primary" }),
+        workflowAction({ key: "save-draft", label: "保存修改" }),
+        workflowAction({ key: "confirm-fields", label: "完成病历审核", tone: "primary" }),
       ],
     };
   }
@@ -1027,7 +1026,7 @@ function draftFieldEvidence(fields, key) {
       .flatMap((diagnosis) => diagnosis.evidence || [])
       .map((item) => item.text)
       .filter(Boolean);
-    return evidence.length ? evidence.join("\n") : "暂无候选诊断证据，需医生结合原始转写复核。";
+    return evidence.length ? evidence.join("\n") : "暂无鉴别诊断参考证据，需医生结合原始转写复核。";
   }
   return fieldEvidence(fields?.[key] || null, key);
 }
@@ -1050,8 +1049,8 @@ function diagnosisList(items) {
 }
 
 function diagnosisConfidence(diagnosis = {}) {
-  if (diagnosis.confidence == null) return "规则置信度待评估";
-  return `规则置信度 ${Math.round(Number(diagnosis.confidence) * 100)}%`;
+  if (diagnosis.confidence == null) return "规则匹配度待评估";
+  return `规则匹配度 ${Math.round(Number(diagnosis.confidence) * 100)}%`;
 }
 
 function renderDiagnosisDetailLine(label, value) {
@@ -1071,9 +1070,12 @@ function renderDiagnosisDetailList(label, items) {
 }
 
 function renderDiagnosisDetails(diagnosis = {}) {
-  const ruleText = [diagnosis.rule_id, diagnosisConfidence(diagnosis)].filter(Boolean).join(" · ");
+  const ruleParts = appState.viewMode === "debug"
+    ? [diagnosis.rule_id, diagnosisConfidence(diagnosis)]
+    : [diagnosisConfidence(diagnosis)];
+  const ruleText = ruleParts.filter(Boolean).join(" · ");
   const details = [
-    renderDiagnosisDetailLine("规则", ruleText),
+    renderDiagnosisDetailLine("规则匹配", ruleText),
     renderDiagnosisDetailLine("触发原因", diagnosis.reason),
     renderDiagnosisDetailList("建议检查", diagnosis.suggested_checks),
     renderDiagnosisDetailList("用药提示", diagnosis.medication_notes),
@@ -1095,11 +1097,11 @@ function renderFieldDetailContent(key) {
       ? diagnoses.map((diagnosis, index) => `
           ${detailSection(`初步诊断 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
             <div class="detail-kv"><span>状态</span><strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong></div>
-            <div class="detail-kv"><span>置信度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
+            <div class="detail-kv"><span>规则匹配度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
             <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
           `)}
         `).join("")
-      : `<div class="empty-state">暂无初步诊断。生成病历后会显示候选诊断摘要，需医生确认。</div>`;
+      : `<div class="empty-state">暂无初步诊断。生成病历后会显示鉴别诊断参考摘要，需医生判断。</div>`;
   }
   const field = fields[key] || null;
   const status = fieldStatus(field, key);
@@ -1128,16 +1130,16 @@ function renderFieldDetailContent(key) {
 
 function renderDiagnosisDetailContent(index) {
   const diagnosis = activeRecordFields()?.candidate_diagnoses?.[index];
-  if (!diagnosis) return `<div class="empty-state">暂无候选诊断详情。</div>`;
+  if (!diagnosis) return `<div class="empty-state">暂无鉴别诊断参考详情。</div>`;
   const diagnosisQuality = activeQualityReport()?.candidate_diagnosis_status?.diagnosis_quality?.[index] || null;
   return `
-    ${detailSection(diagnosis.name || "候选诊断", `
+    ${detailSection(diagnosis.name || "鉴别诊断参考", `
       <div class="detail-kv">
         <span>状态</span>
         <strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong>
       </div>
       <div class="detail-kv">
-        <span>置信度</span>
+        <span>规则匹配度</span>
         <strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong>
       </div>
       <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
@@ -1148,10 +1150,10 @@ function renderDiagnosisDetailContent(index) {
       <div class="detail-text">${escapeHtml(
         diagnosisQuality.missing?.length
           ? `缺项：${diagnosisQuality.missing.join("、")}。${diagnosisQuality.suggested_action || ""}`
-          : (diagnosisQuality.suggested_action || "候选诊断结构完整，等待医生确认。")
+          : (diagnosisQuality.suggested_action || "鉴别诊断参考结构完整，等待医生判断。")
       )}</div>
     `) : ""}
-    ${detailSection("诊断证据", `<div class="detail-text">${escapeHtml((diagnosis.evidence || []).map((item) => item.text).filter(Boolean).join("\n") || "暂无候选诊断证据。")}</div>`)}
+    ${detailSection("诊断证据", `<div class="detail-text">${escapeHtml((diagnosis.evidence || []).map((item) => item.text).filter(Boolean).join("\n") || "暂无鉴别诊断参考证据。")}</div>`)}
   `;
 }
 
@@ -1171,7 +1173,7 @@ function renderAllFieldsDetailContent() {
   }).join("");
   const diagnoses = fields.candidate_diagnoses || [];
   const diagnosisSection = diagnoses.length
-    ? detailSection("候选诊断", diagnoses.map((diagnosis, index) => `
+    ? detailSection("鉴别诊断参考", diagnoses.map((diagnosis, index) => `
       <div class="diagnosis-detail">
         <span>候选 ${index + 1}</span>
         <strong>${escapeHtml(diagnosis.name || "未命名诊断")} · ${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong>
@@ -1237,7 +1239,7 @@ function renderFields() {
   const diagnoses = appState.viewMode === "doctor" ? "" : (fields?.candidate_diagnoses || []).map((diagnosis, index) => `
     <article class="field-card candidate" data-field="diagnosis-${index}">
       <div class="field-head">
-        <span class="field-title">候选诊断</span>
+        <span class="field-title">鉴别诊断参考</span>
         <span class="status-badge candidate">${diagnosis.confirmed_by_doctor ? "已确认" : "候选待确认"}</span>
       </div>
       <div class="field-value">${escapeHtml(diagnosis.name || "未命名诊断")}</div>
@@ -1246,7 +1248,7 @@ function renderFields() {
         <button type="button" data-evidence-toggle>证据</button>
         ${detailButton(`diagnosis:${index}`, "详情")}
       </div>
-      <div class="field-evidence">${escapeHtml((diagnosis.evidence || []).map((item) => item.text).join("\n") || "暂无候选诊断证据。")}</div>
+      <div class="field-evidence">${escapeHtml((diagnosis.evidence || []).map((item) => item.text).join("\n") || "暂无鉴别诊断参考证据。")}</div>
     </article>
   `).join("");
   const hiddenFieldCount = Math.max(0, FIELD_DEFS.length - displayFieldDefs.length);
@@ -1376,6 +1378,89 @@ function speakerAssignmentNeedsReview(item = {}) {
   if (String(item.source || "").startsWith("manual")) return false;
   const confidence = Number(item.confidence);
   return Number.isFinite(confidence) && confidence < ROLE_DISPLAY_CONFIDENCE_THRESHOLD;
+}
+
+function isClinicalRole(role) {
+  return ["医生", "患者", "其他"].includes(role);
+}
+
+function stableAsrSegments(asr = appState.currentAsrResult) {
+  const segments = asr?.segments?.length ? asr.segments : currentReviewSegments();
+  return segments.filter((segment) => !segment.provisional);
+}
+
+function segmentSpeakerId(segment = {}) {
+  return segment.speaker_id || segment.speaker || "";
+}
+
+function speakerRolesComplete(asr = appState.currentAsrResult) {
+  const segments = stableAsrSegments(asr);
+  const assignments = asr?.speaker_assignments || appState.speakerAssignments || [];
+  const assignmentBySpeaker = new Map(assignments.map((item) => [item.speaker_id, item]));
+  const speakerIds = new Set(segments.map(segmentSpeakerId).filter(Boolean));
+
+  if (speakerIds.size) {
+    for (const speakerId of speakerIds) {
+      const assignmentRole = assignmentBySpeaker.get(speakerId)?.role;
+      const segmentRoles = segments
+        .filter((segment) => segmentSpeakerId(segment) === speakerId)
+        .map((segment) => segment.role)
+        .filter(Boolean);
+      if (!isClinicalRole(assignmentRole) && !segmentRoles.some(isClinicalRole)) return false;
+    }
+    return true;
+  }
+
+  if (assignments.length) {
+    return assignments.every((item) => isClinicalRole(item.role));
+  }
+
+  return segments.length ? segments.every((segment) => isClinicalRole(segment.role)) : false;
+}
+
+function roleQualityStatus(asr = appState.currentAsrResult) {
+  return asr?.role_quality?.status || "";
+}
+
+function roleQualityPassed(asr = appState.currentAsrResult) {
+  return roleQualityStatus(asr) === "passed" && speakerRolesComplete(asr);
+}
+
+function roleQualityNeedsIdentityReview(asr = appState.currentAsrResult) {
+  return ["needs_review", "blocked"].includes(roleQualityStatus(asr));
+}
+
+function roleQualityReasonText(asr = appState.currentAsrResult) {
+  const quality = asr?.role_quality;
+  if (!quality) return "";
+  const reasons = quality.reasons || [];
+  if (reasons.length) return reasons.join("；");
+  if (quality.status === "blocked") return "说话人角色质量门禁未通过。";
+  if (quality.status === "needs_review") return "说话人身份需要医生确认。";
+  return "说话人角色已自动识别。";
+}
+
+function pendingSpeakerAssignments() {
+  const assignments = appState.currentAsrResult?.speaker_assignments || appState.speakerAssignments || [];
+  const pending = assignments.filter((item) => speakerAssignmentNeedsReview(item));
+  const pendingBySpeaker = new Map(pending.map((item) => [item.speaker_id, item]));
+  const quality = appState.currentAsrResult?.role_quality || {};
+  [
+    ...(quality.unresolved_assignments || []),
+    ...(quality.low_confidence_clinical_roles || []),
+    ...(quality.unmapped_speakers || []),
+  ].forEach((item) => {
+    const speakerId = item?.speaker_id;
+    if (!speakerId || pendingBySpeaker.has(speakerId)) return;
+    const assignment = assignments.find((candidate) => candidate.speaker_id === speakerId) || {};
+    pendingBySpeaker.set(speakerId, {
+      ...assignment,
+      ...item,
+      speaker_id: speakerId,
+      requires_confirmation: true,
+    });
+  });
+  return [...pendingBySpeaker.values()];
 }
 
 function speakerClassFromRole(role) {
@@ -1929,7 +2014,7 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
   const canGenerateFromTranscript = Boolean(asr && !appState.currentTaskId && !appState.currentRecordFields);
   const actionButton = asr
     ? roleReviewRequired()
-      ? `<button type="button" class="secondary-action" data-save-role-review ${appState.roleReviewSaving ? "disabled" : ""}>保存角色校正</button>`
+      ? `<button type="button" class="secondary-action" data-save-role-review ${appState.roleReviewSaving ? "disabled" : ""}>保存身份确认</button>`
       : canGenerateFromTranscript
         ? `<button type="button" class="primary-action" data-generate-from-transcript>用校正文本生成病历</button>`
         : ""
@@ -1937,8 +2022,8 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
   const detailAction = rows.length ? detailButton("transcript:all", "查看全部转写") : "";
   const reviewText = reviewable
     ? unreviewedCount
-      ? "需确认说话人映射"
-      : "角色已确认"
+      ? "需确认说话人身份"
+      : "说话人角色已自动识别"
     : "完成转写后校正";
   const elapsed = appState.asrElapsedSeconds
     ? ` · 已用时 ${Math.round(appState.asrElapsedSeconds)} 秒`
@@ -2046,19 +2131,26 @@ function renderTranscriptDetailContent(target = "all") {
   const rows = transcriptRows();
   if (!rows.length) return `<div class="empty-state">暂无对话转写。</div>`;
   const selectedIndex = Number(target);
+  const identityReviewMode = target === "role-review";
   const canEdit = Boolean(appState.currentAsrSessionId && appState.currentAsrResult?.segments?.length);
   const unreviewedCount = roleReviewPendingCount();
   const canGenerateFromTranscript = Boolean(appState.currentAsrResult && !appState.currentTaskId && !appState.currentRecordFields);
   const speakerGroups = transcriptSpeakerGroups(rows);
+  const pendingSpeakerIds = new Set(pendingSpeakerAssignments().map((item) => item.speaker_id));
+  const visibleSpeakerGroups = identityReviewMode
+    ? speakerGroups.filter((group) => pendingSpeakerIds.has(group.speakerId) || !group.role)
+    : speakerGroups;
   const speakerAliases = buildSpeakerAliasMap(rows);
   const reviewHint = canEdit
     ? appState.roleReviewDirty
       ? "存在未保存校正，保存后会用于后续病历生成。"
-      : "可在这里校正角色和原文，默认列表保持只读。"
+      : identityReviewMode
+        ? "只需确认不确定的说话人；已可靠识别的说话人不会重复要求确认。"
+        : "可在这里更正说话人身份和原文，默认列表保持只读。"
     : "当前内容只读。";
   const actionButtons = `
     <div class="transcript-review-actions">
-      ${canEdit ? `<button type="button" class="primary-action" data-save-role-review ${appState.roleReviewSaving ? "disabled" : ""}>${appState.roleReviewSaving ? "保存中" : "保存校正"}</button>` : ""}
+      ${canEdit ? `<button type="button" class="primary-action" data-save-role-review ${appState.roleReviewSaving ? "disabled" : ""}>${appState.roleReviewSaving ? "保存中" : identityReviewMode ? "保存身份确认" : "保存更正"}</button>` : ""}
       ${canGenerateFromTranscript ? `<button type="button" class="secondary-action" data-generate-from-transcript>用当前转写生成病历</button>` : ""}
     </div>
   `;
@@ -2066,13 +2158,13 @@ function renderTranscriptDetailContent(target = "all") {
     ${detailSection("转写状态", `
       <div class="detail-kv"><span>引擎</span><strong>${escapeHtml(appState.currentAsrResult?.engine || appState.selectedEngine || "ASR")}</strong></div>
       <div class="detail-kv"><span>分段</span><strong>${rows.length} 条</strong></div>
-      <div class="detail-kv"><span>校正</span><strong>${escapeHtml(canEdit ? (unreviewedCount ? `${unreviewedCount} 位说话人需映射` : "角色已映射") : "只读")}</strong></div>
+      <div class="detail-kv"><span>说话人身份</span><strong>${escapeHtml(canEdit ? (unreviewedCount ? `${unreviewedCount} 位说话人需确认` : "说话人角色已自动识别") : "只读")}</strong></div>
       <p class="detail-note">${escapeHtml(reviewHint)}</p>
     `)}
-    ${canEdit && speakerGroups.length ? detailSection("按说话人统一校正", `
-      <p class="detail-note">说话人由 CAM++ 声纹聚类得到；临床角色仍需医生确认。一次修改会同步到该说话人的全部发言。</p>
+    ${canEdit && visibleSpeakerGroups.length ? detailSection(identityReviewMode ? "需要确认的说话人" : "按说话人统一更正", `
+      <p class="detail-note">${identityReviewMode ? "确认后会同步到该说话人的全部发言，并用于继续生成病历。" : "一次修改会同步到该说话人的全部发言。"}</p>
       <div class="speaker-role-groups">
-        ${speakerGroups.map((group) => `
+        ${visibleSpeakerGroups.map((group) => `
           <label class="speaker-role-group">
             <span><strong>${escapeHtml(group.displayName)}</strong><small>${escapeHtml(group.speakerId)} · ${group.count} 段</small></span>
             <select data-speaker-role-select data-speaker-id="${escapeHtml(group.speakerId)}" aria-label="设置${escapeHtml(group.displayName)}角色">
@@ -2081,8 +2173,8 @@ function renderTranscriptDetailContent(target = "all") {
           </label>
         `).join("")}
       </div>
-    `) : ""}
-    ${detailSection("角色与文本校正", `
+    `) : identityReviewMode ? detailSection("身份确认", `<div class="empty-state">当前没有需要人工确认的说话人。</div>`) : ""}
+    ${detailSection(identityReviewMode ? "更正转写（可选）" : "身份与文本更正", `
       <div class="transcript-review-list">
         ${rows.map((item) => `
           <div class="transcript-review-row ${Number.isFinite(selectedIndex) && selectedIndex === item.index ? "focus" : ""}" data-segment-index="${item.index}">
@@ -2117,7 +2209,7 @@ function allEvidence() {
   });
   (fields.candidate_diagnoses || []).forEach((diagnosis) => {
     (diagnosis.evidence || []).forEach((span) => {
-      if (span.text) evidence.push(`候选诊断 ${diagnosis.name}：${span.text}`);
+      if (span.text) evidence.push(`鉴别诊断参考 ${diagnosis.name}：${span.text}`);
     });
   });
   return evidence.slice(0, 8);
@@ -2289,7 +2381,7 @@ function saveBehaviorBlock() {
     open: false,
     body: `
         <div class="storage-note">
-          <strong>“保存草稿到SQLite”会调用 <code>POST /api/tasks/{task_id}/review</code>。</strong>
+          <strong>“保存修改到SQLite”会调用 <code>POST /api/tasks/{task_id}/review</code>。</strong>
           <ul>
             <li>写入 SQLite：是，更新当前 Task 的审核结果并记录审计日志。</li>
             <li>保存病历字段：是，保存医生端当前字段卡片内容。</li>
@@ -2320,14 +2412,14 @@ function runLogBlock() {
   });
 }
 
-function assistCard({ title, badgeClass = "neutral", badgeText = "", body = "", detailTarget = "" }) {
+function assistCard({ title, badgeClass = "neutral", badgeText = "", body = "", detailTarget = "", detailLabel = "详情" }) {
   return `
     <section class="doctor-assist-card">
       <div class="doctor-assist-card-head">
         <h3>${escapeHtml(title)}</h3>
         <div class="doctor-assist-card-actions">
           ${badgeText ? `<span class="status-badge ${badgeClass}">${escapeHtml(badgeText)}</span>` : ""}
-          ${detailTarget ? detailButton(detailTarget, "详情") : ""}
+          ${detailTarget ? detailButton(detailTarget, detailLabel) : ""}
         </div>
       </div>
       <div class="doctor-assist-card-body">${body}</div>
@@ -2335,34 +2427,52 @@ function assistCard({ title, badgeClass = "neutral", badgeText = "", body = "", 
   `;
 }
 
+function diagnosisEvidenceLine(diagnosis = {}) {
+  return diagnosis.reason
+    || (diagnosis.evidence || []).map((item) => item.text).filter(Boolean)[0]
+    || "暂无匹配依据，需医生结合原始转写判断。";
+}
+
+function diagnosisRiskLine(diagnosis = {}) {
+  return diagnosisList(diagnosis.risk_warnings)[0]
+    || diagnosisList(diagnosis.suggested_checks)[0]
+    || diagnosisList(diagnosis.follow_up_questions)[0]
+    || "需结合查体、检查和病情变化继续判断。";
+}
+
 function renderCandidateDiagnosisCard(diagnoses) {
   if (!diagnoses.length) {
     return assistCard({
-      title: "候选诊断",
+      title: "鉴别诊断参考",
       badgeClass: "confirmed",
       badgeText: "暂无",
-      body: `<div class="empty-state">暂无候选诊断。</div>`,
+      body: `<div class="empty-state">暂无鉴别诊断参考。</div>`,
     });
   }
+  const preview = listPreview(diagnoses, 2);
 
   return assistCard({
-    title: "候选诊断",
+    title: "鉴别诊断参考",
     badgeClass: "candidate",
-    badgeText: "待医生确认",
+    badgeText: "需医生判断",
     detailTarget: "assist:candidates",
+    detailLabel: "查看完整依据",
     body: `
       <ol class="assist-number-list">
-        ${listPreview(diagnoses, 1).visible.map((diagnosis, index) => `
+        ${preview.visible.map((diagnosis, index) => `
           <li>
             <span>${index + 1}</span>
-            <div>
+            <div class="assist-diagnosis-summary">
               <strong>${escapeHtml(diagnosis.name || "未命名诊断")}</strong>
               <em>${escapeHtml(diagnosis.status || "候选/待医生确认")} · ${escapeHtml(diagnosisConfidence(diagnosis))}</em>
+              <p>依据：${escapeHtml(diagnosisEvidenceLine(diagnosis))}</p>
+              <p>关注：${escapeHtml(diagnosisRiskLine(diagnosis))}</p>
             </div>
           </li>
         `).join("")}
       </ol>
-      ${diagnoses.length > 1 ? `<div class="summary-note">另有 ${diagnoses.length - 1} 条候选诊断，点击详情查看。</div>` : ""}
+      ${preview.hiddenCount ? `<div class="summary-note">另有 ${preview.hiddenCount} 条鉴别诊断参考，点击查看完整依据。</div>` : ""}
+      <div class="summary-note">仅供鉴别诊断参考，需医生判断，不能作为已确诊结论。</div>
     `,
   });
 }
@@ -2409,7 +2519,7 @@ function renderTreatmentRecommendationCard(fields, diagnoses) {
 
 function renderEvidenceCard(evidence, diagnoses) {
   const diagnosisReasons = diagnoses
-    .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "候选诊断"}：${diagnosis.reason}` : "")
+    .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "鉴别诊断参考"}：${diagnosis.reason}` : "")
     .filter(Boolean);
   const linkedEvidence = (appState.recordPreview?.evidence_links || []).map((item) => ({
     text: `${item.label || "字段证据"}：${item.evidence || item.text || ""}`,
@@ -2554,7 +2664,7 @@ function renderAssistDetailContent(section) {
     if (!quality) return `<div class="empty-state">暂无病历质量报告。</div>`;
     const treatment = quality.treatment_safety || {};
     const treatmentRows = [
-      `治疗建议状态：${treatment.status === "complete" ? "完整" : treatment.status === "not_applicable" ? "暂无候选诊断，暂不适用" : "需完善"}`,
+      `治疗建议状态：${treatment.status === "complete" ? "完整" : treatment.status === "not_applicable" ? "暂无鉴别诊断参考，暂不适用" : "需完善"}`,
       `建议检查：${(treatment.suggested_checks || []).join("、") || "暂无"}`,
       `风险提醒：${(treatment.risk_warnings || []).join("、") || "暂无"}`,
       `建议补问：${(treatment.follow_up_questions || []).join("、") || "暂无"}`,
@@ -2594,18 +2704,18 @@ function renderAssistDetailContent(section) {
     const diagnosisQuality = activeQualityReport()?.candidate_diagnosis_status?.diagnosis_quality || [];
     return diagnoses.length
       ? diagnoses.map((diagnosis, index) => `
-          ${detailSection(`候选诊断 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
+          ${detailSection(`鉴别诊断参考 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
             <div class="detail-kv"><span>状态</span><strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong></div>
-            <div class="detail-kv"><span>规则置信度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
+            <div class="detail-kv"><span>规则匹配度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
             <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
             ${diagnosisQuality[index] ? `<div class="detail-text">${escapeHtml(
               diagnosisQuality[index].missing?.length
                 ? `缺项：${diagnosisQuality[index].missing.join("、")}。${diagnosisQuality[index].suggested_action || ""}`
-                : (diagnosisQuality[index].suggested_action || "候选诊断结构完整，等待医生确认。")
+                : (diagnosisQuality[index].suggested_action || "鉴别诊断参考结构完整，等待医生判断。")
             )}</div>` : ""}
           `)}
         `).join("")
-      : `<div class="empty-state">暂无候选诊断。</div>`;
+      : `<div class="empty-state">暂无鉴别诊断参考。</div>`;
   }
 
   if (section === "treatment") {
@@ -2626,7 +2736,7 @@ function renderAssistDetailContent(section) {
 
   if (section === "evidence") {
     const diagnosisReasons = diagnoses
-      .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "候选诊断"}：${diagnosis.reason}` : "")
+      .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "鉴别诊断参考"}：${diagnosis.reason}` : "")
       .filter(Boolean);
     const items = [...diagnosisReasons, ...evidence];
     return items.length
@@ -2734,9 +2844,9 @@ function renderAssist() {
     })}
 
     ${assistDetails({
-      title: "候选诊断",
+      title: "鉴别诊断参考",
       badgeClass: diagnoses.length ? "candidate" : "confirmed",
-      badgeText: diagnoses.length ? "待确认" : "暂无",
+      badgeText: diagnoses.length ? "需医生判断" : "暂无",
       open: diagnoses.length > 0,
       tone: diagnoses.length ? "risk-warning" : "normal-success",
       body: diagnoses.length ? diagnoses.map((diagnosis) => `
@@ -2745,7 +2855,7 @@ function renderAssist() {
             <div class="diagnosis-status">${escapeHtml(diagnosis.status || "候选/待医生确认")} · ${escapeHtml(diagnosisConfidence(diagnosis))}</div>
             <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
           </div>
-        `).join("") : `<div class="safety-strip success">暂无候选诊断。</div>`,
+        `).join("") : `<div class="safety-strip success">暂无鉴别诊断参考。</div>`,
     })}
 
     ${assistDetails({
@@ -2851,7 +2961,7 @@ function openWorkbenchDetail(target = "") {
     return;
   }
   if (type === "diagnosis") {
-    openDetailDrawer("候选诊断详情", renderDiagnosisDetailContent(Number(value)));
+    openDetailDrawer("鉴别诊断参考详情", renderDiagnosisDetailContent(Number(value)));
     return;
   }
   if (type === "transcript") {
@@ -2860,7 +2970,7 @@ function openWorkbenchDetail(target = "") {
   }
   if (type === "assist") {
     const titleMap = {
-      candidates: "候选诊断详情",
+      candidates: "鉴别诊断参考完整依据",
       treatment: "治疗方案推荐详情",
       evidence: "判断证据详情",
       quality: "病历质量摘要",
@@ -3443,6 +3553,9 @@ function transcriptSpeakerGroups(rows = transcriptRows()) {
 
 function roleReviewRequired() {
   const asr = appState.currentAsrResult;
+  if (!asr) return false;
+  if (roleQualityPassed(asr)) return false;
+  if (roleQualityNeedsIdentityReview(asr)) return true;
   const segments = currentReviewSegments();
   const assignments = asr?.speaker_assignments || appState.speakerAssignments || [];
   if (assignments.length) {
@@ -3457,9 +3570,10 @@ function roleReviewRequired() {
 }
 
 function roleReviewPendingCount() {
+  if (roleQualityPassed()) return 0;
   const assignments = appState.currentAsrResult?.speaker_assignments || appState.speakerAssignments || [];
   if (assignments.length) {
-    return assignments.filter((item) => speakerAssignmentNeedsReview(item)).length;
+    return pendingSpeakerAssignments().length;
   }
   return currentReviewSegments()
     .filter((segment) => segment.needs_review || !segment.role || segment.role === "待确认")
@@ -3470,18 +3584,39 @@ function focusNextActionPanel() {
   const panel = $("nextActionPanel");
   if (!panel) return;
   panel.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
-  panel.querySelector("[data-workflow-action='generate-record'], [data-workflow-action='save-role-review']")?.focus?.();
+  panel.querySelector("[data-workflow-action='generate-record'], [data-workflow-action='open-role-review'], [data-workflow-action='save-role-review']")?.focus?.();
+}
+
+function speakerRolesForReviewSave() {
+  const corrections = { ...appState.speakerRoleCorrections };
+  if (roleReviewRequired()) {
+    const pendingIds = new Set(pendingSpeakerAssignments().map((item) => item.speaker_id));
+    transcriptSpeakerGroups().forEach((group) => {
+      if (pendingIds.has(group.speakerId) && group.role && !corrections[group.speakerId]) {
+        corrections[group.speakerId] = group.role;
+      }
+    });
+  }
+  return Object.entries(corrections).map(([speakerId, role]) => ({
+    speaker_id: speakerId,
+    role,
+    reviewed_by_doctor: Boolean(role),
+  }));
 }
 
 async function saveRoleReview({ silent = false } = {}) {
   if (!appState.currentAsrSessionId || !appState.currentAsrResult?.segments?.length) {
-    if (!silent) showToast("暂无可保存的角色校正结果");
+    if (!silent) showToast("暂无可保存的身份确认结果");
     return appState.currentAsrResult;
   }
 
-  const unresolvedSpeakers = transcriptSpeakerGroups().filter((group) => !group.role);
+  const pendingIds = new Set(pendingSpeakerAssignments().map((item) => item.speaker_id));
+  const speakerGroupsForSave = pendingIds.size
+    ? transcriptSpeakerGroups().filter((group) => pendingIds.has(group.speakerId))
+    : transcriptSpeakerGroups();
+  const unresolvedSpeakers = speakerGroupsForSave.filter((group) => !group.role);
   if (unresolvedSpeakers.length) {
-    if (!silent) showToast(`请先完成 ${unresolvedSpeakers.length} 位说话人的全局角色映射`);
+    if (!silent) showToast(`请先完成 ${unresolvedSpeakers.length} 位说话人的身份确认`);
     return appState.currentAsrResult;
   }
 
@@ -3498,11 +3633,7 @@ async function saveRoleReview({ silent = false } = {}) {
       text: segment.text || "",
       reviewed_by_doctor: Boolean(segment.reviewed_by_doctor && segment.role && segment.role !== "待确认"),
     }));
-    const speakerRoles = Object.entries(appState.speakerRoleCorrections).map(([speakerId, role]) => ({
-      speaker_id: speakerId,
-      role,
-      reviewed_by_doctor: Boolean(role),
-    }));
+    const speakerRoles = speakerRolesForReviewSave();
 
     const response = await api(`/api/asr/sessions/${appState.currentAsrSessionId}/result`, {
       method: "PATCH",
@@ -3538,19 +3669,19 @@ async function saveRoleReview({ silent = false } = {}) {
   }
   if (silent) return savedResult;
   if (pendingCount) {
-    showToast(`角色校正已保存，仍有 ${pendingCount} 位说话人需要映射`);
+    showToast(`身份确认已保存，仍有 ${pendingCount} 位说话人需要确认`);
     focusNextActionPanel();
     return savedResult;
   }
   if (shouldAutoGenerate) {
     appState.pendingGenerateAfterRoleReview = false;
     closeDrawer();
-    showToast("角色校正已保存，正在生成病历");
+    showToast("身份确认已保存，正在生成病历");
     await regenerateRecord();
     return savedResult;
   }
   appState.pendingGenerateAfterRoleReview = false;
-  showToast("角色校正已保存，可继续生成病历");
+  showToast("身份确认已保存，可继续生成病历");
   focusNextActionPanel();
   renderAll();
   return savedResult;
@@ -3627,20 +3758,51 @@ async function continueGeneratingFromTranscription(transcribed) {
     setBusy(false);
     const pendingCount = roleReviewPendingCount();
     showToast(pendingCount
-      ? `转写完成，仍有 ${pendingCount} 位说话人需要全局映射`
-      : "转写完成，请确认说话人映射后自动生成病历");
+      ? `转写完成，仍有 ${pendingCount} 位说话人需要确认`
+      : "转写完成，请确认说话人身份后自动生成病历");
     focusNextActionPanel();
     renderAll();
     return transcribed;
   }
-  setBusy(true, "正在从转写文本生成病历...");
-  const created = await api(`/api/audio/${transcribed.audio_id}/generate-record`, { method: "POST" });
-  appState.currentTaskId = created.task_id;
-  appState.taskStatus = created.status;
-  appState.currentTask = { id: created.task_id, status: created.status };
+  return startRecordGenerationFromAudio(transcribed.audio_id);
+}
+
+function applyRoleQualityGateError(error) {
+  const roleQuality = error?.detail?.role_quality;
+  if (!roleQuality) return false;
+  if (appState.currentAsrResult) {
+    appState.currentAsrResult = {
+      ...appState.currentAsrResult,
+      role_quality: roleQuality,
+      needs_review: true,
+    };
+  }
+  appState.speakerMappingRequired = true;
+  appState.pendingGenerateAfterRoleReview = true;
+  const reasonText = roleQualityReasonText(appState.currentAsrResult)
+    || "说话人角色质量门禁未通过，请先确认说话人身份。";
+  setBusy(false);
+  setActionError(reasonText);
   renderAll();
-  listenForEvents(created.task_id, created.events_url);
-  return created;
+  showToast("请先确认说话人身份");
+  focusNextActionPanel();
+  return true;
+}
+
+async function startRecordGenerationFromAudio(audioId) {
+  setBusy(true, "正在从转写文本生成病历...");
+  try {
+    const created = await api(`/api/audio/${audioId}/generate-record`, { method: "POST" });
+    appState.currentTaskId = created.task_id;
+    appState.taskStatus = created.status;
+    appState.currentTask = { id: created.task_id, status: created.status };
+    renderAll();
+    listenForEvents(created.task_id, created.events_url);
+    return created;
+  } catch (error) {
+    if (applyRoleQualityGateError(error)) return null;
+    throw error;
+  }
 }
 
 async function runAudioWorkflowFromFile(file, engine, mode = appState.audioMode) {
@@ -3710,11 +3872,15 @@ async function regenerateRecord() {
       await saveRoleReview({ silent: true });
     }
     if (roleReviewRequired()) {
-      throw new Error("请先完成医生/患者角色校正");
+      throw new Error("请先完成说话人身份确认");
     }
     const text = appState.currentAsrResult?.conversation_text || appState.currentInputText || $("conversationInput").value.trim();
     if (!text) throw new Error("暂无可重新生成的对话文本");
     const keepAsr = Boolean(appState.currentAudioId && appState.currentAsrResult?.engine !== "text-import");
+    if (keepAsr) {
+      await startRecordGenerationFromAudio(appState.currentAudioId);
+      return;
+    }
     await createRecordTask(text, { keepAsr });
   } catch (error) {
     setBusy(false);
@@ -3725,7 +3891,7 @@ async function regenerateRecord() {
 async function saveDraftReview() {
   try {
     if (!appState.currentTaskId || !appState.currentRecordFields) throw new Error("暂无可保存的病历字段");
-    setBusy(true, "正在保存草稿到 SQLite...");
+    setBusy(true, "正在保存修改到 SQLite...");
     appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -3733,7 +3899,7 @@ async function saveDraftReview() {
     });
     await refreshTask(appState.currentTaskId, appState.currentTask);
     setBusy(false);
-    showToast("草稿已保存到 SQLite");
+    showToast("修改已保存到 SQLite");
   } catch (error) {
     setBusy(false);
     reportActionError(error);
@@ -3743,12 +3909,12 @@ async function saveDraftReview() {
 async function confirmFields() {
   try {
     if (!appState.currentTaskId) throw new Error("暂无可确认的任务");
-    setBusy(true, "正在确认字段...");
+    setBusy(true, "正在完成审核...");
     appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/approve`, { method: "POST" });
     appState.taskStatus = "approved";
     await refreshTask(appState.currentTaskId, appState.currentTask);
     setBusy(false);
-    showToast("字段已确认");
+    showToast("病历审核已完成");
   } catch (error) {
     setBusy(false);
     reportActionError(error);
@@ -3811,6 +3977,10 @@ async function handleWorkflowAction(action) {
   }
   if (action === "save-role-review") {
     await saveRoleReview();
+    return;
+  }
+  if (action === "open-role-review") {
+    openRoleReview();
     return;
   }
   if (action === "generate-record") {
@@ -4249,6 +4419,10 @@ function openDebug() {
   openDrawer("debugPanel", "医生端调试详情");
 }
 
+function openRoleReview() {
+  openDetailDrawer("说话人身份确认", renderTranscriptDetailContent("role-review"));
+}
+
 async function testLlmConnection() {
   try {
     const status = await refreshLlmStatus({ test: true });
@@ -4454,7 +4628,8 @@ function bindEvents() {
     const speakerRoleSelect = event.target.closest("[data-speaker-role-select]");
     if (speakerRoleSelect) {
       updateSpeakerRole(speakerRoleSelect.dataset.speakerId, speakerRoleSelect.value);
-      $("detailDrawerContent").innerHTML = renderTranscriptDetailContent();
+      const target = $("drawerTitle").textContent === "说话人身份确认" ? "role-review" : "all";
+      $("detailDrawerContent").innerHTML = renderTranscriptDetailContent(target);
       return;
     }
     const roleSelect = event.target.closest("[data-detail-role-select]");
@@ -4480,7 +4655,8 @@ function bindEvents() {
     if (!saveButton) return;
     try {
       await saveRoleReview();
-      $("detailDrawerContent").innerHTML = renderTranscriptDetailContent();
+      const target = $("drawerTitle").textContent === "说话人身份确认" ? "role-review" : "all";
+      $("detailDrawerContent").innerHTML = renderTranscriptDetailContent(target);
     } catch (error) {
       reportActionError(error);
     }

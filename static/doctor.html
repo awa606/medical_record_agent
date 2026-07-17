@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>医生端工作台 - AI生成式电子病历辅助系统</title>
-  <link rel="stylesheet" href="./doctor.css?v=2026071502" />
+  <link rel="stylesheet" href="./doctor.css?v=2026071601" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -155,7 +155,7 @@
           <ol>
             <li>选择输入方式：文本导入 / 上传音频。</li>
             <li>系统自动完成：转写、字段抽取、草稿生成、安全校验。</li>
-            <li>医生需要完成：核对字段、确认候选诊断、补充缺失项、确认导出。</li>
+            <li>医生需要完成：核对病历内容及鉴别诊断参考、补充缺失项、完成审核后导出。</li>
           </ol>
         </div>
         <div class="guide-actions">
@@ -249,7 +249,7 @@
           <div class="panel-header">
             <div>
               <h2>AI辅助</h2>
-              <p>展示候选诊断、治疗方案和诊断证据，最终由医生确认。</p>
+              <p>展示鉴别诊断参考、治疗方案和诊断证据，最终由医生判断。</p>
             </div>
           </div>
           <div id="assistPanels" class="assist-list"></div>
@@ -260,8 +260,8 @@
             </div>
             <div class="button-group">
               <button type="button" id="regenerateButton">重新生成</button>
-              <button type="button" id="saveDraftButton">保存草稿</button>
-              <button type="button" id="confirmFieldsButton">确认字段</button>
+              <button type="button" id="saveDraftButton">保存修改</button>
+              <button type="button" id="confirmFieldsButton">完成病历审核</button>
               <button type="button" class="danger-action" id="exportButton">确认导出</button>
             </div>
           </footer>
@@ -378,6 +378,6 @@
     </aside>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="./doctor.js?v=2026071502"></script>
+  <script src="./doctor.js?v=2026071601"></script>
   </body>
 </html>

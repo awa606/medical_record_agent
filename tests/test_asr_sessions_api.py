@@ -13,21 +13,26 @@ from app.api.asr_sessions import (
     _asr_session_event_stream,
     _chunk_seconds_for_duration,
     _read_events,
+    _write_session_result,
     _should_use_realtime_upload_session,
     create_asr_session,
     read_asr_session_result,
+    merge_asr_session_speakers,
     update_asr_session_result,
     upload_asr_session_audio,
 )
-from app.api.audio import read_audio_transcript
+from app.api.audio import _write_transcript, read_audio_transcript
 from app.main import app
 from app.schemas import (
     ASRResult,
     ASRSegment,
+    ASRSpeakerMergeRequest,
     ASRSegmentCorrection,
     ASRSessionCorrectionRequest,
     ASRSessionEvent,
+    SpeakerRoleAssignment,
 )
+from app.schemas.asr import DiarizationTurn
 from app.services.asr import AudioChunk
 
 
@@ -410,6 +415,167 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertTrue(response.asr_result.needs_review)
         self.assertTrue(response.asr_result.segments[0].needs_review)
         self.assertEqual(response.asr_result.segments[0].role, "待确认")
+
+    def test_manual_speaker_merge_persists_segments_assignments_turns_and_quality(self):
+        session = create_asr_session(engine="funasr")
+        result = ASRResult(
+            audio_id="fever-merge",
+            engine="funasr-paraformer-zh",
+            text="请问哪里不舒服？\n我发热三天。\n还有咳嗽。",
+            conversation_text="",
+            segments=[
+                ASRSegment(segment_id="seg-1", speaker="spk1", speaker_id="spk1", role="医生", role_confidence=0.96, role_source="manual", reviewed_by_doctor=True, text="请问哪里不舒服？", start_time=0.0, end_time=1.0),
+                ASRSegment(segment_id="seg-2", speaker="spk2", speaker_id="spk2", role="患者", role_confidence=0.62, role_source="speaker_context_rules", needs_review=True, text="我发热三天。", start_time=1.0, end_time=2.0),
+                ASRSegment(segment_id="seg-3", speaker="spk3", speaker_id="spk3", role="患者", role_confidence=0.61, role_source="speaker_context_rules", needs_review=True, text="还有咳嗽。", start_time=2.0, end_time=3.0),
+            ],
+            diarization_turns=[
+                DiarizationTurn(start_time=0.0, end_time=1.0, speaker_id="spk1"),
+                DiarizationTurn(start_time=1.0, end_time=2.0, speaker_id="spk2"),
+                DiarizationTurn(start_time=2.0, end_time=3.0, speaker_id="spk3"),
+            ],
+            speaker_assignments=[
+                SpeakerRoleAssignment(speaker_id="spk1", role="医生", confidence=0.99, source="manual"),
+                SpeakerRoleAssignment(speaker_id="spk2", role="患者", confidence=0.62, source="speaker_context_rules", requires_confirmation=True),
+                SpeakerRoleAssignment(speaker_id="spk3", role="患者", confidence=0.61, source="speaker_context_rules", requires_confirmation=True),
+            ],
+            needs_review=True,
+        )
+        _write_session_result(session.session_id, result)
+        _write_transcript(result)
+
+        response = merge_asr_session_speakers(
+            session.session_id,
+            ASRSpeakerMergeRequest(
+                source_speaker="spk3",
+                target_speaker="spk2",
+                reviewer="doctor",
+                note="患者误拆合并",
+            ),
+        )
+
+        self.assertEqual(response.speaker_count_before, 3)
+        self.assertEqual(response.speaker_count_after, 2)
+        self.assertEqual(response.affected_segment_ids, ["seg-3"])
+        merged = response.asr_result
+        self.assertEqual({segment.speaker_id for segment in merged.segments}, {"spk1", "spk2"})
+        self.assertEqual({turn.speaker_id for turn in merged.diarization_turns}, {"spk1", "spk2"})
+        self.assertEqual({item.speaker_id for item in merged.speaker_assignments}, {"spk1", "spk2"})
+        self.assertIn("[患者] 还有咳嗽。", merged.conversation_text)
+        self.assertEqual(merged.role_quality.metrics.speaker_count, 2)
+
+        stored = read_asr_session_result(session.session_id)
+        self.assertEqual(stored.conversation_text, merged.conversation_text)
+        legacy = read_audio_transcript("fever-merge")
+        self.assertEqual(legacy.conversation_text, merged.conversation_text)
+
+        event_names = [event.event for event in _read_events(session.session_id)]
+        self.assertEqual(event_names[-1], "speakers_merged")
+
+    def test_manual_speaker_merge_errors_are_explicit(self):
+        session = create_asr_session(engine="funasr")
+        result = ASRResult(
+            audio_id="merge-errors",
+            engine="funasr",
+            text="a\nb",
+            conversation_text="",
+            segments=[
+                ASRSegment(segment_id="a", speaker="spk1", speaker_id="spk1", text="a"),
+                ASRSegment(segment_id="b", speaker="spk2", speaker_id="spk2", text="b"),
+            ],
+        )
+        _write_session_result(session.session_id, result)
+
+        client = TestClient(app)
+        same = client.post(
+            f"/api/asr/sessions/{session.session_id}/speakers/merge",
+            json={"source_speaker": "spk1", "target_speaker": "spk1"},
+        )
+        missing = client.post(
+            f"/api/asr/sessions/{session.session_id}/speakers/merge",
+            json={"source_speaker": "spk9", "target_speaker": "spk1"},
+        )
+
+        self.assertEqual(same.status_code, 400)
+        self.assertEqual(missing.status_code, 404)
+
+    def test_generate_record_gate_recovers_after_merge_and_role_confirmation(self):
+        session = create_asr_session(engine="funasr")
+        result = ASRResult(
+            audio_id="merge-gate",
+            engine="funasr",
+            text="请问哪里不舒服？\n我发热三天。\n还有咳嗽。",
+            conversation_text="",
+            segments=[
+                ASRSegment(segment_id="g1", speaker="spk1", speaker_id="spk1", role="医生", role_confidence=0.99, role_source="manual", reviewed_by_doctor=True, text="请问哪里不舒服？"),
+                ASRSegment(segment_id="g2", speaker="spk2", speaker_id="spk2", role=None, needs_review=True, text="我发热三天。"),
+                ASRSegment(segment_id="g3", speaker="spk3", speaker_id="spk3", role=None, needs_review=True, text="还有咳嗽。"),
+            ],
+            speaker_assignments=[
+                SpeakerRoleAssignment(speaker_id="spk1", role="医生", confidence=0.99, source="manual"),
+                SpeakerRoleAssignment(speaker_id="spk2", role=None, confidence=0.0, requires_confirmation=True),
+                SpeakerRoleAssignment(speaker_id="spk3", role=None, confidence=0.0, requires_confirmation=True),
+            ],
+            needs_review=True,
+        )
+        _write_session_result(session.session_id, result)
+        _write_transcript(result)
+        client = TestClient(app)
+
+        blocked = client.post("/api/audio/merge-gate/generate-record")
+        self.assertEqual(blocked.status_code, 409)
+
+        merge_asr_session_speakers(
+            session.session_id,
+            ASRSpeakerMergeRequest(source_speaker="spk3", target_speaker="spk2"),
+        )
+        still_blocked = client.post("/api/audio/merge-gate/generate-record")
+        self.assertEqual(still_blocked.status_code, 409)
+
+        update_asr_session_result(
+            session.session_id,
+            ASRSessionCorrectionRequest(
+                speaker_roles=[
+                    {"speaker_id": "spk1", "role": "医生"},
+                    {"speaker_id": "spk2", "role": "患者"},
+                ]
+            ),
+        )
+        allowed = client.post("/api/audio/merge-gate/generate-record")
+        self.assertEqual(allowed.status_code, 200)
+
+    def test_companion_and_pending_roles_are_accepted_for_speaker_review(self):
+        session = create_asr_session(engine="mock")
+        result = ASRResult(
+            audio_id="companion-role",
+            engine="mock",
+            text="医生 患者 家属",
+            conversation_text="",
+            segments=[
+                ASRSegment(segment_id="c1", speaker="spk1", speaker_id="spk1", text="请问哪里不舒服？"),
+                ASRSegment(segment_id="c2", speaker="spk2", speaker_id="spk2", text="我发热三天。"),
+                ASRSegment(segment_id="c3", speaker="spk3", speaker_id="spk3", text="我是家属。"),
+            ],
+        )
+        _write_session_result(session.session_id, result)
+
+        response = update_asr_session_result(
+            session.session_id,
+            ASRSessionCorrectionRequest(
+                speaker_roles=[
+                    {"speaker_id": "spk1", "role": "医生"},
+                    {"speaker_id": "spk2", "role": "患者"},
+                    {"speaker_id": "spk3", "role": "陪同人员"},
+                ]
+            ),
+        )
+        self.assertEqual({segment.role for segment in response.asr_result.segments}, {"医生", "患者", "陪同人员"})
+
+        pending = update_asr_session_result(
+            session.session_id,
+            ASRSessionCorrectionRequest(speaker_roles=[{"speaker_id": "spk3", "role": "暂不确定", "reviewed_by_doctor": False}]),
+        )
+        self.assertTrue(pending.asr_result.needs_review)
+        self.assertEqual([segment for segment in pending.asr_result.segments if segment.speaker_id == "spk3"][0].role, "待确认")
 
     def test_sse_reconnect_skips_sent_events(self):
         session = create_asr_session(engine="mock")

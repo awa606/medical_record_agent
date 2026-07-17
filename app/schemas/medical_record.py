@@ -20,9 +20,12 @@ class MedicalField(BaseModel):
 
     value: str | None = None
     missing: bool = False
+    status: Literal["complete", "partial", "missing", "conflicting"] = "complete"
     hint: str | None = None
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     source_spans: list[SourceSpan] = Field(default_factory=list)
+    missing_elements: list[str] = Field(default_factory=list)
+    fact_ids: list[str] = Field(default_factory=list)
     confirmed_by_doctor: bool = False
 
     @classmethod
@@ -30,9 +33,12 @@ class MedicalField(BaseModel):
         return cls(
             value=None,
             missing=True,
+            status="missing",
             hint=hint,
             confidence=None,
             source_spans=[],
+            missing_elements=[],
+            fact_ids=[],
             confirmed_by_doctor=False,
         )
 
@@ -41,8 +47,16 @@ class MedicalField(BaseModel):
         if self.missing:
             if self.value is not None:
                 raise ValueError("missing field must keep value as None")
+            self.status = "missing"
             if not self.hint:
                 self.hint = "建议补问"
+        elif self.status == "missing":
+            self.missing = True
+            self.value = None
+            if not self.hint:
+                self.hint = "建议补问"
+        elif self.status == "partial" and not self.missing_elements:
+            self.missing_elements = ["待医生补充"]
         return self
 
 

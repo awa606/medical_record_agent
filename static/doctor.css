@@ -1859,6 +1859,16 @@ body.doctor-mode .start-guide {
   color: #b16b00;
 }
 
+.status-badge.partial {
+  background: #eef6ff;
+  color: #1f5fbf;
+}
+
+.status-badge.conflicting {
+  background: #fff0f0;
+  color: #b42318;
+}
+
 .field-card {
   border-color: #e0e6ef;
   border-radius: 7px;
@@ -1872,6 +1882,16 @@ body.doctor-mode .start-guide {
 
 .field-card.missing {
   background: #fff;
+}
+
+.field-card.partial {
+  border-left-color: #2f80ed;
+  background: #f8fbff;
+}
+
+.field-card.conflicting {
+  border-left-color: #df3f3f;
+  background: #fff7f7;
 }
 
 .field-head {
@@ -5265,6 +5285,19 @@ body.doctor-mode .field-card .field-title {
   box-shadow: 0 0 0 3px #fff7ed;
 }
 
+.field-status-inline {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.field-status-text {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .status-dot-label.confirmed,
 .field-status-point.confirmed {
   background: #20b26b;
@@ -5283,6 +5316,18 @@ body.doctor-mode .field-card .field-title {
 .field-status-point.candidate {
   background: #f2b01e;
   box-shadow: 0 0 0 3px #fff4d6;
+}
+
+.status-dot-label.partial,
+.field-status-point.partial {
+  background: #2f80ed;
+  box-shadow: 0 0 0 3px #eaf2ff;
+}
+
+.status-dot-label.conflicting,
+.field-status-point.conflicting {
+  background: #df3f3f;
+  box-shadow: 0 0 0 3px #feecec;
 }
 
 body.doctor-mode .field-card .field-value {

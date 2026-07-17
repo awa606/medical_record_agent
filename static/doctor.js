@@ -394,6 +394,21 @@ function activeQualityReport() {
   return appState.currentQualityReport || appState.recordPreview?.quality_preview || null;
 }
 
+function activeExtractionInfo() {
+  const preview = appState.recordPreview?.extraction_info;
+  if (preview) return preview;
+  const traceLlm = appState.currentAgentTrace?.llm;
+  if (!traceLlm) return null;
+  return {
+    requested_provider: traceLlm.llm_provider || "mock",
+    actual_provider: traceLlm.actual_provider || traceLlm.llm_provider || "mock",
+    model: traceLlm.model || "mock-deterministic-extractor",
+    fallback: Boolean(traceLlm.fallback),
+    fallback_reason: traceLlm.fallback_reason || null,
+    extraction_mode: "formal_record_generation",
+  };
+}
+
 function fieldQualityLabel(key) {
   const quality = activeQualityReport();
   if (!quality) return "";
@@ -402,6 +417,8 @@ function fieldQualityLabel(key) {
     const statusLabels = {
       complete: "质量可用",
       missing: "需补充",
+      partial: "部分完成",
+      conflicting: "证据冲突",
       low_confidence: "低置信度",
       evidence_missing: "证据不足",
       needs_doctor_review: "待医生确认",
@@ -428,6 +445,8 @@ function fieldQualityLabel(key) {
 function fieldQualityBadgeClass(label) {
   if (label === "质量可用") return "confirmed";
   if (label === "需补充") return "missing";
+  if (label === "部分完成") return "partial";
+  if (label === "证据冲突") return "conflicting";
   if (label === "证据不足") return "warning";
   return "low";
 }
@@ -457,7 +476,7 @@ function previewTreatmentText() {
 function previewRecognizedLabels() {
   const updates = appState.recordPreview?.structured_updates || [];
   return updates
-    .filter((item) => item.status === "preview" && item.value_preview)
+    .filter((item) => item.status !== "missing" && item.value_preview)
     .map((item) => item.label)
     .slice(0, 4);
 }
@@ -471,7 +490,11 @@ function previewNoticeText() {
       ? "正在收集信息"
       : "结构化预览更新中";
   const recognized = labels.length ? ` · 已识别：${labels.join("、")}` : "";
-  return `实时预览，需医生确认 · ${stageLabel}${recognized}`;
+  const extraction = activeExtractionInfo();
+  const extractionText = extraction
+    ? ` · 字段抽取：${extraction.actual_provider || "mock"} / ${extraction.model || "mock-deterministic-extractor"}${extraction.fallback ? "（已降级）" : ""}`
+    : "";
+  return `实时预览，需医生确认 · ${stageLabel}${recognized}${extractionText}`;
 }
 
 function riskSummary() {
@@ -836,7 +859,8 @@ function renderPatientBar() {
       : appState.currentAudioId
         ? `A-${appState.currentAudioId}`
         : "未创建";
-  $("recordingStatus").textContent = appState.uploadedFilename || "未上传";
+  $("recordingStatus").textContent = appState.uploadedFilename
+    || (appState.currentAudioId ? "音频已上传" : appState.currentInputText ? "输入方式：文本" : "未上传");
   $("topAsrEngineSelect").value = appState.selectedEngine;
   $("audioEngineSelect").value = appState.selectedEngine;
   const recordingEngineSelect = $("recordingEngineSelect");
@@ -930,16 +954,17 @@ function startAsrPrewarmPolling() {
 }
 
 function llmDisplayState() {
+  const extraction = activeExtractionInfo();
   const traceLlm = appState.currentAgentTrace?.llm;
   const status = appState.currentLlmStatus || {};
-  const provider = traceLlm?.llm_provider || status.provider || "mock";
-  const model = traceLlm?.model || status.model || "mock-deterministic-extractor";
-  const fallback = traceLlm?.fallback ?? status.fallback ?? false;
+  const provider = extraction?.requested_provider || traceLlm?.llm_provider || status.provider || "mock";
+  const model = extraction?.model || traceLlm?.model || status.model || "mock-deterministic-extractor";
+  const fallback = extraction?.fallback ?? traceLlm?.fallback ?? status.fallback ?? false;
   const checked = status.checked ?? Boolean(traceLlm);
   const configured = status.configured ?? true;
   let fallbackLabel = "否";
   if (!configured || fallback) {
-    fallbackLabel = `是：${status.fallback_provider || traceLlm?.actual_provider || "mock"}`;
+    fallbackLabel = `是：${extraction?.actual_provider || status.fallback_provider || traceLlm?.actual_provider || "mock"}`;
   } else if (!checked && provider !== "mock") {
     fallbackLabel = "未测试";
   }
@@ -948,7 +973,7 @@ function llmDisplayState() {
     model,
     fallback,
     fallbackLabel,
-    fallback_reason: traceLlm?.fallback_reason || status.fallback_reason || null,
+    fallback_reason: extraction?.fallback_reason || traceLlm?.fallback_reason || status.fallback_reason || null,
   };
 }
 
@@ -974,6 +999,8 @@ function fieldStatus(field, key) {
       : { key: "missing", label: "待补充" };
   }
   if (!field || field.missing || (!field.value && field.hint)) return { key: "missing", label: "待补充" };
+  if (field.status === "partial") return { key: "partial", label: "部分完成" };
+  if (field.status === "conflicting") return { key: "conflicting", label: "证据冲突" };
   if (field.confirmed_by_doctor) return { key: "confirmed", label: "已确认" };
   if (typeof field.confidence === "number" && field.confidence < 0.7) return { key: "low", label: "低置信度" };
   return { key: "confirmed", label: "已确认" };
@@ -1210,14 +1237,14 @@ function renderFields() {
       ? appState.viewMode === "doctor"
         ? `
         <div class="field-meta compact-field-meta">
-          ${detailButton(`field:${key}`, "详情")}
+          ${detailButton(`field:${key}`, "查看原文证据")}
         </div>
         `
         : `
         <div class="field-meta">
           <span class="confidence">${escapeHtml(confidence)}</span>
           <button type="button" data-evidence-toggle>证据</button>
-          ${detailButton(`field:${key}`, "详情")}
+          ${detailButton(`field:${key}`, "查看原文证据")}
         </div>
         <div class="field-evidence">${escapeHtml(evidence)}</div>
     `
@@ -1227,7 +1254,7 @@ function renderFields() {
         <div class="field-head">
           <span class="field-title">${escapeHtml(title)}</span>
           ${appState.viewMode === "doctor"
-            ? `<span class="status-dot-label ${status.key}" title="${escapeHtml(compactStatusText || "待生成")}"></span>`
+            ? `<span class="field-status-inline"><span class="status-dot-label ${status.key}" title="${escapeHtml(compactStatusText || "待生成")}"></span><span class="field-status-text">${escapeHtml(status.label)}</span></span>`
             : `<span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>${qualityLabel ? `<span class="status-badge ${fieldQualityBadgeClass(qualityLabel)}">${escapeHtml(qualityLabel)}</span>` : ""}`}
         </div>
         <div class="field-value">${value ? escapeHtml(value) : `<span class="draft-placeholder" aria-hidden="true">&nbsp;</span>`}</div>
@@ -1608,6 +1635,10 @@ function previewSignature(text, segments) {
   return `${segments.length}:${text.length}:${text.slice(-120)}`;
 }
 
+function hasClinicalPreviewSignal(text) {
+  return /(发烧|发热|体温|℃|°C|\d+\s*度|头痛|头疼|脑袋疼|咳嗽|布洛芬|退热|退烧|没有|否认)/i.test(String(text || ""));
+}
+
 async function fetchRecordPreview(text, segments) {
   if (!text.trim() || appState.currentRecordFields) return;
   const signature = previewSignature(text, segments);
@@ -1658,7 +1689,12 @@ function scheduleRecordPreview({ force = false } = {}) {
   if (roleReviewRequired()) return;
   const segments = currentReviewSegments().filter((segment) => !segment.provisional).map(segmentWithInferredRole);
   const text = liveConversationTextForPreview();
-  if (!force && segments.length < RECORD_PREVIEW_MIN_SEGMENTS && text.length < RECORD_PREVIEW_MIN_CHARS) return;
+  if (
+    !force
+    && segments.length < RECORD_PREVIEW_MIN_SEGMENTS
+    && text.length < RECORD_PREVIEW_MIN_CHARS
+    && !hasClinicalPreviewSignal(text)
+  ) return;
   const now = Date.now();
   const delay = force
     ? 0
@@ -2446,7 +2482,7 @@ function renderCandidateDiagnosisCard(diagnoses) {
       title: "鉴别诊断参考",
       badgeClass: "confirmed",
       badgeText: "暂无",
-      body: `<div class="empty-state">暂无鉴别诊断参考。</div>`,
+      body: `<div class="empty-state">当前信息不足，完成关键补问后生成。</div>`,
     });
   }
   const preview = listPreview(diagnoses, 2);
@@ -2782,6 +2818,8 @@ function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
     ? `<div class="safety-strip warning">${escapeHtml(appState.recordPreviewError)}</div>`
     : "";
   return `
+    ${previewNotice}
+    ${previewError}
     <div class="doctor-assist-overview">
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}

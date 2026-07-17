@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from app.schemas import MedicalRecordFields, SafetyCheckResult
+from app.services.clinical_facts import validate_field_evidence
 from app.services.llm.base import LLMProvider
 from app.services.llm.json_repair import parse_json_object
 from app.services.llm.mock_provider import MockLLMProvider
@@ -95,7 +96,11 @@ class LLMRecordGenerator:
                     conversation,
                     timeout_seconds=self.timeout_seconds,
                 )
-                fields = self._fields_from_response(response.content)
+                fields = validate_field_evidence(
+                    self._fields_from_response(response.content),
+                    conversation,
+                    strict_text_match=False,
+                )
                 self._set_trace(
                     provider=response.provider,
                     model=response.model,
@@ -161,9 +166,12 @@ class LLMRecordGenerator:
             normalized[key] = {
                 "value": value.get("value"),
                 "missing": bool(value.get("missing")),
+                "status": value.get("status") or ("missing" if value.get("missing") else "complete"),
                 "hint": value.get("hint"),
                 "confidence": value.get("confidence"),
                 "source_spans": self._normalize_spans(value.get("source_spans")),
+                "missing_elements": self._normalize_string_list(value.get("missing_elements")),
+                "fact_ids": self._normalize_string_list(value.get("fact_ids")),
                 "confirmed_by_doctor": bool(value.get("confirmed_by_doctor", False)),
             }
 

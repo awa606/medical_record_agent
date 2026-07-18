@@ -10,18 +10,23 @@ from app.schemas.asr import (
     SpeakerRoleQualityMetrics,
     SpeakerRoleQualityResult,
 )
-from app.services.asr.speaker_diarization import ROLE_DOCTOR, ROLE_OTHER, ROLE_PATIENT
+from app.services.asr.speaker_diarization import ROLE_COMPANION, ROLE_DOCTOR, ROLE_OTHER, ROLE_PATIENT
 
 
 ROLE_ALIASES = {
     ROLE_DOCTOR: ROLE_DOCTOR,
     ROLE_PATIENT: ROLE_PATIENT,
+    ROLE_COMPANION: ROLE_COMPANION,
     ROLE_OTHER: ROLE_OTHER,
     "doctor": ROLE_DOCTOR,
     "patient": ROLE_PATIENT,
+    "companion": ROLE_COMPANION,
+    "family": ROLE_COMPANION,
+    "陪同": ROLE_COMPANION,
+    "家属": ROLE_COMPANION,
     "other": ROLE_OTHER,
 }
-CLINICAL_ROLES = {ROLE_DOCTOR, ROLE_PATIENT, ROLE_OTHER}
+CLINICAL_ROLES = {ROLE_DOCTOR, ROLE_PATIENT, ROLE_COMPANION, ROLE_OTHER}
 MANUAL_SOURCE_PREFIXES = ("manual",)
 
 

@@ -5,6 +5,7 @@ from typing import Any
 
 from app.schemas.asr import ASRResult, ASRSegment
 from app.services.asr.evaluator import ASREvaluator
+from app.services.asr.speaker_diarization import SPEAKER_UNASSIGNED
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -121,13 +122,21 @@ class FunASREngine:
                 raw_speaker = sentence.get("spk")
                 if raw_speaker is None:
                     raw_speaker = sentence.get("speaker")
-                speaker = self._normalize_speaker(raw_speaker, index)
+                speaker = self._normalize_speaker(raw_speaker)
+                diarization_source = "missing_label" if speaker == SPEAKER_UNASSIGNED else "funasr_sentence_info"
                 segments.append(
                     ASRSegment(
                         segment_id=f"{audio_id}-cal-{len(segments) + 1:04d}",
                         provisional=False,
                         speaker=speaker,
-                        speaker_id=speaker if self.speaker_diarization_enabled else None,
+                        speaker_id=(
+                            speaker
+                            if self.speaker_diarization_enabled or speaker == SPEAKER_UNASSIGNED
+                            else None
+                        ),
+                        speaker_raw=None if raw_speaker is None else str(raw_speaker),
+                        speaker_normalized=speaker,
+                        diarization_source=diarization_source,
                         role=None,
                         text=text,
                         start_time=self._timestamp_to_seconds(sentence.get("start")),
@@ -140,8 +149,11 @@ class FunASREngine:
         return [
             ASRSegment(
                 segment_id=f"{audio_id}-cal-0001",
-                speaker="spk0",
-                speaker_id="spk0" if self.speaker_diarization_enabled else None,
+                speaker=SPEAKER_UNASSIGNED,
+                speaker_id=SPEAKER_UNASSIGNED,
+                speaker_raw=None,
+                speaker_normalized=SPEAKER_UNASSIGNED,
+                diarization_source="missing_label",
                 role=None,
                 text=fallback_text,
                 start_time=None,
@@ -150,9 +162,9 @@ class FunASREngine:
         ]
 
     @staticmethod
-    def _normalize_speaker(value: Any, fallback_index: int) -> str:
+    def _normalize_speaker(value: Any) -> str:
         if value is None or str(value).strip() == "":
-            return f"spk{fallback_index}"
+            return SPEAKER_UNASSIGNED
         normalized = str(value).strip()
         if normalized.isdigit():
             return f"spk{normalized}"

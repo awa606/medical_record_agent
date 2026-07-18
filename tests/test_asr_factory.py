@@ -16,6 +16,7 @@ from app.services.asr import (
     normalize_online_asr_response,
 )
 from app.services.asr.qwen3_engine import DEPENDENCY_ERROR, ROLE_REVIEW_WARNING
+from app.services.asr.funasr_engine import FunASREngine
 from app.services.asr.sensevoice_engine import DEPENDENCY_ERROR as SENSEVOICE_DEPENDENCY_ERROR
 from app.services.asr.whisper_engine import DEPENDENCY_ERROR as WHISPER_DEPENDENCY_ERROR
 
@@ -156,6 +157,36 @@ class ASRFactoryTests(unittest.TestCase):
         self.assertEqual(result.segments[0].start_time, 0.48)
         self.assertEqual(result.segments[0].end_time, 1.2)
         self.assertTrue(result.segments[0].needs_review)
+
+    def test_funasr_missing_speaker_labels_do_not_invent_speakers_per_sentence(self):
+        class FakeModel:
+            def generate(self, **_kwargs):
+                return [
+                    {
+                        "sentence_info": [
+                            {"text": "请问哪里不舒服？", "start": 0, "end": 1000},
+                            {"text": "我发热三天。", "start": 1000, "end": 2200},
+                            {"text": "有没有咳嗽？", "start": 2200, "end": 3000},
+                            {"text": "有一点咳嗽。", "start": 3000, "end": 4200},
+                            {"text": "好的。", "start": 4200, "end": 4800},
+                        ]
+                    }
+                ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audio_path = Path(temp_dir) / "fever_missing_speaker.wav"
+            audio_path.write_bytes(b"RIFF....WAVEfmt ")
+            result = FunASREngine(
+                model_instance=FakeModel(),
+                hotword_path=None,
+                enable_speaker_diarization=True,
+            ).transcribe("audio-funasr-missing-speaker", audio_path)
+
+        speaker_ids = {segment.speaker_id or segment.speaker for segment in result.segments}
+        self.assertEqual(speaker_ids, {"speaker_unassigned"})
+        self.assertTrue(all(segment.speaker_raw is None for segment in result.segments))
+        self.assertTrue(all(segment.speaker_normalized == "speaker_unassigned" for segment in result.segments))
+        self.assertTrue(all(segment.diarization_source == "missing_label" for segment in result.segments))
 
     def test_whisper_engine_requires_optional_dependencies(self):
         original_import = builtins.__import__

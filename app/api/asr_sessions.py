@@ -31,7 +31,10 @@ from app.schemas import (
     ASRSessionEvent,
     ASRSessionRecord,
     ASRSessionUploadResponse,
+    ASRSpeakerMergeRequest,
+    ASRSpeakerMergeResponse,
     AudioRecord,
+    DiarizationTurn,
     SpeakerRoleAssignment,
 )
 from app.services.asr import (
@@ -71,10 +74,16 @@ ROLE_LABELS = {
     "医生": "医生",
     "patient": "患者",
     "患者": "患者",
+    "companion": "陪同人员",
+    "family": "陪同人员",
+    "陪同": "陪同人员",
+    "陪同人员": "陪同人员",
+    "家属": "陪同人员",
     "other": "其他",
     "其他": "其他",
     "unknown": "待确认",
     "待确认": "待确认",
+    "暂不确定": "待确认",
     "待校正": "待确认",
 }
 
@@ -365,6 +374,190 @@ def _apply_segment_corrections(
     return attach_speaker_role_quality(updated)
 
 
+def _speaker_identity(segment: ASRSegment) -> str:
+    return str(segment.speaker_id or segment.speaker or "").strip()
+
+
+def _speaker_ids(result: ASRResult) -> list[str]:
+    return sorted({_speaker_identity(segment) for segment in result.segments if _speaker_identity(segment)})
+
+
+def _is_confirmed_role(role: str | None) -> bool:
+    return role in {"医生", "患者", "陪同人员", "其他"}
+
+
+def _merge_speaker_assignment(
+    source: SpeakerRoleAssignment | None,
+    target: SpeakerRoleAssignment | None,
+    *,
+    target_speaker: str,
+) -> SpeakerRoleAssignment:
+    if target is None and source is None:
+        return SpeakerRoleAssignment(
+            speaker_id=target_speaker,
+            role=None,
+            confidence=0.0,
+            source="manual_speaker_merge",
+            reason="说话人合并后仍需确认角色。",
+            requires_confirmation=True,
+        )
+    if target is None and source is not None:
+        return SpeakerRoleAssignment(
+            speaker_id=target_speaker,
+            role=source.role,
+            confidence=min(source.confidence, 0.8),
+            source="manual_speaker_merge",
+            reason="来源说话人已合并到目标说话人，角色需医生复核。",
+            requires_confirmation=True,
+        )
+    if source is None and target is not None:
+        return target.model_copy(update={"speaker_id": target_speaker})
+
+    assert source is not None and target is not None
+    conflict = bool(source.role and target.role and source.role != target.role)
+    role = None if conflict else (target.role or source.role)
+    confidence = min(target.confidence, source.confidence)
+    requires_confirmation = (
+        conflict
+        or target.requires_confirmation
+        or source.requires_confirmation
+        or not _is_confirmed_role(role)
+    )
+    reason = (
+        "合并前两个说话人的角色不一致，需要医生重新确认。"
+        if conflict
+        else "说话人已人工合并，角色质量已重新计算。"
+    )
+    return SpeakerRoleAssignment(
+        speaker_id=target_speaker,
+        role=role,
+        confidence=confidence,
+        source="manual_speaker_merge",
+        reason=reason,
+        requires_confirmation=requires_confirmation,
+    )
+
+
+def _merged_speaker_assignments(
+    assignments: list[SpeakerRoleAssignment],
+    *,
+    source_speaker: str,
+    target_speaker: str,
+) -> list[SpeakerRoleAssignment]:
+    source = next((item for item in assignments if item.speaker_id == source_speaker), None)
+    target = next((item for item in assignments if item.speaker_id == target_speaker), None)
+    merged_target = _merge_speaker_assignment(source, target, target_speaker=target_speaker)
+
+    output: list[SpeakerRoleAssignment] = []
+    inserted = False
+    for item in assignments:
+        if item.speaker_id == source_speaker:
+            if target is None and not inserted:
+                output.append(merged_target)
+                inserted = True
+            continue
+        if item.speaker_id == target_speaker:
+            if not inserted:
+                output.append(merged_target)
+                inserted = True
+            continue
+        output.append(item)
+    if not inserted:
+        output.append(merged_target)
+    return output
+
+
+def _apply_assignment_to_segment(
+    segment: ASRSegment,
+    assignment: SpeakerRoleAssignment | None,
+) -> ASRSegment:
+    if assignment is None:
+        return segment.model_copy(update={"needs_review": True, "reviewed_by_doctor": False})
+    role = assignment.role if _is_confirmed_role(assignment.role) else "待确认"
+    reviewed = (
+        not assignment.requires_confirmation
+        and _is_confirmed_role(assignment.role)
+        and str(assignment.source or "").startswith("manual")
+    )
+    return segment.model_copy(
+        update={
+            "role": role,
+            "role_confidence": assignment.confidence if _is_confirmed_role(assignment.role) else None,
+            "role_source": assignment.source,
+            "role_note": assignment.reason,
+            "needs_review": assignment.requires_confirmation or not _is_confirmed_role(assignment.role),
+            "reviewed_by_doctor": reviewed,
+        }
+    )
+
+
+def _merge_speakers_in_result(
+    result: ASRResult,
+    *,
+    source_speaker: str,
+    target_speaker: str,
+) -> tuple[ASRResult, list[str], int, int]:
+    source_speaker = source_speaker.strip()
+    target_speaker = target_speaker.strip()
+    if source_speaker == target_speaker:
+        raise HTTPException(status_code=400, detail="source_speaker and target_speaker must be different")
+
+    before_ids = _speaker_ids(result)
+    if source_speaker not in before_ids:
+        raise HTTPException(status_code=404, detail=f"source_speaker not found: {source_speaker}")
+    if target_speaker not in before_ids:
+        raise HTTPException(status_code=404, detail=f"target_speaker not found: {target_speaker}")
+
+    assignments = _merged_speaker_assignments(
+        result.speaker_assignments,
+        source_speaker=source_speaker,
+        target_speaker=target_speaker,
+    )
+    assignment_map = {item.speaker_id: item for item in assignments}
+    affected_segment_ids: list[str] = []
+    merged_segments: list[ASRSegment] = []
+    for index, segment in enumerate(result.segments):
+        identity = _speaker_identity(segment)
+        if identity == source_speaker:
+            affected_segment_ids.append(segment.segment_id or f"segment-{index}")
+            segment = segment.model_copy(
+                update={
+                    "speaker": target_speaker,
+                    "speaker_id": target_speaker,
+                    "speaker_normalized": target_speaker,
+                    "diarization_source": "manual_speaker_merge",
+                    "role_note": f"已由医生将 {source_speaker} 合并到 {target_speaker}。",
+                }
+            )
+        merged_segments.append(_apply_assignment_to_segment(segment, assignment_map.get(_speaker_identity(segment))))
+
+    merged_turns = [
+        turn.model_copy(update={"speaker_id": target_speaker if turn.speaker_id == source_speaker else turn.speaker_id})
+        for turn in result.diarization_turns
+    ]
+    warning = f"Speaker clusters merged manually: {source_speaker} -> {target_speaker}."
+    warnings = list(result.warnings)
+    if warning not in warnings:
+        warnings.append(warning)
+
+    merged = result.model_copy(
+        update={
+            "segments": merged_segments,
+            "diarization_turns": merged_turns,
+            "speaker_assignments": assignments,
+            "text": _plain_text_from_segments(merged_segments),
+            "conversation_text": _conversation_from_segments(merged_segments),
+            "role_strategy": "manual_speaker_merge",
+            "warnings": warnings,
+            "reviewed_by_doctor": bool(merged_segments) and all(segment.reviewed_by_doctor for segment in merged_segments),
+            "needs_review": any(segment.needs_review for segment in merged_segments)
+            or any(item.requires_confirmation for item in assignments),
+        }
+    )
+    merged = attach_speaker_role_quality(merged)
+    return merged, affected_segment_ids, len(before_ids), len(_speaker_ids(merged))
+
+
 def _segment_progress(segment: ASRSegment, index: int, total: int, duration: float | None) -> float:
     if duration and segment.end_time is not None:
         return round(min(max(segment.end_time / duration, 0.0), 1.0), 4)
@@ -563,6 +756,9 @@ def _offset_segment_for_chunk(segment: ASRSegment, chunk_start_seconds: float) -
         provisional=segment.provisional,
         speaker=segment.speaker,
         speaker_id=segment.speaker_id,
+        speaker_raw=segment.speaker_raw,
+        speaker_normalized=segment.speaker_normalized,
+        diarization_source=segment.diarization_source,
         speaker_confidence=segment.speaker_confidence,
         role=segment.role,
         text=segment.text,
@@ -1754,6 +1950,64 @@ def update_asr_session_result(
         audio_id=updated_result.audio_id,
         status="reviewed",
         asr_result=updated_result,
+        updated_at=updated_at,
+    )
+
+
+@router.post("/{session_id}/speakers/merge")
+def merge_asr_session_speakers(
+    session_id: str,
+    payload: ASRSpeakerMergeRequest,
+) -> ASRSpeakerMergeResponse:
+    session = _read_session(session_id)
+    path = _result_path(session_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="ASR session result not found")
+
+    result = ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
+    merged_result, affected_segment_ids, speaker_count_before, speaker_count_after = _merge_speakers_in_result(
+        result,
+        source_speaker=payload.source_speaker,
+        target_speaker=payload.target_speaker,
+    )
+    updated_at = _now()
+    updated_session = session.model_copy(update={"updated_at": updated_at})
+
+    _write_session_result(session_id, merged_result)
+    _write_transcript(merged_result)
+    _write_session(updated_session)
+    _append_events(
+        session_id,
+        [
+            _session_event(
+                session=updated_session,
+                event="speakers_merged",
+                data={
+                    "status": "speakers_merged",
+                    "audio_id": merged_result.audio_id,
+                    "source_speaker": payload.source_speaker,
+                    "target_speaker": payload.target_speaker,
+                    "speaker_count_before": speaker_count_before,
+                    "speaker_count_after": speaker_count_after,
+                    "affected_segment_ids": affected_segment_ids,
+                    "reviewer": payload.reviewer,
+                    "note": payload.note,
+                    "role_quality": merged_result.role_quality.model_dump(mode="json")
+                    if merged_result.role_quality
+                    else None,
+                    "asr_result": merged_result.model_dump(),
+                },
+            )
+        ],
+    )
+    return ASRSpeakerMergeResponse(
+        session_id=session_id,
+        audio_id=merged_result.audio_id,
+        speaker_count_before=speaker_count_before,
+        speaker_count_after=speaker_count_after,
+        affected_segment_ids=affected_segment_ids,
+        role_quality=merged_result.role_quality,
+        asr_result=merged_result,
         updated_at=updated_at,
     )
 

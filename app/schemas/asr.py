@@ -11,6 +11,9 @@ class ASRSegment(BaseModel):
     provisional: bool = False
     speaker: str | None = None
     speaker_id: str | None = None
+    speaker_raw: str | None = None
+    speaker_normalized: str | None = None
+    diarization_source: str | None = None
     speaker_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     role: str | None = None
     text: str = ""
@@ -175,5 +178,24 @@ class ASRSessionCorrectionResponse(BaseModel):
     session_id: str
     audio_id: str
     status: str
+    asr_result: ASRResult
+    updated_at: str
+
+
+class ASRSpeakerMergeRequest(BaseModel):
+    source_speaker: str = Field(min_length=1)
+    target_speaker: str = Field(min_length=1)
+    reviewer: str | None = None
+    note: str | None = None
+
+
+class ASRSpeakerMergeResponse(BaseModel):
+    session_id: str
+    audio_id: str
+    status: str = "speakers_merged"
+    speaker_count_before: int
+    speaker_count_after: int
+    affected_segment_ids: list[str] = Field(default_factory=list)
+    role_quality: SpeakerRoleQualityResult
     asr_result: ASRResult
     updated_at: str

@@ -2,37 +2,39 @@
 
 ## Purpose
 
-This log records the acceptance evidence after merging PR #56, `fix: prevent invented speakers and support manual diarization merging`.
+This log records acceptance evidence after PR #56, `fix: prevent invented speakers and support manual diarization merging`, was merged.
 
-It is an audit artifact only. It does not change production code, role thresholds, ASR evaluation data, disease packages, or provider behavior.
+This is an audit artifact only. It does not change production code, role thresholds, ASR evaluation data, disease packages, provider behavior, or audio assets.
 
 ## Repository State
 
 - #55 merged in `origin/main`: `2df07f336f335aee9e1232cdc74fe01e037c417a`.
 - #56 squash-merged into `main`: `4dd97d3a76dd65bc43a354f8ac1b4680ec47fe0f`.
 - #56 PR page showed the PR merged and the PR check passed.
-- Local `gh`/git network access on this workstation could not resolve `github.com`, so GitHub connector APIs were used for merge and branch creation.
+- Local `gh` and `git` network access on this workstation could not resolve `github.com`, so GitHub connector APIs were used for merge and branch creation.
 
 ## #55 Clinical Fact Regression Confirmation
 
-Validated with browser-side preview calls through `/static/doctor.html` and `fetch('/api/records/preview')`:
+Validated with browser-side preview calls through `/static/doctor.html` and `fetch('/api/records/preview')`.
 
-| Input | Expected state | Confirmed result |
+The original Chinese inputs are recorded with escaped Unicode to keep this audit file ASCII-safe:
+
+| Case | Input | Confirmed result |
 | --- | --- | --- |
-| `我发烧39°C` | Partial chief complaint and present illness | `发热，体温39℃（持续时间待补问）`; no invented duration or symptoms |
-| `我感觉我发烧了，头很痛，39°C` | Partial fever + headache | `发热伴头痛（病程待补问）`; accompanying symptom `头痛` |
-| `我没有发烧，只是头痛` | Absent fever fact, no positive fever complaint | Chief complaint remains `头痛（病程待补问）`; present illness records `患者否认发热` |
-| `昨天发烧，今天已经退了` | Resolved fever, not active high fever | Present illness records `曾有发热，目前已缓解` |
-| `医生：有没有发热？患者：没有` | No positive chief complaint | Chief complaint missing; present illness records `患者否认发热` |
+| short fever | `\u6211\u53d1\u70e739\u00b0C` | Partial chief complaint and present illness; fever and 39C are retained; no invented duration or symptoms. |
+| fever + headache | `\u6211\u611f\u89c9\u6211\u53d1\u70e7\u4e86\uff0c\u5934\u5f88\u75db\uff0c39\u00b0C` | Partial fever + headache; accompanying symptom headache is retained. |
+| absent fever | `\u6211\u6ca1\u6709\u53d1\u70e7\uff0c\u53ea\u662f\u5934\u75db` | Fever is treated as an absent fact; no positive fever complaint is generated. |
+| resolved fever | `\u6628\u5929\u53d1\u70e7\uff0c\u4eca\u5929\u5df2\u7ecf\u9000\u4e86` | Fever is treated as previously present and currently resolved, not active high fever. |
+| doctor asks, patient denies | `\u533b\u751f\uff1a\u6709\u6ca1\u6709\u53d1\u70ed\uff1f\u60a3\u8005\uff1a\u6ca1\u6709` | No positive chief complaint is generated; present illness records fever denial. |
 
-Safety wording: in these regression cases, unsupported invented facts were 0. This does not prove global unsupported-generation rate is 0; field-level semantic support checking remains a future hardening task.
+Safety wording: unsupported invented facts were 0 in these regression cases. This does not prove the global unsupported-generation rate is 0. Field-level semantic support checking remains a future hardening task.
 
 Forbidden invented facts checked in the short-fever case:
 
-- `3天前`
-- `淋雨`
-- `铁锈色痰`
-- `布洛芬`
+- `3 days before`
+- `rain exposure`
+- `rust-colored sputum`
+- `ibuprofen`
 
 Extraction metadata returned by preview:
 
@@ -43,15 +45,15 @@ Extraction metadata returned by preview:
 
 ## #56 Diarization Recovery Confirmation
 
-Synthetic ASRResult fixture used for recoverability validation because no large `fever.wav` is committed in the repository.
+Synthetic ASRResult fixture was used for recoverability validation because no large `fever.wav` is committed in the repository.
 
 Before merge:
 
 | Segment | Raw speaker | Normalized speaker | Role |
 | --- | --- | --- | --- |
-| `seg-1` | `spk1` | `spk1` | 医生 |
-| `seg-2` | `spk2` | `spk2` | 患者 |
-| `seg-3` | `spk3` | `spk3` | 待确认 |
+| `seg-1` | `spk1` | `spk1` | doctor |
+| `seg-2` | `spk2` | `spk2` | patient |
+| `seg-3` | `spk3` | `spk3` | pending |
 
 Manual recovery action:
 
@@ -73,11 +75,11 @@ Expected and confirmed behavior:
 - `role_quality` is recalculated after merge.
 - If the merged role remains unconfirmed, record generation stays gated with 409.
 - After role confirmation, record generation can continue successfully.
-- Each speaker remains manually recoverable as 医生 / 患者 / 陪同人员 / 其他 / 暂不确定.
+- Each speaker remains manually recoverable as doctor, patient, companion, other, or pending.
 
 Missing-label behavior:
 
-- FunASR sentence_info entries without `spk` or `speaker` now normalize to `speaker_unassigned`.
+- FunASR `sentence_info` entries without `spk` or `speaker` now normalize to `speaker_unassigned`.
 - Missing labels include audit fields: `speaker_raw=null`, `speaker_normalized=speaker_unassigned`, `diarization_source=missing_label`.
 - Five unlabeled segments no longer become five invented people.
 

@@ -1,0 +1,79 @@
+{
+  "case_id": "ce2e_v1_029_high_fever",
+  "split": "development",
+  "scenario_type": "danger_signal",
+  "title": "高热危险信号",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "note": "Synthetic classroom evaluation case; no real patient data."
+  },
+  "segments": [
+    {
+      "segment_id": "seg-1",
+      "speaker_id": "spk-patient",
+      "role": "患者",
+      "text": "发热40度。"
+    }
+  ],
+  "expected": {
+    "facts": [
+      {
+        "type": "symptom",
+        "name": "发热",
+        "assertion": "present"
+      },
+      {
+        "type": "measurement",
+        "name": "体温",
+        "assertion": "present",
+        "value": "40℃"
+      }
+    ],
+    "field_status": {
+      "chief_complaint": "partial",
+      "present_illness": "partial"
+    },
+    "required_content": [
+      {
+        "target": "chief_complaint",
+        "contains": [
+          "40℃"
+        ]
+      }
+    ],
+    "forbidden_content": [
+      "3天前淋雨受凉",
+      "铁锈色痰",
+      "当地卫生院",
+      "食欲不佳",
+      "既往体健",
+      "肺结核",
+      "布洛芬",
+      "淋雨",
+      "咳嗽、咳痰"
+    ],
+    "candidate_diagnoses": [
+      {
+        "name": "发热待查",
+        "requires_evidence": true,
+        "rule_id": "FEVER_RESP_V1_FEVER_WORKUP"
+      }
+    ],
+    "forbidden_candidate_diagnoses": [],
+    "follow_up_questions_any": [],
+    "risk_signals": [
+      {
+        "name": "danger_signal",
+        "warning_keywords": [
+          "持续高热",
+          "胸痛",
+          "气促"
+        ]
+      }
+    ],
+    "applicable_packs": [
+      "fever_respiratory_v1"
+    ]
+  }
+}

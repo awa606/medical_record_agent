@@ -1,0 +1,86 @@
+{
+  "case_id": "ce2e_v1_022_pulmonary_reference",
+  "split": "development",
+  "scenario_type": "pulmonary_reference",
+  "title": "肺部感染待排线索",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "note": "Synthetic classroom evaluation case; no real patient data."
+  },
+  "segments": [
+    {
+      "segment_id": "seg-1",
+      "speaker_id": "spk-patient",
+      "role": "患者",
+      "text": "发热39度，一直咳。"
+    }
+  ],
+  "expected": {
+    "facts": [
+      {
+        "type": "symptom",
+        "name": "发热",
+        "assertion": "present"
+      },
+      {
+        "type": "measurement",
+        "name": "体温",
+        "assertion": "present",
+        "value": "39℃"
+      },
+      {
+        "type": "symptom",
+        "name": "咳嗽",
+        "assertion": "present"
+      }
+    ],
+    "field_status": {
+      "chief_complaint": "partial",
+      "present_illness": "partial"
+    },
+    "required_content": [
+      {
+        "target": "chief_complaint",
+        "contains": [
+          "发热"
+        ]
+      },
+      {
+        "target": "present_illness",
+        "contains": [
+          "咳嗽"
+        ]
+      }
+    ],
+    "forbidden_content": [
+      "3天前淋雨受凉",
+      "铁锈色痰",
+      "当地卫生院",
+      "食欲不佳",
+      "既往体健",
+      "肺结核",
+      "布洛芬",
+      "淋雨",
+      "咳嗽、咳痰"
+    ],
+    "candidate_diagnoses": [
+      {
+        "name": "发热待查",
+        "requires_evidence": true,
+        "rule_id": "FEVER_RESP_V1_FEVER_WORKUP"
+      },
+      {
+        "name": "肺部感染待排",
+        "requires_evidence": true,
+        "rule_id": "FEVER_RESP_V1_PULMONARY_INFECTION"
+      }
+    ],
+    "forbidden_candidate_diagnoses": [],
+    "follow_up_questions_any": [],
+    "risk_signals": [],
+    "applicable_packs": [
+      "fever_respiratory_v1"
+    ]
+  }
+}

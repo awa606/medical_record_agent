@@ -5,7 +5,7 @@
   "audio_pipeline_evaluated": false,
   "selected_split": "all",
   "manifest_path": "data/clinical_e2e/field_disease_pack_v1/manifest.json",
-  "generated_at": "2026-07-19T15:35:41.507515+00:00",
+  "generated_at": "2026-07-19T16:23:41.439515+00:00",
   "sample_count": 60,
   "split_counts": {
     "development": 40,
@@ -73,6 +73,7 @@
     "field_evidence_coverage": 1.0,
     "field_fact_link_coverage": 0.9106,
     "candidate_recall": 0.8036,
+    "candidate_precision": 0.9375,
     "candidate_evidence_completeness": 1.0,
     "follow_up_question_recall": 0.5625,
     "danger_signal_recall": 0.5,
@@ -88,6 +89,9 @@
     "expected_candidate_total": 56,
     "expected_candidate_hit": 45,
     "actual_candidate_total": 48,
+    "matched_actual_candidate_count": 45,
+    "unexpected_candidate_count": 3,
+    "forbidden_candidate_count": 1,
     "candidate_with_evidence_count": 48,
     "candidate_without_evidence_count": 0,
     "unexpected_fever_pack_candidate_count": 2,
@@ -105,6 +109,8 @@
     "passed": false,
     "unsupported_content_count": 0,
     "candidate_without_evidence_count": 0,
+    "unexpected_candidate_count": 3,
+    "forbidden_candidate_count": 1,
     "confirmed_diagnosis_phrase_count": 0,
     "danger_signal_missed_count": 2
   },
@@ -131,7 +137,7 @@
           "field_extraction": {
             "llm_provider": "mock",
             "model": "mock-deterministic-extractor",
-            "latency_ms": 0,
+            "latency_ms": 1,
             "fallback": false,
             "fallback_reason": null,
             "actual_provider": "mock",
@@ -401,6 +407,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -801,6 +810,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -1098,6 +1110,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -1333,14 +1348,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -1360,6 +1378,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -1601,14 +1622,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -1628,6 +1652,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -1819,14 +1846,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -1846,6 +1876,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -2109,6 +2142,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -2408,6 +2444,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -2828,6 +2867,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -3254,6 +3296,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -3623,6 +3668,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -3948,6 +3996,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -4238,6 +4289,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -4607,6 +4661,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -5027,6 +5084,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -5416,6 +5476,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 1,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 1,
@@ -5429,8 +5492,10 @@
         "field_with_fact_ids_count": 3,
         "confirmed_diagnosis_phrase_count": 0
       },
-      "hard_gate_passed": true,
-      "hard_gate_failures": []
+      "hard_gate_passed": false,
+      "hard_gate_failures": [
+        "unexpected_candidate:肺部感染待排:FEVER_RESP_V1_PULMONARY_INFECTION"
+      ]
     },
     {
       "case_id": "ce2e_v1_019_resolved_after_antipyretic",
@@ -5720,6 +5785,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -6026,6 +6094,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 1,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -6041,6 +6112,7 @@
       },
       "hard_gate_passed": false,
       "hard_gate_failures": [
+        "unexpected_candidate:感冒（暑湿困表证）:R_SUMMER_DAMP_001",
         "danger_signal_missed:danger_signal"
       ]
     },
@@ -6406,6 +6478,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -6783,6 +6858,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -7081,6 +7159,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -7395,6 +7476,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -7680,6 +7764,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -8142,6 +8229,9 @@
         "expected_candidate_total": 3,
         "expected_candidate_hit": 3,
         "actual_candidate_total": 3,
+        "matched_actual_candidate_count": 3,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 3,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -8468,6 +8558,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -8816,6 +8909,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -9112,6 +9208,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -9474,6 +9573,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -9721,6 +9823,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -9869,14 +9974,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -9896,6 +10004,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -10096,14 +10207,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -10123,6 +10237,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -10261,14 +10378,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -10288,6 +10408,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -10479,14 +10602,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -10506,6 +10632,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -10722,14 +10851,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -10749,6 +10881,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -10940,14 +11075,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -10967,6 +11105,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -11124,14 +11265,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -11151,6 +11295,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -11318,14 +11465,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -11345,6 +11495,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -11498,14 +11651,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -11525,6 +11681,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -11766,14 +11925,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -11793,6 +11955,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -12002,14 +12167,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": true
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -12029,6 +12197,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 1,
+        "forbidden_candidate_count": 1,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 1,
@@ -12042,8 +12213,11 @@
         "field_with_fact_ids_count": 2,
         "confirmed_diagnosis_phrase_count": 0
       },
-      "hard_gate_passed": true,
-      "hard_gate_failures": []
+      "hard_gate_passed": false,
+      "hard_gate_failures": [
+        "unexpected_candidate:发热待查:FEVER_RESP_V1_FEVER_WORKUP",
+        "forbidden_candidate:发热待查:FEVER_RESP_V1_FEVER_WORKUP"
+      ]
     },
     {
       "case_id": "ce2e_v1_041_final_short_fever",
@@ -12328,6 +12502,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -12643,6 +12820,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -12940,6 +13120,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -13173,14 +13356,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -13200,6 +13386,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -13455,6 +13644,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -13813,6 +14005,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -14203,6 +14398,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -14430,6 +14628,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -14737,6 +14938,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -14877,14 +15081,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -14904,6 +15111,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -15057,14 +15267,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -15084,6 +15297,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -15327,14 +15543,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -15354,6 +15573,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -15652,6 +15874,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -15885,14 +16110,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -15912,6 +16140,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -16211,6 +16442,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -16545,6 +16779,9 @@
         "expected_candidate_total": 2,
         "expected_candidate_hit": 2,
         "actual_candidate_total": 2,
+        "matched_actual_candidate_count": 2,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 2,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -16736,14 +16973,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -16763,6 +17003,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -17067,6 +17310,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -17383,6 +17629,9 @@
         "expected_candidate_total": 1,
         "expected_candidate_hit": 1,
         "actual_candidate_total": 1,
+        "matched_actual_candidate_count": 1,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 1,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -17626,14 +17875,17 @@
         "forbidden_candidate_diagnoses": [
           {
             "name": "发热待查",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "流感样症状参考",
+            "rule_id": null,
             "found": false
           },
           {
             "name": "肺部感染待排",
+            "rule_id": null,
             "found": false
           }
         ],
@@ -17653,6 +17905,9 @@
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -17673,6 +17928,7 @@
   "notes": [
     "This report evaluates text/role segments to clinical fields and disease-pack references.",
     "It does not evaluate ASR, diarization, speaker-role calibration, browser recording, or edge deployment.",
-    "final_check cases are reported separately and must not be used to tune rules after freezing."
+    "final_check cases were executed in the initial baseline and are now treated as a frozen regression split.",
+    "A new final-check set is required before making formal unseen-test performance claims."
   ]
 }

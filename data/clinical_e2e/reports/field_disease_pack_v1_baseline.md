@@ -20,11 +20,14 @@
 | field_evidence_coverage | 1.0 |
 | field_fact_link_coverage | 0.9106 |
 | candidate_recall | 0.8036 |
+| candidate_precision | 0.9375 |
 | candidate_evidence_completeness | 1.0 |
 | follow_up_question_recall | 0.5625 |
 | danger_signal_recall | 0.5 |
 | unsupported_content_count | 0 |
 | candidate_without_evidence_count | 0 |
+| unexpected_candidate_count | 3 |
+| forbidden_candidate_count | 1 |
 | confirmed_diagnosis_phrase_count | 0 |
 | danger_signal_missed_count | 2 |
 | unexpected_fever_pack_candidate_count | 2 |
@@ -69,11 +72,14 @@
 
 ## Hard Gate Failures
 
-- `ce2e_v1_020_fever_chest_tightness`: danger_signal_missed:danger_signal
+- `ce2e_v1_018_negative_cough_context`: unexpected_candidate:肺部感染待排:FEVER_RESP_V1_PULMONARY_INFECTION
+- `ce2e_v1_020_fever_chest_tightness`: unexpected_candidate:感冒（暑湿困表证）:R_SUMMER_DAMP_001, danger_signal_missed:danger_signal
+- `ce2e_v1_040_question_style_absent`: unexpected_candidate:发热待查:FEVER_RESP_V1_FEVER_WORKUP, forbidden_candidate:发热待查:FEVER_RESP_V1_FEVER_WORKUP
 - `ce2e_v1_049_final_high_fever`: danger_signal_missed:fever_safety
 
 ## Notes
 
 - This report evaluates text/role segments to clinical fields and disease-pack references.
 - It does not evaluate ASR, diarization, speaker-role calibration, browser recording, or edge deployment.
-- final_check cases are reported separately and must not be used to tune rules after freezing.
+- final_check cases were executed in the initial baseline and are now treated as a frozen regression split.
+- A new final-check set is required before making formal unseen-test performance claims.

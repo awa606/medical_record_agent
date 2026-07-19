@@ -177,12 +177,16 @@ def evaluate_loaded_dataset(
             for key in [
                 "unsupported_content_count",
                 "candidate_without_evidence_count",
+                "unexpected_candidate_count",
+                "forbidden_candidate_count",
                 "confirmed_diagnosis_phrase_count",
                 "danger_signal_missed_count",
             ]
         ),
         "unsupported_content_count": metrics["unsupported_content_count"],
         "candidate_without_evidence_count": metrics["candidate_without_evidence_count"],
+        "unexpected_candidate_count": metrics["unexpected_candidate_count"],
+        "forbidden_candidate_count": metrics["forbidden_candidate_count"],
         "confirmed_diagnosis_phrase_count": metrics["confirmed_diagnosis_phrase_count"],
         "danger_signal_missed_count": metrics["danger_signal_missed_count"],
     }
@@ -207,7 +211,8 @@ def evaluate_loaded_dataset(
         "notes": [
             "This report evaluates text/role segments to clinical fields and disease-pack references.",
             "It does not evaluate ASR, diarization, speaker-role calibration, browser recording, or edge deployment.",
-            "final_check cases are reported separately and must not be used to tune rules after freezing.",
+            "final_check cases were executed in the initial baseline and are now treated as a frozen regression split.",
+            "A new final-check set is required before making formal unseen-test performance claims.",
         ],
     }
 
@@ -245,6 +250,21 @@ def evaluate_case(case: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any
         _evaluate_forbidden_candidate(item, candidates)
         for item in expected["forbidden_candidate_diagnoses"]
     ]
+    matched_actual_candidates = [
+        candidate
+        for candidate in candidates
+        if any(_candidate_matches_expected(candidate, item) for item in expected["candidate_diagnoses"])
+    ]
+    unexpected_candidates = [
+        candidate
+        for candidate in candidates
+        if not any(_candidate_matches_expected(candidate, item) for item in expected["candidate_diagnoses"])
+    ]
+    forbidden_candidates = [
+        candidate
+        for candidate in candidates
+        if any(_candidate_matches_forbidden(candidate, item) for item in expected["forbidden_candidate_diagnoses"])
+    ]
     follow_up_results = [
         _evaluate_text_any(question, _candidate_texts(candidates, "follow_up_questions"))
         for question in expected["follow_up_questions_any"]
@@ -281,6 +301,12 @@ def evaluate_case(case: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any
     )
     hard_gate_failures.extend(
         f"candidate_without_evidence:{name}" for name in candidate_without_evidence
+    )
+    hard_gate_failures.extend(
+        f"unexpected_candidate:{_candidate_identity(candidate)}" for candidate in unexpected_candidates
+    )
+    hard_gate_failures.extend(
+        f"forbidden_candidate:{_candidate_identity(candidate)}" for candidate in forbidden_candidates
     )
     hard_gate_failures.extend(
         f"confirmed_diagnosis_phrase:{phrase}" for phrase in confirmed_diagnosis_phrases
@@ -330,6 +356,9 @@ def evaluate_case(case: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any
             "expected_candidate_total": len(candidate_results),
             "expected_candidate_hit": sum(1 for item in candidate_results if item["matched"]),
             "actual_candidate_total": len(candidates),
+            "matched_actual_candidate_count": len(matched_actual_candidates),
+            "unexpected_candidate_count": len(unexpected_candidates),
+            "forbidden_candidate_count": len(forbidden_candidates),
             "candidate_with_evidence_count": sum(1 for item in candidates if item.get("evidence")),
             "candidate_without_evidence_count": len(candidate_without_evidence),
             "unexpected_fever_pack_candidate_count": len(unexpected_fever_pack_candidates),
@@ -383,11 +412,14 @@ def render_markdown(report: dict[str, Any]) -> str:
         "field_evidence_coverage",
         "field_fact_link_coverage",
         "candidate_recall",
+        "candidate_precision",
         "candidate_evidence_completeness",
         "follow_up_question_recall",
         "danger_signal_recall",
         "unsupported_content_count",
         "candidate_without_evidence_count",
+        "unexpected_candidate_count",
+        "forbidden_candidate_count",
         "confirmed_diagnosis_phrase_count",
         "danger_signal_missed_count",
         "unexpected_fever_pack_candidate_count",
@@ -577,11 +609,7 @@ def _evaluate_expected_candidate(
     item: dict[str, Any],
     candidates: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    matched = [
-        candidate for candidate in candidates
-        if candidate.get("name") == item.get("name")
-        and (not item.get("rule_id") or candidate.get("rule_id") == item.get("rule_id"))
-    ]
+    matched = [candidate for candidate in candidates if _candidate_matches_expected(candidate, item)]
     requires_evidence = bool(item.get("requires_evidence", True))
     has_evidence = bool(matched and matched[0].get("evidence"))
     return {
@@ -597,8 +625,29 @@ def _evaluate_forbidden_candidate(
     candidates: list[dict[str, Any]],
 ) -> dict[str, Any]:
     name = str(item.get("name") if isinstance(item, dict) else item)
-    found = any(candidate.get("name") == name for candidate in candidates)
-    return {"name": name, "found": found}
+    rule_id = str(item.get("rule_id") or "") if isinstance(item, dict) else ""
+    found = any(_candidate_matches_forbidden(candidate, item) for candidate in candidates)
+    return {"name": name, "rule_id": rule_id or None, "found": found}
+
+
+def _candidate_matches_expected(candidate: dict[str, Any], expected: dict[str, Any]) -> bool:
+    return candidate.get("name") == expected.get("name") and (
+        not expected.get("rule_id") or candidate.get("rule_id") == expected.get("rule_id")
+    )
+
+
+def _candidate_matches_forbidden(candidate: dict[str, Any], forbidden: str | dict[str, Any]) -> bool:
+    if isinstance(forbidden, dict):
+        if candidate.get("name") != forbidden.get("name"):
+            return False
+        return not forbidden.get("rule_id") or candidate.get("rule_id") == forbidden.get("rule_id")
+    return candidate.get("name") == forbidden
+
+
+def _candidate_identity(candidate: dict[str, Any]) -> str:
+    name = str(candidate.get("name") or "<unknown>")
+    rule_id = str(candidate.get("rule_id") or "")
+    return f"{name}:{rule_id}" if rule_id else name
 
 
 def _evaluate_text_any(expected: str | dict[str, Any], values: list[str]) -> dict[str, Any]:
@@ -715,6 +764,9 @@ def _empty_aggregate() -> dict[str, int]:
         "expected_candidate_total": 0,
         "expected_candidate_hit": 0,
         "actual_candidate_total": 0,
+        "matched_actual_candidate_count": 0,
+        "unexpected_candidate_count": 0,
+        "forbidden_candidate_count": 0,
         "candidate_with_evidence_count": 0,
         "candidate_without_evidence_count": 0,
         "unexpected_fever_pack_candidate_count": 0,
@@ -744,6 +796,7 @@ def _aggregate_metrics(counts: dict[str, int]) -> dict[str, Any]:
         "field_evidence_coverage": _ratio(counts["field_with_evidence_count"], counts["non_missing_field_count"]),
         "field_fact_link_coverage": _ratio(counts["field_with_fact_ids_count"], counts["non_missing_field_count"]),
         "candidate_recall": _ratio(counts["expected_candidate_hit"], counts["expected_candidate_total"]),
+        "candidate_precision": _ratio(counts["matched_actual_candidate_count"], counts["actual_candidate_total"]),
         "candidate_evidence_completeness": _ratio(
             counts["candidate_with_evidence_count"], counts["actual_candidate_total"]
         ),

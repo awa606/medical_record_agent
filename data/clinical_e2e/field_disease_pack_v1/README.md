@@ -4,5 +4,5 @@ This dataset evaluates synthetic text/role segments through clinical fact extrac
 
 - It does not evaluate ASR, diarization, browser recording, role thresholds, or edge deployment.
 - `development` cases may be inspected while fixing product behavior.
-- `final_check` cases are a frozen check split and must not be used to tune rules after freezing.
+- `final_check` cases were executed in the initial baseline. After this dataset is merged, treat them as a frozen regression split; formal unseen-test claims require a new final-check set.
 - All cases are synthetic and contain no real patient data.

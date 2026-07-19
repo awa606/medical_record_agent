@@ -64,6 +64,9 @@ def test_cli_writes_json_report(tmp_path: Path) -> None:
     assert report["sample_count"] == 60
     assert report["audio_pipeline_evaluated"] is False
     assert "clinical_fact_accuracy" in report["metrics"]
+    assert "candidate_precision" in report["metrics"]
+    assert "unexpected_candidate_count" in report["metrics"]
+    assert "forbidden_candidate_count" in report["metrics"]
     assert "hard_gates" in report
     assert report["split_counts"] == {"development": 40, "final_check": 20}
 
@@ -133,6 +136,51 @@ def test_hard_gate_reports_forbidden_content_candidate_evidence_and_danger_signa
     assert report["metrics"]["candidate_without_evidence_count"] == 1
     assert report["metrics"]["confirmed_diagnosis_phrase_count"] == 1
     assert report["metrics"]["danger_signal_missed_count"] == 1
+
+
+def test_hard_gate_reports_unexpected_forbidden_candidates_and_precision() -> None:
+    case = {
+        "case_id": "unit-candidate-precision",
+        "split": "development",
+        "scenario_type": "unexpected_candidate",
+        "privacy": {"synthetic": True, "contains_real_patient_data": False},
+        "segments": [
+            {"segment_id": "seg-1", "speaker_id": "spk1", "role": "patient", "text": "fever 39"}
+        ],
+        "expected": {
+            **_minimal_expected(),
+            "candidate_diagnoses": [
+                {
+                    "name": "Expected fever pack",
+                    "rule_id": "FEVER_RESP_V1_FEVER_WORKUP",
+                    "requires_evidence": True,
+                }
+            ],
+            "forbidden_candidate_diagnoses": [
+                {"name": "Forbidden cold rule", "rule_id": "R_SUMMER_DAMP_001"}
+            ],
+        },
+    }
+    dataset = {
+        "dataset_version": "unit",
+        "schema_version": "unit",
+        "evaluation_mode": "text_to_record_disease_pack",
+        "manifest_path": str(DATASET_MANIFEST),
+        "selected_split": "all",
+        "all_split_counts": {"development": 1, "final_check": 1},
+        "cases": [{"manifest": {"case_id": case["case_id"]}, "case": case, "case_path": Path("unit.json")}],
+    }
+
+    report = evaluate_loaded_dataset(dataset, runner=_fake_candidate_runner)
+
+    assert report["hard_gates"]["passed"] is False
+    assert report["metrics"]["actual_candidate_total"] == 2
+    assert report["metrics"]["matched_actual_candidate_count"] == 1
+    assert report["metrics"]["candidate_precision"] == 0.5
+    assert report["metrics"]["unexpected_candidate_count"] == 1
+    assert report["metrics"]["forbidden_candidate_count"] == 1
+    assert report["hard_gates"]["unexpected_candidate_count"] == 1
+    assert report["hard_gates"]["forbidden_candidate_count"] == 1
 
 
 def test_duplicate_case_id_fails_validation(tmp_path: Path) -> None:
@@ -235,5 +283,66 @@ def _fake_unsafe_runner(_case: dict) -> dict:
             }
         ],
         "draft": "诊断为发热待查，存在编造病程。",
+        "provider_trace": {"llm_provider": "mock", "actual_provider": "mock", "model": "unit", "mode": "demo"},
+    }
+
+
+def _fake_candidate_runner(_case: dict) -> dict:
+    missing_field = {
+        "value": None,
+        "missing": True,
+        "status": "missing",
+        "hint": "needs follow-up",
+        "confidence": None,
+        "source_spans": [],
+        "missing_elements": [],
+        "fact_ids": [],
+        "confirmed_by_doctor": False,
+    }
+    fields = {
+        key: dict(missing_field)
+        for key in [
+            "chief_complaint",
+            "present_illness",
+            "previous_treatment",
+            "accompanying_symptoms",
+            "past_history",
+            "allergy_history",
+            "physical_exam",
+        ]
+    }
+    return {
+        "conversation_text": "[patient] fever 39",
+        "facts": [{"type": "symptom", "name": "fever", "assertion": "present"}],
+        "fields": fields,
+        "candidate_diagnoses": [
+            {
+                "name": "Expected fever pack",
+                "status": "candidate",
+                "evidence": [{"text": "fever 39", "index": 0}],
+                "reason": "expected candidate with evidence",
+                "rule_id": "FEVER_RESP_V1_FEVER_WORKUP",
+                "confidence": 0.7,
+                "suggested_checks": [],
+                "medication_notes": [],
+                "risk_warnings": [],
+                "follow_up_questions": [],
+                "confirmed_by_doctor": False,
+            },
+            {
+                "name": "Forbidden cold rule",
+                "status": "candidate",
+                "evidence": [{"text": "fever 39", "index": 0}],
+                "reason": "legacy mock candidate should be counted as unexpected",
+                "rule_id": "R_SUMMER_DAMP_001",
+                "confidence": 0.6,
+                "suggested_checks": [],
+                "medication_notes": [],
+                "risk_warnings": [],
+                "follow_up_questions": [],
+                "confirmed_by_doctor": False,
+            },
+        ],
+        "draft": "",
         "provider_trace": {"llm_provider": "mock", "actual_provider": "mock", "model": "unit", "mode": "demo"},
     }

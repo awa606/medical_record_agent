@@ -22,7 +22,7 @@ class ClinicalFactExtractionTests(unittest.TestCase):
         self.assertNotIn("咳嗽", fields.present_illness.value)
         self.assertNotIn("布洛芬", fields.present_illness.value)
         self.assertTrue(fields.chief_complaint.source_spans)
-        self.assertEqual(fields.candidate_diagnoses, [])
+        self.assertEqual([diagnosis.name for diagnosis in fields.candidate_diagnoses], ["发热待查"])
 
     def test_short_fever_and_headache_forms_partial_fields(self):
         fields = MockLLM().extract_fields("我感觉我发烧了，头很痛，39°C")

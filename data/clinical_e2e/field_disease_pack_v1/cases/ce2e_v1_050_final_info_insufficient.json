@@ -1,0 +1,47 @@
+{
+  "case_id": "ce2e_v1_050_final_info_insufficient",
+  "split": "final_check",
+  "scenario_type": "insufficient",
+  "title": "冻结检查案例 050_final_info_insufficient",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "note": "Synthetic classroom evaluation case; no real patient data."
+  },
+  "segments": [
+    {
+      "segment_id": "seg-1",
+      "speaker_id": "spk-patient",
+      "role": "患者",
+      "text": "有点难受。"
+    }
+  ],
+  "expected": {
+    "facts": [],
+    "field_status": {
+      "chief_complaint": "missing",
+      "present_illness": "missing"
+    },
+    "required_content": [],
+    "forbidden_content": [
+      "3天前淋雨受凉",
+      "铁锈色痰",
+      "当地卫生院",
+      "食欲不佳",
+      "既往体健",
+      "肺结核",
+      "布洛芬",
+      "淋雨",
+      "咳嗽、咳痰"
+    ],
+    "candidate_diagnoses": [],
+    "forbidden_candidate_diagnoses": [
+      "发热待查",
+      "流感样症状参考",
+      "肺部感染待排"
+    ],
+    "follow_up_questions_any": [],
+    "risk_signals": [],
+    "applicable_packs": []
+  }
+}

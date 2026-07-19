@@ -1,0 +1,71 @@
+{
+  "case_id": "ce2e_v1_060_final_out_scope_chest_pain",
+  "split": "final_check",
+  "scenario_type": "out_of_scope",
+  "title": "冻结检查案例 060_final_out_scope_chest_pain",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "note": "Synthetic classroom evaluation case; no real patient data."
+  },
+  "segments": [
+    {
+      "segment_id": "seg-1",
+      "speaker_id": "spk-patient",
+      "role": "患者",
+      "text": "胸痛半天，没有发烧。"
+    }
+  ],
+  "expected": {
+    "facts": [
+      {
+        "type": "symptom",
+        "name": "胸痛",
+        "assertion": "present"
+      },
+      {
+        "type": "duration",
+        "name": "病程",
+        "assertion": "present",
+        "value": "半天"
+      },
+      {
+        "type": "symptom",
+        "name": "发热",
+        "assertion": "absent"
+      }
+    ],
+    "field_status": {
+      "chief_complaint": "complete",
+      "present_illness": "partial"
+    },
+    "required_content": [
+      {
+        "target": "present_illness",
+        "contains": [
+          "否认发热"
+        ]
+      }
+    ],
+    "forbidden_content": [
+      "3天前淋雨受凉",
+      "铁锈色痰",
+      "当地卫生院",
+      "食欲不佳",
+      "既往体健",
+      "肺结核",
+      "布洛芬",
+      "淋雨",
+      "咳嗽、咳痰"
+    ],
+    "candidate_diagnoses": [],
+    "forbidden_candidate_diagnoses": [
+      "发热待查",
+      "流感样症状参考",
+      "肺部感染待排"
+    ],
+    "follow_up_questions_any": [],
+    "risk_signals": [],
+    "applicable_packs": []
+  }
+}

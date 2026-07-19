@@ -1,0 +1,93 @@
+{
+  "case_id": "ce2e_v1_038_low_grade_temp_cough",
+  "split": "development",
+  "scenario_type": "low_grade_fever_cough",
+  "title": "低热伴咳嗽",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "note": "Synthetic classroom evaluation case; no real patient data."
+  },
+  "segments": [
+    {
+      "segment_id": "seg-1",
+      "speaker_id": "spk-patient",
+      "role": "患者",
+      "text": "体温37.8度，咳嗽两天。"
+    }
+  ],
+  "expected": {
+    "facts": [
+      {
+        "type": "measurement",
+        "name": "体温",
+        "assertion": "present",
+        "value": "37.8℃"
+      },
+      {
+        "type": "symptom",
+        "name": "发热",
+        "assertion": "present"
+      },
+      {
+        "type": "symptom",
+        "name": "咳嗽",
+        "assertion": "present"
+      },
+      {
+        "type": "duration",
+        "name": "病程",
+        "assertion": "present",
+        "value": "两天"
+      }
+    ],
+    "field_status": {
+      "chief_complaint": "complete",
+      "present_illness": "partial"
+    },
+    "required_content": [
+      {
+        "target": "chief_complaint",
+        "contains": [
+          "咳嗽",
+          "两天"
+        ]
+      },
+      {
+        "target": "present_illness",
+        "contains": [
+          "37.8℃"
+        ]
+      }
+    ],
+    "forbidden_content": [
+      "3天前淋雨受凉",
+      "铁锈色痰",
+      "当地卫生院",
+      "食欲不佳",
+      "既往体健",
+      "肺结核",
+      "布洛芬",
+      "淋雨",
+      "咳嗽、咳痰"
+    ],
+    "candidate_diagnoses": [
+      {
+        "name": "发热待查",
+        "requires_evidence": true,
+        "rule_id": "FEVER_RESP_V1_FEVER_WORKUP"
+      },
+      {
+        "name": "肺部感染待排",
+        "requires_evidence": true,
+        "rule_id": "FEVER_RESP_V1_PULMONARY_INFECTION"
+      }
+    ],
+    "forbidden_candidate_diagnoses": [],
+    "follow_up_questions_any": [],
+    "risk_signals": [],
+    "applicable_packs": [
+      "fever_respiratory_v1"
+    ]
+  }
+}

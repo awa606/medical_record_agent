@@ -92,6 +92,46 @@ class ClinicalFactExtractionTests(unittest.TestCase):
         self.assertTrue(any(fact.name == "发热" for fact in facts))
         self.assertTrue(any(fact.name == "体温" and fact.value == "39℃" for fact in facts))
 
+    def test_temperature_forty_is_not_truncated(self):
+        for text in ["体温40度", "40℃", "40°C", "39.5℃"]:
+            with self.subTest(text=text):
+                facts = extract_clinical_facts(text)
+                expected = "39.5℃" if text.startswith("39.5") else "40℃"
+                self.assertTrue(
+                    any(fact.name == "体温" and fact.value == expected for fact in facts),
+                    facts,
+                )
+
+    def test_respiratory_danger_symptoms_and_negations_are_extracted(self):
+        positive = extract_clinical_facts("发热39度，有点胸闷，还有气促")
+        negative = extract_clinical_facts("没有胸痛，也没有呼吸困难")
+
+        self.assertTrue(any(fact.name == "胸闷" and fact.assertion == "present" for fact in positive))
+        self.assertTrue(any(fact.name == "气促" and fact.assertion == "present" for fact in positive))
+        self.assertTrue(any(fact.name == "胸痛" and fact.assertion == "absent" for fact in negative))
+        self.assertTrue(any(fact.name == "呼吸困难" and fact.assertion == "absent" for fact in negative))
+
+    def test_negative_cough_and_question_style_absent_fever_do_not_create_positive_candidates(self):
+        negative_cough = MockLLM().extract_fields("我发烧一天，最高39度，没有咳嗽。")
+        answered_no = MockLLM().extract_fields("医生问发热吗，患者说没有。")
+
+        self.assertEqual(
+            [diagnosis.rule_id for diagnosis in negative_cough.candidate_diagnoses],
+            ["FEVER_RESP_V1_FEVER_WORKUP"],
+        )
+        self.assertEqual(answered_no.candidate_diagnoses, [])
+        self.assertTrue(answered_no.chief_complaint.missing)
+
+    def test_fever_with_chest_tightness_uses_clinical_fact_pack_before_legacy_mock_rule(self):
+        fields = MockLLM().extract_fields("发热39度，有点胸闷")
+
+        self.assertTrue(any(fact.name == "胸闷" for fact in extract_clinical_facts("发热39度，有点胸闷")))
+        self.assertEqual(
+            [diagnosis.rule_id for diagnosis in fields.candidate_diagnoses],
+            ["FEVER_RESP_V1_FEVER_WORKUP"],
+        )
+        self.assertNotIn("R_SUMMER_DAMP_001", [diagnosis.rule_id for diagnosis in fields.candidate_diagnoses])
+
     def test_generated_fields_keep_source_spans_and_fact_ids(self):
         fields = MockLLM().extract_fields("我感觉我发烧了，头很痛，39°C")
 

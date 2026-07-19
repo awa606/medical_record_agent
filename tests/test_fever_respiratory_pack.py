@@ -42,6 +42,21 @@ def test_absent_fever_does_not_create_positive_fever_pack_candidate() -> None:
     assert fields.candidate_diagnoses == []
 
 
+def test_high_fever_keeps_danger_signal_warning() -> None:
+    fields = MockLLM().extract_fields("体温40度，头痛")
+
+    assert [diagnosis.rule_id for diagnosis in fields.candidate_diagnoses] == [
+        "FEVER_RESP_V1_FEVER_WORKUP",
+        "FEVER_RESP_V1_INFLUENZA_LIKE",
+    ]
+    assert "40℃" in fields.present_illness.value
+    warnings = "\n".join(
+        warning for diagnosis in fields.candidate_diagnoses for warning in diagnosis.risk_warnings
+    )
+    assert "持续高热" in warnings
+    assert "气促" in warnings
+
+
 def test_pack_reads_facts_not_raw_text_keywords() -> None:
     facts = extract_clinical_facts("只是头痛，没有咳嗽，也没有发烧")
 

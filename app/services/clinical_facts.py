@@ -28,7 +28,7 @@ _SPLIT_RE = re.compile(r"[。！？!?\n]+")
 _TEMP_RE = re.compile(r"(?P<value>3[5-9](?:\.\d)?|4[0-2](?:\.\d)?)\s*(?:°\s*)?(?:C|c|℃|度)")
 _NEGATIVE_FEVER_RE = re.compile(r"(?:没有|没|无|不|否认).{0,4}(?:发热|发烧)")
 _QUESTION_NEGATIVE_FEVER_RE = re.compile(
-    r"(?:有没有|是否).{0,8}(?:发热|发烧).{0,12}(?:患者|病人)?[：:，,\s]*(?:没有|没|无|不)"
+    r"(?:有没有|是否|问).{0,8}(?:发热|发烧).{0,16}(?:患者|病人)?(?:说|回答|称)?[：:，,\s]*(?:没有|没|无|不)"
 )
 _RESOLVED_FEVER_RE = re.compile(
     r"(?:昨天|之前|先前|前面|曾经|曾有|发过)?.{0,6}(?:发热|发烧|体温).{0,14}(?:退了|退热|退烧|降下|降下来|不烧|已经退)"
@@ -48,6 +48,15 @@ _CHINESE_TEMPERATURES = {
     "四十": "40",
     "四十一": "41",
     "四十二": "42",
+}
+
+_NEGATION_WORDS = ("没有", "没", "无", "不", "否认", "未")
+_COUGH_SYNONYMS = ("咳嗽", "有点咳", "一直咳", "咳了")
+_RESPIRATORY_DANGER_SYMPTOMS = {
+    "胸闷": ("胸闷", "胸口闷", "胸部发闷"),
+    "胸痛": ("胸痛", "胸口痛", "胸部疼痛"),
+    "气促": ("气促", "气短", "喘不上气", "喘不过气"),
+    "呼吸困难": ("呼吸困难", "呼吸费力"),
 }
 
 
@@ -116,7 +125,8 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
         if _contains_treatment(normalized):
             add(type_="treatment", name="既往处理", value=_treatment_value(normalized), evidence=segment, index=index)
 
-        if _NEGATIVE_FEVER_RE.search(normalized):
+        question_negative_fever = bool(_QUESTION_NEGATIVE_FEVER_RE.search(normalized))
+        if question_negative_fever or _NEGATIVE_FEVER_RE.search(normalized):
             add(type_="symptom", name="发热", assertion="absent", evidence=segment, index=index)
         elif _RESOLVED_FEVER_RE.search(normalized):
             add(type_="symptom", name="发热", assertion="resolved", evidence=segment, index=index)
@@ -126,8 +136,14 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
         if any(keyword in normalized for keyword in ["头很痛", "头痛", "头疼", "脑袋疼", "脑袋痛"]):
             add(type_="symptom", name="头痛", assertion="present", evidence=segment, index=index)
 
-        if "咳嗽" in normalized or re.search(r"有点咳|一直咳|咳了", normalized):
-            add(type_="symptom", name="咳嗽", assertion="present", evidence=segment, index=index)
+        cough_assertion = _symptom_assertion(normalized, _COUGH_SYNONYMS)
+        if cough_assertion:
+            add(type_="symptom", name="咳嗽", assertion=cough_assertion, evidence=segment, index=index)
+
+        for symptom_name, keywords in _RESPIRATORY_DANGER_SYMPTOMS.items():
+            assertion = _symptom_assertion(normalized, keywords)
+            if assertion:
+                add(type_="symptom", name=symptom_name, assertion=assertion, evidence=segment, index=index)
 
     return _dedupe_facts(facts)
 
@@ -199,11 +215,29 @@ def _normalize_text(text: str) -> str:
 def _extract_temperature(text: str) -> str | None:
     match = _TEMP_RE.search(text)
     if match:
-        return f"{match.group('value').rstrip('0').rstrip('.')}℃"
+        return f"{_format_temperature_value(match.group('value'))}℃"
     for chinese, arabic in _CHINESE_TEMPERATURES.items():
         if f"{chinese}度" in text or f"{chinese}摄氏度" in text:
             return f"{arabic}℃"
     return None
+
+
+def _format_temperature_value(value: str) -> str:
+    if "." in value:
+        return value.rstrip("0").rstrip(".")
+    return value
+
+
+def _symptom_assertion(text: str, keywords: tuple[str, ...]) -> Assertion | None:
+    found_absent = False
+    for keyword in keywords:
+        for match in re.finditer(re.escape(keyword), text):
+            prefix = text[max(0, match.start() - 8) : match.start()]
+            if any(word in prefix for word in _NEGATION_WORDS):
+                found_absent = True
+                continue
+            return "present"
+    return "absent" if found_absent else None
 
 
 def _extract_duration(text: str) -> str | None:

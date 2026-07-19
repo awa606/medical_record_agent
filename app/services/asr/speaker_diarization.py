@@ -332,14 +332,7 @@ def _merge_short_speaker_clusters(segments: list[ASRSegment]) -> list[ASRSegment
     short_speakers = {
         speaker
         for speaker, item in stats.items()
-        if (
-            item.duration < 3.0
-            or item.max_turn_duration < 1.0 and item.duration < 5.0
-            or (
-                1 <= item.text_length <= 40
-                and item.meaningful_length / max(item.text_length, 1) <= 0.35
-            )
-        )
+        if _is_mergeable_low_information_cluster(item)
     }
     substantial = set(groups) - short_speakers
     if not substantial:
@@ -366,6 +359,17 @@ def _merge_short_speaker_clusters(segments: list[ASRSegment]) -> list[ASRSegment
             )
         )
     return merged
+
+
+def _is_mergeable_low_information_cluster(item: _SpeakerStats) -> bool:
+    if item.text_length <= 0:
+        return True
+    meaningful_ratio = item.meaningful_length / max(item.text_length, 1)
+    return (
+        1 <= item.text_length <= 40
+        and meaningful_ratio <= 0.35
+        and (item.duration < 3.0 or item.max_turn_duration < 1.0 and item.duration < 5.0)
+    )
 
 
 def _merge_stable_utterances(segments: list[ASRSegment]) -> list[ASRSegment]:

@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from app.schemas import MedicalRecordFields, SafetyCheckResult
 from app.services.clinical_facts import validate_field_evidence
-from app.services.llm.base import LLMProvider
+from app.services.llm.base import LLMProvider, LLMProviderUnavailableError
 from app.services.llm.json_repair import parse_json_object
 from app.services.llm.mock_provider import MockLLMProvider
 from app.services.mock_llm import MockLLM
@@ -47,11 +47,7 @@ def _safe_reason(exc: BaseException | str) -> str:
 
 
 class LLMRecordGenerator:
-    """LLM-backed field extraction with MockLLM fallback.
-
-    Draft generation and safety checking deliberately stay on MockLLM in this
-    first integration stage to keep the fever_01 demo deterministic.
-    """
+    """Unified clinical extraction, draft generation, and safety adapter."""
 
     def __init__(
         self,
@@ -61,14 +57,19 @@ class LLMRecordGenerator:
         requested_provider: str | None = None,
         requested_model: str | None = None,
         init_fallback_reason: str | None = None,
+        mode: str = "demo",
+        allow_mock_fallback: bool = True,
     ) -> None:
         self.provider = provider or MockLLMProvider()
         self.mock_llm = mock_llm or MockLLM()
         self.requested_provider = requested_provider or self.provider.name
         self.requested_model = requested_model or self.provider.model
         self.init_fallback_reason = init_fallback_reason
+        self.mode = mode
+        self.allow_mock_fallback = allow_mock_fallback
         self.timeout_seconds = _env_float("LLM_TIMEOUT_SECONDS", 30.0)
         self.max_retries = max(0, _env_int("LLM_MAX_RETRIES", 2))
+        self.operation_traces: dict[str, dict[str, Any]] = {}
         self.last_trace = self._default_trace()
 
     def extract_fields(self, conversation: str) -> MedicalRecordFields:
@@ -79,6 +80,7 @@ class LLMRecordGenerator:
             start = time.perf_counter()
             fields = self.mock_llm.extract_fields(conversation)
             self._set_trace(
+                operation="field_extraction",
                 provider="mock",
                 model=self.provider.model,
                 latency_ms=int((time.perf_counter() - start) * 1000),
@@ -102,6 +104,7 @@ class LLMRecordGenerator:
                     strict_text_match=False,
                 )
                 self._set_trace(
+                    operation="field_extraction",
                     provider=response.provider,
                     model=response.model,
                     latency_ms=int((time.perf_counter() - start) * 1000),
@@ -120,7 +123,19 @@ class LLMRecordGenerator:
         )
 
     def generate_draft(self, fields: MedicalRecordFields | dict) -> str:
-        return self.mock_llm.generate_draft(fields)
+        start = time.perf_counter()
+        draft = self.mock_llm.generate_draft(fields)
+        uses_mock_builder = self.provider.name != "mock"
+        self._set_trace(
+            operation="draft_generation",
+            provider=self.requested_provider,
+            model=self.requested_model,
+            latency_ms=int((time.perf_counter() - start) * 1000),
+            fallback=uses_mock_builder,
+            fallback_reason="draft_generation_uses_mock_record_builder" if uses_mock_builder else None,
+            actual_provider="mock" if uses_mock_builder else self.provider.name,
+        )
+        return draft
 
     def safety_check(
         self,
@@ -129,10 +144,24 @@ class LLMRecordGenerator:
         *,
         allow_export: bool = False,
     ) -> SafetyCheckResult:
-        return self.mock_llm.safety_check(draft_text, fields, allow_export=allow_export)
+        start = time.perf_counter()
+        safety = self.mock_llm.safety_check(draft_text, fields, allow_export=allow_export)
+        uses_mock_checker = self.provider.name != "mock"
+        self._set_trace(
+            operation="safety_check",
+            provider=self.requested_provider,
+            model=self.requested_model,
+            latency_ms=int((time.perf_counter() - start) * 1000),
+            fallback=uses_mock_checker,
+            fallback_reason="safety_check_uses_deterministic_rules" if uses_mock_checker else None,
+            actual_provider="mock" if uses_mock_checker else self.provider.name,
+        )
+        return safety
 
     def get_trace(self) -> dict[str, Any]:
-        return dict(self.last_trace)
+        trace = dict(self.last_trace)
+        trace["operations"] = {key: dict(value) for key, value in self.operation_traces.items()}
+        return trace
 
     def _fields_from_response(self, raw_text: str) -> MedicalRecordFields:
         data = parse_json_object(raw_text)
@@ -241,12 +270,25 @@ class LLMRecordGenerator:
         *,
         latency_ms: int | None = None,
     ) -> MedicalRecordFields:
+        if not self.allow_mock_fallback:
+            self._set_trace(
+                operation="field_extraction",
+                provider=self.requested_provider,
+                model=self.requested_model,
+                latency_ms=latency_ms or 0,
+                fallback=False,
+                fallback_reason=fallback_reason,
+                actual_provider=self.provider.name,
+            )
+            raise LLMProviderUnavailableError(fallback_reason)
+
         start = time.perf_counter()
         fields = self.mock_llm.extract_fields(conversation)
         fallback_latency = latency_ms
         if fallback_latency is None:
             fallback_latency = int((time.perf_counter() - start) * 1000)
         self._set_trace(
+            operation="field_extraction",
             provider=self.requested_provider,
             model=self.requested_model,
             latency_ms=fallback_latency,
@@ -264,11 +306,15 @@ class LLMRecordGenerator:
             "fallback": bool(self.init_fallback_reason),
             "fallback_reason": self.init_fallback_reason,
             "actual_provider": "mock" if self.init_fallback_reason else self.provider.name,
+            "operation": "not_started",
+            "mode": self.mode,
+            "fallback_allowed": self.allow_mock_fallback,
         }
 
     def _set_trace(
         self,
         *,
+        operation: str,
         provider: str,
         model: str,
         latency_ms: int,
@@ -283,4 +329,8 @@ class LLMRecordGenerator:
             "fallback": fallback,
             "fallback_reason": fallback_reason,
             "actual_provider": actual_provider,
+            "operation": operation,
+            "mode": self.mode,
+            "fallback_allowed": self.allow_mock_fallback,
         }
+        self.operation_traces[operation] = dict(self.last_trace)

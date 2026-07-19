@@ -97,6 +97,7 @@ class MedicalRecordOrchestrator:
                 lambda: self._rule_based_draft(self.fields),
                 input_snapshot={"fields": self._snapshot(self.fields)},
             )
+            self._capture_llm_trace()
             self._persist_result()
 
             self.safety_check = self._run_llm_step(
@@ -109,6 +110,7 @@ class MedicalRecordOrchestrator:
                     "fields": self._snapshot(self.fields),
                 },
             )
+            self._capture_llm_trace()
             self.quality_report = build_record_quality_report(
                 self.fields,
                 self.safety_check,

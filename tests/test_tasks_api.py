@@ -11,6 +11,7 @@ from app.agents import MedicalRecordOrchestrator
 from app.api.tasks import (
     ReviewRequest,
     _event_from_audit_log,
+    _validate_export_ready,
     approve_task,
     export_task,
     read_task_agent_trace,
@@ -22,11 +23,26 @@ from app.api.tasks import (
 from app.db import get_audit_logs
 from app.main import app
 from app.services import WORD_NOTICE
+from app.schemas import SafetyCheckResult
 
 
 class TaskApiTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_env = {
+            key: os.environ.get(key)
+            for key in [
+                "LLM_PROVIDER",
+                "RECORD_PROVIDER_MODE",
+                "ONLINE_LLM_API_BASE",
+                "ONLINE_LLM_API_KEY",
+                "ONLINE_LLM_MODEL",
+                "OLLAMA_BASE_URL",
+                "OLLAMA_MODEL",
+            ]
+        }
+        for key in self.original_env:
+            os.environ.pop(key, None)
         os.environ["MEDICAL_RECORD_AGENT_DB"] = os.path.join(
             self.temp_dir.name,
             "api.sqlite3",
@@ -39,6 +55,11 @@ class TaskApiTests(unittest.TestCase):
     def tearDown(self):
         os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
         os.environ.pop("MEDICAL_RECORD_AGENT_OUTPUT_DIR", None)
+        for key, value in self.original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         self.temp_dir.cleanup()
 
     def test_task_routes_are_registered(self):
@@ -158,6 +179,34 @@ class TaskApiTests(unittest.TestCase):
         with ZipFile(word_path) as docx:
             document_xml = docx.read("word/document.xml").decode("utf-8")
         self.assertIn(WORD_NOTICE, document_xml)
+
+    def test_export_readiness_blocks_provider_fallback_trace(self):
+        result = MedicalRecordOrchestrator().run_from_text(
+            "左手手掌被咬了，大约两个小时左右，用酒精冲洗，牙龈出血。"
+        )
+        fields = result["fields"]
+        for field in [
+            fields.chief_complaint,
+            fields.present_illness,
+            fields.previous_treatment,
+            fields.accompanying_symptoms,
+            fields.past_history,
+            fields.allergy_history,
+            fields.physical_exam,
+        ]:
+            field.confirmed_by_doctor = True
+        for diagnosis in fields.candidate_diagnoses:
+            diagnosis.confirmed_by_doctor = True
+
+        errors = _validate_export_ready(
+            {
+                "fields": fields.model_dump(),
+                "safety_check": SafetyCheckResult(passed=True).model_dump(),
+                "llm_trace": {"fallback": True, "fallback_reason": "provider failed"},
+            }
+        )
+
+        self.assertTrue(any("降级模式" in error for error in errors))
 
 
 if __name__ == "__main__":

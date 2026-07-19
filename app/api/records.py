@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import os
 import re
 from typing import Any
 
@@ -9,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.agents import MedicalRecordOrchestrator
 from app.schemas import ASRResult, ASRSegment, MedicalRecordFields, SafetyCheckResult, SourceSpan
-from app.services import MockLLM, create_llm_record_generator
+from app.services import LLMProviderUnavailableError, create_llm_record_generator
 from app.services.asr.role_quality import build_speaker_role_quality
 from app.services.record_quality import build_record_quality_report
 
@@ -80,6 +81,7 @@ class BuildDraftResponse(BaseModel):
     draft: str
     safety_check: dict[str, Any]
     quality_report: dict[str, Any]
+    generation_info: dict[str, Any]
     creates_task: bool = False
     export_allowed: bool = False
 
@@ -93,6 +95,7 @@ class QualityRequest(BaseModel):
 class QualityResponse(BaseModel):
     status: str
     quality_report: dict[str, Any]
+    provider_info: dict[str, Any] | None = None
     creates_task: bool = False
 
 
@@ -442,12 +445,43 @@ def _require_segments_role_quality(
         )
 
 
+def _record_generator_or_503():
+    try:
+        return create_llm_record_generator()
+    except LLMProviderUnavailableError as exc:
+        raise _provider_unavailable_http(str(exc)) from exc
+
+
+def _provider_unavailable_http(reason: str, trace: dict[str, Any] | None = None) -> HTTPException:
+    detail = _extraction_info(trace)
+    if trace is None:
+        detail["requested_provider"] = os.environ.get("LLM_PROVIDER") or "mock"
+        detail["mode"] = os.environ.get("RECORD_PROVIDER_MODE") or "demo"
+    detail.update(
+        {
+            "message": "Requested record generation provider is unavailable.",
+            "actual_provider": None,
+            "fallback": False,
+            "fallback_reason": reason,
+        }
+    )
+    return HTTPException(status_code=503, detail=detail)
+
+
+def ensure_record_provider_available() -> dict[str, Any]:
+    generator = _record_generator_or_503()
+    return _extraction_info(generator.get_trace())
+
+
 def _extract_fields_for_service(
     conversation_text: str,
     segments: list[dict[str, Any]],
 ) -> tuple[MedicalRecordFields, dict[str, Any]]:
-    generator = create_llm_record_generator()
-    fields = generator.extract_fields(conversation_text)
+    generator = _record_generator_or_503()
+    try:
+        fields = generator.extract_fields(conversation_text)
+    except LLMProviderUnavailableError as exc:
+        raise _provider_unavailable_http(str(exc), generator.get_trace()) from exc
     fields = _enrich_field_evidence(fields, _stable_segments_for_external_api(segments))
     return fields, _extraction_info(generator.get_trace())
 
@@ -460,6 +494,9 @@ def _extraction_info(trace: dict[str, Any] | None) -> dict[str, Any]:
         "model": trace.get("model") or "mock-deterministic-extractor",
         "fallback": bool(trace.get("fallback", False)),
         "fallback_reason": trace.get("fallback_reason"),
+        "mode": trace.get("mode") or "demo",
+        "fallback_allowed": bool(trace.get("fallback_allowed", True)),
+        "operation": trace.get("operation") or "field_extraction",
         "extraction_mode": "clinical_fact_rules_v1",
     }
 
@@ -490,15 +527,19 @@ def extract_fields(payload: ExtractFieldsRequest) -> ExtractFieldsResponse:
 
 @router.post("/build-draft", response_model=BuildDraftResponse)
 def build_draft(payload: BuildDraftRequest) -> BuildDraftResponse:
-    llm = MockLLM()
-    draft = llm.generate_draft(payload.fields)
-    safety = llm.safety_check(draft, payload.fields, allow_export=payload.allow_export)
+    generator = _record_generator_or_503()
+    draft = generator.generate_draft(payload.fields)
+    generation_info = _extraction_info(generator.get_trace())
+    safety = generator.safety_check(draft, payload.fields, allow_export=payload.allow_export)
+    safety_info = _extraction_info(generator.get_trace())
+    generation_info["safety_check"] = safety_info
     quality_report = build_record_quality_report(payload.fields, safety, draft=draft)
     return BuildDraftResponse(
         status="draft_built",
         draft=draft,
         safety_check=safety.model_dump(mode="json"),
         quality_report=quality_report,
+        generation_info=generation_info,
         export_allowed=False,
     )
 
@@ -506,8 +547,11 @@ def build_draft(payload: BuildDraftRequest) -> BuildDraftResponse:
 @router.post("/quality", response_model=QualityResponse)
 def evaluate_record_quality(payload: QualityRequest) -> QualityResponse:
     safety = payload.safety_check
+    provider_info = None
     if safety is None and payload.draft:
-        safety = MockLLM().safety_check(payload.draft, payload.fields)
+        generator = _record_generator_or_503()
+        safety = generator.safety_check(payload.draft, payload.fields)
+        provider_info = _extraction_info(generator.get_trace())
     quality_report = build_record_quality_report(
         payload.fields,
         safety,
@@ -516,6 +560,7 @@ def evaluate_record_quality(payload: QualityRequest) -> QualityResponse:
     return QualityResponse(
         status=quality_report["status"],
         quality_report=quality_report,
+        provider_info=provider_info,
     )
 
 
@@ -524,6 +569,7 @@ def generate_record(
     payload: GenerateRecordRequest,
     background_tasks: BackgroundTasks,
 ) -> dict[str, object]:
+    ensure_record_provider_available()
     orchestrator = MedicalRecordOrchestrator()
     task_id = orchestrator.create_text_task(payload.conversation_text)
     background_tasks.add_task(run_record_generation_task, task_id, payload.conversation_text)
@@ -538,13 +584,19 @@ def generate_record(
 @router.post("/preview", response_model=PreviewRecordResponse)
 def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
     conversation_text, stable_segments = _stable_preview_input(payload)
-    generator = create_llm_record_generator()
-    fields = generator.extract_fields(conversation_text)
+    generator = _record_generator_or_503()
+    try:
+        fields = generator.extract_fields(conversation_text)
+    except LLMProviderUnavailableError as exc:
+        raise _provider_unavailable_http(str(exc), generator.get_trace()) from exc
     fields = _enrich_field_evidence(fields, stable_segments)
     extraction_info = _extraction_info(generator.get_trace())
-    llm = MockLLM()
-    draft = llm.generate_draft(fields)
-    safety = llm.safety_check(draft, fields, allow_export=False)
+    draft = generator.generate_draft(fields)
+    draft_info = _extraction_info(generator.get_trace())
+    safety = generator.safety_check(draft, fields, allow_export=False)
+    safety_info = _extraction_info(generator.get_trace())
+    extraction_info["draft_generation"] = draft_info
+    extraction_info["safety_check"] = safety_info
     updates = _structured_updates(fields, stable_segments)
     quality_preview = build_record_quality_report(fields, safety, draft=draft)
 

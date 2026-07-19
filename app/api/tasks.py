@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from app.db import create_audit_log, get_audit_logs, get_task, get_task_steps, json_dumps, update_task
 from app.schemas import MedicalRecordFields, SafetyCheckResult
-from app.services import MockLLM, export_record
+from app.services import LLMProviderUnavailableError, create_llm_record_generator, export_record
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
 
 
@@ -74,6 +74,20 @@ def _save_task_result(
     create_audit_log(task_id, event_type, event_detail)
 
 
+def _record_generator_or_503():
+    try:
+        return create_llm_record_generator()
+    except LLMProviderUnavailableError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Requested record generation provider is unavailable.",
+                "fallback": False,
+                "fallback_reason": str(exc),
+            },
+        ) from exc
+
+
 @router.get("/{task_id}")
 def read_task(task_id: int) -> dict[str, Any]:
     task = get_task(task_id)
@@ -113,12 +127,14 @@ def read_task_agent_trace(
 def review_task(task_id: int, payload: ReviewRequest) -> dict[str, Any]:
     task, result = _load_task_result(task_id)
     fields = payload.fields
-    draft = MockLLM().generate_draft(fields)
-    safety_check = MockLLM().safety_check(draft, fields)
+    generator = _record_generator_or_503()
+    draft = generator.generate_draft(fields)
+    safety_check = generator.safety_check(draft, fields)
 
     result["fields"] = fields.model_dump()
     result["draft"] = draft
     result["safety_check"] = safety_check.model_dump()
+    result["llm_trace"] = generator.get_trace()
     result["reviewed"] = True
 
     _save_task_result(
@@ -224,6 +240,9 @@ def _validate_export_ready(result: dict[str, Any]) -> list[str]:
     fields = MedicalRecordFields.model_validate(result.get("fields"))
     safety_check = SafetyCheckResult.model_validate(result.get("safety_check"))
 
+    if result.get("degraded") or _trace_has_fallback(result.get("llm_trace")):
+        errors.append("当前病历生成处于降级模式，禁止导出。")
+
     if not safety_check.passed or safety_check.blocked:
         errors.append("安全校验未通过，禁止导出。")
 
@@ -252,6 +271,17 @@ def _validate_export_ready(result: dict[str, Any]) -> list[str]:
         errors.append(f"存在未确认候选诊断：{'、'.join(unconfirmed_diagnoses)}。")
 
     return errors
+
+
+def _trace_has_fallback(trace: Any) -> bool:
+    if not isinstance(trace, dict):
+        return False
+    if trace.get("fallback"):
+        return True
+    operations = trace.get("operations")
+    if isinstance(operations, dict):
+        return any(isinstance(item, dict) and item.get("fallback") for item in operations.values())
+    return False
 
 
 def _build_export_readiness(

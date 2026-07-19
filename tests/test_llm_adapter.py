@@ -3,7 +3,7 @@ import os
 import unittest
 
 from app.schemas import MedicalRecordFields
-from app.services.llm import create_llm_provider, create_llm_record_generator
+from app.services.llm import LLMProviderUnavailableError, create_llm_provider, create_llm_record_generator
 from app.services.llm.base import LLMProviderResponse
 from app.services.llm.json_repair import parse_json_object
 from app.services.llm.llm_record_generator import LLMRecordGenerator
@@ -19,6 +19,7 @@ ENV_KEYS = [
     "OLLAMA_MODEL",
     "LLM_TIMEOUT_SECONDS",
     "LLM_MAX_RETRIES",
+    "RECORD_PROVIDER_MODE",
 ]
 
 
@@ -155,6 +156,29 @@ class LLMAdapterTests(unittest.TestCase):
         self.assertEqual(trace["llm_provider"], "typo")
         self.assertTrue(trace["fallback"])
         self.assertIn("Unsupported LLM_PROVIDER", trace["fallback_reason"])
+
+    def test_live_mode_rejects_mock_provider(self):
+        os.environ["RECORD_PROVIDER_MODE"] = "live"
+
+        with self.assertRaises(LLMProviderUnavailableError):
+            create_llm_record_generator()
+
+    def test_live_mode_rejects_missing_online_config_without_mock_fallback(self):
+        os.environ["RECORD_PROVIDER_MODE"] = "live"
+        os.environ["LLM_PROVIDER"] = "online"
+
+        with self.assertRaises(LLMProviderUnavailableError) as raised:
+            create_llm_record_generator()
+
+        self.assertIn("ONLINE_LLM_API_BASE", str(raised.exception))
+
+    def test_invalid_record_provider_mode_raises_provider_unavailable(self):
+        os.environ["RECORD_PROVIDER_MODE"] = "production"
+
+        with self.assertRaises(LLMProviderUnavailableError) as raised:
+            create_llm_record_generator()
+
+        self.assertIn("Unsupported RECORD_PROVIDER_MODE", str(raised.exception))
 
 
 if __name__ == "__main__":

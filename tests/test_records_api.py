@@ -24,6 +24,20 @@ from app.api.tasks import read_task
 class RecordsApiTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_env = {
+            key: os.environ.get(key)
+            for key in [
+                "LLM_PROVIDER",
+                "RECORD_PROVIDER_MODE",
+                "ONLINE_LLM_API_BASE",
+                "ONLINE_LLM_API_KEY",
+                "ONLINE_LLM_MODEL",
+                "OLLAMA_BASE_URL",
+                "OLLAMA_MODEL",
+            ]
+        }
+        for key in self.original_env:
+            os.environ.pop(key, None)
         os.environ["MEDICAL_RECORD_AGENT_DB"] = os.path.join(
             self.temp_dir.name,
             "records.sqlite3",
@@ -31,6 +45,11 @@ class RecordsApiTests(unittest.TestCase):
 
     def tearDown(self):
         os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
+        for key, value in self.original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         self.temp_dir.cleanup()
 
     def test_generate_record_creates_task_for_background_execution(self):
@@ -262,6 +281,35 @@ class RecordsApiTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 409)
         self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
+
+    def test_live_mode_preview_returns_503_when_provider_is_mock(self):
+        os.environ["RECORD_PROVIDER_MODE"] = "live"
+
+        with self.assertRaises(HTTPException) as raised:
+            preview_record(
+                PreviewRecordRequest(
+                    conversation_text="[患者] 我发烧39°C",
+                    source="text_preview",
+                )
+            )
+
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertFalse(raised.exception.detail["fallback"])
+        self.assertEqual(raised.exception.detail["mode"], "live")
+
+    def test_build_draft_returns_generation_info(self):
+        extracted = extract_fields(
+            ExtractFieldsRequest(
+                conversation_text="[患者] 我发烧39°C",
+                source="external_api",
+            )
+        )
+
+        draft_result = build_draft(BuildDraftRequest(fields=extracted.fields))
+
+        self.assertIn("generation_info", draft_result.model_dump())
+        self.assertEqual(draft_result.generation_info["actual_provider"], "mock")
+        self.assertEqual(draft_result.generation_info["mode"], "demo")
 
     def test_extract_fields_rejects_unmapped_stable_speaker(self):
         with self.assertRaises(HTTPException) as raised:

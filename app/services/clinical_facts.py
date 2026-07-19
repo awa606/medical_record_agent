@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, SourceSpan
+from app.services.fever_respiratory_pack import infer_fever_respiratory_candidates
 
 
 FactType = Literal["symptom", "measurement", "duration", "treatment"]
@@ -156,7 +157,7 @@ def build_fields_from_clinical_facts(text: str) -> MedicalRecordFields | None:
         past_history=MedicalField.missing_field("既往史尚未提及"),
         allergy_history=MedicalField.missing_field("过敏史尚未提及"),
         physical_exam=MedicalField.missing_field("待医生查体补充"),
-        candidate_diagnoses=[],
+        candidate_diagnoses=infer_fever_respiratory_candidates(facts),
     )
 
 

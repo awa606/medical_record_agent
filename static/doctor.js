@@ -409,6 +409,8 @@ function activeExtractionInfo() {
     model: traceLlm.model || "mock-deterministic-extractor",
     fallback: Boolean(traceLlm.fallback),
     fallback_reason: traceLlm.fallback_reason || null,
+    mode: traceLlm.mode || "demo",
+    fallback_allowed: traceLlm.fallback_allowed ?? true,
     extraction_mode: "formal_record_generation",
   };
 }
@@ -496,7 +498,7 @@ function previewNoticeText() {
   const recognized = labels.length ? ` · 已识别：${labels.join("、")}` : "";
   const extraction = activeExtractionInfo();
   const extractionText = extraction
-    ? ` · 字段抽取：${extraction.actual_provider || "mock"} / ${extraction.model || "mock-deterministic-extractor"}${extraction.fallback ? "（已降级）" : ""}`
+    ? ` · 字段抽取：${extraction.actual_provider || "mock"} / ${extraction.model || "mock-deterministic-extractor"} / ${extraction.mode || "demo"}${extraction.fallback ? "（已降级）" : ""}`
     : "";
   return `实时预览，需医生确认 · ${stageLabel}${recognized}${extractionText}`;
 }
@@ -869,7 +871,7 @@ function renderPatientBar() {
   $("audioEngineSelect").value = appState.selectedEngine;
   const recordingEngineSelect = $("recordingEngineSelect");
   if (recordingEngineSelect) recordingEngineSelect.value = appState.selectedEngine;
-  $("llmProvider").textContent = llm.provider;
+  $("llmProvider").textContent = `${llm.provider} / ${llm.mode || "demo"}`;
   $("llmModel").textContent = llm.model;
   $("llmFallback").textContent = llm.fallbackLabel;
   $("reviewStatus").textContent = STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入";
@@ -963,6 +965,7 @@ function llmDisplayState() {
   const status = appState.currentLlmStatus || {};
   const provider = extraction?.requested_provider || traceLlm?.llm_provider || status.provider || "mock";
   const model = extraction?.model || traceLlm?.model || status.model || "mock-deterministic-extractor";
+  const mode = extraction?.mode || traceLlm?.mode || status.mode || "demo";
   const fallback = extraction?.fallback ?? traceLlm?.fallback ?? status.fallback ?? false;
   const checked = status.checked ?? Boolean(traceLlm);
   const configured = status.configured ?? true;
@@ -975,6 +978,7 @@ function llmDisplayState() {
   return {
     provider,
     model,
+    mode,
     fallback,
     fallbackLabel,
     fallback_reason: extraction?.fallback_reason || traceLlm?.fallback_reason || status.fallback_reason || null,
@@ -2331,6 +2335,8 @@ function buildLocalAgentTrace() {
       fallback: llmFallback,
       fallback_reason: llmFallback ? llmStatus.fallback_reason || null : null,
       actual_provider: llmFallback ? "mock" : llmStatus.provider || "mock",
+      mode: llmStatus.mode || "demo",
+      fallback_allowed: llmStatus.fallback_allowed ?? true,
     },
     plan,
     executed_steps: (appState.currentSteps || []).map((step) => ({
@@ -2388,7 +2394,7 @@ function renderAgentTraceSummary({ open = false } = {}) {
     body: `
         <div class="safety-strip"><strong>输入类型</strong><br>${escapeHtml(trace.input_type)}</div>
         <div class="safety-strip"><strong>感知结果</strong><br>${escapeHtml(perceptionText)}</div>
-        <div class="safety-strip ${llm.fallback ? "warning" : "success"}"><strong>LLM Provider</strong><br>${escapeHtml(llm.llm_provider || "mock")} / ${escapeHtml(llm.model || "mock-deterministic-extractor")}</div>
+        <div class="safety-strip ${llm.fallback ? "warning" : "success"}"><strong>LLM Provider</strong><br>${escapeHtml(llm.llm_provider || "mock")} / ${escapeHtml(llm.model || "mock-deterministic-extractor")} / ${escapeHtml(llm.mode || "demo")}</div>
         <div class="safety-strip ${llm.fallback ? "warning" : ""}"><strong>LLM Fallback</strong><br>${llm.fallback ? `已兜底：${escapeHtml(llm.fallback_reason || "unknown")}` : `未触发，latency=${escapeHtml(String(llm.latency_ms ?? "-"))}ms`}</div>
         <div class="safety-strip"><strong>计划步骤</strong><br>${escapeHtml((trace.plan || []).join(" -> "))}</div>
         <div class="safety-strip"><strong>当前状态</strong><br>${escapeHtml(decision.next_state || "-")}</div>

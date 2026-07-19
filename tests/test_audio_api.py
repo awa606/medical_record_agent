@@ -38,6 +38,20 @@ class FakeUploadFile:
 class AudioApiTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_env = {
+            key: os.environ.get(key)
+            for key in [
+                "LLM_PROVIDER",
+                "RECORD_PROVIDER_MODE",
+                "ONLINE_LLM_API_BASE",
+                "ONLINE_LLM_API_KEY",
+                "ONLINE_LLM_MODEL",
+                "OLLAMA_BASE_URL",
+                "OLLAMA_MODEL",
+            ]
+        }
+        for key in self.original_env:
+            os.environ.pop(key, None)
         os.environ["MEDICAL_RECORD_AGENT_DB"] = os.path.join(
             self.temp_dir.name,
             "audio.sqlite3",
@@ -50,6 +64,11 @@ class AudioApiTests(unittest.TestCase):
     def tearDown(self):
         os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
         os.environ.pop("MEDICAL_RECORD_AGENT_UPLOAD_DIR", None)
+        for key, value in self.original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         self.temp_dir.cleanup()
 
     def test_audio_routes_are_registered(self):
@@ -140,6 +159,18 @@ class AudioApiTests(unittest.TestCase):
         task = read_task(response["task_id"])
         self.assertEqual(task["status"], "CREATED")
         self.assertIn("[医生]", task["input_text"])
+
+    def test_generate_record_from_audio_returns_503_when_live_provider_unavailable(self):
+        uploaded = self._upload_sample("sample.wav")
+        transcribe_audio(uploaded.audio_id, engine="mock")
+        os.environ["RECORD_PROVIDER_MODE"] = "live"
+
+        with self.assertRaises(HTTPException) as raised:
+            generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertFalse(raised.exception.detail["fallback"])
+        self.assertEqual(raised.exception.detail["mode"], "live")
 
     def test_generate_record_from_audio_rejects_unmapped_speaker(self):
         uploaded = self._upload_sample("sample.wav")

@@ -143,6 +143,10 @@ def _llm_trace(result: dict[str, Any]) -> dict[str, Any]:
         "fallback": bool(trace.get("fallback", False)),
         "fallback_reason": trace.get("fallback_reason"),
         "actual_provider": trace.get("actual_provider") or trace.get("llm_provider") or "mock",
+        "mode": trace.get("mode") or "demo",
+        "fallback_allowed": bool(trace.get("fallback_allowed", True)),
+        "operation": trace.get("operation"),
+        "operations": trace.get("operations") if isinstance(trace.get("operations"), dict) else {},
     }
 
 

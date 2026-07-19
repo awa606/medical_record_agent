@@ -13,7 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, Uplo
 from fastapi.responses import FileResponse
 
 from app.agents import MedicalRecordOrchestrator
-from app.api.records import run_record_generation_task
+from app.api.records import ensure_record_provider_available, run_record_generation_task
 from app.schemas import ASREvaluationRequest, ASREvaluationResult, ASRResult, AudioRecord
 from app.services.asr import ASREvaluator, apply_manifest_role_strategy, create_asr_engine
 from app.services.asr.role_quality import attach_speaker_role_quality, build_speaker_role_quality
@@ -217,6 +217,7 @@ def generate_record_from_audio(
     if not conversation_text:
         raise HTTPException(status_code=400, detail="Transcript conversation_text is empty")
 
+    ensure_record_provider_available()
     orchestrator = MedicalRecordOrchestrator()
     task_id = orchestrator.create_text_task(conversation_text)
     background_tasks.add_task(

@@ -77,6 +77,26 @@ class SpeakerDiarizationAssistTests(unittest.TestCase):
         self.assertEqual({item.role for item in enhanced.speaker_assignments}, {"医生", "患者"})
         self.assertNotIn("待确认", {segment.role for segment in enhanced.segments})
 
+    def test_short_meaningful_third_speaker_is_not_auto_merged(self):
+        result = ASRResult(
+            audio_id="three_person_visit",
+            engine="funasr",
+            text="医生问诊，患者回答，家属补充。",
+            conversation_text="",
+            segments=[
+                ASRSegment(speaker="spk1", text="请问哪里不舒服？有没有发热？", start_time=0.0, end_time=4.0),
+                ASRSegment(speaker="spk2", text="我发热三天，头也很痛。", start_time=4.2, end_time=8.2),
+                ASRSegment(speaker="spk3", text="她昨天晚上还吐了一次。", start_time=8.4, end_time=10.1),
+            ],
+        )
+
+        enhanced = enhance_speaker_diarization(result)
+
+        self.assertEqual({segment.speaker_id for segment in enhanced.segments}, {"spk1", "spk2", "spk3"})
+        self.assertEqual(len(enhanced.speaker_assignments), 3)
+        self.assertTrue(enhanced.needs_review)
+        self.assertTrue(any(item.speaker_id == "spk3" and item.requires_confirmation for item in enhanced.speaker_assignments))
+
     def test_same_speaker_short_filler_and_answer_are_merged(self):
         result = ASRResult(
             audio_id="demo_audio",

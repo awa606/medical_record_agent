@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
-import shutil
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -20,6 +19,7 @@ from app.schemas import ASREvaluationRequest, ASREvaluationResult, ASRResult, Au
 from app.services.asr import ASREvaluator, apply_manifest_role_strategy, create_asr_engine
 from app.services.asr.role_quality import attach_speaker_role_quality, build_speaker_role_quality
 from app.services.asr.role_strategy import find_sample_config
+from app.services.runtime_limits import audio_upload_max_bytes, copy_upload_with_limit
 
 
 router = APIRouter(prefix="/audio", tags=["audio"], dependencies=[Depends(require_current_user)])
@@ -130,8 +130,11 @@ def upload_audio(file: UploadFile = File(...), request: Request = None) -> Audio
     audio_id = uuid.uuid4().hex
     filename = f"{audio_id}{extension}"
     destination = upload_dir / filename
-    with destination.open("wb") as output:
-        shutil.copyfileobj(file.file, output)
+    size_bytes = copy_upload_with_limit(
+        file.file,
+        destination,
+        max_bytes=audio_upload_max_bytes(),
+    )
 
     record = AudioRecord(
         audio_id=audio_id,
@@ -139,7 +142,7 @@ def upload_audio(file: UploadFile = File(...), request: Request = None) -> Audio
         path=str(destination),
         status="uploaded",
         content_type=getattr(file, "content_type", None),
-        size_bytes=destination.stat().st_size,
+        size_bytes=size_bytes,
         created_at=datetime.now(UTC).isoformat(),
         owner_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
     )

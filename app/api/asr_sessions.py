@@ -53,6 +53,12 @@ from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 from app.services.asr.role_quality import attach_speaker_role_quality
 from app.services.asr.speaker_role_classifier import resolve_speaker_roles
+from app.services.runtime_limits import (
+    audio_upload_max_bytes,
+    copy_upload_with_limit,
+    recording_chunk_max_bytes,
+    recording_max_seconds,
+)
 
 
 router = APIRouter(prefix="/asr/sessions", tags=["asr-sessions"], dependencies=[Depends(require_current_user)])
@@ -1235,9 +1241,11 @@ def upload_recording_chunk(
         raise HTTPException(status_code=409, detail=f"chunk_index {chunk_index} was already uploaded with a different hash")
 
     destination = _recording_chunk_path(session_id, chunk_index)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    with destination.open("wb") as output:
-        shutil.copyfileobj(file.file, output)
+    size_bytes = copy_upload_with_limit(
+        file.file,
+        destination,
+        max_bytes=recording_chunk_max_bytes(),
+    )
 
     actual_hash = _sha256_file(destination)
     if actual_hash != expected_hash:
@@ -1247,7 +1255,7 @@ def upload_recording_chunk(
     chunks[chunk_key] = {
         "sha256": actual_hash,
         "path": str(destination),
-        "size_bytes": destination.stat().st_size,
+        "size_bytes": size_bytes,
         "duration_seconds": duration_seconds,
         "received_at": _now(),
     }
@@ -1263,7 +1271,7 @@ def upload_recording_chunk(
             "status": "recording_chunk_received",
             "chunk_index": chunk_index,
             "sha256": actual_hash,
-            "size_bytes": destination.stat().st_size,
+            "size_bytes": size_bytes,
             "duration_seconds": duration_seconds,
         },
     )
@@ -1314,6 +1322,9 @@ def complete_recording_chunks(
     destination = upload_dir / f"{audio_id}.wav"
     chunk_paths = [_recording_chunk_path(session_id, index) for index in ordered_indices]
     duration = _combine_wav_chunks(chunk_paths, destination)
+    if duration is not None and duration > recording_max_seconds():
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=413, detail="Recording duration exceeds the configured maximum")
 
     filename = f"browser-recording-{session_id[:8]}.wav"
     record = AudioRecord(
@@ -2136,8 +2147,15 @@ def upload_asr_session_audio(
 
     audio_id = uuid.uuid4().hex
     destination = upload_dir / f"{audio_id}{extension}"
-    with destination.open("wb") as output:
-        shutil.copyfileobj(file.file, output)
+    size_bytes = copy_upload_with_limit(
+        file.file,
+        destination,
+        max_bytes=audio_upload_max_bytes(),
+    )
+    duration_seconds = _audio_duration_for_chunking(destination)
+    if duration_seconds is not None and duration_seconds > recording_max_seconds():
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=413, detail="Audio duration exceeds the configured maximum")
 
     record = AudioRecord(
         audio_id=audio_id,
@@ -2145,7 +2163,7 @@ def upload_asr_session_audio(
         path=str(destination),
         status="uploaded",
         content_type=getattr(file, "content_type", None),
-        size_bytes=destination.stat().st_size,
+        size_bytes=size_bytes,
         created_at=_now(),
         owner_user_id=session.owner_user_id,
     )
@@ -2191,7 +2209,7 @@ def upload_asr_session_audio(
         events_url=current_session.events_url or f"/api/asr/sessions/{session_id}/events",
         result_url=current_session.result_url or f"/api/asr/sessions/{session_id}/result",
         media_url=f"/api/audio/{audio_id}/media",
-        duration_seconds=_audio_duration_for_chunking(destination),
+        duration_seconds=duration_seconds,
     )
 
 

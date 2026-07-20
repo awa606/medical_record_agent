@@ -13,6 +13,7 @@ from app.api import (
     capabilities_router,
     llm_router,
     records_router,
+    runtime_router,
     speaker_profiles_router,
     tasks_router,
 )
@@ -43,6 +44,7 @@ app.include_router(llm_router, prefix="/api")
 app.include_router(records_router, prefix="/api")
 app.include_router(speaker_profiles_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
+app.include_router(runtime_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

@@ -7,6 +7,7 @@ const appState = {
   provisionalTranscriptSegments: [],
   currentEvaluation: null,
   currentTask: null,
+  currentEncounter: null,
   currentSteps: [],
   currentRecordFields: null,
   currentDraft: "",
@@ -103,6 +104,9 @@ const appState = {
   authUser: null,
   authStatus: "unknown",
   authMessage: "",
+  encounterWorklist: [],
+  encounterWorklistStatus: "idle",
+  encounterWorklistError: "",
 };
 
 const RECORD_PREVIEW_MIN_CHARS = 10;
@@ -367,6 +371,143 @@ async function refreshExportReadiness() {
   } catch (error) {
     appState.currentExportReadiness = null;
     return null;
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function encounterStatusLabel(status) {
+  const labels = {
+    draft: "草稿",
+    modified: "已修改",
+    pending_review: "待审核",
+    approved: "已批准",
+    exported: "已导出",
+  };
+  return labels[status] || status || "未开始";
+}
+
+function renderEncounterWorklistPanel() {
+  const list = $("encounterWorklist");
+  if (!list) return;
+  if (appState.encounterWorklistStatus === "loading") {
+    list.innerHTML = `<div class="empty-state">正在加载今日就诊...</div>`;
+    return;
+  }
+  if (appState.encounterWorklistError) {
+    list.innerHTML = `<div class="safety-strip danger">${escapeHtml(appState.encounterWorklistError)}</div>`;
+    return;
+  }
+  const items = appState.encounterWorklist || [];
+  if (!items.length) {
+    list.innerHTML = `<div class="empty-state">暂无可恢复的就诊记录。</div>`;
+    return;
+  }
+  const rows = items.map((item) => {
+    const active = appState.currentEncounter?.id === item.id;
+    const patient = item.patient_display_name || item.patient_deidentified_id || `Encounter ${item.id}`;
+    const status = encounterStatusLabel(item.status || item.task_current_stage);
+    return `
+      <article class="encounter-worklist-item ${active ? "active" : ""}">
+        <div>
+          <strong>${escapeHtml(patient)}</strong>
+          <span>${escapeHtml(item.patient_deidentified_id || "-")}</span>
+          <small>更新 ${escapeHtml(formatDateTime(item.updated_at || item.created_at))} · 版本 ${escapeHtml(item.current_revision_id || "-")} · Task ${escapeHtml(item.task_id || "-")}</small>
+        </div>
+        <div class="encounter-worklist-actions">
+          <span class="status-badge ${active ? "confirmed" : "neutral"}">${escapeHtml(status)}</span>
+          <button type="button" data-restore-encounter="${escapeHtml(item.id)}">${active ? "已打开" : "继续编辑"}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+  const revisions = appState.currentEncounter?.revisions || [];
+  const revisionHistory = revisions.length ? `
+    <section class="encounter-revision-history">
+      <h3>当前就诊版本</h3>
+      ${revisions.map((revision) => `
+        <div class="encounter-revision-row">
+          <strong>v${escapeHtml(revision.revision_no || "-")}</strong>
+          <span>${escapeHtml(revision.source || "-")} · ${escapeHtml(formatDateTime(revision.created_at))}</span>
+        </div>
+      `).join("")}
+    </section>
+  ` : "";
+  list.innerHTML = rows + revisionHistory;
+}
+
+async function refreshEncounterWorklist() {
+  appState.encounterWorklistStatus = "loading";
+  appState.encounterWorklistError = "";
+  renderEncounterWorklistPanel();
+  const query = $("encounterSearchInput")?.value?.trim() || "";
+  const status = $("encounterStatusFilter")?.value || "";
+  const mine = appState.authUser?.role === "admin" ? "false" : "true";
+  const params = new URLSearchParams({ mine });
+  if (query) params.set("q", query);
+  if (status) params.set("status", status);
+  try {
+    const data = await api(`/api/encounters?${params.toString()}`);
+    appState.encounterWorklist = data.encounters || [];
+    appState.encounterWorklistStatus = "ready";
+  } catch (error) {
+    appState.encounterWorklist = [];
+    appState.encounterWorklistStatus = "error";
+    appState.encounterWorklistError = error?.message || "无法加载就诊列表";
+  }
+  renderEncounterWorklistPanel();
+}
+
+async function openEncounterWorklist() {
+  openDrawer("encounterWorklistPanel", "今日就诊");
+  await refreshEncounterWorklist();
+}
+
+function applyEncounterDetail(detail) {
+  resetTaskState();
+  appState.currentEncounter = detail;
+  const task = detail?.task || null;
+  const result = task?.result_json || {};
+  appState.currentTask = task;
+  appState.currentTaskId = task?.id || null;
+  appState.taskStatus = task?.current_stage || task?.status || detail?.status || "draft";
+  appState.currentRecordFields = result.fields || null;
+  appState.currentDraft = result.draft || "";
+  appState.currentSafetyCheck = result.safety_check || null;
+  appState.currentQualityReport = result.quality_report || null;
+  appState.currentExports = result.exports || null;
+  appState.currentExportReadiness = null;
+  appState.currentInputText = "";
+}
+
+async function restoreEncounter(encounterId) {
+  if (!encounterId) return;
+  setBusy(true, "正在恢复就诊草稿...");
+  try {
+    const detail = await api(`/api/encounters/${encodeURIComponent(encounterId)}`);
+    applyEncounterDetail(detail);
+    if (appState.currentTaskId) {
+      await refreshTask(appState.currentTaskId, appState.currentTask);
+      await refreshExportReadiness();
+    }
+    await refreshEncounterWorklist();
+    closeDrawer();
+    showToast("已恢复就诊草稿");
+  } catch (error) {
+    reportActionError(error);
+  } finally {
+    setBusy(false);
+    renderAll();
   }
 }
 
@@ -950,7 +1091,7 @@ function openDetailDrawer(title, html) {
 
 function renderPatientBar() {
   const llm = llmDisplayState();
-  $("patientName").textContent = "模拟患者";
+  $("patientName").textContent = appState.currentEncounter?.patient_display_name || "模拟患者";
   $("patientProfile").textContent = "女 / 32岁";
   $("sessionId").textContent = appState.currentTaskId
     ? `T-${appState.currentTaskId}`
@@ -959,8 +1100,10 @@ function renderPatientBar() {
       : appState.currentAudioId
         ? `A-${appState.currentAudioId}`
         : "未创建";
-  $("recordingStatus").textContent = appState.uploadedFilename
-    || (appState.currentAudioId ? "音频已上传" : appState.currentInputText ? "输入方式：文本" : "未上传");
+  $("recordingStatus").textContent = appState.currentEncounter?.id
+    ? `就诊 ${appState.currentEncounter.id} · ${encounterStatusLabel(appState.currentEncounter.status)}`
+    : appState.uploadedFilename
+      || (appState.currentAudioId ? "音频已上传" : appState.currentInputText ? "输入方式：文本" : "未上传");
   $("topAsrEngineSelect").value = appState.selectedEngine;
   $("audioEngineSelect").value = appState.selectedEngine;
   const recordingEngineSelect = $("recordingEngineSelect");
@@ -3157,6 +3300,7 @@ function renderAll() {
   renderInputMethodMenu();
   renderDisplaySettingsMenu();
   renderPatientBar();
+  renderEncounterWorklistPanel();
   renderBrowserRecordingPanel();
   renderRunContext();
   renderStartGuide();
@@ -3207,6 +3351,7 @@ function resetTaskState({ keepAsr = false } = {}) {
   appState.currentTaskId = null;
   appState.currentEvaluation = null;
   appState.currentTask = null;
+  appState.currentEncounter = null;
   appState.currentSteps = [];
   appState.currentRecordFields = null;
   appState.currentDraft = "";
@@ -4701,6 +4846,9 @@ function bindEvents() {
     event.stopPropagation();
     toggleDisplaySettingsMenu();
   });
+  $("openWorklistButton").addEventListener("click", () => {
+    openEncounterWorklist();
+  });
   $("inputMethodMenu").addEventListener("click", (event) => {
     const button = event.target.closest("[data-input-method]");
     if (!button) return;
@@ -4723,6 +4871,22 @@ function bindEvents() {
   $("copyRunLogCommandButton").addEventListener("click", copyRunLogCommand);
   $("closeDrawerButton").addEventListener("click", closeDrawer);
   $("drawerBackdrop").addEventListener("click", closeDrawer);
+  $("refreshWorklistButton").addEventListener("click", () => {
+    refreshEncounterWorklist();
+  });
+  $("encounterSearchInput").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    refreshEncounterWorklist();
+  });
+  $("encounterStatusFilter").addEventListener("change", () => {
+    refreshEncounterWorklist();
+  });
+  $("encounterWorklist").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-restore-encounter]");
+    if (!button) return;
+    await restoreEncounter(button.dataset.restoreEncounter);
+  });
   $("submitTextButton").addEventListener("click", submitTextImport);
   $("submitAudioButton").addEventListener("click", submitAudio);
   $("startBrowserRecordingButton").addEventListener("click", startBrowserRecording);

@@ -1351,6 +1351,96 @@ body.screenshot-mode .debug-tools {
   gap: 8px;
 }
 
+.worklist-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 160px) auto;
+  gap: 10px;
+}
+
+.worklist-toolbar input,
+.worklist-toolbar select {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.worklist-toolbar button,
+.encounter-worklist-actions button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: #fff;
+  font-weight: 800;
+}
+
+.encounter-worklist {
+  display: grid;
+  gap: 10px;
+}
+
+.encounter-worklist-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.encounter-worklist-item.active {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.encounter-worklist-item strong,
+.encounter-worklist-item span,
+.encounter-worklist-item small {
+  display: block;
+}
+
+.encounter-worklist-item span,
+.encounter-worklist-item small {
+  color: var(--muted);
+}
+
+.encounter-worklist-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.encounter-revision-history {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--surface-soft);
+}
+
+.encounter-revision-history h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.encounter-revision-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.encounter-revision-row span {
+  color: var(--muted);
+}
+
 #debugPanel details {
   border: 1px solid var(--line);
   border-radius: 12px;

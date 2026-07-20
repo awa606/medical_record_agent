@@ -66,6 +66,7 @@
         </section>
         <nav class="top-actions" aria-label="全局操作">
           <a href="./index.html">首页</a>
+          <button type="button" id="openWorklistButton">今日就诊</button>
           <div class="input-method-menu">
             <button type="button" class="primary-action" id="inputMethodButton" aria-expanded="false" aria-controls="inputMethodMenu">输入方式</button>
             <div id="inputMethodMenu" class="input-method-popover" hidden>
@@ -279,6 +280,23 @@
         <h2 id="drawerTitle">抽屉</h2>
         <button type="button" id="closeDrawerButton">关闭</button>
       </header>
+
+      <section id="encounterWorklistPanel" class="drawer-panel">
+        <p class="form-help">查看当前账号可访问的就诊记录，恢复未完成草稿或继续审核。</p>
+        <div class="worklist-toolbar">
+          <input id="encounterSearchInput" type="search" placeholder="搜索患者脱敏标识" aria-label="搜索就诊" />
+          <select id="encounterStatusFilter" aria-label="筛选就诊状态">
+            <option value="">全部状态</option>
+            <option value="pending_review">待审核</option>
+            <option value="approved">已批准</option>
+            <option value="exported">已导出</option>
+            <option value="draft">草稿</option>
+            <option value="modified">已修改</option>
+          </select>
+          <button type="button" id="refreshWorklistButton">刷新</button>
+        </div>
+        <div id="encounterWorklist" class="encounter-worklist" aria-live="polite"></div>
+      </section>
 
       <section id="textImportPanel" class="drawer-panel">
         <p class="form-help">粘贴人工问诊文本后调用 <code>POST /api/records/generate</code> 生成病历。</p>

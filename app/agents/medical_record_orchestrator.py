@@ -5,6 +5,7 @@ from typing import Any, Callable, TypeVar
 
 from app.db import (
     create_audit_log,
+    create_record_revision_for_task,
     create_task,
     create_task_step,
     finish_task_step,
@@ -120,6 +121,12 @@ class MedicalRecordOrchestrator:
 
             self._set_status(self.STATUS_WAITING_DOCTOR_REVIEW, "doctor_review")
             self._persist_result()
+            create_record_revision_for_task(
+                task_id,
+                self._result_payload(),
+                source="generation",
+                workflow_status="pending_review",
+            )
             return self._result()
         except Exception as exc:
             self.error_message = str(exc)

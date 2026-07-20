@@ -9,7 +9,18 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
-from app.db import create_audit_log, get_audit_logs, get_task, get_task_steps, json_dumps, update_task
+from app.db import (
+    create_approval_for_task,
+    create_audit_log,
+    create_export_event_for_task,
+    create_record_revision_for_task,
+    get_active_approval_for_task,
+    get_audit_logs,
+    get_task,
+    get_task_steps,
+    json_dumps,
+    update_task,
+)
 from app.schemas import MedicalRecordFields, SafetyCheckResult
 from app.services import LLMProviderUnavailableError, create_llm_record_generator, export_record
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
@@ -163,6 +174,7 @@ def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -
     result["safety_check"] = safety_check.model_dump()
     result["llm_trace"] = generator.get_trace()
     result["reviewed"] = True
+    result["approved"] = False
 
     _save_task_result(
         task_id,
@@ -172,6 +184,13 @@ def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -
         event_detail={"task_id": task_id},
         request=request,
     )
+    create_record_revision_for_task(
+        task_id,
+        result,
+        actor_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
+        source="doctor_review",
+        workflow_status="modified",
+    )
     task["result_json"] = result
     task["current_stage"] = "reviewed"
     return task
@@ -180,6 +199,8 @@ def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -
 @router.post("/{task_id}/approve")
 def approve_task(task_id: int, request: Request = None) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request)
+    if task.get("current_stage") == "approved" and get_active_approval_for_task(task_id) is not None:
+        raise HTTPException(status_code=409, detail="Current record revision is already approved")
     fields = MedicalRecordFields.model_validate(result["fields"])
 
     for field in _iter_medical_fields(fields):
@@ -189,6 +210,31 @@ def approve_task(task_id: int, request: Request = None) -> dict[str, Any]:
 
     result["fields"] = fields.model_dump()
     result["approved"] = True
+    revision = create_record_revision_for_task(
+        task_id,
+        result,
+        actor_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
+        source="doctor_approval",
+        workflow_status="approved",
+    )
+    try:
+        approval = create_approval_for_task(
+            task_id,
+            actor_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    result["record_revision"] = {
+        "id": revision["id"],
+        "revision_no": revision["revision_no"],
+        "source": revision["source"],
+    }
+    result["approval"] = {
+        "id": approval["id"],
+        "revision_id": approval["revision_id"],
+        "approved_by_user_id": approval["approved_by_user_id"],
+        "created_at": approval["created_at"],
+    }
 
     _save_task_result(
         task_id,
@@ -206,10 +252,12 @@ def approve_task(task_id: int, request: Request = None) -> dict[str, Any]:
 @router.post("/{task_id}/export")
 def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request)
+    approval = get_active_approval_for_task(task_id)
     readiness = _build_export_readiness(
         task_id,
         result,
         current_stage=task.get("current_stage"),
+        active_approval=approval,
     )
     if readiness["errors"]:
         raise HTTPException(status_code=400, detail=readiness)
@@ -225,6 +273,19 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"导出失败：{exc}") from exc
 
     result["exports"] = exports
+    export_event = create_export_event_for_task(
+        task_id,
+        approval_id=int(approval["id"]),
+        actor_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
+        exports=exports,
+    )
+    result["export_event"] = {
+        "id": export_event["id"],
+        "revision_id": export_event["revision_id"],
+        "approval_id": export_event["approval_id"],
+        "exported_by_user_id": export_event["exported_by_user_id"],
+        "created_at": export_event["created_at"],
+    }
     _save_task_result(
         task_id,
         result,
@@ -239,6 +300,7 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
         task_id,
         result,
         current_stage="exported",
+        active_approval=approval,
     )
     return {"task_id": task_id, "exports": exports, "export_readiness": export_readiness}
 
@@ -251,6 +313,7 @@ def read_export_readiness(task_id: int, request: Request = None) -> ExportReadin
             task_id,
             result,
             current_stage=task.get("current_stage"),
+            active_approval=get_active_approval_for_task(task_id),
         )
     )
 
@@ -319,8 +382,11 @@ def _build_export_readiness(
     result: dict[str, Any],
     *,
     current_stage: str | None = None,
+    active_approval: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     errors = _validate_export_ready(result)
+    if active_approval is None:
+        errors.append("病历尚未完成医生批准，禁止导出。")
     exports = result.get("exports")
     if not isinstance(exports, dict):
         exports = None

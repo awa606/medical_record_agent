@@ -334,7 +334,7 @@
       </section>
 
       <section id="recordingPanel" class="drawer-panel">
-        <p class="form-help">使用浏览器麦克风录制 60 秒以内 WAV 音频，完成试听后复用 ASR 转写和病历生成流程。</p>
+        <p class="form-help">使用浏览器麦克风录制最长 30 分钟 WAV 音频，支持暂停/恢复、分块上传、刷新后按 session 恢复转写。</p>
         <select id="recordingEngineSelect">
           <option value="funasr" selected>FunASR</option>
           <option value="sensevoice">SenseVoice Small</option>
@@ -350,10 +350,13 @@
           </div>
           <div class="recording-actions">
             <button type="button" class="primary-action" id="startBrowserRecordingButton">开始录音</button>
+            <button type="button" id="pauseBrowserRecordingButton">暂停</button>
+            <button type="button" id="resumeBrowserRecordingButton">恢复</button>
             <button type="button" id="stopBrowserRecordingButton">停止</button>
             <button type="button" class="danger-action" id="cancelBrowserRecordingButton">取消</button>
           </div>
           <audio id="browserRecordingPreview" controls preload="metadata"></audio>
+          <div id="browserRecordingChunkStatus" class="recording-chunk-status"></div>
           <div id="browserRecordingMessage" class="recording-message"></div>
         </div>
         <button type="button" class="primary-action wide-action" id="submitBrowserRecordingButton">上传并生成病历</button>

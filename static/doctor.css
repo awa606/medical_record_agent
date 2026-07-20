@@ -5026,7 +5026,7 @@ body.care-mode .transcript-list,
 
 .recording-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -5044,6 +5044,13 @@ body.care-mode .transcript-list,
   color: #64748b;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.recording-chunk-status {
+  min-height: 18px;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .recording-message.error {

@@ -1,8 +1,11 @@
 import asyncio
+import hashlib
+import io
 import os
 import tempfile
 import time
 import unittest
+import wave
 from pathlib import Path
 from unittest.mock import patch
 
@@ -188,6 +191,21 @@ def fake_audio_chunks() -> list[AudioChunk]:
     ]
 
 
+def browser_wav_bytes(frame_count: int = 1600, sample_rate: int = 16000, amplitude: int = 1200) -> bytes:
+    output = io.BytesIO()
+    with wave.open(output, "wb") as writer:
+        writer.setnchannels(1)
+        writer.setsampwidth(2)
+        writer.setframerate(sample_rate)
+        frame = int(amplitude).to_bytes(2, "little", signed=True)
+        writer.writeframes(frame * frame_count)
+    return output.getvalue()
+
+
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
 class ASRSessionApiTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -211,8 +229,99 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("/api/asr/sessions", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/audio", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/chunks", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/chunks/status", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/complete", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/events", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/result", route_paths)
+
+    def test_browser_recording_chunks_are_idempotent_and_complete_to_asr_result(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session = client.post("/api/asr/sessions?engine=mock").json()
+        session_id = session["session_id"]
+
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "0",
+                "sha256": sha256_bytes(chunk_zero),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-0.wav", chunk_zero, "audio/wav")},
+        )
+        self.assertEqual(upload.status_code, 200, upload.text)
+        self.assertFalse(upload.json()["duplicate"])
+        self.assertEqual(upload.json()["chunk_count"], 1)
+        self.assertEqual(upload.json()["next_chunk_index"], 1)
+
+        duplicate = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "0",
+                "sha256": sha256_bytes(chunk_zero),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-0.wav", chunk_zero, "audio/wav")},
+        )
+        self.assertEqual(duplicate.status_code, 200, duplicate.text)
+        self.assertTrue(duplicate.json()["duplicate"])
+        self.assertEqual(duplicate.json()["chunk_count"], 1)
+
+        conflicting = browser_wav_bytes(amplitude=2000)
+        conflict = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "0",
+                "sha256": sha256_bytes(conflicting),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-0.wav", conflicting, "audio/wav")},
+        )
+        self.assertEqual(conflict.status_code, 409)
+
+        chunk_one = browser_wav_bytes(amplitude=1500)
+        second = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "1",
+                "sha256": sha256_bytes(chunk_one),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-1.wav", chunk_one, "audio/wav")},
+        )
+        self.assertEqual(second.status_code, 200, second.text)
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["chunk_count"], 2)
+        self.assertEqual(status.json()["next_chunk_index"], 2)
+
+        completed = client.post(f"/api/asr/sessions/{session_id}/complete")
+        self.assertEqual(completed.status_code, 200, completed.text)
+        self.assertEqual(completed.json()["status"], "transcribing")
+        result = client.get(f"/api/asr/sessions/{session_id}/result")
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertIn("蛇咬伤", result.json()["text"])
+
+    def test_browser_recording_complete_rejects_missing_chunk_gap(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_one = browser_wav_bytes()
+        upload = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "1",
+                "sha256": sha256_bytes(chunk_one),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-1.wav", chunk_one, "audio/wav")},
+        )
+        self.assertEqual(upload.status_code, 200, upload.text)
+
+        completed = client.post(f"/api/asr/sessions/{session_id}/complete")
+        self.assertEqual(completed.status_code, 409)
 
     def test_session_accepts_doctor_profile_and_diarization_engine(self):
         session = create_asr_session(

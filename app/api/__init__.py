@@ -1,4 +1,5 @@
 from app.api.auth import router as auth_router
+from app.api.encounters import router as encounters_router
 from app.api.llm import router as llm_router
 from app.api.capabilities import router as capabilities_router
 from app.api.audio import router as audio_router
@@ -12,6 +13,7 @@ __all__ = [
     "asr_sessions_router",
     "asr_prewarm_router",
     "auth_router",
+    "encounters_router",
     "audio_router",
     "capabilities_router",
     "llm_router",

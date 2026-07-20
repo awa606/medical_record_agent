@@ -485,6 +485,122 @@ def get_task_encounter(task_id: int) -> dict[str, Any] | None:
     return row_to_dict(row)
 
 
+def create_encounter(
+    *,
+    doctor_user_id: int | None,
+    deidentified_id: str,
+    display_name: str | None = None,
+) -> dict[str, Any]:
+    init_db()
+    now = utc_now()
+    with closing(get_connection()) as connection:
+        patient = connection.execute(
+            "SELECT * FROM patient WHERE deidentified_id = ?",
+            (deidentified_id,),
+        ).fetchone()
+        if patient is None:
+            cursor = connection.execute(
+                """
+                INSERT INTO patient (
+                    deidentified_id, display_name, created_by_user_id, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (deidentified_id, display_name or deidentified_id, doctor_user_id, now, now),
+            )
+            patient_id = int(cursor.lastrowid)
+        else:
+            patient_id = int(patient["id"])
+        cursor = connection.execute(
+            """
+            INSERT INTO encounter (
+                patient_id, doctor_user_id, task_id, status,
+                current_revision_id, created_at, updated_at
+            )
+            VALUES (?, ?, NULL, 'draft', NULL, ?, ?)
+            """,
+            (patient_id, doctor_user_id, now, now),
+        )
+        encounter_id = int(cursor.lastrowid)
+        connection.commit()
+    return get_encounter(encounter_id) or {}
+
+
+def get_encounter(encounter_id: int) -> dict[str, Any] | None:
+    init_db()
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            """
+            SELECT e.*, p.deidentified_id AS patient_deidentified_id,
+                   p.display_name AS patient_display_name,
+                   t.status AS task_status,
+                   t.current_stage AS task_current_stage,
+                   t.result_json AS task_result_json
+            FROM encounter e
+            JOIN patient p ON p.id = e.patient_id
+            LEFT JOIN agent_task t ON t.id = e.task_id
+            WHERE e.id = ?
+            """,
+            (encounter_id,),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def list_encounters(
+    *,
+    user_id: int,
+    role: str,
+    status: str | None = None,
+    mine: bool = True,
+    q: str | None = None,
+) -> list[dict[str, Any]]:
+    init_db()
+    clauses: list[str] = []
+    params: list[Any] = []
+    if status:
+        clauses.append("e.status = ?")
+        params.append(status)
+    if role != "admin" or mine:
+        clauses.append("e.doctor_user_id = ?")
+        params.append(user_id)
+    if q:
+        like = f"%{q}%"
+        clauses.append(
+            "(p.deidentified_id LIKE ? OR p.display_name LIKE ? OR CAST(e.task_id AS TEXT) LIKE ?)"
+        )
+        params.extend([like, like, like])
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    query = f"""
+        SELECT e.*, p.deidentified_id AS patient_deidentified_id,
+               p.display_name AS patient_display_name,
+               t.status AS task_status,
+               t.current_stage AS task_current_stage
+        FROM encounter e
+        JOIN patient p ON p.id = e.patient_id
+        LEFT JOIN agent_task t ON t.id = e.task_id
+        {where}
+        ORDER BY e.updated_at DESC, e.id DESC
+    """
+    with closing(get_connection()) as connection:
+        rows = connection.execute(query, params).fetchall()
+    return [dict(row) for row in rows]
+
+
+def list_record_revisions_for_encounter(encounter_id: int) -> list[dict[str, Any]]:
+    init_db()
+    with closing(get_connection()) as connection:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM record_revision
+            WHERE encounter_id = ?
+            ORDER BY revision_no ASC
+            """,
+            (encounter_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def list_record_revisions_for_task(task_id: int) -> list[dict[str, Any]]:
     init_db()
     with closing(get_connection()) as connection:

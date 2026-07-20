@@ -43,7 +43,7 @@ jobs:
       - name: Check doctor frontend JavaScript
         run: node --check static/doctor.js
 
-      - name: Check service health endpoint
+      - name: Check service health and readiness endpoints
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
@@ -58,13 +58,15 @@ jobs:
           for _ in range(30):
               try:
                   with urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=2) as response:
-                      payload = json.loads(response.read().decode("utf-8"))
-                  if payload.get("status") == "ok":
+                      health = json.loads(response.read().decode("utf-8"))
+                  with urllib.request.urlopen("http://127.0.0.1:8000/ready", timeout=2) as response:
+                      ready = json.loads(response.read().decode("utf-8"))
+                  if health.get("status") == "ok" and ready.get("status") == "ready":
                       raise SystemExit(0)
-                  last_error = f"unexpected payload: {payload!r}"
+                  last_error = f"unexpected payload: health={health!r}, ready={ready!r}"
               except Exception as exc:  # noqa: BLE001
                   last_error = str(exc)
                   time.sleep(1)
-          raise SystemExit(f"/health did not become ready: {last_error}")
+          raise SystemExit(f"/health or /ready did not become ready: {last_error}")
           PY
           kill "$APP_PID"

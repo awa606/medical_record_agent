@@ -27,7 +27,12 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 
 COPY . .
 
-RUN mkdir -p /app/runtime/uploads /app/runtime/outputs /app/model_cache/hf /app/model_cache/modelscope
+RUN mkdir -p /app/runtime/uploads /app/runtime/outputs /app/runtime/speaker_profiles /app/model_cache/hf /app/model_cache/modelscope \
+    && groupadd --system appuser \
+    && useradd --system --gid appuser --home /app appuser \
+    && chown -R appuser:appuser /app/runtime /app/model_cache
+
+USER appuser
 
 EXPOSE 8000
 

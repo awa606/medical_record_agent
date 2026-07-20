@@ -93,6 +93,75 @@ def init_db() -> None:
                 revoked_at TEXT,
                 FOREIGN KEY(user_id) REFERENCES auth_user(id)
             );
+
+            CREATE TABLE IF NOT EXISTS patient (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                deidentified_id TEXT NOT NULL UNIQUE,
+                display_name TEXT,
+                created_by_user_id INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS encounter (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL,
+                doctor_user_id INTEGER,
+                task_id INTEGER,
+                status TEXT NOT NULL,
+                current_revision_id INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(patient_id) REFERENCES patient(id),
+                FOREIGN KEY(task_id) REFERENCES agent_task(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS record_revision (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                encounter_id INTEGER NOT NULL,
+                task_id INTEGER,
+                revision_no INTEGER NOT NULL,
+                source TEXT NOT NULL,
+                fields_json TEXT,
+                draft_text TEXT,
+                safety_check_json TEXT,
+                quality_report_json TEXT,
+                result_json TEXT,
+                created_by_user_id INTEGER,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(encounter_id) REFERENCES encounter(id),
+                FOREIGN KEY(task_id) REFERENCES agent_task(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS approval (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                encounter_id INTEGER NOT NULL,
+                revision_id INTEGER NOT NULL,
+                task_id INTEGER,
+                approved_by_user_id INTEGER,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                invalidated_at TEXT,
+                invalidation_reason TEXT,
+                FOREIGN KEY(encounter_id) REFERENCES encounter(id),
+                FOREIGN KEY(revision_id) REFERENCES record_revision(id),
+                FOREIGN KEY(task_id) REFERENCES agent_task(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS export_event (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                encounter_id INTEGER NOT NULL,
+                revision_id INTEGER NOT NULL,
+                approval_id INTEGER NOT NULL,
+                task_id INTEGER,
+                exported_by_user_id INTEGER,
+                exports_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(encounter_id) REFERENCES encounter(id),
+                FOREIGN KEY(revision_id) REFERENCES record_revision(id),
+                FOREIGN KEY(approval_id) REFERENCES approval(id),
+                FOREIGN KEY(task_id) REFERENCES agent_task(id)
+            );
             """
         )
         _migrate_schema(connection)
@@ -105,6 +174,8 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, "agent_task", "retry_count", "INTEGER NOT NULL DEFAULT 0")
     _ensure_column(connection, "agent_task", "completed_at", "TEXT")
     _ensure_column(connection, "agent_task", "owner_user_id", "INTEGER")
+    _ensure_column(connection, "agent_task", "encounter_id", "INTEGER")
+    _ensure_column(connection, "agent_task", "current_record_revision_id", "INTEGER")
     _ensure_column(connection, "agent_task_step", "attempt_no", "INTEGER NOT NULL DEFAULT 1")
     _ensure_column(connection, "agent_task_step", "input_snapshot_json", "TEXT")
     _ensure_column(connection, "agent_task_step", "output_snapshot_json", "TEXT")
@@ -217,6 +288,342 @@ def set_task_owner(task_id: int, owner_user_id: int | None) -> None:
             (owner_user_id, utc_now(), task_id),
         )
         connection.commit()
+
+
+def _update_task_workflow_links(
+    connection: sqlite3.Connection,
+    *,
+    task_id: int,
+    encounter_id: int | None = None,
+    revision_id: int | None = None,
+) -> None:
+    connection.execute(
+        """
+        UPDATE agent_task
+        SET encounter_id = COALESCE(?, encounter_id),
+            current_record_revision_id = COALESCE(?, current_record_revision_id),
+            updated_at = ?
+        WHERE id = ?
+        """,
+        (encounter_id, revision_id, utc_now(), task_id),
+    )
+
+
+def ensure_task_encounter(
+    task_id: int,
+    *,
+    actor_user_id: int | None = None,
+    patient_label: str | None = None,
+) -> dict[str, Any]:
+    init_db()
+    with closing(get_connection()) as connection:
+        task = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
+        if task is None:
+            raise ValueError(f"Task not found: {task_id}")
+        if task["encounter_id"] is not None:
+            encounter = connection.execute(
+                "SELECT * FROM encounter WHERE id = ?",
+                (task["encounter_id"],),
+            ).fetchone()
+            if encounter is not None:
+                return dict(encounter)
+
+        now = utc_now()
+        doctor_user_id = actor_user_id if actor_user_id is not None else task["owner_user_id"]
+        deidentified_id = f"SIM-{task_id:06d}"
+        display_name = patient_label or "模拟患者"
+        patient = connection.execute(
+            "SELECT * FROM patient WHERE deidentified_id = ?",
+            (deidentified_id,),
+        ).fetchone()
+        if patient is None:
+            cursor = connection.execute(
+                """
+                INSERT INTO patient (
+                    deidentified_id, display_name, created_by_user_id, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (deidentified_id, display_name, actor_user_id, now, now),
+            )
+            patient_id = int(cursor.lastrowid)
+        else:
+            patient_id = int(patient["id"])
+
+        cursor = connection.execute(
+            """
+            INSERT INTO encounter (
+                patient_id, doctor_user_id, task_id, status,
+                current_revision_id, created_at, updated_at
+            )
+            VALUES (?, ?, ?, 'draft', NULL, ?, ?)
+            """,
+            (patient_id, doctor_user_id, task_id, now, now),
+        )
+        encounter_id = int(cursor.lastrowid)
+        _update_task_workflow_links(connection, task_id=task_id, encounter_id=encounter_id)
+        connection.commit()
+        encounter = connection.execute("SELECT * FROM encounter WHERE id = ?", (encounter_id,)).fetchone()
+        return dict(encounter)
+
+
+def _invalidate_active_approvals(
+    connection: sqlite3.Connection,
+    *,
+    encounter_id: int,
+    reason: str,
+) -> int:
+    now = utc_now()
+    cursor = connection.execute(
+        """
+        UPDATE approval
+        SET status = 'invalidated',
+            invalidated_at = ?,
+            invalidation_reason = ?
+        WHERE encounter_id = ?
+          AND invalidated_at IS NULL
+          AND status = 'active'
+        """,
+        (now, reason, encounter_id),
+    )
+    return int(cursor.rowcount or 0)
+
+
+def create_record_revision_for_task(
+    task_id: int,
+    result: dict[str, Any],
+    *,
+    actor_user_id: int | None = None,
+    source: str,
+    workflow_status: str,
+    invalidate_approvals: bool = True,
+) -> dict[str, Any]:
+    init_db()
+    with closing(get_connection()) as connection:
+        task = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
+        if task is None:
+            raise ValueError(f"Task not found: {task_id}")
+        encounter = ensure_task_encounter(task_id, actor_user_id=actor_user_id)
+        encounter_id = int(encounter["id"])
+        if invalidate_approvals:
+            _invalidate_active_approvals(
+                connection,
+                encounter_id=encounter_id,
+                reason=f"new_revision:{source}",
+            )
+
+        row = connection.execute(
+            "SELECT COALESCE(MAX(revision_no), 0) AS max_revision FROM record_revision WHERE encounter_id = ?",
+            (encounter_id,),
+        ).fetchone()
+        revision_no = int(row["max_revision"]) + 1 if row is not None else 1
+        now = utc_now()
+        cursor = connection.execute(
+            """
+            INSERT INTO record_revision (
+                encounter_id, task_id, revision_no, source, fields_json,
+                draft_text, safety_check_json, quality_report_json,
+                result_json, created_by_user_id, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                encounter_id,
+                task_id,
+                revision_no,
+                source,
+                json_or_none(result.get("fields")),
+                result.get("draft"),
+                json_or_none(result.get("safety_check")),
+                json_or_none(result.get("quality_report")),
+                json_dumps(result),
+                actor_user_id,
+                now,
+            ),
+        )
+        revision_id = int(cursor.lastrowid)
+        connection.execute(
+            """
+            UPDATE encounter
+            SET status = ?, current_revision_id = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (workflow_status, revision_id, now, encounter_id),
+        )
+        _update_task_workflow_links(
+            connection,
+            task_id=task_id,
+            encounter_id=encounter_id,
+            revision_id=revision_id,
+        )
+        connection.commit()
+        return get_record_revision(revision_id) or {}
+
+
+def get_record_revision(revision_id: int) -> dict[str, Any] | None:
+    init_db()
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            "SELECT * FROM record_revision WHERE id = ?",
+            (revision_id,),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def get_task_encounter(task_id: int) -> dict[str, Any] | None:
+    init_db()
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            """
+            SELECT e.*
+            FROM encounter e
+            JOIN agent_task t ON t.encounter_id = e.id
+            WHERE t.id = ?
+            """,
+            (task_id,),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def list_record_revisions_for_task(task_id: int) -> list[dict[str, Any]]:
+    init_db()
+    with closing(get_connection()) as connection:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM record_revision
+            WHERE task_id = ?
+            ORDER BY revision_no ASC
+            """,
+            (task_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def create_approval_for_task(
+    task_id: int,
+    *,
+    actor_user_id: int | None = None,
+) -> dict[str, Any]:
+    init_db()
+    with closing(get_connection()) as connection:
+        task = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
+        if task is None:
+            raise ValueError(f"Task not found: {task_id}")
+        encounter_id = task["encounter_id"]
+        revision_id = task["current_record_revision_id"]
+        if encounter_id is None or revision_id is None:
+            raise ValueError("Task has no current record revision")
+        active = connection.execute(
+            """
+            SELECT *
+            FROM approval
+            WHERE revision_id = ? AND status = 'active' AND invalidated_at IS NULL
+            """,
+            (revision_id,),
+        ).fetchone()
+        if active is not None:
+            raise ValueError("Current revision is already approved")
+        _invalidate_active_approvals(
+            connection,
+            encounter_id=int(encounter_id),
+            reason="new_approval",
+        )
+        now = utc_now()
+        cursor = connection.execute(
+            """
+            INSERT INTO approval (
+                encounter_id, revision_id, task_id, approved_by_user_id,
+                status, created_at, invalidated_at, invalidation_reason
+            )
+            VALUES (?, ?, ?, ?, 'active', ?, NULL, NULL)
+            """,
+            (encounter_id, revision_id, task_id, actor_user_id, now),
+        )
+        approval_id = int(cursor.lastrowid)
+        connection.execute(
+            "UPDATE encounter SET status = 'approved', updated_at = ? WHERE id = ?",
+            (now, encounter_id),
+        )
+        connection.commit()
+        return dict(
+            connection.execute("SELECT * FROM approval WHERE id = ?", (approval_id,)).fetchone()
+        )
+
+
+def get_active_approval_for_task(task_id: int) -> dict[str, Any] | None:
+    init_db()
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            """
+            SELECT a.*
+            FROM approval a
+            JOIN agent_task t ON t.current_record_revision_id = a.revision_id
+            WHERE t.id = ?
+              AND a.status = 'active'
+              AND a.invalidated_at IS NULL
+            """,
+            (task_id,),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def create_export_event_for_task(
+    task_id: int,
+    *,
+    approval_id: int,
+    actor_user_id: int | None,
+    exports: dict[str, Any],
+) -> dict[str, Any]:
+    init_db()
+    with closing(get_connection()) as connection:
+        approval = connection.execute(
+            "SELECT * FROM approval WHERE id = ? AND status = 'active' AND invalidated_at IS NULL",
+            (approval_id,),
+        ).fetchone()
+        if approval is None:
+            raise ValueError("Active approval not found")
+        now = utc_now()
+        cursor = connection.execute(
+            """
+            INSERT INTO export_event (
+                encounter_id, revision_id, approval_id, task_id,
+                exported_by_user_id, exports_json, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                approval["encounter_id"],
+                approval["revision_id"],
+                approval_id,
+                task_id,
+                actor_user_id,
+                json_dumps(exports),
+                now,
+            ),
+        )
+        export_event_id = int(cursor.lastrowid)
+        connection.execute(
+            "UPDATE encounter SET status = 'exported', updated_at = ? WHERE id = ?",
+            (now, approval["encounter_id"]),
+        )
+        connection.commit()
+        return dict(connection.execute("SELECT * FROM export_event WHERE id = ?", (export_event_id,)).fetchone())
+
+
+def list_export_events_for_task(task_id: int) -> list[dict[str, Any]]:
+    init_db()
+    with closing(get_connection()) as connection:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM export_event
+            WHERE task_id = ?
+            ORDER BY id ASC
+            """,
+            (task_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def update_task(

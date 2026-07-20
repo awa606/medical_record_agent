@@ -68,16 +68,24 @@ const appState = {
   browserRecordingAudioContext: null,
   browserRecordingSource: null,
   browserRecordingProcessor: null,
-  browserRecordingChunks: [],
   browserRecordingChunkBuffer: [],
   browserRecordingChunkIndex: 0,
-  browserRecordingChunkUploads: [],
+  browserRecordingRecordedChunks: 0,
+  browserRecordingUploadedChunks: 0,
+  browserRecordingPendingChunks: 0,
+  browserRecordingRetryStatus: "",
+  browserRecordingUploadInFlight: false,
+  browserRecordingRetryTimer: null,
+  browserRecordingRecovering: false,
+  browserRecordingMissingChunks: [],
   browserRecordingSessionId: "",
   browserRecordingPausedAt: 0,
   browserRecordingTotalPausedMs: 0,
   browserRecordingSampleRate: 0,
+  browserRecordingRecordedSamples: 0,
   browserRecordingObjectUrl: "",
   browserRecordingFile: null,
+  browserRecordingFinalized: null,
   browserRecordingMessage: "",
   browserRecordingChunkStatus: "",
   browserRecordingRequestId: 0,
@@ -117,6 +125,8 @@ const appState = {
   encounterWorklistError: "",
 };
 
+window.__MRA_APP_STATE__ = appState;
+
 const RECORD_PREVIEW_MIN_CHARS = 10;
 const RECORD_PREVIEW_MIN_SEGMENTS = 1;
 const RECORD_PREVIEW_MIN_INTERVAL_MS = 2000;
@@ -124,7 +134,14 @@ const RECORD_PREVIEW_DEBOUNCE_MS = 450;
 const ROLE_DISPLAY_CONFIDENCE_THRESHOLD = 0.9;
 const MAX_BROWSER_RECORDING_SECONDS = 1800;
 const MIN_BROWSER_RECORDING_SECONDS = 0.5;
-const BROWSER_RECORDING_CHUNK_SECONDS = 10;
+const BROWSER_RECORDING_CHUNK_SECONDS = Number(window.__MRA_BROWSER_RECORDING_CHUNK_SECONDS || 10);
+const BROWSER_RECORDING_MAX_RETRY_ATTEMPTS = 8;
+const BROWSER_RECORDING_RETRY_BASE_MS = 1000;
+const BROWSER_RECORDING_RETRY_MAX_MS = 30000;
+const BROWSER_RECORDING_DB_NAME = "medical-record-agent-recording-v2";
+const BROWSER_RECORDING_DB_VERSION = 2;
+const BROWSER_RECORDING_STORE = "chunks";
+const BROWSER_RECORDING_CLEANUP_STORE = "recording_cleanups";
 
 const FIELD_DEFS = [
   ["chief_complaint", "主诉"],
@@ -277,6 +294,7 @@ async function api(path, options = {}) {
       || (Array.isArray(detail?.errors) ? detail.errors.join(" ") : "")
       || JSON.stringify(detail || data);
     const error = new Error(errorMessage);
+    error.status = response.status;
     error.detail = detail || data;
     throw error;
   }
@@ -1133,33 +1151,37 @@ function renderBrowserRecordingPanel() {
   const stopButton = $("stopBrowserRecordingButton");
   const cancelButton = $("cancelBrowserRecordingButton");
   const submitButton = $("submitBrowserRecordingButton");
+  const retryButton = $("retryBrowserRecordingChunksButton");
   const preview = $("browserRecordingPreview");
   const chunkStatus = $("browserRecordingChunkStatus");
   const message = $("browserRecordingMessage");
-  if (!statusLabel || !timer || !startButton || !pauseButton || !resumeButton || !stopButton || !cancelButton || !submitButton || !preview || !chunkStatus || !message) return;
+  if (!statusLabel || !timer || !startButton || !pauseButton || !resumeButton || !stopButton || !cancelButton || !submitButton || !retryButton || !preview || !chunkStatus || !message) return;
 
   const statusLabels = {
     idle: "等待录音",
     requesting: "正在请求麦克风权限",
     recording: "正在录音",
     paused: "录音已暂停",
+    finalizing: "正在准备试听",
     recorded: "录音已就绪",
-    uploading: "正在上传录音",
+    uploading: "正在生成病历",
     error: "录音异常",
   };
   const isRecording = appState.browserRecordingStatus === "recording";
   const isPaused = appState.browserRecordingStatus === "paused";
   const isRequesting = appState.browserRecordingStatus === "requesting";
-  const isUploading = appState.browserRecordingStatus === "uploading";
-  const hasServerChunks = Boolean(appState.browserRecordingSessionId && appState.browserRecordingChunkIndex > 0);
+  const isUploading = ["uploading", "finalizing"].includes(appState.browserRecordingStatus);
+  const hasQueuedChunks = Boolean(appState.browserRecordingSessionId && (appState.browserRecordingChunkIndex > 0 || appState.browserRecordingRecordedChunks > 0));
+  const hasFailedChunks = Boolean(appState.browserRecordingPendingChunks > 0 || appState.browserRecordingRetryStatus);
   statusLabel.textContent = statusLabels[appState.browserRecordingStatus] || statusLabels.idle;
   timer.textContent = formatRelativeTime(appState.browserRecordingElapsedSeconds);
   startButton.disabled = appState.busy || isRequesting || isRecording || isUploading;
   pauseButton.disabled = !isRecording || isUploading;
   resumeButton.disabled = !isPaused || isUploading;
   stopButton.disabled = !(isRecording || isPaused);
-  cancelButton.disabled = isUploading || (appState.browserRecordingStatus === "idle" && !appState.browserRecordingFile);
-  submitButton.disabled = appState.busy || isUploading || !(appState.browserRecordingFile || hasServerChunks);
+  cancelButton.disabled = isUploading || (appState.browserRecordingStatus === "idle" && !hasQueuedChunks && !appState.browserRecordingFinalized);
+  submitButton.disabled = appState.busy || isUploading || !appState.browserRecordingFinalized || hasFailedChunks || appState.browserRecordingRecovering;
+  retryButton.disabled = appState.browserRecordingUploadInFlight || !appState.browserRecordingSessionId || !hasFailedChunks;
   preview.style.display = appState.browserRecordingObjectUrl ? "block" : "none";
   chunkStatus.textContent = appState.browserRecordingChunkStatus || "";
   message.textContent = appState.browserRecordingMessage || "";
@@ -2190,13 +2212,36 @@ async function restoreAsrSessionFromUrl() {
       appState.taskStatus = "TRANSCRIBING";
       appState.asrPhase = "model_loading";
       listenForAsrEvents(session.events_url || `/api/asr/sessions/${sessionId}/events`);
-    } else if (session.status === "recording") {
-      const chunkStatus = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/chunks/status`);
+    } else if (["created", "recording", "finalizing", "recorded"].includes(session.status)) {
+      const localRows = await listBrowserRecordingQueueEntries(session.session_id).catch(() => []);
+      if (session.status === "created" && !localRows.length) {
+        renderAll();
+        return;
+      }
       appState.browserRecordingSessionId = session.session_id;
-      appState.browserRecordingStatus = "paused";
-      appState.browserRecordingChunkIndex = Number(chunkStatus.next_chunk_index || 0);
-      appState.browserRecordingChunkStatus = `已恢复 ${chunkStatus.chunk_count || 0} 个音频块`;
-      appState.browserRecordingMessage = "录音会话已恢复，可点击“恢复”继续录音，或结束后合并上传。";
+      const chunkStatus = await reconcileBrowserRecordingQueue(session.session_id);
+      appState.browserRecordingStatus = chunkStatus?.status === "recorded" ? "recorded" : "paused";
+      appState.browserRecordingChunkIndex = Number(chunkStatus?.next_chunk_index || 0);
+      appState.browserRecordingRecordedChunks = Math.max(
+        Number(chunkStatus?.chunk_count || 0),
+        appState.browserRecordingRecordedChunks || 0,
+      );
+      if (chunkStatus?.status === "recorded" && chunkStatus.audio_id) {
+        appState.browserRecordingFinalized = chunkStatus;
+        appState.browserRecordingObjectUrl = chunkStatus.media_url || `/api/audio/${encodeURIComponent(chunkStatus.audio_id)}/media`;
+        const preview = $("browserRecordingPreview");
+        if (preview) {
+          preview.src = appState.browserRecordingObjectUrl;
+          preview.load();
+        }
+        appState.browserRecordingMessage = "录音会话已恢复，可试听并继续生成病历。";
+      } else if (appState.browserRecordingMissingChunks?.length) {
+        appState.browserRecordingMessage = `录音会话缺少第 ${appState.browserRecordingMissingChunks.join(", ")} 段，本地也没有可补传数据。`;
+        appState.browserRecordingStatus = "error";
+      } else {
+        appState.browserRecordingMessage = "录音会话已恢复，可点击“恢复”继续录音，或停止后准备试听。";
+      }
+      updateBrowserRecordingChunkStatusText();
       appState.taskStatus = "CREATED";
     }
     $("topAsrEngineSelect").value = appState.selectedEngine;
@@ -4541,7 +4586,7 @@ function browserRecordingErrorMessage(error) {
 }
 
 function releaseBrowserRecordingPreview() {
-  if (appState.browserRecordingObjectUrl) {
+  if (appState.browserRecordingObjectUrl?.startsWith("blob:")) {
     URL.revokeObjectURL(appState.browserRecordingObjectUrl);
   }
   appState.browserRecordingObjectUrl = "";
@@ -4666,6 +4711,196 @@ async function sha256Blob(blob) {
     .join("");
 }
 
+function recordingQueueKey(sessionId, chunkIndex) {
+  return `${sessionId}:${String(chunkIndex).padStart(8, "0")}`;
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function openBrowserRecordingDb() {
+  if (!window.indexedDB) {
+    return Promise.reject(new Error("当前浏览器不支持录音恢复队列，请使用最新版 Chrome 或 Edge。"));
+  }
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(BROWSER_RECORDING_DB_NAME, BROWSER_RECORDING_DB_VERSION);
+    request.onerror = () => reject(request.error || new Error("无法打开录音恢复队列。"));
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(BROWSER_RECORDING_STORE)) {
+        const store = db.createObjectStore(BROWSER_RECORDING_STORE, { keyPath: "key" });
+        store.createIndex("session_id", "session_id", { unique: false });
+        store.createIndex("status", "status", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(BROWSER_RECORDING_CLEANUP_STORE)) {
+        const cleanupStore = db.createObjectStore(BROWSER_RECORDING_CLEANUP_STORE, { keyPath: "session_id" });
+        cleanupStore.createIndex("status", "status", { unique: false });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+async function withBrowserRecordingStore(mode, callback) {
+  const db = await openBrowserRecordingDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(BROWSER_RECORDING_STORE, mode);
+      const store = transaction.objectStore(BROWSER_RECORDING_STORE);
+      let result;
+      transaction.oncomplete = () => resolve(result);
+      transaction.onerror = () => reject(transaction.error || new Error("录音恢复队列操作失败。"));
+      transaction.onabort = () => reject(transaction.error || new Error("录音恢复队列操作已取消。"));
+      try {
+        result = callback(store);
+      } catch (error) {
+        transaction.abort();
+        reject(error);
+      }
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function withBrowserRecordingCleanupStore(mode, callback) {
+  const db = await openBrowserRecordingDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(BROWSER_RECORDING_CLEANUP_STORE, mode);
+      const store = transaction.objectStore(BROWSER_RECORDING_CLEANUP_STORE);
+      let result;
+      transaction.oncomplete = () => resolve(result);
+      transaction.onerror = () => reject(transaction.error || new Error("Recording cleanup queue operation failed."));
+      transaction.onabort = () => reject(transaction.error || new Error("Recording cleanup queue operation aborted."));
+      try {
+        result = callback(store);
+      } catch (error) {
+        transaction.abort();
+        reject(error);
+      }
+    });
+  } finally {
+    db.close();
+  }
+}
+
+function requestToPromise(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("录音恢复队列请求失败。"));
+  });
+}
+
+async function putBrowserRecordingQueueEntry(entry) {
+  return withBrowserRecordingStore("readwrite", (store) => {
+    store.put({
+      ...entry,
+      updated_at: new Date().toISOString(),
+    });
+  });
+}
+
+async function listBrowserRecordingQueueEntries(sessionId) {
+  return withBrowserRecordingStore("readonly", async (store) => {
+    const index = store.index("session_id");
+    const rows = await requestToPromise(index.getAll(sessionId));
+    return rows.sort((left, right) => Number(left.chunk_index) - Number(right.chunk_index));
+  });
+}
+
+async function deleteBrowserRecordingQueueEntry(sessionId, chunkIndex) {
+  return withBrowserRecordingStore("readwrite", (store) => {
+    store.delete(recordingQueueKey(sessionId, chunkIndex));
+  });
+}
+
+async function clearBrowserRecordingQueue(sessionId) {
+  const rows = await listBrowserRecordingQueueEntries(sessionId);
+  await withBrowserRecordingStore("readwrite", (store) => {
+    rows.forEach((row) => store.delete(row.key));
+  });
+}
+
+async function putBrowserRecordingCleanup(sessionId, reason = "cancel") {
+  if (!sessionId) return;
+  return withBrowserRecordingCleanupStore("readwrite", (store) => {
+    store.put({
+      session_id: sessionId,
+      status: "pending",
+      reason,
+      retry_count: 0,
+      last_error: "",
+      next_retry_at: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  });
+}
+
+async function listBrowserRecordingCleanups() {
+  return withBrowserRecordingCleanupStore("readonly", (store) => requestToPromise(store.getAll()));
+}
+
+async function deleteBrowserRecordingCleanup(sessionId) {
+  return withBrowserRecordingCleanupStore("readwrite", (store) => {
+    store.delete(sessionId);
+  });
+}
+
+async function updateBrowserRecordingCleanup(sessionId, updates) {
+  const rows = await listBrowserRecordingCleanups();
+  const current = rows.find((row) => row.session_id === sessionId);
+  if (!current) return;
+  return withBrowserRecordingCleanupStore("readwrite", (store) => {
+    store.put({
+      ...current,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    });
+  });
+}
+
+async function updateBrowserRecordingQueueEntry(sessionId, chunkIndex, updates) {
+  const db = await openBrowserRecordingDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(BROWSER_RECORDING_STORE, "readwrite");
+      const store = transaction.objectStore(BROWSER_RECORDING_STORE);
+      const key = recordingQueueKey(sessionId, chunkIndex);
+      const request = store.get(key);
+      request.onerror = () => reject(request.error || new Error("录音恢复队列读取失败。"));
+      request.onsuccess = () => {
+        const current = request.result;
+        if (!current) return;
+        store.put({
+          ...current,
+          ...updates,
+          updated_at: new Date().toISOString(),
+        });
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error || new Error("录音恢复队列更新失败。"));
+      transaction.onabort = () => reject(transaction.error || new Error("录音恢复队列更新已取消。"));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function refreshBrowserRecordingQueueCounts(sessionId = appState.browserRecordingSessionId) {
+  if (!sessionId) return { pending: 0, failed: 0, uploaded: appState.browserRecordingUploadedChunks || 0 };
+  const rows = await listBrowserRecordingQueueEntries(sessionId).catch(() => []);
+  appState.browserRecordingPendingChunks = rows.length;
+  const failed = rows.filter((row) => row.status === "failed").length;
+  return {
+    pending: rows.length,
+    failed,
+    uploaded: appState.browserRecordingUploadedChunks || 0,
+  };
+}
+
 async function ensureBrowserRecordingSession(engine) {
   if (appState.browserRecordingSessionId) return appState.browserRecordingSessionId;
   const sessionParams = new URLSearchParams({ engine });
@@ -4680,7 +4915,20 @@ async function ensureBrowserRecordingSession(engine) {
   return session.session_id;
 }
 
-async function uploadBrowserRecordingChunk({ force = false } = {}) {
+function updateBrowserRecordingChunkStatusText() {
+  const parts = [
+    `已录制 ${appState.browserRecordingRecordedChunks || 0} 块`,
+    `已上传 ${appState.browserRecordingUploadedChunks || 0} 块`,
+    `待上传 ${appState.browserRecordingPendingChunks || 0} 块`,
+  ];
+  if (appState.browserRecordingRetryStatus) parts.push(appState.browserRecordingRetryStatus);
+  if (appState.browserRecordingMissingChunks?.length) {
+    parts.push(`缺少第 ${appState.browserRecordingMissingChunks.join(", ")} 段，无法完成`);
+  }
+  appState.browserRecordingChunkStatus = parts.join(" · ");
+}
+
+async function queueBrowserRecordingChunk({ force = false } = {}) {
   if (!appState.browserRecordingSessionId) return null;
   const chunks = appState.browserRecordingChunkBuffer || [];
   const sampleCount = chunks.reduce((total, chunk) => total + chunk.length, 0);
@@ -4688,33 +4936,323 @@ async function uploadBrowserRecordingChunk({ force = false } = {}) {
     return null;
   }
   if (sampleCount === 0) return null;
-  appState.browserRecordingChunkBuffer = [];
   const sampleRate = appState.browserRecordingSampleRate || 44100;
   const blob = encodeWavFromFloat32(chunks, sampleRate);
   const chunkIndex = appState.browserRecordingChunkIndex;
-  appState.browserRecordingChunkIndex += 1;
   const checksum = await sha256Blob(blob);
+  await putBrowserRecordingQueueEntry({
+    key: recordingQueueKey(appState.browserRecordingSessionId, chunkIndex),
+    session_id: appState.browserRecordingSessionId,
+    chunk_index: chunkIndex,
+    sha256: checksum,
+    duration_seconds: sampleCount / sampleRate,
+    blob,
+    status: "pending",
+    retry_count: 0,
+    next_retry_at: 0,
+    last_error: "",
+    created_at: new Date().toISOString(),
+  });
+  appState.browserRecordingChunkBuffer = [];
+  appState.browserRecordingChunkIndex += 1;
+  appState.browserRecordingRecordedChunks += 1;
+  await refreshBrowserRecordingQueueCounts();
+  updateBrowserRecordingChunkStatusText();
+  renderBrowserRecordingPanel();
+  pumpBrowserRecordingUploadQueue().catch(() => undefined);
+  return { chunk_index: chunkIndex, sha256: checksum };
+}
+
+async function uploadQueuedBrowserRecordingChunk(entry) {
   const form = new FormData();
-  form.append("chunk_index", String(chunkIndex));
-  form.append("sha256", checksum);
-  form.append("duration_seconds", String(sampleCount / sampleRate));
-  form.append("file", blob, `browser-recording-chunk-${String(chunkIndex).padStart(6, "0")}.wav`);
-  const uploadPromise = api(`/api/asr/sessions/${encodeURIComponent(appState.browserRecordingSessionId)}/chunks`, {
+  form.append("chunk_index", String(entry.chunk_index));
+  form.append("sha256", entry.sha256);
+  form.append("duration_seconds", String(entry.duration_seconds || 0));
+  form.append("file", entry.blob, `browser-recording-chunk-${String(entry.chunk_index).padStart(6, "0")}.wav`);
+  return api(`/api/asr/sessions/${encodeURIComponent(entry.session_id)}/chunks`, {
     method: "POST",
     body: form,
   });
-  appState.browserRecordingChunkUploads.push(uploadPromise);
-  const result = await uploadPromise;
-  appState.browserRecordingChunkStatus = `已上传 ${result.chunk_count || appState.browserRecordingChunkIndex} 个音频块`;
+}
+
+function scheduleBrowserRecordingQueueRetry(delayMs) {
+  if (appState.browserRecordingRetryTimer) window.clearTimeout(appState.browserRecordingRetryTimer);
+  appState.browserRecordingRetryTimer = window.setTimeout(() => {
+    appState.browserRecordingRetryTimer = null;
+    pumpBrowserRecordingUploadQueue().catch(() => undefined);
+  }, Math.max(500, delayMs));
+}
+
+function isBrowserRecordingChunkConflict(error) {
+  const message = String(error?.message || error?.detail?.message || "");
+  return error?.status === 409 && /different hash|分块冲突|chunk_index/i.test(message);
+}
+
+async function pumpBrowserRecordingUploadQueue(sessionId = appState.browserRecordingSessionId) {
+  if (!sessionId || appState.browserRecordingUploadInFlight) return;
+  appState.browserRecordingUploadInFlight = true;
+  try {
+    while (true) {
+      const rows = await listBrowserRecordingQueueEntries(sessionId);
+      appState.browserRecordingPendingChunks = rows.length;
+      const uploadable = rows
+        .filter((row) => row.status !== "uploaded" && row.status !== "conflict")
+        .sort((left, right) => Number(left.chunk_index) - Number(right.chunk_index));
+      if (!uploadable.length) {
+        appState.browserRecordingRetryStatus = rows.some((row) => row.status === "conflict")
+          ? "分块冲突，请取消并重新录制"
+          : "";
+        break;
+      }
+      const next = uploadable[0];
+      const now = Date.now();
+      if (Number(next.next_retry_at || 0) > now) {
+        const waitMs = Number(next.next_retry_at) - now;
+        appState.browserRecordingRetryStatus = `等待 ${Math.ceil(waitMs / 1000)} 秒后重试第 ${next.chunk_index} 段`;
+        scheduleBrowserRecordingQueueRetry(waitMs);
+        break;
+      }
+      await updateBrowserRecordingQueueEntry(sessionId, next.chunk_index, {
+        status: "uploading",
+        last_error: "",
+      });
+      updateBrowserRecordingChunkStatusText();
+      renderBrowserRecordingPanel();
+      try {
+        const result = await uploadQueuedBrowserRecordingChunk(next);
+        await deleteBrowserRecordingQueueEntry(sessionId, next.chunk_index);
+        appState.browserRecordingUploadedChunks = Math.max(
+          appState.browserRecordingUploadedChunks || 0,
+          Number(result.chunk_count || 0),
+          Number(next.chunk_index) + 1,
+        );
+        appState.browserRecordingRetryStatus = "";
+        await refreshBrowserRecordingQueueCounts(sessionId);
+        updateBrowserRecordingChunkStatusText();
+        renderBrowserRecordingPanel();
+      } catch (error) {
+        if (isBrowserRecordingChunkConflict(error)) {
+          await updateBrowserRecordingQueueEntry(sessionId, next.chunk_index, {
+            status: "conflict",
+            retry_count: Number(next.retry_count || 0) + 1,
+            next_retry_at: 0,
+            last_error: error?.message || String(error),
+          });
+          appState.browserRecordingRetryStatus = `第 ${next.chunk_index} 段分块冲突，请取消并重新录制`;
+          await refreshBrowserRecordingQueueCounts(sessionId);
+          updateBrowserRecordingChunkStatusText();
+          renderBrowserRecordingPanel();
+          break;
+        }
+        const retryCount = Number(next.retry_count || 0) + 1;
+        const retryable = retryCount < BROWSER_RECORDING_MAX_RETRY_ATTEMPTS;
+        const delayMs = Math.min(
+          BROWSER_RECORDING_RETRY_MAX_MS,
+          BROWSER_RECORDING_RETRY_BASE_MS * (2 ** Math.max(0, retryCount - 1)),
+        );
+        await updateBrowserRecordingQueueEntry(sessionId, next.chunk_index, {
+          status: retryable ? "pending" : "failed",
+          retry_count: retryCount,
+          next_retry_at: retryable ? Date.now() + delayMs : 0,
+          last_error: error?.message || String(error),
+        });
+        appState.browserRecordingRetryStatus = retryable
+          ? `第 ${next.chunk_index} 段上传失败，${Math.ceil(delayMs / 1000)} 秒后重试`
+          : `第 ${next.chunk_index} 段上传失败，请点击重新上传`;
+        await refreshBrowserRecordingQueueCounts(sessionId);
+        updateBrowserRecordingChunkStatusText();
+        renderBrowserRecordingPanel();
+        if (retryable) scheduleBrowserRecordingQueueRetry(delayMs);
+        break;
+      }
+    }
+  } finally {
+    appState.browserRecordingUploadInFlight = false;
+  }
+}
+
+async function retryFailedBrowserRecordingChunks() {
+  const sessionId = appState.browserRecordingSessionId;
+  if (!sessionId) return;
+  const rows = await listBrowserRecordingQueueEntries(sessionId);
+  const retryableRows = rows.filter((row) => row.status !== "conflict");
+  await Promise.all(retryableRows.map((row) => updateBrowserRecordingQueueEntry(sessionId, row.chunk_index, {
+    status: "pending",
+    retry_count: 0,
+    next_retry_at: 0,
+    last_error: "",
+  })));
+  appState.browserRecordingRetryStatus = "正在重新上传失败片段";
+  await refreshBrowserRecordingQueueCounts(sessionId);
+  updateBrowserRecordingChunkStatusText();
   renderBrowserRecordingPanel();
-  return result;
+  await pumpBrowserRecordingUploadQueue(sessionId);
+}
+
+async function processPendingBrowserRecordingCleanups() {
+  const rows = await listBrowserRecordingCleanups().catch(() => []);
+  for (const row of rows) {
+    const sessionId = row.session_id;
+    if (!sessionId) continue;
+    const now = Date.now();
+    if (Number(row.next_retry_at || 0) > now) continue;
+    try {
+      await updateBrowserRecordingCleanup(sessionId, { status: "deleting", last_error: "" });
+      await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/recording`, { method: "DELETE" });
+      const cleanupStatus = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/chunks/status?cleanup_check=${Date.now()}`);
+      if (cleanupStatus?.status !== "cancelled") {
+        throw new Error("Recording cleanup was not confirmed by the server.");
+      }
+      await clearBrowserRecordingQueue(sessionId).catch(() => undefined);
+      await deleteBrowserRecordingCleanup(sessionId);
+      if (appState.browserRecordingSessionId === sessionId) {
+        appState.browserRecordingRetryStatus = "";
+        appState.browserRecordingChunkStatus = "";
+        appState.browserRecordingPendingChunks = 0;
+      }
+    } catch (error) {
+      if (error?.status === 404) {
+        await clearBrowserRecordingQueue(sessionId).catch(() => undefined);
+        await deleteBrowserRecordingCleanup(sessionId);
+        continue;
+      }
+      const retryCount = Number(row.retry_count || 0) + 1;
+      const delayMs = Math.min(
+        BROWSER_RECORDING_RETRY_MAX_MS,
+        BROWSER_RECORDING_RETRY_BASE_MS * (2 ** Math.max(0, retryCount - 1)),
+      );
+      await updateBrowserRecordingCleanup(sessionId, {
+        status: "pending",
+        retry_count: retryCount,
+        next_retry_at: Date.now() + delayMs,
+        last_error: error?.message || String(error),
+      });
+      if (appState.browserRecordingSessionId === sessionId) {
+        appState.browserRecordingRetryStatus = `取消清理失败，${Math.ceil(delayMs / 1000)} 秒后重试`;
+        updateBrowserRecordingChunkStatusText();
+        renderBrowserRecordingPanel();
+      }
+    }
+  }
+}
+
+async function refreshBrowserRecordingServerStatus(sessionId = appState.browserRecordingSessionId) {
+  if (!sessionId) return null;
+  const status = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/chunks/status`);
+  appState.browserRecordingUploadedChunks = Number(status.next_chunk_index || status.chunk_count || 0);
+  appState.browserRecordingMissingChunks = Array.isArray(status.missing_chunk_indices)
+    ? status.missing_chunk_indices
+    : [];
+  if (status.status === "recorded" && status.audio_id) {
+    appState.browserRecordingFinalized = status;
+    appState.currentAudioId = status.audio_id;
+    appState.audioMediaUrl = status.media_url || `/api/audio/${encodeURIComponent(status.audio_id)}/media`;
+  }
+  updateBrowserRecordingChunkStatusText();
+  return status;
+}
+
+async function reconcileBrowserRecordingQueue(sessionId = appState.browserRecordingSessionId) {
+  if (!sessionId) return null;
+  appState.browserRecordingRecovering = true;
+  try {
+    const serverStatus = await refreshBrowserRecordingServerStatus(sessionId);
+    const serverChunks = new Map((serverStatus?.chunks || []).map((chunk) => [Number(chunk.chunk_index), chunk]));
+    const rows = await listBrowserRecordingQueueEntries(sessionId);
+    for (const row of rows) {
+      const serverChunk = serverChunks.get(Number(row.chunk_index));
+      if (serverChunk?.sha256 === row.sha256) {
+        await deleteBrowserRecordingQueueEntry(sessionId, row.chunk_index);
+      } else if (!serverChunk) {
+        await updateBrowserRecordingQueueEntry(sessionId, row.chunk_index, {
+          status: "pending",
+          next_retry_at: 0,
+        });
+      }
+    }
+    await refreshBrowserRecordingQueueCounts(sessionId);
+    await pumpBrowserRecordingUploadQueue(sessionId);
+    const latestStatus = await refreshBrowserRecordingServerStatus(sessionId);
+    const localRows = await listBrowserRecordingQueueEntries(sessionId);
+    const localIndexes = new Set(localRows.map((row) => Number(row.chunk_index)));
+    appState.browserRecordingMissingChunks = (latestStatus?.missing_chunk_indices || [])
+      .filter((index) => !localIndexes.has(Number(index)));
+    appState.browserRecordingChunkIndex = Math.max(
+      Number(latestStatus?.next_chunk_index || 0),
+      ...localRows.map((row) => Number(row.chunk_index) + 1),
+      appState.browserRecordingChunkIndex || 0,
+    );
+    updateBrowserRecordingChunkStatusText();
+    return latestStatus;
+  } finally {
+    appState.browserRecordingRecovering = false;
+    renderBrowserRecordingPanel();
+  }
+}
+
+async function waitForBrowserRecordingUploads(sessionId = appState.browserRecordingSessionId) {
+  const deadline = Date.now() + 60000;
+  while (Date.now() < deadline) {
+    await pumpBrowserRecordingUploadQueue(sessionId);
+    await refreshBrowserRecordingQueueCounts(sessionId);
+    const rows = await listBrowserRecordingQueueEntries(sessionId);
+    if (!rows.length && !appState.browserRecordingUploadInFlight) {
+      const status = await refreshBrowserRecordingServerStatus(sessionId);
+      if (status?.missing_chunk_indices?.length) {
+        throw new Error(`缺少第 ${status.missing_chunk_indices.join(", ")} 段，无法完成录音。`);
+      }
+      return status;
+    }
+    const hasConflict = rows.some((row) => row.status === "conflict");
+    const permanentlyFailed = rows.some((row) => row.status === "failed");
+    updateBrowserRecordingChunkStatusText();
+    if (hasConflict) {
+      throw new Error("分块冲突，请取消并重新录制。");
+    }
+    if (permanentlyFailed) {
+      throw new Error(`还有 ${rows.length} 个音频块未上传，请点击重新上传失败片段。`);
+    }
+    await delay(500);
+  }
+  throw new Error("音频块上传等待超时，请检查网络后点击重新上传失败片段。");
+}
+
+async function finalizeBrowserRecording() {
+  const sessionId = appState.browserRecordingSessionId;
+  if (!sessionId) throw new Error("录音会话尚未创建，请重新开始录音。");
+  await waitForBrowserRecordingUploads(sessionId);
+  appState.browserRecordingStatus = "finalizing";
+  appState.browserRecordingMessage = "正在校验音频块并准备试听...";
+  renderBrowserRecordingPanel();
+  const finalized = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/finalize`, { method: "POST" });
+  appState.browserRecordingFinalized = finalized;
+  appState.currentAsrSessionId = finalized.session_id;
+  appState.currentAudioId = finalized.audio_id;
+  appState.uploadedFilename = finalized.filename || finalized.audio_id;
+  appState.audioMediaUrl = finalized.media_url || `/api/audio/${encodeURIComponent(finalized.audio_id)}/media`;
+  appState.audioDurationSeconds = Number(finalized.duration_seconds || 0);
+  const preview = $("browserRecordingPreview");
+  if (preview) {
+    preview.src = appState.audioMediaUrl;
+    preview.load();
+  }
+  appState.browserRecordingObjectUrl = appState.audioMediaUrl;
+  appState.browserRecordingStatus = "recorded";
+  appState.browserRecordingMessage = "录音已准备完成，可先试听，再点击上传并生成病历。";
+  await refreshBrowserRecordingServerStatus(sessionId);
+  renderAll();
+  return finalized;
+}
+
+async function uploadBrowserRecordingChunk({ force = false } = {}) {
+  return queueBrowserRecordingChunk({ force });
 }
 
 async function flushBrowserRecordingChunk({ force = false } = {}) {
   try {
-    return await uploadBrowserRecordingChunk({ force });
+    return await queueBrowserRecordingChunk({ force });
   } catch (error) {
-    setBrowserRecordingError(`音频块上传失败：${error?.message || String(error)}`);
+    setBrowserRecordingError(`音频块保存失败：${error?.message || String(error)}`);
     throw error;
   }
 }
@@ -4766,8 +5304,8 @@ async function startBrowserRecordingCaptureForExistingSession(requestId) {
         mixed[index] += data[index] / channelCount;
       }
     }
-    appState.browserRecordingChunks.push(mixed);
     appState.browserRecordingChunkBuffer.push(mixed);
+    appState.browserRecordingRecordedSamples += mixed.length;
   };
   source.connect(processor);
   processor.connect(audioContext.destination);
@@ -4782,11 +5320,9 @@ async function completeBrowserRecordingUpload() {
   if (!appState.browserRecordingSessionId) {
     throw new Error("录音会话尚未创建，请重新开始录音。");
   }
-  await flushBrowserRecordingChunk({ force: true });
-  const settled = await Promise.allSettled(appState.browserRecordingChunkUploads);
-  const failedUpload = settled.find((item) => item.status === "rejected");
-  if (failedUpload) {
-    throw failedUpload.reason || new Error("存在未成功上传的音频块。");
+  await waitForBrowserRecordingUploads(appState.browserRecordingSessionId);
+  if (!appState.browserRecordingFinalized?.audio_id) {
+    await finalizeBrowserRecording();
   }
   const completed = await api(`/api/asr/sessions/${encodeURIComponent(appState.browserRecordingSessionId)}/complete`, {
     method: "POST",
@@ -4805,18 +5341,27 @@ async function completeBrowserRecordingUpload() {
 async function startBrowserRecording() {
   clearActionError();
   releaseBrowserRecordingPreview();
-  appState.browserRecordingChunks = [];
   appState.browserRecordingChunkBuffer = [];
-  appState.browserRecordingChunkUploads = [];
   appState.browserRecordingChunkIndex = 0;
+  appState.browserRecordingRecordedChunks = 0;
+  appState.browserRecordingUploadedChunks = 0;
+  appState.browserRecordingPendingChunks = 0;
+  appState.browserRecordingRetryStatus = "";
+  appState.browserRecordingMissingChunks = [];
   appState.browserRecordingSessionId = "";
+  appState.browserRecordingFinalized = null;
   appState.browserRecordingPausedAt = 0;
   appState.browserRecordingTotalPausedMs = 0;
   appState.browserRecordingElapsedSeconds = 0;
+  appState.browserRecordingRecordedSamples = 0;
   appState.browserRecordingMessage = "";
   appState.browserRecordingChunkStatus = "";
   const requestId = appState.browserRecordingRequestId + 1;
   appState.browserRecordingRequestId = requestId;
+  if (appState.browserRecordingRetryTimer) {
+    window.clearTimeout(appState.browserRecordingRetryTimer);
+    appState.browserRecordingRetryTimer = null;
+  }
 
   if (!navigator.mediaDevices?.getUserMedia) {
     setBrowserRecordingError("当前浏览器不支持麦克风录音，请使用最新版 Chrome 或 Edge。");
@@ -4883,8 +5428,8 @@ async function startBrowserRecording() {
           mixed[index] += data[index] / channelCount;
         }
       }
-      appState.browserRecordingChunks.push(mixed);
       appState.browserRecordingChunkBuffer.push(mixed);
+      appState.browserRecordingRecordedSamples += mixed.length;
     };
     source.connect(processor);
     processor.connect(audioContext.destination);
@@ -4970,8 +5515,7 @@ async function stopBrowserRecording({ auto = false } = {}) {
   appState.browserRecordingElapsedSeconds = Math.min(elapsed, MAX_BROWSER_RECORDING_SECONDS);
   cleanupBrowserRecordingCapture();
 
-  const sampleCount = appState.browserRecordingChunks.reduce((total, chunk) => total + chunk.length, 0);
-  if (sampleCount === 0 || appState.browserRecordingElapsedSeconds < MIN_BROWSER_RECORDING_SECONDS) {
+  if ((appState.browserRecordingRecordedSamples || 0) === 0 || appState.browserRecordingElapsedSeconds < MIN_BROWSER_RECORDING_SECONDS) {
     releaseBrowserRecordingPreview();
     appState.browserRecordingStatus = "error";
     appState.browserRecordingMessage = "未录到有效声音，请重新录制。";
@@ -4982,21 +5526,14 @@ async function stopBrowserRecording({ auto = false } = {}) {
 
   try {
     await flushBrowserRecordingChunk({ force: true });
-  } catch (_error) {
+    await finalizeBrowserRecording();
+  } catch (error) {
+    appState.browserRecordingStatus = "error";
+    appState.browserRecordingMessage = `录音已停止，但仍需补传音频块：${error?.message || String(error)}`;
+    renderAll();
     return;
   }
 
-  const blob = encodeWavFromFloat32(appState.browserRecordingChunks, appState.browserRecordingSampleRate || 44100);
-  const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
-  const file = new File([blob], `browser-recording-${timestamp}.wav`, { type: "audio/wav" });
-  appState.browserRecordingFile = file;
-  appState.browserRecordingObjectUrl = URL.createObjectURL(blob);
-  const preview = $("browserRecordingPreview");
-  if (preview) {
-    preview.src = appState.browserRecordingObjectUrl;
-    preview.load();
-  }
-  appState.browserRecordingStatus = "recorded";
   appState.browserRecordingMessage = auto
     ? "已达到最长 30 分钟录音限制，可先试听再上传生成病历。"
     : "录音已停止，可先试听再上传生成病历。";
@@ -5004,7 +5541,8 @@ async function stopBrowserRecording({ auto = false } = {}) {
   showToast(auto ? "已达到最长 30 分钟录音限制" : "录音已停止");
 }
 
-function cancelBrowserRecording({ silent = false } = {}) {
+async function cancelBrowserRecording({ silent = false } = {}) {
+  const sessionId = appState.browserRecordingSessionId;
   appState.browserRecordingRequestId += 1;
   if (appState.browserRecordingSessionId && appState.currentAsrSessionId === appState.browserRecordingSessionId) {
     appState.currentAsrSessionId = null;
@@ -5012,10 +5550,32 @@ function cancelBrowserRecording({ silent = false } = {}) {
   }
   cleanupBrowserRecordingCapture();
   releaseBrowserRecordingPreview();
-  appState.browserRecordingChunks = [];
   appState.browserRecordingChunkBuffer = [];
-  appState.browserRecordingChunkUploads = [];
+  if (appState.browserRecordingRetryTimer) {
+    window.clearTimeout(appState.browserRecordingRetryTimer);
+    appState.browserRecordingRetryTimer = null;
+  }
+  let serverCleanupConfirmed = !sessionId;
+  if (sessionId) {
+    try {
+      await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/recording`, { method: "DELETE" });
+      await deleteBrowserRecordingCleanup(sessionId).catch(() => undefined);
+      serverCleanupConfirmed = true;
+    } catch (error) {
+      await putBrowserRecordingCleanup(sessionId, "cancel").catch(() => undefined);
+      appState.browserRecordingRetryStatus = "取消清理待网络恢复后重试";
+      if (!silent && window.navigator.onLine) reportActionError(error);
+    }
+    if (serverCleanupConfirmed) {
+      await clearBrowserRecordingQueue(sessionId).catch(() => undefined);
+    }
+  }
   appState.browserRecordingChunkIndex = 0;
+  appState.browserRecordingRecordedChunks = 0;
+  appState.browserRecordingUploadedChunks = 0;
+  appState.browserRecordingPendingChunks = 0;
+  appState.browserRecordingRetryStatus = "";
+  appState.browserRecordingMissingChunks = [];
   appState.browserRecordingSessionId = "";
   appState.browserRecordingChunkStatus = "";
   appState.browserRecordingPausedAt = 0;
@@ -5023,19 +5583,24 @@ function cancelBrowserRecording({ silent = false } = {}) {
   appState.browserRecordingStartedAt = 0;
   appState.browserRecordingElapsedSeconds = 0;
   appState.browserRecordingSampleRate = 0;
+  appState.browserRecordingRecordedSamples = 0;
   appState.browserRecordingStatus = "idle";
-  appState.browserRecordingMessage = silent ? "" : "录音已取消。";
+  appState.browserRecordingMessage = silent
+    ? ""
+    : (serverCleanupConfirmed ? "录音已取消。" : "取消请求已保存，网络恢复后会自动清理服务端录音。");
+  appState.browserRecordingFinalized = null;
+  appState.browserRecordingFile = null;
   renderAll();
-  if (!silent) showToast("录音已取消");
+  if (!silent) showToast(serverCleanupConfirmed ? "录音已取消" : "取消请求已保存，网络恢复后会自动清理");
 }
 
 async function submitBrowserRecording() {
   try {
-    if (!appState.browserRecordingFile && !(appState.browserRecordingSessionId && appState.browserRecordingChunkIndex > 0)) {
+    if (!appState.browserRecordingFinalized?.audio_id) {
       throw new Error("请先完成录音并试听确认。");
     }
     appState.browserRecordingStatus = "uploading";
-    appState.browserRecordingMessage = "正在合并音频块并生成病历...";
+    appState.browserRecordingMessage = "正在启动转写并生成病历...";
     renderAll();
     closeDrawer();
     appState.audioMode = "generate";
@@ -5162,7 +5727,17 @@ function bindEvents() {
     stopBrowserRecording().catch(reportActionError);
   });
   $("cancelBrowserRecordingButton").addEventListener("click", () => cancelBrowserRecording());
+  $("retryBrowserRecordingChunksButton").addEventListener("click", () => {
+    retryFailedBrowserRecordingChunks().catch(reportActionError);
+  });
   $("submitBrowserRecordingButton").addEventListener("click", submitBrowserRecording);
+  window.addEventListener("online", () => {
+    processPendingBrowserRecordingCleanups().catch(reportActionError);
+    if (appState.browserRecordingSessionId) {
+      appState.browserRecordingRetryStatus = "网络已恢复，正在补传音频块";
+      pumpBrowserRecordingUploadQueue().catch(reportActionError);
+    }
+  });
   $("enrollDoctorProfileButton").addEventListener("click", enrollDoctorProfile);
   $("doctorProfileSelect").addEventListener("change", (event) => {
     appState.selectedDoctorProfileId = event.target.value;
@@ -5395,6 +5970,7 @@ function bindEvents() {
 async function init() {
   bindEvents();
   await refreshAuth();
+  await processPendingBrowserRecordingCleanups().catch(() => undefined);
   renderAll();
   startAsrPrewarmPolling();
   refreshLlmStatus();

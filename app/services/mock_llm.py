@@ -112,6 +112,10 @@ _PHYSICAL_EXAM_REJECT_KEYWORDS = [
 
 _SUBJECTIVE_TEMPERATURE_KEYWORDS = ["最高体温", "体温多", "发热", "退热", "反复发热"]
 _OBJECTIVE_EXAM_ANCHORS = ["查体", "体格检查", "生命体征", "T ", "P ", "R ", "BP"]
+_CLINICAL_FACT_PRIORITY_TEMP_RE = re.compile(
+    r"(?:3[5-9](?:\.\d)?|4[0-2](?:\.\d)?)\s*(?:°\s*)?(?:C|c|℃|度)"
+)
+_CLINICAL_FACT_DANGER_KEYWORDS = ["胸闷", "胸痛", "气促", "呼吸困难"]
 
 
 def _looks_like_physical_exam(text: str) -> bool:
@@ -129,6 +133,20 @@ def _looks_like_physical_exam(text: str) -> bool:
     if any(pattern.search(text) for pattern in _PHYSICAL_EXAM_REQUIRED_PATTERNS):
         return True
     return any(keyword in normalized for keyword in _PHYSICAL_EXAM_FINDING_KEYWORDS)
+
+
+def _should_prioritize_clinical_fact_fields(
+    conversation: str,
+    fields: MedicalRecordFields,
+) -> bool:
+    if not fields.candidate_diagnoses:
+        return False
+    if _looks_like_physical_exam(conversation) and any(anchor in conversation for anchor in _OBJECTIVE_EXAM_ANCHORS):
+        return False
+    has_temperature_value = bool(_CLINICAL_FACT_PRIORITY_TEMP_RE.search(conversation))
+    has_fever_context = _contains(conversation, ["发热", "发烧", "体温"])
+    has_danger_signal = _contains(conversation, _CLINICAL_FACT_DANGER_KEYWORDS)
+    return has_temperature_value or (has_fever_context and has_danger_signal)
 
 
 def _extract_physical_exam_field(segments: list[str]) -> MedicalField:
@@ -299,6 +317,10 @@ def mock_extract_fields(conversation: str) -> MedicalRecordFields:
     if _is_fever_case(conversation):
         return validate_field_evidence(_extract_fever_fields(conversation, segments), conversation)
 
+    clinical_fact_fields = build_fields_from_clinical_facts(conversation)
+    if clinical_fact_fields is not None and _should_prioritize_clinical_fact_fields(conversation, clinical_fact_fields):
+        return validate_field_evidence(clinical_fact_fields, conversation)
+
     knowledge_candidates = infer_common_cold_candidates(conversation, segments)
     if knowledge_candidates:
         return validate_field_evidence(
@@ -309,10 +331,6 @@ def mock_extract_fields(conversation: str) -> MedicalRecordFields:
     physical_exam = _extract_physical_exam_field(segments)
     if not physical_exam.missing:
         return MedicalRecordFields(physical_exam=physical_exam)
-
-    clinical_fact_fields = build_fields_from_clinical_facts(conversation)
-    if clinical_fact_fields is not None:
-        return validate_field_evidence(clinical_fact_fields, conversation)
 
     treatments = _extract_treatments(conversation)
     symptoms = _extract_symptoms(conversation)
@@ -393,6 +411,16 @@ def mock_extract_fields(conversation: str) -> MedicalRecordFields:
                 follow_up_questions=["是否还有鼻出血、黑便、血尿或皮下瘀斑？"],
             )
         )
+
+    if (
+        clinical_fact_fields is not None
+        and not has_bite
+        and chief_complaint.missing
+        and previous_treatment.missing
+        and accompanying_symptoms.missing
+        and not candidate_diagnoses
+    ):
+        return validate_field_evidence(clinical_fact_fields, conversation)
 
     return MedicalRecordFields(
         chief_complaint=chief_complaint,

@@ -63,15 +63,23 @@ const appState = {
   browserRecordingStartedAt: 0,
   browserRecordingElapsedSeconds: 0,
   browserRecordingTimer: null,
+  browserRecordingChunkTimer: null,
   browserRecordingStream: null,
   browserRecordingAudioContext: null,
   browserRecordingSource: null,
   browserRecordingProcessor: null,
   browserRecordingChunks: [],
+  browserRecordingChunkBuffer: [],
+  browserRecordingChunkIndex: 0,
+  browserRecordingChunkUploads: [],
+  browserRecordingSessionId: "",
+  browserRecordingPausedAt: 0,
+  browserRecordingTotalPausedMs: 0,
   browserRecordingSampleRate: 0,
   browserRecordingObjectUrl: "",
   browserRecordingFile: null,
   browserRecordingMessage: "",
+  browserRecordingChunkStatus: "",
   browserRecordingRequestId: 0,
   lastActionError: "",
   inputMenuOpen: false,
@@ -114,8 +122,9 @@ const RECORD_PREVIEW_MIN_SEGMENTS = 1;
 const RECORD_PREVIEW_MIN_INTERVAL_MS = 2000;
 const RECORD_PREVIEW_DEBOUNCE_MS = 450;
 const ROLE_DISPLAY_CONFIDENCE_THRESHOLD = 0.9;
-const MAX_BROWSER_RECORDING_SECONDS = 60;
+const MAX_BROWSER_RECORDING_SECONDS = 1800;
 const MIN_BROWSER_RECORDING_SECONDS = 0.5;
+const BROWSER_RECORDING_CHUNK_SECONDS = 10;
 
 const FIELD_DEFS = [
   ["chief_complaint", "主诉"],
@@ -1119,31 +1128,40 @@ function renderBrowserRecordingPanel() {
   const statusLabel = $("browserRecordingStatusLabel");
   const timer = $("browserRecordingTimer");
   const startButton = $("startBrowserRecordingButton");
+  const pauseButton = $("pauseBrowserRecordingButton");
+  const resumeButton = $("resumeBrowserRecordingButton");
   const stopButton = $("stopBrowserRecordingButton");
   const cancelButton = $("cancelBrowserRecordingButton");
   const submitButton = $("submitBrowserRecordingButton");
   const preview = $("browserRecordingPreview");
+  const chunkStatus = $("browserRecordingChunkStatus");
   const message = $("browserRecordingMessage");
-  if (!statusLabel || !timer || !startButton || !stopButton || !cancelButton || !submitButton || !preview || !message) return;
+  if (!statusLabel || !timer || !startButton || !pauseButton || !resumeButton || !stopButton || !cancelButton || !submitButton || !preview || !chunkStatus || !message) return;
 
   const statusLabels = {
     idle: "等待录音",
     requesting: "正在请求麦克风权限",
     recording: "正在录音",
+    paused: "录音已暂停",
     recorded: "录音已就绪",
     uploading: "正在上传录音",
     error: "录音异常",
   };
   const isRecording = appState.browserRecordingStatus === "recording";
+  const isPaused = appState.browserRecordingStatus === "paused";
   const isRequesting = appState.browserRecordingStatus === "requesting";
   const isUploading = appState.browserRecordingStatus === "uploading";
+  const hasServerChunks = Boolean(appState.browserRecordingSessionId && appState.browserRecordingChunkIndex > 0);
   statusLabel.textContent = statusLabels[appState.browserRecordingStatus] || statusLabels.idle;
   timer.textContent = formatRelativeTime(appState.browserRecordingElapsedSeconds);
   startButton.disabled = appState.busy || isRequesting || isRecording || isUploading;
-  stopButton.disabled = !isRecording;
+  pauseButton.disabled = !isRecording || isUploading;
+  resumeButton.disabled = !isPaused || isUploading;
+  stopButton.disabled = !(isRecording || isPaused);
   cancelButton.disabled = isUploading || (appState.browserRecordingStatus === "idle" && !appState.browserRecordingFile);
-  submitButton.disabled = appState.busy || isUploading || !appState.browserRecordingFile;
+  submitButton.disabled = appState.busy || isUploading || !(appState.browserRecordingFile || hasServerChunks);
   preview.style.display = appState.browserRecordingObjectUrl ? "block" : "none";
+  chunkStatus.textContent = appState.browserRecordingChunkStatus || "";
   message.textContent = appState.browserRecordingMessage || "";
   message.classList.toggle("error", appState.browserRecordingStatus === "error");
 }
@@ -2172,6 +2190,14 @@ async function restoreAsrSessionFromUrl() {
       appState.taskStatus = "TRANSCRIBING";
       appState.asrPhase = "model_loading";
       listenForAsrEvents(session.events_url || `/api/asr/sessions/${sessionId}/events`);
+    } else if (session.status === "recording") {
+      const chunkStatus = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/chunks/status`);
+      appState.browserRecordingSessionId = session.session_id;
+      appState.browserRecordingStatus = "paused";
+      appState.browserRecordingChunkIndex = Number(chunkStatus.next_chunk_index || 0);
+      appState.browserRecordingChunkStatus = `已恢复 ${chunkStatus.chunk_count || 0} 个音频块`;
+      appState.browserRecordingMessage = "录音会话已恢复，可点击“恢复”继续录音，或结束后合并上传。";
+      appState.taskStatus = "CREATED";
     }
     $("topAsrEngineSelect").value = appState.selectedEngine;
     $("audioEngineSelect").value = appState.selectedEngine;
@@ -4532,6 +4558,10 @@ function cleanupBrowserRecordingCapture() {
     window.clearInterval(appState.browserRecordingTimer);
     appState.browserRecordingTimer = null;
   }
+  if (appState.browserRecordingChunkTimer) {
+    window.clearInterval(appState.browserRecordingChunkTimer);
+    appState.browserRecordingChunkTimer = null;
+  }
   if (appState.browserRecordingProcessor) {
     appState.browserRecordingProcessor.onaudioprocess = null;
     try {
@@ -4574,10 +4604,10 @@ function browserRecordingRequestActive(requestId) {
 
 function updateBrowserRecordingTimer() {
   if (appState.browserRecordingStatus !== "recording") return;
-  const elapsed = (Date.now() - appState.browserRecordingStartedAt) / 1000;
+  const elapsed = (Date.now() - appState.browserRecordingStartedAt - appState.browserRecordingTotalPausedMs) / 1000;
   appState.browserRecordingElapsedSeconds = Math.min(elapsed, MAX_BROWSER_RECORDING_SECONDS);
   if (elapsed >= MAX_BROWSER_RECORDING_SECONDS) {
-    stopBrowserRecording({ auto: true });
+    stopBrowserRecording({ auto: true }).catch(reportActionError);
     return;
   }
   renderBrowserRecordingPanel();
@@ -4628,12 +4658,163 @@ function encodeWavFromFloat32(chunks, sampleRate) {
   return new Blob([view], { type: "audio/wav" });
 }
 
+async function sha256Blob(blob) {
+  const buffer = await blob.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function ensureBrowserRecordingSession(engine) {
+  if (appState.browserRecordingSessionId) return appState.browserRecordingSessionId;
+  const sessionParams = new URLSearchParams({ engine });
+  if (appState.selectedDoctorProfileId) {
+    sessionParams.set("doctor_profile_id", appState.selectedDoctorProfileId);
+  }
+  const session = await api(`/api/asr/sessions?${sessionParams.toString()}`, { method: "POST" });
+  appState.currentAsrSessionId = session.session_id;
+  appState.browserRecordingSessionId = session.session_id;
+  appState.selectedEngine = session.engine || engine || appState.selectedEngine;
+  updateSessionUrl(session.session_id);
+  return session.session_id;
+}
+
+async function uploadBrowserRecordingChunk({ force = false } = {}) {
+  if (!appState.browserRecordingSessionId) return null;
+  const chunks = appState.browserRecordingChunkBuffer || [];
+  const sampleCount = chunks.reduce((total, chunk) => total + chunk.length, 0);
+  if (!force && sampleCount < (appState.browserRecordingSampleRate || 44100) * BROWSER_RECORDING_CHUNK_SECONDS) {
+    return null;
+  }
+  if (sampleCount === 0) return null;
+  appState.browserRecordingChunkBuffer = [];
+  const sampleRate = appState.browserRecordingSampleRate || 44100;
+  const blob = encodeWavFromFloat32(chunks, sampleRate);
+  const chunkIndex = appState.browserRecordingChunkIndex;
+  appState.browserRecordingChunkIndex += 1;
+  const checksum = await sha256Blob(blob);
+  const form = new FormData();
+  form.append("chunk_index", String(chunkIndex));
+  form.append("sha256", checksum);
+  form.append("duration_seconds", String(sampleCount / sampleRate));
+  form.append("file", blob, `browser-recording-chunk-${String(chunkIndex).padStart(6, "0")}.wav`);
+  const uploadPromise = api(`/api/asr/sessions/${encodeURIComponent(appState.browserRecordingSessionId)}/chunks`, {
+    method: "POST",
+    body: form,
+  });
+  appState.browserRecordingChunkUploads.push(uploadPromise);
+  const result = await uploadPromise;
+  appState.browserRecordingChunkStatus = `已上传 ${result.chunk_count || appState.browserRecordingChunkIndex} 个音频块`;
+  renderBrowserRecordingPanel();
+  return result;
+}
+
+async function flushBrowserRecordingChunk({ force = false } = {}) {
+  try {
+    return await uploadBrowserRecordingChunk({ force });
+  } catch (error) {
+    setBrowserRecordingError(`音频块上传失败：${error?.message || String(error)}`);
+    throw error;
+  }
+}
+
+function startBrowserRecordingIntervals() {
+  if (appState.browserRecordingTimer) window.clearInterval(appState.browserRecordingTimer);
+  if (appState.browserRecordingChunkTimer) window.clearInterval(appState.browserRecordingChunkTimer);
+  appState.browserRecordingTimer = window.setInterval(updateBrowserRecordingTimer, 250);
+  appState.browserRecordingChunkTimer = window.setInterval(() => {
+    flushBrowserRecordingChunk().catch(() => undefined);
+  }, Math.max(1000, BROWSER_RECORDING_CHUNK_SECONDS * 1000));
+}
+
+async function startBrowserRecordingCaptureForExistingSession(requestId) {
+  if (!appState.browserRecordingSessionId) {
+    throw new Error("录音会话尚未恢复，请重新开始录音。");
+  }
+  if (navigator.mediaDevices.enumerateDevices) {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    if (!devices.some((device) => device.kind === "audioinput")) {
+      throw new DOMException("No audio input device", "NotFoundError");
+    }
+  }
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    },
+  });
+  if (appState.browserRecordingRequestId !== requestId) {
+    stream.getTracks().forEach((track) => track.stop());
+    return;
+  }
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const audioContext = new AudioContextClass();
+  await audioContext.resume();
+  const source = audioContext.createMediaStreamSource(stream);
+  const processor = audioContext.createScriptProcessor(4096, Math.max(1, source.channelCount || 1), 1);
+  processor.onaudioprocess = (event) => {
+    if (appState.browserRecordingStatus !== "recording") return;
+    const input = event.inputBuffer;
+    const frameCount = input.length;
+    const channelCount = Math.max(1, input.numberOfChannels || 1);
+    const mixed = new Float32Array(frameCount);
+    for (let channel = 0; channel < channelCount; channel += 1) {
+      const data = input.getChannelData(channel);
+      for (let index = 0; index < frameCount; index += 1) {
+        mixed[index] += data[index] / channelCount;
+      }
+    }
+    appState.browserRecordingChunks.push(mixed);
+    appState.browserRecordingChunkBuffer.push(mixed);
+  };
+  source.connect(processor);
+  processor.connect(audioContext.destination);
+  appState.browserRecordingStream = stream;
+  appState.browserRecordingAudioContext = audioContext;
+  appState.browserRecordingSource = source;
+  appState.browserRecordingProcessor = processor;
+  appState.browserRecordingSampleRate = audioContext.sampleRate;
+}
+
+async function completeBrowserRecordingUpload() {
+  if (!appState.browserRecordingSessionId) {
+    throw new Error("录音会话尚未创建，请重新开始录音。");
+  }
+  await flushBrowserRecordingChunk({ force: true });
+  const settled = await Promise.allSettled(appState.browserRecordingChunkUploads);
+  const failedUpload = settled.find((item) => item.status === "rejected");
+  if (failedUpload) {
+    throw failedUpload.reason || new Error("存在未成功上传的音频块。");
+  }
+  const completed = await api(`/api/asr/sessions/${encodeURIComponent(appState.browserRecordingSessionId)}/complete`, {
+    method: "POST",
+  });
+  appState.currentAsrSessionId = completed.session_id;
+  appState.currentAudioId = completed.audio_id;
+  appState.uploadedFilename = completed.filename || completed.audio_id;
+  applyUploadedAudioMetadata(completed);
+  appState.taskStatus = "TRANSCRIBING";
+  setBusy(true, `正在使用 ${ENGINE_LABELS[completed.engine] || completed.engine} 转写录音...`);
+  return new Promise((resolve, reject) => {
+    listenForAsrEvents(completed.events_url, { resolve, reject });
+  });
+}
+
 async function startBrowserRecording() {
   clearActionError();
   releaseBrowserRecordingPreview();
   appState.browserRecordingChunks = [];
+  appState.browserRecordingChunkBuffer = [];
+  appState.browserRecordingChunkUploads = [];
+  appState.browserRecordingChunkIndex = 0;
+  appState.browserRecordingSessionId = "";
+  appState.browserRecordingPausedAt = 0;
+  appState.browserRecordingTotalPausedMs = 0;
   appState.browserRecordingElapsedSeconds = 0;
   appState.browserRecordingMessage = "";
+  appState.browserRecordingChunkStatus = "";
   const requestId = appState.browserRecordingRequestId + 1;
   appState.browserRecordingRequestId = requestId;
 
@@ -4674,6 +4855,12 @@ async function startBrowserRecording() {
     if (!stream.getAudioTracks().length) {
       throw new DOMException("No audio input track", "NotFoundError");
     }
+    const engine = $("recordingEngineSelect").value;
+    await ensureBrowserRecordingSession(engine);
+    if (!browserRecordingRequestActive(requestId)) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     audioContext = new AudioContextClass();
     await audioContext.resume();
@@ -4685,6 +4872,7 @@ async function startBrowserRecording() {
     const source = audioContext.createMediaStreamSource(stream);
     const processor = audioContext.createScriptProcessor(4096, Math.max(1, source.channelCount || 1), 1);
     processor.onaudioprocess = (event) => {
+      if (appState.browserRecordingStatus !== "recording") return;
       const input = event.inputBuffer;
       const frameCount = input.length;
       const channelCount = Math.max(1, input.numberOfChannels || 1);
@@ -4696,6 +4884,7 @@ async function startBrowserRecording() {
         }
       }
       appState.browserRecordingChunks.push(mixed);
+      appState.browserRecordingChunkBuffer.push(mixed);
     };
     source.connect(processor);
     processor.connect(audioContext.destination);
@@ -4707,8 +4896,8 @@ async function startBrowserRecording() {
     appState.browserRecordingSampleRate = audioContext.sampleRate;
     appState.browserRecordingStartedAt = Date.now();
     appState.browserRecordingStatus = "recording";
-    appState.browserRecordingMessage = "录音中，请在 60 秒内完成演示问诊。";
-    appState.browserRecordingTimer = window.setInterval(updateBrowserRecordingTimer, 250);
+    appState.browserRecordingMessage = "录音中，音频会自动分块上传；最长支持 30 分钟。";
+    startBrowserRecordingIntervals();
     renderAll();
   } catch (error) {
     if (browserRecordingRequestActive(requestId)) {
@@ -4719,9 +4908,65 @@ async function startBrowserRecording() {
   }
 }
 
-function stopBrowserRecording({ auto = false } = {}) {
+async function pauseBrowserRecording() {
   if (appState.browserRecordingStatus !== "recording") return;
-  const elapsed = (Date.now() - appState.browserRecordingStartedAt) / 1000;
+  appState.browserRecordingPausedAt = Date.now();
+  appState.browserRecordingStatus = "paused";
+  if (appState.browserRecordingTimer) window.clearInterval(appState.browserRecordingTimer);
+  if (appState.browserRecordingChunkTimer) window.clearInterval(appState.browserRecordingChunkTimer);
+  appState.browserRecordingTimer = null;
+  appState.browserRecordingChunkTimer = null;
+  appState.browserRecordingMessage = "录音已暂停；已录内容会继续保留，可恢复录音或结束上传。";
+  renderAll();
+  await flushBrowserRecordingChunk({ force: true });
+  showToast("录音已暂停");
+}
+
+async function resumeBrowserRecording() {
+  if (appState.browserRecordingStatus !== "paused") return;
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setBrowserRecordingError("当前浏览器不支持麦克风录音，请使用最新版 Chrome 或 Edge。");
+    return;
+  }
+  if (!secureBrowserRecordingContext()) {
+    setBrowserRecordingError("浏览器录音需要 HTTPS 或 localhost 环境，请切换安全地址后重试。");
+    return;
+  }
+  const requestId = appState.browserRecordingRequestId + 1;
+  appState.browserRecordingRequestId = requestId;
+  if (!appState.browserRecordingProcessor) {
+    appState.browserRecordingStatus = "requesting";
+    appState.browserRecordingMessage = "正在恢复麦克风录音...";
+    renderAll();
+    try {
+      await startBrowserRecordingCaptureForExistingSession(requestId);
+    } catch (error) {
+      if (appState.browserRecordingRequestId === requestId) {
+        setBrowserRecordingError(browserRecordingErrorMessage(error));
+      }
+      return;
+    }
+  }
+  if (appState.browserRecordingPausedAt) {
+    appState.browserRecordingTotalPausedMs += Date.now() - appState.browserRecordingPausedAt;
+  }
+  appState.browserRecordingPausedAt = 0;
+  if (!appState.browserRecordingStartedAt) {
+    appState.browserRecordingStartedAt = Date.now();
+  }
+  appState.browserRecordingStatus = "recording";
+  appState.browserRecordingMessage = "录音已恢复，音频块会继续按顺序上传。";
+  startBrowserRecordingIntervals();
+  renderAll();
+  showToast("录音已恢复");
+}
+
+async function stopBrowserRecording({ auto = false } = {}) {
+  if (!["recording", "paused"].includes(appState.browserRecordingStatus)) return;
+  const effectiveNow = appState.browserRecordingStatus === "paused"
+    ? appState.browserRecordingPausedAt || Date.now()
+    : Date.now();
+  const elapsed = (effectiveNow - appState.browserRecordingStartedAt - appState.browserRecordingTotalPausedMs) / 1000;
   appState.browserRecordingElapsedSeconds = Math.min(elapsed, MAX_BROWSER_RECORDING_SECONDS);
   cleanupBrowserRecordingCapture();
 
@@ -4732,6 +4977,12 @@ function stopBrowserRecording({ auto = false } = {}) {
     appState.browserRecordingMessage = "未录到有效声音，请重新录制。";
     renderAll();
     showToast("未录到有效声音，请重新录制");
+    return;
+  }
+
+  try {
+    await flushBrowserRecordingChunk({ force: true });
+  } catch (_error) {
     return;
   }
 
@@ -4747,17 +4998,28 @@ function stopBrowserRecording({ auto = false } = {}) {
   }
   appState.browserRecordingStatus = "recorded";
   appState.browserRecordingMessage = auto
-    ? "已达到最长 60 秒录音限制，可先试听再上传生成病历。"
+    ? "已达到最长 30 分钟录音限制，可先试听再上传生成病历。"
     : "录音已停止，可先试听再上传生成病历。";
   renderAll();
-  showToast(auto ? "已达到最长 60 秒录音限制" : "录音已停止");
+  showToast(auto ? "已达到最长 30 分钟录音限制" : "录音已停止");
 }
 
 function cancelBrowserRecording({ silent = false } = {}) {
   appState.browserRecordingRequestId += 1;
+  if (appState.browserRecordingSessionId && appState.currentAsrSessionId === appState.browserRecordingSessionId) {
+    appState.currentAsrSessionId = null;
+    updateSessionUrl("");
+  }
   cleanupBrowserRecordingCapture();
   releaseBrowserRecordingPreview();
   appState.browserRecordingChunks = [];
+  appState.browserRecordingChunkBuffer = [];
+  appState.browserRecordingChunkUploads = [];
+  appState.browserRecordingChunkIndex = 0;
+  appState.browserRecordingSessionId = "";
+  appState.browserRecordingChunkStatus = "";
+  appState.browserRecordingPausedAt = 0;
+  appState.browserRecordingTotalPausedMs = 0;
   appState.browserRecordingStartedAt = 0;
   appState.browserRecordingElapsedSeconds = 0;
   appState.browserRecordingSampleRate = 0;
@@ -4769,18 +5031,18 @@ function cancelBrowserRecording({ silent = false } = {}) {
 
 async function submitBrowserRecording() {
   try {
-    if (!appState.browserRecordingFile) {
+    if (!appState.browserRecordingFile && !(appState.browserRecordingSessionId && appState.browserRecordingChunkIndex > 0)) {
       throw new Error("请先完成录音并试听确认。");
     }
-    const engine = $("recordingEngineSelect").value;
     appState.browserRecordingStatus = "uploading";
-    appState.browserRecordingMessage = "正在上传录音并生成病历...";
+    appState.browserRecordingMessage = "正在合并音频块并生成病历...";
     renderAll();
     closeDrawer();
     appState.audioMode = "generate";
-    await runAudioWorkflowFromFile(appState.browserRecordingFile, engine, "generate");
+    const transcribed = await completeBrowserRecordingUpload();
+    await continueGeneratingFromTranscription(transcribed);
     appState.browserRecordingStatus = "recorded";
-    appState.browserRecordingMessage = "录音已上传，正在等待生成流程。";
+    appState.browserRecordingMessage = "录音已合并上传，正在等待生成流程。";
     renderBrowserRecordingPanel();
   } catch (error) {
     appState.browserRecordingStatus = appState.browserRecordingFile ? "recorded" : "error";
@@ -4890,7 +5152,15 @@ function bindEvents() {
   $("submitTextButton").addEventListener("click", submitTextImport);
   $("submitAudioButton").addEventListener("click", submitAudio);
   $("startBrowserRecordingButton").addEventListener("click", startBrowserRecording);
-  $("stopBrowserRecordingButton").addEventListener("click", () => stopBrowserRecording());
+  $("pauseBrowserRecordingButton").addEventListener("click", () => {
+    pauseBrowserRecording().catch(reportActionError);
+  });
+  $("resumeBrowserRecordingButton").addEventListener("click", () => {
+    resumeBrowserRecording().catch(reportActionError);
+  });
+  $("stopBrowserRecordingButton").addEventListener("click", () => {
+    stopBrowserRecording().catch(reportActionError);
+  });
   $("cancelBrowserRecordingButton").addEventListener("click", () => cancelBrowserRecording());
   $("submitBrowserRecordingButton").addEventListener("click", submitBrowserRecording);
   $("enrollDoctorProfileButton").addEventListener("click", enrollDoctorProfile);

@@ -71,9 +71,32 @@ def init_db() -> None:
                 created_at TEXT NOT NULL,
                 FOREIGN KEY(task_id) REFERENCES agent_task(id)
             );
+
+            CREATE TABLE IF NOT EXISTS auth_user (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                display_name TEXT NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('admin', 'doctor')),
+                password_hash TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                last_login_at TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS auth_session (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token_hash TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                revoked_at TEXT,
+                FOREIGN KEY(user_id) REFERENCES auth_user(id)
+            );
             """
         )
         _migrate_schema(connection)
+        _bootstrap_admin_user(connection)
         connection.commit()
 
 
@@ -81,6 +104,7 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, "agent_task", "input_text", "TEXT")
     _ensure_column(connection, "agent_task", "retry_count", "INTEGER NOT NULL DEFAULT 0")
     _ensure_column(connection, "agent_task", "completed_at", "TEXT")
+    _ensure_column(connection, "agent_task", "owner_user_id", "INTEGER")
     _ensure_column(connection, "agent_task_step", "attempt_no", "INTEGER NOT NULL DEFAULT 1")
     _ensure_column(connection, "agent_task_step", "input_snapshot_json", "TEXT")
     _ensure_column(connection, "agent_task_step", "output_snapshot_json", "TEXT")
@@ -100,6 +124,45 @@ def _ensure_column(
         connection.execute(
             f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
         )
+
+
+def _bootstrap_admin_user(connection: sqlite3.Connection) -> None:
+    if os.environ.get("MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP", "1").lower() in {"0", "false", "no"}:
+        return
+    existing = connection.execute("SELECT COUNT(*) AS count FROM auth_user").fetchone()
+    if existing is not None and int(existing["count"]) > 0:
+        return
+
+    username = os.environ.get("MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_USERNAME", "admin")
+    password = os.environ.get("MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD", "admin123456")
+    display_name = os.environ.get("MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_DISPLAY_NAME", "Local Admin")
+    mode = os.environ.get("RECORD_PROVIDER_MODE", "demo").strip().lower()
+    using_default_password = "MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD" not in os.environ
+    if mode in {"live", "edge"} and (using_default_password or _is_weak_password(password, username)):
+        raise RuntimeError("Edge/Live mode requires a strong MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD")
+
+    from app.services.auth import hash_password
+
+    now = utc_now()
+    connection.execute(
+        """
+        INSERT INTO auth_user (
+            username, display_name, role, password_hash,
+            is_active, created_at, updated_at, last_login_at
+        )
+        VALUES (?, ?, 'admin', ?, 1, ?, ?, NULL)
+        """,
+        (username, display_name, hash_password(password), now, now),
+    )
+
+
+def _is_weak_password(password: str, username: str) -> bool:
+    lowered = password.lower()
+    return (
+        len(password) < 10
+        or lowered in {"admin", "admin123", "admin123456", "password", "12345678"}
+        or lowered == username.lower()
+    )
 
 
 def row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
@@ -139,7 +202,21 @@ def create_task(
         )
         task_id = int(cursor.lastrowid)
         connection.commit()
-        return task_id
+    return task_id
+
+
+def set_task_owner(task_id: int, owner_user_id: int | None) -> None:
+    init_db()
+    with closing(get_connection()) as connection:
+        connection.execute(
+            """
+            UPDATE agent_task
+            SET owner_user_id = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (owner_user_id, utc_now(), task_id),
+        )
+        connection.commit()
 
 
 def update_task(
@@ -331,3 +408,136 @@ def get_audit_logs(task_id: int) -> list[dict[str, Any]]:
             (task_id,),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def create_user(
+    *,
+    username: str,
+    password: str,
+    display_name: str,
+    role: str,
+) -> int:
+    init_db()
+    if role not in {"admin", "doctor"}:
+        raise ValueError("Unsupported user role")
+    from app.services.auth import hash_password
+
+    now = utc_now()
+    try:
+        with closing(get_connection()) as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO auth_user (
+                    username, display_name, role, password_hash,
+                    is_active, created_at, updated_at, last_login_at
+                )
+                VALUES (?, ?, ?, ?, 1, ?, ?, NULL)
+                """,
+                (username, display_name, role, hash_password(password), now, now),
+            )
+            user_id = int(cursor.lastrowid)
+            connection.commit()
+            return user_id
+    except sqlite3.IntegrityError as exc:
+        raise ValueError("Username already exists") from exc
+
+
+def get_user_by_username(username: str) -> dict[str, Any] | None:
+    init_db()
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            "SELECT * FROM auth_user WHERE username = ?",
+            (username,),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def get_user_by_id(user_id: int) -> dict[str, Any] | None:
+    init_db()
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            "SELECT * FROM auth_user WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def list_users() -> list[dict[str, Any]]:
+    init_db()
+    with closing(get_connection()) as connection:
+        rows = connection.execute(
+            """
+            SELECT id, username, display_name, role, is_active,
+                   created_at, updated_at, last_login_at
+            FROM auth_user
+            ORDER BY id ASC
+            """
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def update_user_last_login(user_id: int) -> None:
+    init_db()
+    now = utc_now()
+    with closing(get_connection()) as connection:
+        connection.execute(
+            """
+            UPDATE auth_user
+            SET last_login_at = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (now, now, user_id),
+        )
+        connection.commit()
+
+
+def create_auth_session(
+    *,
+    user_id: int,
+    token_hash: str,
+    expires_at: str,
+) -> int:
+    init_db()
+    with closing(get_connection()) as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO auth_session (user_id, token_hash, created_at, expires_at, revoked_at)
+            VALUES (?, ?, ?, ?, NULL)
+            """,
+            (user_id, token_hash, utc_now(), expires_at),
+        )
+        session_id = int(cursor.lastrowid)
+        connection.commit()
+        return session_id
+
+
+def get_auth_session_user(token_hash: str) -> dict[str, Any] | None:
+    init_db()
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            """
+            SELECT u.*
+            FROM auth_session s
+            JOIN auth_user u ON u.id = s.user_id
+            WHERE s.token_hash = ?
+              AND s.revoked_at IS NULL
+              AND s.expires_at > ?
+              AND u.is_active = 1
+            """,
+            (token_hash, utc_now()),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def revoke_auth_session(token_hash: str) -> None:
+    init_db()
+    with closing(get_connection()) as connection:
+        connection.execute(
+            """
+            UPDATE auth_session
+            SET revoked_at = ?
+            WHERE token_hash = ? AND revoked_at IS NULL
+            """,
+            (utc_now(), token_hash),
+        )
+        connection.commit()

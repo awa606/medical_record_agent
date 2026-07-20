@@ -5,17 +5,19 @@ import os
 import re
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.agents import MedicalRecordOrchestrator
+from app.api.auth import current_user_from_request, require_current_user
+from app.db import set_task_owner
 from app.schemas import ASRResult, ASRSegment, MedicalRecordFields, SafetyCheckResult, SourceSpan
 from app.services import LLMProviderUnavailableError, create_llm_record_generator
 from app.services.asr.role_quality import build_speaker_role_quality
 from app.services.record_quality import build_record_quality_report
 
 
-router = APIRouter(prefix="/records", tags=["records"])
+router = APIRouter(prefix="/records", tags=["records"], dependencies=[Depends(require_current_user)])
 
 
 class GenerateRecordRequest(BaseModel):
@@ -568,10 +570,14 @@ def evaluate_record_quality(payload: QualityRequest) -> QualityResponse:
 def generate_record(
     payload: GenerateRecordRequest,
     background_tasks: BackgroundTasks,
+    request: Request = None,
 ) -> dict[str, object]:
     ensure_record_provider_available()
     orchestrator = MedicalRecordOrchestrator()
     task_id = orchestrator.create_text_task(payload.conversation_text)
+    user = current_user_from_request(request)
+    if user is not None:
+        set_task_owner(task_id, user.id)
     background_tasks.add_task(run_record_generation_task, task_id, payload.conversation_text)
 
     return {

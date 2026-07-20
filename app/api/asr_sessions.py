@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, File, Header, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.api.audio import (
@@ -23,6 +23,7 @@ from app.api.audio import (
     _write_transcript,
     get_upload_dir,
 )
+from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.schemas import (
     ASRResult,
     ASRSegment,
@@ -52,7 +53,7 @@ from app.services.asr.role_quality import attach_speaker_role_quality
 from app.services.asr.speaker_role_classifier import resolve_speaker_roles
 
 
-router = APIRouter(prefix="/asr/sessions", tags=["asr-sessions"])
+router = APIRouter(prefix="/asr/sessions", tags=["asr-sessions"], dependencies=[Depends(require_current_user)])
 
 SUPPORTED_ASR_ENGINES = {"mock", "funasr", "sensevoice", "whisper", "qwen3", "online"}
 CHUNKABLE_ASR_ENGINES = {"funasr", "sensevoice"}
@@ -176,6 +177,10 @@ def _read_session(session_id: str) -> ASRSessionRecord:
     if not path.exists():
         raise HTTPException(status_code=404, detail="ASR session not found")
     return ASRSessionRecord.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def _assert_session_access(session: ASRSessionRecord, request: Request | None) -> None:
+    assert_owner_or_admin(session.owner_user_id, request, resource_name="ASR session")
 
 
 def _write_events(session_id: str, events: list[ASRSessionEvent]) -> None:
@@ -1039,6 +1044,7 @@ def create_asr_session(
     engine: str = Query(default="mock"),
     doctor_profile_id: str | None = Query(default=None),
     diarization_engine: str = Query(default="auto"),
+    request: Request = None,
 ) -> ASRSessionRecord:
     normalized_engine = _normalize_engine_name(engine)
     if not isinstance(doctor_profile_id, str):
@@ -1065,14 +1071,17 @@ def create_asr_session(
         diarization_engine=normalized_diarization_engine,
         created_at=now,
         updated_at=now,
+        owner_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
     )
     _write_session(session)
     return session
 
 
 @router.get("/{session_id}")
-def read_asr_session(session_id: str) -> ASRSessionRecord:
-    return _read_session(session_id)
+def read_asr_session(session_id: str, request: Request = None) -> ASRSessionRecord:
+    session = _read_session(session_id)
+    _assert_session_access(session, request)
+    return session
 
 
 def _run_asr_session_transcription(
@@ -1860,6 +1869,7 @@ def upload_asr_session_audio(
         content_type=getattr(file, "content_type", None),
         size_bytes=destination.stat().st_size,
         created_at=_now(),
+        owner_user_id=session.owner_user_id,
     )
     _write_audio_record(record)
 
@@ -1911,8 +1921,10 @@ def upload_asr_session_audio(
 def upload_asr_session_audio_route(
     session_id: str,
     background_tasks: BackgroundTasks,
+    request: Request = None,
     file: UploadFile = File(...),
 ) -> ASRSessionUploadResponse:
+    _assert_session_access(_read_session(session_id), request)
     return upload_asr_session_audio(session_id, file, background_tasks=background_tasks)
 
 
@@ -1920,8 +1932,10 @@ def upload_asr_session_audio_route(
 def update_asr_session_result(
     session_id: str,
     payload: ASRSessionCorrectionRequest,
+    request: Request = None,
 ) -> ASRSessionCorrectionResponse:
     session = _read_session(session_id)
+    _assert_session_access(session, request)
     path = _result_path(session_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="ASR session result not found")
@@ -1958,8 +1972,10 @@ def update_asr_session_result(
 def merge_asr_session_speakers(
     session_id: str,
     payload: ASRSpeakerMergeRequest,
+    request: Request = None,
 ) -> ASRSpeakerMergeResponse:
     session = _read_session(session_id)
+    _assert_session_access(session, request)
     path = _result_path(session_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="ASR session result not found")
@@ -2015,10 +2031,12 @@ def merge_asr_session_speakers(
 @router.get("/{session_id}/events")
 def read_asr_session_events(
     session_id: str,
+    request: Request = None,
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
     delay_ms: int = Query(default=100, ge=0, le=5000),
 ) -> StreamingResponse:
-    _read_session(session_id)
+    session = _read_session(session_id)
+    _assert_session_access(session, request)
     return StreamingResponse(
         _asr_session_event_stream(
             session_id,
@@ -2035,8 +2053,8 @@ def read_asr_session_events(
 
 
 @router.get("/{session_id}/result")
-def read_asr_session_result(session_id: str) -> ASRResult:
-    _read_session(session_id)
+def read_asr_session_result(session_id: str, request: Request = None) -> ASRResult:
+    _assert_session_access(_read_session(session_id), request)
     path = _result_path(session_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="ASR session result not found")

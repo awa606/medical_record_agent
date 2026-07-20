@@ -100,6 +100,9 @@ const appState = {
   asrPrewarmStatus: null,
   asrPrewarmCheckedAt: "",
   asrPrewarmTimer: null,
+  authUser: null,
+  authStatus: "unknown",
+  authMessage: "",
 };
 
 const RECORD_PREVIEW_MIN_CHARS = 10;
@@ -249,6 +252,12 @@ async function api(path, options = {}) {
   const response = await fetch(path, options);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401) {
+      appState.authUser = null;
+      appState.authStatus = "required";
+      appState.authMessage = "登录已失效，请重新登录。";
+      renderAuthPanel();
+    }
     const detail = data.detail;
     if (typeof detail === "string") throw new Error(detail);
     const errorMessage = detail?.message
@@ -259,6 +268,91 @@ async function api(path, options = {}) {
     throw error;
   }
   return data;
+}
+
+async function refreshAuth() {
+  try {
+    const response = await fetch("/api/auth/me");
+    if (!response.ok) {
+      appState.authUser = null;
+      appState.authStatus = "required";
+      appState.authMessage = "";
+      return null;
+    }
+    const user = await response.json();
+    appState.authUser = user;
+    appState.authStatus = "authenticated";
+    appState.authMessage = "";
+    return user;
+  } catch (_error) {
+    appState.authUser = null;
+    appState.authStatus = "required";
+    appState.authMessage = "无法连接登录服务。";
+    return null;
+  } finally {
+    renderAuthPanel();
+  }
+}
+
+function renderAuthPanel() {
+  const panel = $("loginPanel");
+  const label = $("authUserLabel");
+  const logoutButton = $("logoutButton");
+  const message = $("loginMessage");
+  if (label) {
+    label.textContent = appState.authUser
+      ? `${appState.authUser.display_name || appState.authUser.username} · ${appState.authUser.role}`
+      : "未登录";
+  }
+  if (logoutButton) logoutButton.hidden = !appState.authUser;
+  if (panel) panel.hidden = appState.authStatus === "authenticated";
+  if (message) message.textContent = appState.authMessage || "";
+}
+
+async function submitLogin(event) {
+  event.preventDefault();
+  const username = $("loginUsername")?.value?.trim();
+  const password = $("loginPassword")?.value || "";
+  if (!username || !password) {
+    appState.authMessage = "请输入用户名和密码。";
+    renderAuthPanel();
+    return;
+  }
+  appState.authMessage = "正在登录...";
+  renderAuthPanel();
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.detail || "用户名或密码错误。");
+    }
+    appState.authUser = data.user;
+    appState.authStatus = "authenticated";
+    appState.authMessage = "";
+    renderAll();
+    refreshLlmStatus();
+    showToast("登录成功");
+  } catch (error) {
+    appState.authUser = null;
+    appState.authStatus = "required";
+    appState.authMessage = error?.message || "登录失败。";
+    renderAuthPanel();
+  }
+}
+
+async function logout() {
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } finally {
+    appState.authUser = null;
+    appState.authStatus = "required";
+    appState.authMessage = "已退出登录。";
+    renderAll();
+  }
 }
 
 async function refreshExportReadiness() {
@@ -3059,6 +3153,7 @@ function isApprovedForExport() {
 
 function renderAll() {
   renderMode();
+  renderAuthPanel();
   renderInputMethodMenu();
   renderDisplaySettingsMenu();
   renderPatientBar();
@@ -4859,10 +4954,13 @@ function bindEvents() {
   $("saveDraftButton").addEventListener("click", saveDraftReview);
   $("confirmFieldsButton").addEventListener("click", confirmFields);
   $("exportButton").addEventListener("click", exportRecord);
+  $("loginForm").addEventListener("submit", submitLogin);
+  $("logoutButton").addEventListener("click", logout);
 }
 
 async function init() {
   bindEvents();
+  await refreshAuth();
   renderAll();
   startAsrPrewarmPolling();
   refreshLlmStatus();

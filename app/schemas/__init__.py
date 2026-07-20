@@ -18,6 +18,14 @@ from app.schemas.asr import (
     SpeakerRoleQualityResult,
     SpeakerRoleAssignment,
 )
+from app.schemas.auth import (
+    AuthenticatedUser,
+    CreateUserRequest,
+    LoginRequest,
+    LoginResponse,
+    UserListResponse,
+    UserPublic,
+)
 from app.schemas.medical_record import (
     CandidateDiagnosis,
     MedicalField,
@@ -50,17 +58,23 @@ __all__ = [
     "AgentTaskResponse",
     "AgentTaskStepResponse",
     "AudioRecord",
+    "AuthenticatedUser",
     "DiarizationTurn",
+    "CreateUserRequest",
     "SpeakerRoleQualityMetrics",
     "SpeakerRoleQualityResult",
     "CandidateDiagnosis",
     "DoctorSpeakerProfile",
     "MedicalField",
     "MedicalRecordFields",
+    "LoginRequest",
+    "LoginResponse",
     "SafetyCheckResult",
     "StepStatus",
     "SourceSpan",
     "SpeakerRoleAssignment",
     "SpeakerProfileList",
     "TaskStatus",
+    "UserListResponse",
+    "UserPublic",
 ]

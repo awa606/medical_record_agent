@@ -16,6 +16,7 @@ from app.api.audio import (
 from app.api.tasks import read_task
 from app.main import app
 from app.schemas import ASREvaluationRequest, ASRResult, ASRSegment, SpeakerRoleAssignment
+from tests.auth_helpers import login_as_admin
 
 
 DOCTOR = "\u533b\u751f"
@@ -103,6 +104,7 @@ class AudioApiTests(unittest.TestCase):
     def test_media_endpoint_supports_range_requests(self):
         uploaded = self._upload_sample("sample.wav")
         client = TestClient(app)
+        login_as_admin(client)
 
         response = client.get(
             f"/api/audio/{uploaded.audio_id}/media",

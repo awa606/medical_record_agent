@@ -4,9 +4,11 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 
 from app.api.audio import _safe_extension
+from app.api.auth import require_admin, require_current_user
+from app.schemas.auth import AuthenticatedUser
 from app.schemas.speaker_profile import DoctorSpeakerProfile, SpeakerProfileList
 from app.services.asr.speaker_profiles import (
     create_doctor_profile,
@@ -15,7 +17,11 @@ from app.services.asr.speaker_profiles import (
 )
 
 
-router = APIRouter(prefix="/speaker-profiles", tags=["speaker-profiles"])
+router = APIRouter(
+    prefix="/speaker-profiles",
+    tags=["speaker-profiles"],
+    dependencies=[Depends(require_current_user)],
+)
 
 
 @router.post("/doctor")
@@ -43,7 +49,10 @@ def read_speaker_profiles() -> SpeakerProfileList:
 
 
 @router.delete("/{profile_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_speaker_profile(profile_id: str) -> Response:
+def remove_speaker_profile(
+    profile_id: str,
+    _admin: AuthenticatedUser = Depends(require_admin),
+) -> Response:
     try:
         deleted = delete_doctor_profile(profile_id)
     except ValueError as exc:

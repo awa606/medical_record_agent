@@ -9,18 +9,20 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 
 from app.agents import MedicalRecordOrchestrator
+from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.api.records import ensure_record_provider_available, run_record_generation_task
+from app.db import set_task_owner
 from app.schemas import ASREvaluationRequest, ASREvaluationResult, ASRResult, AudioRecord
 from app.services.asr import ASREvaluator, apply_manifest_role_strategy, create_asr_engine
 from app.services.asr.role_quality import attach_speaker_role_quality, build_speaker_role_quality
 from app.services.asr.role_strategy import find_sample_config
 
 
-router = APIRouter(prefix="/audio", tags=["audio"])
+router = APIRouter(prefix="/audio", tags=["audio"], dependencies=[Depends(require_current_user)])
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_UPLOAD_DIR = PROJECT_ROOT / "data" / "uploads"
@@ -82,6 +84,10 @@ def _read_audio_record(audio_id: str) -> AudioRecord:
     )
 
 
+def _assert_audio_access(record: AudioRecord, request: Request | None) -> None:
+    assert_owner_or_admin(record.owner_user_id, request, resource_name="audio")
+
+
 def _write_transcript(result: ASRResult) -> None:
     path = _transcript_path(result.audio_id)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -116,7 +122,7 @@ def _sample_id_from_record(record: AudioRecord) -> str:
 
 
 @router.post("/upload")
-def upload_audio(file: UploadFile = File(...)) -> AudioRecord:
+def upload_audio(file: UploadFile = File(...), request: Request = None) -> AudioRecord:
     extension = _safe_extension(file.filename or "")
     upload_dir = get_upload_dir()
     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -135,19 +141,23 @@ def upload_audio(file: UploadFile = File(...)) -> AudioRecord:
         content_type=getattr(file, "content_type", None),
         size_bytes=destination.stat().st_size,
         created_at=datetime.now(UTC).isoformat(),
+        owner_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
     )
     _write_audio_record(record)
     return record
 
 
 @router.get("/{audio_id}")
-def read_audio(audio_id: str) -> AudioRecord:
-    return _read_audio_record(audio_id)
+def read_audio(audio_id: str, request: Request = None) -> AudioRecord:
+    record = _read_audio_record(audio_id)
+    _assert_audio_access(record, request)
+    return record
 
 
 @router.get("/{audio_id}/media")
-def stream_audio_media(audio_id: str) -> FileResponse:
+def stream_audio_media(audio_id: str, request: Request = None) -> FileResponse:
     record = _read_audio_record(audio_id)
+    _assert_audio_access(record, request)
     audio_path = _audio_path(audio_id)
     media_type = record.content_type or mimetypes.guess_type(record.filename)[0] or "application/octet-stream"
     return FileResponse(
@@ -160,9 +170,11 @@ def stream_audio_media(audio_id: str) -> FileResponse:
 @router.post("/{audio_id}/transcribe")
 def transcribe_audio(
     audio_id: str,
+    request: Request = None,
     engine: str = Query(default="mock"),
 ) -> dict[str, Any]:
     record = _read_audio_record(audio_id)
+    _assert_audio_access(record, request)
     try:
         asr_engine = create_asr_engine(engine)
         result = asr_engine.transcribe(audio_id, Path(record.path))
@@ -190,9 +202,11 @@ def read_audio_transcript(audio_id: str) -> ASRResult:
 def evaluate_audio(
     audio_id: str,
     payload: ASREvaluationRequest,
+    request: Request = None,
 ) -> ASREvaluationResult:
     transcript = _read_transcript(audio_id)
     record = _read_audio_record(audio_id)
+    _assert_audio_access(record, request)
     expected_keywords = payload.expected_keywords
     sample = find_sample_config(_sample_id_from_record(record))
     if not expected_keywords and sample:
@@ -210,8 +224,17 @@ def evaluate_audio(
 def generate_record_from_audio(
     audio_id: str,
     background_tasks: BackgroundTasks,
+    request: Request = None,
 ) -> dict[str, object]:
     result = _read_transcript(audio_id)
+    try:
+        record = _read_audio_record(audio_id)
+    except HTTPException as exc:
+        if exc.status_code != 404:
+            raise
+        record = None
+    if record is not None:
+        _assert_audio_access(record, request)
     result = _require_passed_role_quality(result)
     conversation_text = result.conversation_text.strip()
     if not conversation_text:
@@ -220,6 +243,9 @@ def generate_record_from_audio(
     ensure_record_provider_available()
     orchestrator = MedicalRecordOrchestrator()
     task_id = orchestrator.create_text_task(conversation_text)
+    user = current_user_from_request(request)
+    if user is not None:
+        set_task_owner(task_id, user.id)
     background_tasks.add_task(
         run_record_generation_task,
         task_id,

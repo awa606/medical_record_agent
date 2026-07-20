@@ -103,6 +103,7 @@ class AudioRecord(BaseModel):
     content_type: str | None = None
     size_bytes: int | None = None
     created_at: str | None = None
+    owner_user_id: int | None = None
 
 
 class ASREvaluationRequest(BaseModel):
@@ -133,6 +134,7 @@ class ASRSessionRecord(BaseModel):
     diarization_engine: str = "auto"
     created_at: str | None = None
     updated_at: str | None = None
+    owner_user_id: int | None = None
 
 
 class ASRSessionEvent(BaseModel):

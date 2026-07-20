@@ -165,6 +165,26 @@ pre {
   justify-content: flex-end;
 }
 
+.auth-status {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 4px 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.auth-status button {
+  min-height: 26px;
+  border-radius: 7px;
+  padding: 3px 8px;
+}
+
 .mode-switch,
 .capture-switch {
   display: inline-flex;
@@ -4938,6 +4958,68 @@ body.care-mode .transcript-list,
 
 .recording-message.error {
   color: #b42318;
+}
+
+.login-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.login-panel[hidden] {
+  display: none;
+}
+
+.login-card {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 22px;
+  background: #fff;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
+}
+
+.login-card h2 {
+  margin: 4px 0 6px;
+  font-size: 22px;
+}
+
+.login-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.login-card label {
+  display: grid;
+  gap: 6px;
+  color: #334155;
+  font-weight: 900;
+}
+
+.login-card input {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 11px;
+}
+
+.login-card button {
+  min-height: 42px;
+  border-radius: 10px;
+}
+
+.login-message {
+  min-height: 20px;
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 @media (max-width: 760px) {

@@ -18,6 +18,7 @@ from app.services.asr.speaker_profiles import (
     delete_doctor_profile,
     list_doctor_profiles,
 )
+from tests.auth_helpers import login_as_admin
 
 
 class FakeCamppExtractor:
@@ -29,9 +30,11 @@ class SpeakerProfileTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         os.environ["MEDICAL_RECORD_AGENT_SPEAKER_PROFILE_DIR"] = self.temp_dir.name
+        os.environ["MEDICAL_RECORD_AGENT_DB"] = os.path.join(self.temp_dir.name, "profiles.sqlite3")
 
     def tearDown(self):
         os.environ.pop("MEDICAL_RECORD_AGENT_SPEAKER_PROFILE_DIR", None)
+        os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
         self.temp_dir.cleanup()
 
     def test_profile_store_keeps_normalized_embedding_and_public_metadata(self):
@@ -66,6 +69,7 @@ class SpeakerProfileTests(unittest.TestCase):
             )
 
         client = TestClient(app)
+        login_as_admin(client)
         with patch("app.api.speaker_profiles.create_doctor_profile", side_effect=fake_create):
             response = client.post(
                 "/api/speaker-profiles/doctor?name=王医生",

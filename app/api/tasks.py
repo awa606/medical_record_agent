@@ -4,17 +4,18 @@ import asyncio
 import json
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.db import create_audit_log, get_audit_logs, get_task, get_task_steps, json_dumps, update_task
 from app.schemas import MedicalRecordFields, SafetyCheckResult
 from app.services import LLMProviderUnavailableError, create_llm_record_generator, export_record
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
 
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(prefix="/tasks", tags=["tasks"], dependencies=[Depends(require_current_user)])
 TERMINAL_EVENTS = {"WAITING_DOCTOR_REVIEW", "FAILED"}
 
 
@@ -47,10 +48,31 @@ def _decode_step_json(step: dict[str, Any]) -> dict[str, Any]:
     return step
 
 
-def _load_task_result(task_id: int) -> tuple[dict[str, Any], dict[str, Any]]:
+def _assert_task_access(task: dict[str, Any], request: Request | None) -> None:
+    owner_user_id = task.get("owner_user_id")
+    assert_owner_or_admin(
+        int(owner_user_id) if owner_user_id is not None else None,
+        request,
+        resource_name="task",
+    )
+
+
+def _actor_detail(request: Request | None) -> dict[str, Any]:
+    user = current_user_from_request(request)
+    if user is None:
+        return {}
+    return {
+        "actor_user_id": user.id,
+        "actor_role": user.role,
+        "actor_username": user.username,
+    }
+
+
+def _load_task_result(task_id: int, request: Request | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
     task = get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    _assert_task_access(task, request)
     decoded_task = _decode_result_json(task)
     result = decoded_task.get("result_json")
     if not isinstance(result, dict):
@@ -65,13 +87,14 @@ def _save_task_result(
     current_stage: str,
     event_type: str,
     event_detail: dict[str, Any],
+    request: Request | None = None,
 ) -> None:
     update_task(
         task_id,
         current_stage=current_stage,
         result_json=json_dumps(result),
     )
-    create_audit_log(task_id, event_type, event_detail)
+    create_audit_log(task_id, event_type, {**event_detail, **_actor_detail(request)})
 
 
 def _record_generator_or_503():
@@ -89,29 +112,33 @@ def _record_generator_or_503():
 
 
 @router.get("/{task_id}")
-def read_task(task_id: int) -> dict[str, Any]:
+def read_task(task_id: int, request: Request = None) -> dict[str, Any]:
     task = get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    _assert_task_access(task, request)
     return _decode_result_json(task)
 
 
 @router.get("/{task_id}/steps")
-def read_task_steps(task_id: int) -> list[dict[str, Any]]:
+def read_task_steps(task_id: int, request: Request = None) -> list[dict[str, Any]]:
     task = get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    _assert_task_access(task, request)
     return [_decode_step_json(step) for step in get_task_steps(task_id)]
 
 
 @router.get("/{task_id}/trace")
 def read_task_agent_trace(
     task_id: int,
+    request: Request = None,
     audio_id: str | None = Query(default=None),
 ) -> dict[str, Any]:
     task = get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    _assert_task_access(task, request)
 
     decoded_task = _decode_result_json(task)
     decoded_steps = [_decode_step_json(step) for step in get_task_steps(task_id)]
@@ -124,8 +151,8 @@ def read_task_agent_trace(
 
 
 @router.post("/{task_id}/review")
-def review_task(task_id: int, payload: ReviewRequest) -> dict[str, Any]:
-    task, result = _load_task_result(task_id)
+def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -> dict[str, Any]:
+    task, result = _load_task_result(task_id, request)
     fields = payload.fields
     generator = _record_generator_or_503()
     draft = generator.generate_draft(fields)
@@ -143,6 +170,7 @@ def review_task(task_id: int, payload: ReviewRequest) -> dict[str, Any]:
         current_stage="reviewed",
         event_type="doctor_review_saved",
         event_detail={"task_id": task_id},
+        request=request,
     )
     task["result_json"] = result
     task["current_stage"] = "reviewed"
@@ -150,8 +178,8 @@ def review_task(task_id: int, payload: ReviewRequest) -> dict[str, Any]:
 
 
 @router.post("/{task_id}/approve")
-def approve_task(task_id: int) -> dict[str, Any]:
-    task, result = _load_task_result(task_id)
+def approve_task(task_id: int, request: Request = None) -> dict[str, Any]:
+    task, result = _load_task_result(task_id, request)
     fields = MedicalRecordFields.model_validate(result["fields"])
 
     for field in _iter_medical_fields(fields):
@@ -168,6 +196,7 @@ def approve_task(task_id: int) -> dict[str, Any]:
         current_stage="approved",
         event_type="doctor_approved",
         event_detail={"task_id": task_id},
+        request=request,
     )
     task["result_json"] = result
     task["current_stage"] = "approved"
@@ -175,8 +204,8 @@ def approve_task(task_id: int) -> dict[str, Any]:
 
 
 @router.post("/{task_id}/export")
-def export_task(task_id: int) -> dict[str, Any]:
-    task, result = _load_task_result(task_id)
+def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
+    task, result = _load_task_result(task_id, request)
     readiness = _build_export_readiness(
         task_id,
         result,
@@ -191,7 +220,7 @@ def export_task(task_id: int) -> dict[str, Any]:
         create_audit_log(
             task_id,
             "export_failed",
-            {"task_id": task_id, "error": str(exc)},
+            {"task_id": task_id, "error": str(exc), **_actor_detail(request)},
         )
         raise HTTPException(status_code=500, detail=f"导出失败：{exc}") from exc
 
@@ -202,6 +231,7 @@ def export_task(task_id: int) -> dict[str, Any]:
         current_stage="exported",
         event_type="export_completed",
         event_detail={"task_id": task_id, **exports},
+        request=request,
     )
     task["result_json"] = result
     task["current_stage"] = "exported"
@@ -214,8 +244,8 @@ def export_task(task_id: int) -> dict[str, Any]:
 
 
 @router.get("/{task_id}/export-readiness", response_model=ExportReadinessResponse)
-def read_export_readiness(task_id: int) -> ExportReadinessResponse:
-    task, result = _load_task_result(task_id)
+def read_export_readiness(task_id: int, request: Request = None) -> ExportReadinessResponse:
+    task, result = _load_task_result(task_id, request)
     return ExportReadinessResponse(
         **_build_export_readiness(
             task_id,
@@ -365,10 +395,11 @@ async def _task_event_stream(task_id: int):
 
 
 @router.get("/{task_id}/events")
-def read_task_events(task_id: int) -> StreamingResponse:
+def read_task_events(task_id: int, request: Request = None) -> StreamingResponse:
     task = get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    _assert_task_access(task, request)
 
     return StreamingResponse(
         _task_event_stream(task_id),

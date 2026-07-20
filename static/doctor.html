@@ -115,6 +115,10 @@
               <a href="./debug.html">打开调试页</a>
             </div>
           </details>
+          <div class="auth-status">
+            <span id="authUserLabel">未登录</span>
+            <button type="button" id="logoutButton">退出</button>
+          </div>
         </nav>
       </header>
 
@@ -376,6 +380,26 @@
         <div id="detailDrawerContent" class="drawer-result detail-drawer-content"></div>
       </section>
     </aside>
+
+    <section id="loginPanel" class="login-panel" aria-live="polite">
+      <form id="loginForm" class="login-card">
+        <div>
+          <span class="meta-label">本地账号</span>
+          <h2>医生登录</h2>
+          <p>请使用本机医生或管理员账号进入工作台。</p>
+        </div>
+        <label>
+          <span>用户名</span>
+          <input id="loginUsername" type="text" autocomplete="username" value="admin" />
+        </label>
+        <label>
+          <span>密码</span>
+          <input id="loginPassword" type="password" autocomplete="current-password" value="admin123456" />
+        </label>
+        <button type="submit" class="primary-action">登录</button>
+        <div id="loginMessage" class="login-message"></div>
+      </form>
+    </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="./doctor.js?v=2026071601"></script>

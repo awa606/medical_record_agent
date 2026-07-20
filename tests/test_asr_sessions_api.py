@@ -34,6 +34,7 @@ from app.schemas import (
 )
 from app.schemas.asr import DiarizationTurn
 from app.services.asr import AudioChunk
+from tests.auth_helpers import login_as_admin
 
 
 class FakeUploadFile:
@@ -194,9 +195,14 @@ class ASRSessionApiTests(unittest.TestCase):
             self.temp_dir.name,
             "uploads",
         )
+        os.environ["MEDICAL_RECORD_AGENT_DB"] = os.path.join(
+            self.temp_dir.name,
+            "asr_sessions.sqlite3",
+        )
 
     def tearDown(self):
         os.environ.pop("MEDICAL_RECORD_AGENT_UPLOAD_DIR", None)
+        os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
         self.temp_dir.cleanup()
 
     def test_asr_session_routes_are_registered(self):
@@ -326,6 +332,7 @@ class ASRSessionApiTests(unittest.TestCase):
 
     def test_upload_route_starts_background_transcription_and_streams_events(self):
         client = TestClient(app)
+        login_as_admin(client)
         created = client.post("/api/asr/sessions?engine=mock")
         self.assertEqual(created.status_code, 200)
         session_id = created.json()["session_id"]
@@ -486,6 +493,7 @@ class ASRSessionApiTests(unittest.TestCase):
         _write_session_result(session.session_id, result)
 
         client = TestClient(app)
+        login_as_admin(client)
         same = client.post(
             f"/api/asr/sessions/{session.session_id}/speakers/merge",
             json={"source_speaker": "spk1", "target_speaker": "spk1"},
@@ -520,6 +528,7 @@ class ASRSessionApiTests(unittest.TestCase):
         _write_session_result(session.session_id, result)
         _write_transcript(result)
         client = TestClient(app)
+        login_as_admin(client)
 
         blocked = client.post("/api/audio/merge-gate/generate-record")
         self.assertEqual(blocked.status_code, 409)

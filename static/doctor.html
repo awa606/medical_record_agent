@@ -123,21 +123,69 @@
         </nav>
       </header>
 
-      <section class="process-hint" aria-label="病历生成流程提示">
+      <nav class="product-nav" aria-label="医院工作区导航">
+        <button type="button" class="product-nav-item" data-product-view-target="workbench">工作台</button>
+        <button type="button" class="product-nav-item" data-product-view-target="encounter">就诊工作区</button>
+        <button type="button" class="product-nav-item" data-product-view-target="admin">管理后台</button>
+      </nav>
+
+      <section id="workbenchHome" class="product-view product-dashboard" data-product-view="workbench" aria-label="医生工作台与就诊列表">
+        <div class="dashboard-hero">
+          <div>
+            <span class="meta-label">Edge Pilot</span>
+            <h2>今日就诊工作台</h2>
+            <p>从待处理就诊进入患者工作区，继续录音、转写、审核和导出。</p>
+          </div>
+          <div class="dashboard-actions">
+            <button type="button" class="primary-action" data-product-view-target="encounter">进入当前患者</button>
+            <button type="button" id="dashboardRefreshWorklistButton">刷新就诊列表</button>
+          </div>
+        </div>
+        <div class="dashboard-status-grid" aria-label="当前系统状态">
+          <div class="dashboard-status-card">
+            <span>登录医生</span>
+            <strong id="dashboardDoctorLabel">-</strong>
+          </div>
+          <div class="dashboard-status-card">
+            <span>当前就诊</span>
+            <strong id="dashboardEncounterLabel">-</strong>
+          </div>
+          <div class="dashboard-status-card">
+            <span>任务状态</span>
+            <strong id="dashboardTaskStatusLabel">-</strong>
+          </div>
+          <div class="dashboard-status-card">
+            <span>录音/转写</span>
+            <strong id="dashboardRecordingLabel">-</strong>
+          </div>
+        </div>
+        <section class="dashboard-panel">
+          <div class="panel-header">
+            <div>
+              <h2>待办就诊</h2>
+              <p>使用现有就诊接口加载，选择后进入同一个患者工作区。</p>
+            </div>
+            <button type="button" id="dashboardOpenWorklistButton">筛选与更多</button>
+          </div>
+          <div id="dashboardEncounterList" class="encounter-worklist" aria-live="polite"></div>
+        </section>
+      </section>
+
+      <section class="process-hint product-view" data-product-view="encounter" aria-label="病历生成流程提示">
         文本/音频输入 → ASR 转写 → 字段抽取 → 草稿生成 → 安全校验 → 医生审核
       </section>
 
-      <section class="workflow-panel" aria-label="病历生成流程">
+      <section class="workflow-panel product-view" data-product-view="encounter" aria-label="病历生成流程">
         <ol id="workflowSteps" class="workflow-steps"></ol>
       </section>
 
-      <section id="stepPrompt" class="step-prompt" aria-live="polite">
+      <section id="stepPrompt" class="step-prompt product-view" data-product-view="encounter" aria-live="polite">
         请上传问诊音频或粘贴问诊文本开始。
       </section>
 
-      <section id="nextActionPanel" class="next-action-panel" aria-live="polite"></section>
+      <section id="nextActionPanel" class="next-action-panel product-view" data-product-view="encounter" aria-live="polite"></section>
 
-      <section class="run-context debug-only" aria-label="当前运行与保存信息">
+      <section class="run-context debug-only product-view" data-product-view="encounter" aria-label="当前运行与保存信息">
         <div>
           <span class="meta-label">当前 task_id</span>
           <strong id="currentTaskIdValue">-</strong>
@@ -153,7 +201,7 @@
         <button type="button" id="copyRunLogCommandButton">复制运行日志命令</button>
       </section>
 
-      <section id="startGuide" class="start-guide" aria-label="开始使用引导">
+      <section id="startGuide" class="start-guide product-view" data-product-view="encounter" aria-label="开始使用引导">
         <div>
           <span class="meta-label">开始一次病历生成</span>
           <h2>按医生审核流程生成电子病历草稿</h2>
@@ -169,7 +217,7 @@
         </div>
       </section>
 
-      <main class="workbench" aria-label="医生工作台主体">
+      <main class="workbench product-view" data-product-view="encounter" aria-label="医生工作台主体">
         <aside class="column field-column">
           <div class="panel-header">
             <div>
@@ -272,6 +320,37 @@
           </footer>
         </aside>
       </main>
+
+      <section id="adminHome" class="product-view admin-home" data-product-view="admin" aria-label="管理后台基础页">
+        <div class="dashboard-hero">
+          <div>
+            <span class="meta-label">Admin</span>
+            <h2>管理后台</h2>
+            <p>只展示已有管理接口：用户、运行健康和当前试点环境状态。</p>
+          </div>
+          <button type="button" id="refreshAdminHomeButton">刷新状态</button>
+        </div>
+        <div class="admin-grid">
+          <section class="dashboard-panel">
+            <div class="panel-header">
+              <div>
+                <h2>用户与角色</h2>
+                <p>管理员可查看本地账号；医生账号仅显示权限提示。</p>
+              </div>
+            </div>
+            <div id="adminUsersPanel" class="admin-list" aria-live="polite"></div>
+          </section>
+          <section class="dashboard-panel">
+            <div class="panel-header">
+              <div>
+                <h2>系统健康</h2>
+                <p>复用现有 /live 与 /ready，不改变安全策略。</p>
+              </div>
+            </div>
+            <div id="adminRuntimePanel" class="admin-list" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
     </div>
 
     <div id="drawerBackdrop" class="drawer-backdrop"></div>

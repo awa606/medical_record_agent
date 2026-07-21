@@ -4,71 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>医生端工作台 - AI生成式电子病历辅助系统</title>
-  <link rel="stylesheet" href="./doctor.css?v=2026071601" />
+    <link rel="stylesheet" href="./doctor.css?v=2026071601" />
+    <link rel="stylesheet" href="./doctor-ui-v2.css?v=2026072101" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
       <header class="topbar">
         <div class="brand-block">
-          <div class="brand-mark">EMR</div>
-          <div>
-            <h1>AI生成式电子病历辅助系统</h1>
-            <p>医生端工作台 · 接入真实接口</p>
+          <div class="brand-mark" aria-hidden="true">PAMI</div>
+          <div class="brand-copy">
+            <h1>智能病历助手</h1>
+            <p>医院场景 Edge Pilot</p>
           </div>
         </div>
-        <section class="patient-bar" aria-label="患者与会话信息">
-          <div>
-            <span class="meta-label">患者</span>
-            <strong id="patientName">-</strong>
-          </div>
-          <div>
-            <span class="meta-label">性别 / 年龄</span>
-            <strong id="patientProfile">-</strong>
-          </div>
-          <div>
-            <span class="meta-label">会话 ID</span>
-            <strong id="sessionId">-</strong>
-          </div>
-          <div>
-            <span class="meta-label">录音状态</span>
-            <strong id="recordingStatus">-</strong>
-          </div>
-          <div class="asr-engine-meta">
-            <span class="meta-label">ASR Engine</span>
-            <label class="engine-select-wrap" for="topAsrEngineSelect">
-              <select id="topAsrEngineSelect" aria-label="选择 ASR 模型">
-                <option value="funasr" selected>FunASR</option>
-                <option value="sensevoice">SenseVoice</option>
-                <option value="whisper">Whisper</option>
-                <option value="mock">Mock ASR</option>
-                <option value="qwen3">Qwen3-ASR</option>
-                <option value="online">Online ASR</option>
-              </select>
-            </label>
-            <span id="asrModelStatus" class="model-status neutral">模型状态未知</span>
-          </div>
-          <div class="debug-only">
-            <span class="meta-label">LLM Provider</span>
-            <strong id="llmProvider">-</strong>
-          </div>
-          <div class="debug-only">
-            <span class="meta-label">LLM Model</span>
-            <strong id="llmModel">-</strong>
-          </div>
-          <div class="debug-only">
-            <span class="meta-label">LLM Fallback</span>
-            <strong id="llmFallback">-</strong>
-          </div>
-          <div>
-            <span class="meta-label">审核状态</span>
-            <strong id="reviewStatus">-</strong>
-          </div>
-        </section>
         <nav class="top-actions" aria-label="全局操作">
-          <a href="./index.html">首页</a>
-          <button type="button" id="openWorklistButton">今日就诊</button>
+          <button type="button" id="openWorklistButton">查找就诊</button>
           <div class="input-method-menu">
-            <button type="button" class="primary-action" id="inputMethodButton" aria-expanded="false" aria-controls="inputMethodMenu">输入方式</button>
+            <button type="button" class="primary-action" id="inputMethodButton" aria-expanded="false" aria-controls="inputMethodMenu">新建问诊</button>
             <div id="inputMethodMenu" class="input-method-popover" hidden>
               <button type="button" data-input-method="record">录音生成</button>
               <button type="button" data-input-method="audio">音频生成</button>
@@ -124,68 +76,141 @@
       </header>
 
       <nav class="product-nav" aria-label="医院工作区导航">
-        <button type="button" class="product-nav-item" data-product-view-target="workbench">工作台</button>
-        <button type="button" class="product-nav-item" data-product-view-target="encounter">就诊工作区</button>
-        <button type="button" class="product-nav-item" data-product-view-target="admin">管理后台</button>
+        <div class="product-nav-heading">
+          <span>临床工作区</span>
+          <strong>门诊病历辅助</strong>
+        </div>
+        <button type="button" class="product-nav-item" data-product-view-target="workbench">
+          <span>工作台</span>
+          <small>今日待办与就诊列表</small>
+        </button>
+        <button type="button" class="product-nav-item" data-product-view-target="encounter">
+          <span>就诊工作区</span>
+          <small>转写、病历与医生审核</small>
+        </button>
+        <button type="button" class="product-nav-item" data-product-view-target="admin">
+          <span>管理后台</span>
+          <small>用户权限与运行状态</small>
+        </button>
+        <div class="product-nav-foot">
+          <span class="environment-dot" aria-hidden="true"></span>
+          <div>
+            <strong>受控试点环境</strong>
+            <small>AI 结果需医生审核</small>
+          </div>
+        </div>
       </nav>
+
+      <main class="product-main">
 
       <section id="workbenchHome" class="product-view product-dashboard" data-product-view="workbench" aria-label="医生工作台与就诊列表">
         <div class="dashboard-hero">
           <div>
-            <span class="meta-label">Edge Pilot</span>
-            <h2>今日就诊工作台</h2>
-            <p>从待处理就诊进入患者工作区，继续录音、转写、审核和导出。</p>
+            <span class="page-eyebrow">医生工作台</span>
+            <h2>今日需要处理的就诊</h2>
+            <p>优先处理待审核和异常任务，已保存的就诊可随时继续。</p>
           </div>
           <div class="dashboard-actions">
-            <button type="button" class="primary-action" data-product-view-target="encounter">进入当前患者</button>
-            <button type="button" id="dashboardRefreshWorklistButton">刷新就诊列表</button>
+            <button type="button" class="primary-action" data-product-view-target="encounter">继续当前就诊</button>
+            <button type="button" id="dashboardRefreshWorklistButton">刷新列表</button>
           </div>
         </div>
         <div class="dashboard-status-grid" aria-label="当前系统状态">
           <div class="dashboard-status-card">
-            <span>登录医生</span>
+            <span>当前账号</span>
             <strong id="dashboardDoctorLabel">-</strong>
           </div>
           <div class="dashboard-status-card">
-            <span>当前就诊</span>
+            <span>当前患者</span>
             <strong id="dashboardEncounterLabel">-</strong>
           </div>
           <div class="dashboard-status-card">
-            <span>任务状态</span>
+            <span>处理阶段</span>
             <strong id="dashboardTaskStatusLabel">-</strong>
           </div>
           <div class="dashboard-status-card">
-            <span>录音/转写</span>
+            <span>录音与转写</span>
             <strong id="dashboardRecordingLabel">-</strong>
           </div>
         </div>
         <section class="dashboard-panel">
           <div class="panel-header">
             <div>
-              <h2>待办就诊</h2>
-              <p>使用现有就诊接口加载，选择后进入同一个患者工作区。</p>
+                <h2>就诊任务</h2>
+                <p>从最近更新的记录继续，状态异常的任务会优先提示。</p>
             </div>
-            <button type="button" id="dashboardOpenWorklistButton">筛选与更多</button>
+            <button type="button" id="dashboardOpenWorklistButton">搜索与筛选</button>
           </div>
           <div id="dashboardEncounterList" class="encounter-worklist" aria-live="polite"></div>
         </section>
       </section>
 
-      <section class="process-hint product-view" data-product-view="encounter" aria-label="病历生成流程提示">
-        文本/音频输入 → ASR 转写 → 字段抽取 → 草稿生成 → 安全校验 → 医生审核
-      </section>
+      <section id="encounterView" class="product-view encounter-view" data-product-view="encounter" aria-label="患者就诊工作区">
+        <section class="patient-bar encounter-patient-banner" aria-label="患者与会话信息">
+          <div class="patient-identity-cell">
+            <span class="meta-label">当前患者</span>
+            <strong id="patientName">-</strong>
+            <small id="patientProfile">-</small>
+          </div>
+          <div>
+            <span class="meta-label">就诊会话</span>
+            <strong id="sessionId">-</strong>
+          </div>
+          <div>
+            <span class="meta-label">录音状态</span>
+            <strong id="recordingStatus">-</strong>
+          </div>
+          <div>
+            <span class="meta-label">审核状态</span>
+            <strong id="reviewStatus">-</strong>
+          </div>
+          <div class="asr-engine-meta">
+            <span class="meta-label">转写引擎</span>
+            <label class="engine-select-wrap" for="topAsrEngineSelect">
+              <select id="topAsrEngineSelect" aria-label="选择 ASR 模型">
+                <option value="funasr" selected>FunASR</option>
+                <option value="sensevoice">SenseVoice</option>
+                <option value="whisper">Whisper</option>
+                <option value="mock">Mock ASR</option>
+                <option value="qwen3">Qwen3-ASR</option>
+                <option value="online">Online ASR</option>
+              </select>
+            </label>
+            <span id="asrModelStatus" class="model-status neutral">模型状态未知</span>
+          </div>
+          <div class="debug-only">
+            <span class="meta-label">LLM Provider</span>
+            <strong id="llmProvider">-</strong>
+          </div>
+          <div class="debug-only">
+            <span class="meta-label">LLM Model</span>
+            <strong id="llmModel">-</strong>
+          </div>
+          <div class="debug-only">
+            <span class="meta-label">LLM Fallback</span>
+            <strong id="llmFallback">-</strong>
+          </div>
+        </section>
 
-      <section class="workflow-panel product-view" data-product-view="encounter" aria-label="病历生成流程">
-        <ol id="workflowSteps" class="workflow-steps"></ol>
-      </section>
+        <section class="encounter-command-center" aria-label="病历生成流程与下一步操作">
+          <div class="encounter-command-copy">
+            <span class="page-eyebrow">当前流程</span>
+            <h2>问诊记录处理</h2>
+            <p class="process-hint">AI 先生成草稿，医生完成核对与审核后方可导出。</p>
+          </div>
 
-      <section id="stepPrompt" class="step-prompt product-view" data-product-view="encounter" aria-live="polite">
-        请上传问诊音频或粘贴问诊文本开始。
-      </section>
+          <section class="workflow-panel" aria-label="病历生成流程">
+            <ol id="workflowSteps" class="workflow-steps"></ol>
+          </section>
 
-      <section id="nextActionPanel" class="next-action-panel product-view" data-product-view="encounter" aria-live="polite"></section>
+          <section id="stepPrompt" class="step-prompt" aria-live="polite">
+            请上传问诊音频或粘贴问诊文本开始。
+          </section>
 
-      <section class="run-context debug-only product-view" data-product-view="encounter" aria-label="当前运行与保存信息">
+          <section id="nextActionPanel" class="next-action-panel" aria-live="polite"></section>
+        </section>
+
+      <section class="run-context debug-only" aria-label="当前运行与保存信息">
         <div>
           <span class="meta-label">当前 task_id</span>
           <strong id="currentTaskIdValue">-</strong>
@@ -201,10 +226,10 @@
         <button type="button" id="copyRunLogCommandButton">复制运行日志命令</button>
       </section>
 
-      <section id="startGuide" class="start-guide product-view" data-product-view="encounter" aria-label="开始使用引导">
+      <section id="startGuide" class="start-guide" aria-label="开始使用引导">
         <div>
-          <span class="meta-label">开始一次病历生成</span>
-          <h2>按医生审核流程生成电子病历草稿</h2>
+          <span class="page-eyebrow">尚未开始</span>
+          <h2>选择问诊资料的输入方式</h2>
           <ol>
             <li>选择输入方式：文本导入 / 上传音频。</li>
             <li>系统自动完成：转写、字段抽取、草稿生成、安全校验。</li>
@@ -217,12 +242,12 @@
         </div>
       </section>
 
-      <main class="workbench product-view" data-product-view="encounter" aria-label="医生工作台主体">
+      <main class="workbench" aria-label="医生工作台主体">
         <aside class="column field-column">
           <div class="panel-header">
             <div>
-              <h2>病历草稿</h2>
-              <p>固定展示核心病历槽位，内容过长可打开详情查看。</p>
+              <h2>结构化病历</h2>
+              <p>核对 AI 提取字段，缺失和低置信内容会单独标记。</p>
             </div>
             <span id="fieldCountBadge" class="status-badge neutral">-</span>
           </div>
@@ -232,8 +257,8 @@
         <section class="column transcript-column">
           <div class="panel-header">
             <div>
-              <h2>对话转写</h2>
-              <p>分段实时显示，点击单行查看原文或校正。</p>
+              <h2>问诊转写与证据</h2>
+              <p>核对说话人和原文，点击转写可定位对应音频。</p>
             </div>
             <div class="transcript-header-actions">
               <button type="button" id="transcriptSettingsButton" class="transcript-settings-button">显示设置</button>
@@ -301,32 +326,33 @@
         <aside class="column assist-column">
           <div class="panel-header">
             <div>
-              <h2>AI辅助</h2>
-              <p>展示鉴别诊断参考、治疗方案和诊断证据，最终由医生判断。</p>
+              <h2>临床提示</h2>
+              <p>集中展示风险、缺失项和候选诊断，仅供医生参考。</p>
             </div>
           </div>
           <div id="assistPanels" class="assist-list"></div>
-          <footer class="bottom-actions assist-operation-panel" aria-label="操作区">
-            <div class="operation-heading">
-              <strong id="currentTaskLabel">操作区</strong>
-              <span id="currentTaskHint">等待输入</span>
-            </div>
-            <div class="button-group">
-              <button type="button" id="regenerateButton">重新生成</button>
-              <button type="button" id="saveDraftButton">保存修改</button>
-              <button type="button" id="confirmFieldsButton">完成病历审核</button>
-              <button type="button" class="danger-action" id="exportButton">确认导出</button>
-            </div>
-          </footer>
         </aside>
       </main>
+      <footer class="bottom-actions assist-operation-panel encounter-action-bar" aria-label="病历操作区">
+        <div class="operation-heading">
+          <strong id="currentTaskLabel">当前任务</strong>
+          <span id="currentTaskHint">等待输入</span>
+        </div>
+        <div class="button-group">
+          <button type="button" id="regenerateButton">重新生成</button>
+          <button type="button" id="saveDraftButton">保存修改</button>
+          <button type="button" id="confirmFieldsButton">完成病历审核</button>
+          <button type="button" class="danger-action" id="exportButton">确认导出</button>
+        </div>
+      </footer>
+      </section>
 
       <section id="adminHome" class="product-view admin-home" data-product-view="admin" aria-label="管理后台基础页">
         <div class="dashboard-hero">
           <div>
-            <span class="meta-label">Admin</span>
-            <h2>管理后台</h2>
-            <p>只展示已有管理接口：用户、运行健康和当前试点环境状态。</p>
+            <span class="page-eyebrow">系统管理</span>
+            <h2>试点环境管理</h2>
+            <p>查看账号权限与服务健康状态；临床规则和模型配置不在此处修改。</p>
           </div>
           <button type="button" id="refreshAdminHomeButton">刷新状态</button>
         </div>
@@ -334,8 +360,8 @@
           <section class="dashboard-panel">
             <div class="panel-header">
               <div>
-                <h2>用户与角色</h2>
-                <p>管理员可查看本地账号；医生账号仅显示权限提示。</p>
+                <h2>账号与角色</h2>
+                <p>管理员可查看本地试点账号；普通医生仅能访问自己的工作区。</p>
               </div>
             </div>
             <div id="adminUsersPanel" class="admin-list" aria-live="polite"></div>
@@ -343,14 +369,15 @@
           <section class="dashboard-panel">
             <div class="panel-header">
               <div>
-                <h2>系统健康</h2>
-                <p>复用现有 /live 与 /ready，不改变安全策略。</p>
+                <h2>服务运行状态</h2>
+                <p>检查应用是否可访问，以及关键依赖是否准备就绪。</p>
               </div>
             </div>
             <div id="adminRuntimePanel" class="admin-list" aria-live="polite"></div>
           </section>
         </div>
       </section>
+      </main>
     </div>
 
     <div id="drawerBackdrop" class="drawer-backdrop"></div>
@@ -483,26 +510,49 @@
     </aside>
 
     <section id="loginPanel" class="login-panel" aria-live="polite">
-      <form id="loginForm" class="login-card">
-        <div>
-          <span class="meta-label">本地账号</span>
-          <h2>医生登录</h2>
-          <p>请使用本机医生或管理员账号进入工作台。</p>
-        </div>
-        <label>
-          <span>用户名</span>
-          <input id="loginUsername" type="text" autocomplete="username" value="admin" />
-        </label>
-        <label>
-          <span>密码</span>
-          <input id="loginPassword" type="password" autocomplete="current-password" value="admin123456" />
-        </label>
-        <button type="submit" class="primary-action">登录</button>
-        <div id="loginMessage" class="login-message"></div>
-      </form>
+      <div class="login-shell">
+        <aside class="login-brand-pane">
+          <div class="login-brand-lockup">
+            <div class="brand-mark" aria-hidden="true">PAMI</div>
+            <div>
+              <strong>智能病历助手</strong>
+              <span>医院场景 Edge Pilot</span>
+            </div>
+          </div>
+          <div class="login-product-copy">
+            <span class="page-eyebrow">门诊医生工作台</span>
+            <h1>让问诊记录、病历草稿和医生审核回到一个工作区</h1>
+            <p>系统辅助完成转写与结构化整理，最终病历内容始终由医生核对确认。</p>
+          </div>
+          <ul class="login-capability-list">
+            <li><strong>问诊转写</strong><span>录音、音频和文本统一进入处理流程</span></li>
+            <li><strong>证据关联</strong><span>病历字段可回看对应对话证据</span></li>
+            <li><strong>审核留痕</strong><span>修改、审核与导出状态清晰可追溯</span></li>
+          </ul>
+          <small class="login-boundary-note">受控试点环境 · AI 生成内容不可替代医生判断</small>
+        </aside>
+        <form id="loginForm" class="login-card">
+          <div class="login-card-heading">
+            <span class="page-eyebrow">安全访问</span>
+            <h2>登录医生工作台</h2>
+            <p>使用本地试点账号继续今日就诊任务。</p>
+          </div>
+          <label>
+            <span>用户名</span>
+            <input id="loginUsername" type="text" autocomplete="username" value="admin" />
+          </label>
+          <label>
+            <span>密码</span>
+            <input id="loginPassword" type="password" autocomplete="current-password" value="admin123456" />
+          </label>
+          <button type="submit" class="primary-action login-submit">进入工作台</button>
+          <div id="loginMessage" class="login-message"></div>
+          <p class="login-help">登录问题请联系试点环境管理员。</p>
+        </form>
+      </div>
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="./doctor.js?v=2026071601"></script>
+    <script src="./doctor.js?v=2026072101"></script>
   </body>
 </html>

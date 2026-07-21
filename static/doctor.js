@@ -443,6 +443,13 @@ function setProductView(view, { updateHash = true } = {}) {
 
 function renderProductShell() {
   const view = appState.authStatus === "authenticated" ? appState.productView : "workbench";
+  const viewTitles = {
+    workbench: "工作台",
+    encounter: "就诊工作区",
+    admin: "管理后台",
+  };
+  document.body.dataset.productView = view;
+  document.title = `${viewTitles[view] || "医生端"} - 智能病历助手`;
   document.querySelectorAll("[data-product-view]").forEach((element) => {
     element.hidden = element.dataset.productView !== view;
   });
@@ -472,12 +479,12 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
       <article class="encounter-worklist-item ${active ? "active" : ""}">
         <div>
           <strong>${escapeHtml(patient)}</strong>
-          <span>${escapeHtml(item.patient_deidentified_id || "-")}</span>
-          <small>更新 ${escapeHtml(formatDateTime(item.updated_at || item.created_at))} · 版本 ${escapeHtml(item.current_revision_id || "-")} · Task ${escapeHtml(item.task_id || "-")}</small>
+          <span>${escapeHtml(item.patient_deidentified_id || "未提供患者标识")} · 最近更新 ${escapeHtml(formatDateTime(item.updated_at || item.created_at))}</span>
+          <small class="debug-only">版本 ${escapeHtml(item.current_revision_id || "-")} · Task ${escapeHtml(item.task_id || "-")}</small>
         </div>
         <div class="encounter-worklist-actions">
           <span class="status-badge ${active ? "confirmed" : "neutral"}">${escapeHtml(status)}</span>
-          <button type="button" data-restore-encounter="${escapeHtml(item.id)}">${active ? "已打开" : "继续编辑"}</button>
+          <button type="button" data-restore-encounter="${escapeHtml(item.id)}">${active ? "返回工作区" : "继续处理"}</button>
         </div>
       </article>
     `;

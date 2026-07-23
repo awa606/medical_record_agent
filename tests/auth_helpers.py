@@ -3,8 +3,8 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 
-DEFAULT_ADMIN_USERNAME = "admin"
-DEFAULT_ADMIN_PASSWORD = "admin123456"
+DEFAULT_ADMIN_USERNAME = "docker"
+DEFAULT_ADMIN_PASSWORD = "a123456"
 
 
 def login_as_admin(client: TestClient) -> dict:

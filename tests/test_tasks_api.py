@@ -2,10 +2,12 @@ import os
 import tempfile
 import unittest
 
+from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
 
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
 from app.agents import MedicalRecordOrchestrator
 from app.api.tasks import (
@@ -20,10 +22,11 @@ from app.api.tasks import (
     read_task_steps,
     review_task,
 )
-from app.db import get_audit_logs
+from app.db import get_audit_logs, set_task_owner
 from app.main import app
 from app.services import WORD_NOTICE
 from app.schemas import SafetyCheckResult
+from tests.auth_helpers import create_user, login_as_user
 
 
 class TaskApiTests(unittest.TestCase):
@@ -70,6 +73,7 @@ class TaskApiTests(unittest.TestCase):
         self.assertIn("/api/tasks/{task_id}/trace", route_paths)
         self.assertIn("/api/tasks/{task_id}/events", route_paths)
         self.assertIn("/api/tasks/{task_id}/export-readiness", route_paths)
+        self.assertIn("/api/tasks/{task_id}/exports/{export_format}", route_paths)
         self.assertIn("/api/records/generate", route_paths)
 
     def test_read_task_and_steps(self):
@@ -179,6 +183,50 @@ class TaskApiTests(unittest.TestCase):
         with ZipFile(word_path) as docx:
             document_xml = docx.read("word/document.xml").decode("utf-8")
         self.assertIn(WORD_NOTICE, document_xml)
+
+    def test_export_download_route_returns_docx_after_approval(self):
+        client = TestClient(app)
+        doctor = create_user(client, username="download-doctor")
+        result = MedicalRecordOrchestrator().run_from_text("patient has fever for three days")
+        task_id = result["task_id"]
+        set_task_owner(task_id, doctor["id"])
+
+        login_as_user(client, username="download-doctor")
+        approved = client.post(f"/api/tasks/{task_id}/approve")
+        self.assertEqual(approved.status_code, 200, approved.text)
+        exported = client.post(f"/api/tasks/{task_id}/export")
+        self.assertEqual(exported.status_code, 200, exported.text)
+
+        downloaded = client.get(f"/api/tasks/{task_id}/exports/docx")
+        self.assertEqual(downloaded.status_code, 200, downloaded.text)
+        self.assertEqual(
+            downloaded.headers["content-type"],
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        self.assertIn(
+            f"task_{task_id}_medical_record.docx",
+            downloaded.headers.get("content-disposition", ""),
+        )
+        with ZipFile(BytesIO(downloaded.content)) as docx:
+            document_xml = docx.read("word/document.xml").decode("utf-8")
+        self.assertIn(WORD_NOTICE, document_xml)
+
+    def test_export_download_route_enforces_task_owner(self):
+        client = TestClient(app)
+        doctor_a = create_user(client, username="download-owner")
+        create_user(client, username="download-other")
+        result = MedicalRecordOrchestrator().run_from_text("patient has fever for three days")
+        task_id = result["task_id"]
+        set_task_owner(task_id, doctor_a["id"])
+
+        login_as_user(client, username="download-owner")
+        self.assertEqual(client.post(f"/api/tasks/{task_id}/approve").status_code, 200)
+        self.assertEqual(client.post(f"/api/tasks/{task_id}/export").status_code, 200)
+        client.post("/api/auth/logout")
+
+        login_as_user(client, username="download-other")
+        forbidden = client.get(f"/api/tasks/{task_id}/exports/docx")
+        self.assertEqual(forbidden.status_code, 403)
 
     def test_export_readiness_blocks_provider_fallback_trace(self):
         result = MedicalRecordOrchestrator().run_from_text(

@@ -10,6 +10,7 @@ venv/
 ~$*
 
 # Runtime data generated locally
+runtime/
 data/medical_record_agent.sqlite3
 data/uploads/*
 !data/uploads/

@@ -1,6 +1,11 @@
 from app.services import MockLLM
 from app.services.clinical_facts import extract_clinical_facts
-from app.services.fever_respiratory_pack import PACK_VERSION, infer_fever_respiratory_candidates
+from app.services.fever_respiratory_pack import (
+    PACK_VERSION,
+    REFERENCE_CATALOG,
+    SOURCE_CATALOG_VERSION,
+    infer_fever_respiratory_candidates,
+)
 
 
 def _diagnosis_names(text: str) -> list[str]:
@@ -20,6 +25,10 @@ def test_short_fever_uses_facts_for_fever_workup_reference() -> None:
     assert "规则匹配度" in diagnosis.reason
     assert "缺失证据" in diagnosis.reason
     assert "症状持续多久了？" in diagnosis.follow_up_questions
+    assert [reference.reference_id for reference in diagnosis.references] == [
+        "NHC_FLU_2025",
+        "WHO_SARI_TOOLKIT_2022",
+    ]
 
 
 def test_fever_headache_adds_influenza_like_reference() -> None:
@@ -61,3 +70,51 @@ def test_pack_reads_facts_not_raw_text_keywords() -> None:
     facts = extract_clinical_facts("只是头痛，没有咳嗽，也没有发烧")
 
     assert infer_fever_respiratory_candidates(facts) == []
+
+
+def test_influenza_and_pulmonary_candidates_expose_traceable_sources() -> None:
+    influenza = MockLLM().extract_fields("发热39度，头痛").candidate_diagnoses
+    pulmonary = MockLLM().extract_fields("发热39度，咳嗽").candidate_diagnoses
+
+    influenza_reference_ids = {
+        reference.reference_id
+        for diagnosis in influenza
+        for reference in diagnosis.references
+    }
+    pulmonary_reference_ids = {
+        reference.reference_id
+        for diagnosis in pulmonary
+        for reference in diagnosis.references
+    }
+
+    assert "CDC_FLU_SIGNS_2026" in influenza_reference_ids
+    assert "NICE_NG250_2025" in pulmonary_reference_ids
+    assert all(
+        reference.clinical_review_status == "needs_medical_review"
+        for diagnosis in [*influenza, *pulmonary]
+        for reference in diagnosis.references
+    )
+
+
+def test_source_catalog_uses_verified_official_https_sources() -> None:
+    assert SOURCE_CATALOG_VERSION == "fever_respiratory_sources_v1"
+    assert set(REFERENCE_CATALOG) == {
+        "CDC_FLU_SIGNS_2026",
+        "NHC_FLU_2025",
+        "NICE_NG250_2025",
+        "WHO_SARI_TOOLKIT_2022",
+    }
+    assert all(reference.url.startswith("https://") for reference in REFERENCE_CATALOG.values())
+    assert all(
+        reference.verification_status == "source_verified"
+        for reference in REFERENCE_CATALOG.values()
+    )
+
+
+def test_candidate_reference_metadata_is_api_serializable() -> None:
+    diagnosis = MockLLM().extract_fields("发热39度，咳嗽").candidate_diagnoses[0]
+    payload = diagnosis.model_dump(mode="json")
+
+    assert payload["references"]
+    assert payload["references"][0]["reference_id"] == "NHC_FLU_2025"
+    assert payload["references"][0]["clinical_review_status"] == "needs_medical_review"

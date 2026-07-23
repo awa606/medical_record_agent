@@ -11,6 +11,7 @@ from app.api import (
     encounters_router,
     audio_router,
     capabilities_router,
+    knowledge_router,
     llm_router,
     records_router,
     runtime_router,
@@ -40,6 +41,7 @@ app.include_router(asr_prewarm_router, prefix="/api")
 app.include_router(asr_sessions_router, prefix="/api")
 app.include_router(audio_router, prefix="/api")
 app.include_router(capabilities_router, prefix="/api")
+app.include_router(knowledge_router, prefix="/api")
 app.include_router(llm_router, prefix="/api")
 app.include_router(records_router, prefix="/api")
 app.include_router(speaker_profiles_router, prefix="/api")

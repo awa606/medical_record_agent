@@ -1,0 +1,35 @@
+{
+  "started_at": "2026-07-23 22:38:13",
+  "checks": [
+    {
+      "name": "login",
+      "status": "pass",
+      "detail": {
+        "status_code": 200
+      },
+      "elapsed_seconds": 0.445
+    },
+    {
+      "name": "direct transcribe mock",
+      "status": "pass",
+      "detail": {
+        "audio_id": "77dad4ef83db4be9826532c44cfc2e68",
+        "status_code": 200,
+        "body": "{\"audio_id\":\"77dad4ef83db4be9826532c44cfc2e68\",\"status\":\"completed\",\"asr_result\":{\"audio_id\":\"77dad4ef83db4be9826532c44cfc2e68\",\"engine\":\"mock-asr-v0.2\",\"text\":\"你好，哪里不舒服？\\n左手手掌被蛇咬伤了，肿痛两个小时左右。\\n被咬后做过什么处理吗？\\n用酒精冲洗了，绑了绷带，吃了季德胜蛇药片。\\n现在除了咬伤部位不舒服，还有什么其他难受的？\\n现在有些畏寒、头晕、胸闷、心慌，牙龈也有些出血。\",\"conversation_text\":\"[医生] 你好，哪里不舒服？\\n[患者] 左手手掌被蛇咬伤了，肿痛两个小时左右。\\n[医生] 被咬后做过什么处理吗？\\n[患者] 用酒精冲洗了，绑了绷带，吃了季德胜蛇药片。\\n[医生] 现在除了咬伤部位不舒服，还有什么其他难受的？\\n[患者] 现在有些畏寒、头晕、胸闷、心慌，牙龈也有些出血。\",\"segments\":[{\"segment_id\":null,\"revision\":1,\"provisional\":false,\"speaker\":\"医生\",\"speaker_id\":null,\"speaker_raw\":null,\"speaker_normalized\":null,\"diarization_source\":null,\"speaker_confidence\":null,\"role\":\"doctor\",\"text\":\"你好，哪里不舒服？\",\"start_time\":0.0,\"end_time\":2.0,\"confidence\":0.99,\"role_confidence\":0.99,\"role_source\":\"mock_deterministic\",\"role_note\":nul",
+        "segments": 6,
+        "role_quality_status": "passed"
+      },
+      "elapsed_seconds": 0.107
+    },
+    {
+      "name": "direct transcribe funasr",
+      "status": "timeout",
+      "detail": {
+        "audio_id": "74f464387a7e4f679a7d408b4584718d",
+        "timeout_seconds": 60
+      },
+      "elapsed_seconds": 60.003
+    }
+  ],
+  "finished_at": "2026-07-23 22:39:14"
+}

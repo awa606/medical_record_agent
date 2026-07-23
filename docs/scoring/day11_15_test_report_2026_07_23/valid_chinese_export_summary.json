@@ -1,0 +1,57 @@
+{
+  "task_id": 15,
+  "started_at": "2026-07-23 22:40:58",
+  "checks": [
+    {
+      "name": "approve valid Chinese task",
+      "status": "pass",
+      "detail": {
+        "status_code": 200,
+        "bytes": 17789,
+        "body": "<binary>"
+      },
+      "elapsed_seconds": 0.831
+    },
+    {
+      "name": "export readiness",
+      "status": "pass",
+      "detail": {
+        "status_code": 200,
+        "bytes": 129,
+        "body": "{\"task_id\":15,\"ready\":true,\"blocked\":false,\"errors\":[],\"next_action\":\"可以导出。\",\"current_stage\":\"approved\",\"exports\":null}"
+      },
+      "elapsed_seconds": 0.268
+    },
+    {
+      "name": "export valid Chinese task",
+      "status": "pass",
+      "detail": {
+        "status_code": 200,
+        "bytes": 428,
+        "body": "{\"task_id\":15,\"exports\":{\"markdown_path\":\"/app/runtime/outputs/task_15_medical_record.md\",\"word_path\":\"/app/runtime/outputs/task_15_medical_record.docx\"},\"export_readiness\":{\"task_id\":15,\"ready\":true,\"blocked\":false,\"errors\":[],\"next_action\":\"可以导出。\",\"current_stage\":\"exported\",\"exports\":{\"markdown_path\":\"/app/runtime/outputs/task_15_medical_record.md\",\"word_path\":\"/app/runtime/outputs/task_15_medical_record.docx\"}}}"
+      },
+      "elapsed_seconds": 0.656
+    },
+    {
+      "name": "download markdown",
+      "status": "pass",
+      "detail": {
+        "status_code": 200,
+        "bytes": 845,
+        "body": "# 门诊病历\n\n> AI 辅助草稿，以医生确认版本为准\n\n## 主诉\n发热伴咳嗽伴胸闷伴气促两天\n\n## 现病史\n患者自述发热、咳嗽、胸闷、气促两天，体温约39℃，患者否认呼吸困难，服用布洛芬。症状演变、其他伴随症状尚未提及。\n\n> 部分完成，仍需补充：症状演变、其他伴随症状\n\n## 既往处理\n服用布洛芬\n\n> 部分完成，仍需补充：用药剂量、处理时间\n\n## 伴随症状\n咳嗽、胸闷、气促\n\n> 部分完成，仍需补充：其他伴随症状\n\n## 既往史\n未提及/待补充\n\n## 过敏史\n未提及/待补充\n\n## 查体\n待医生查体补充\n\n## 候选诊断\n- 发热待查（候选/待医生确认，医生已确认）\n- 肺部感染待排（候选/待医生确认，医生已确认）\n\n## 安全校验\n- 通过：True\n- 阻断：False\n"
+      },
+      "elapsed_seconds": 0.39
+    },
+    {
+      "name": "download docx",
+      "status": "pass",
+      "detail": {
+        "status_code": 200,
+        "bytes": 1500,
+        "body": "<binary>"
+      },
+      "elapsed_seconds": 0.387
+    }
+  ],
+  "finished_at": "2026-07-23 22:41:01"
+}

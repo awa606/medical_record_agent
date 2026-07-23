@@ -1,0 +1,39 @@
+{
+  "started_at": "2026-07-23 22:40:36",
+  "checks": [
+    {
+      "name": "login",
+      "status": "pass",
+      "detail": {
+        "status_code": 200
+      },
+      "elapsed_seconds": 0.432
+    },
+    {
+      "name": "text generate with valid Chinese",
+      "status": "pass",
+      "detail": {
+        "status_code": 200,
+        "body": "{\"task_id\":15,\"status\":\"CREATED\",\"events_url\":\"/api/tasks/15/events\"}"
+      },
+      "elapsed_seconds": 0.372
+    },
+    {
+      "name": "valid Chinese clinical extraction",
+      "status": "pass",
+      "detail": {
+        "task_id": 15,
+        "stage": "doctor_review",
+        "chief_complaint": "发热伴咳嗽伴胸闷伴气促两天",
+        "present_illness": "患者自述发热、咳嗽、胸闷、气促两天，体温约39℃，患者否认呼吸困难，服用布洛芬。症状演变、其他伴随症状尚未提及。",
+        "candidate_count": 2,
+        "candidate_names": [
+          "发热待查",
+          "肺部感染待排"
+        ]
+      },
+      "elapsed_seconds": null
+    }
+  ],
+  "finished_at": "2026-07-23 22:40:39"
+}

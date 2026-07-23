@@ -95,16 +95,17 @@ def test_product_shell_sets_visible_route_context() -> None:
     assert 'admin: "管理后台"' in js
 
 
-def test_product_shell_keeps_main_recording_path_without_pr69_protocol() -> None:
+def test_product_shell_keeps_recording_recovery_path_inside_product_shell() -> None:
     js = read_static("doctor.js")
 
-    assert "browserRecordingChunks" in js
-    assert "function mergeBrowserRecordingChunks" in js
     assert "async function completeBrowserRecordingUpload" in js
     assert "function cancelBrowserRecording" in js
-    assert "async function queueBrowserRecordingChunk" not in js
-    assert "async function pumpBrowserRecordingUploadQueue" not in js
-    assert "async function finalizeBrowserRecording" not in js
+    assert "browserRecordingChunks" not in js
+    assert "function mergeBrowserRecordingChunks" in js
+    assert "async function queueBrowserRecordingChunk" in js
+    assert "async function pumpBrowserRecordingUploadQueue" in js
+    assert "async function finalizeBrowserRecording" in js
+    assert "/api/asr/sessions/" in js
 
 
 def test_demo_v2_state_consistency_markup_and_helpers() -> None:

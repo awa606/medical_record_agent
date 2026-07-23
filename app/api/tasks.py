@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
@@ -24,10 +26,23 @@ from app.db import (
 from app.schemas import MedicalRecordFields, SafetyCheckResult
 from app.services import LLMProviderUnavailableError, create_llm_record_generator, export_record
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
+from app.services.exporter import DEFAULT_OUTPUT_DIR
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"], dependencies=[Depends(require_current_user)])
 TERMINAL_EVENTS = {"WAITING_DOCTOR_REVIEW", "FAILED"}
+EXPORT_DOWNLOADS = {
+    "markdown": {
+        "path_key": "markdown_path",
+        "extension": "md",
+        "media_type": "text/markdown; charset=utf-8",
+    },
+    "docx": {
+        "path_key": "word_path",
+        "extension": "docx",
+        "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    },
+}
 
 
 class ReviewRequest(BaseModel):
@@ -315,6 +330,59 @@ def read_export_readiness(task_id: int, request: Request = None) -> ExportReadin
             current_stage=task.get("current_stage"),
             active_approval=get_active_approval_for_task(task_id),
         )
+    )
+
+
+def _export_output_root() -> Path:
+    return Path(os.environ.get("MEDICAL_RECORD_AGENT_OUTPUT_DIR", DEFAULT_OUTPUT_DIR)).resolve()
+
+
+def _resolve_export_download_path(exports: dict[str, str], export_format: str) -> tuple[Path, str, str]:
+    config = EXPORT_DOWNLOADS.get(export_format)
+    if config is None:
+        raise HTTPException(status_code=404, detail="Export format not found")
+
+    raw_path = exports.get(config["path_key"])
+    if not raw_path:
+        raise HTTPException(status_code=404, detail="Export file not found")
+
+    output_root = _export_output_root()
+    export_path = Path(raw_path).resolve()
+    try:
+        export_path.relative_to(output_root)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="Stored export path is outside the output directory") from exc
+
+    if not export_path.is_file():
+        raise HTTPException(status_code=404, detail="Export file not found")
+
+    return export_path, config["extension"], config["media_type"]
+
+
+@router.get("/{task_id}/exports/{export_format}")
+def download_task_export(task_id: int, export_format: str, request: Request = None) -> FileResponse:
+    task, result = _load_task_result(task_id, request)
+    approval = get_active_approval_for_task(task_id)
+    readiness = _build_export_readiness(
+        task_id,
+        result,
+        current_stage=task.get("current_stage"),
+        active_approval=approval,
+    )
+    exports = result.get("exports")
+    if readiness["errors"] or not isinstance(exports, dict):
+        raise HTTPException(status_code=409, detail=readiness)
+
+    export_path, extension, media_type = _resolve_export_download_path(exports, export_format.lower())
+    create_audit_log(
+        task_id,
+        "export_downloaded",
+        {"task_id": task_id, "format": export_format.lower(), **_actor_detail(request)},
+    )
+    return FileResponse(
+        export_path,
+        media_type=media_type,
+        filename=f"task_{task_id}_medical_record.{extension}",
     )
 
 

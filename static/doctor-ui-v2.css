@@ -798,7 +798,7 @@ body.doctor-mode .workflow-panel {
 body.doctor-mode .workflow-steps {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(6, minmax(74px, 1fr));
+  grid-template-columns: repeat(5, minmax(84px, 1fr));
   gap: 5px;
   margin: 0;
   padding: 0;
@@ -852,8 +852,8 @@ body.doctor-mode .workflow-index {
 .workflow-label,
 body.doctor-mode .workflow-label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
@@ -883,6 +883,50 @@ body.doctor-mode #stepPrompt {
 .step-prompt.danger {
   border-left-color: #cf4652;
   color: #942d38;
+}
+
+body.doctor-mode .debug-only {
+  display: none !important;
+}
+
+.failure-recovery-panel,
+body.doctor-mode .failure-recovery-panel {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #f2b8bf;
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  background: #fff7f8;
+  color: #623039;
+}
+
+.failure-recovery-panel[hidden],
+body.doctor-mode .failure-recovery-panel[hidden] {
+  display: none !important;
+}
+
+.failure-recovery-panel strong {
+  display: block;
+  margin-top: 8px;
+  color: #842b36;
+  font-size: 15px;
+}
+
+.failure-recovery-panel p {
+  margin: 5px 0 0;
+  color: #7a4b52;
+  font-size: 12px;
+}
+
+.failure-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .next-action-panel,
@@ -1082,6 +1126,16 @@ body.doctor-mode .field-card.is-empty.weight-low {
   background: #fffdf8;
 }
 
+.field-card.readonly-field,
+body.doctor-mode .field-card.readonly-field {
+  border-left-color: #45a989;
+  background: #f8fbfa;
+}
+
+.field-card.readonly-field .field-value {
+  color: #2d465d;
+}
+
 .field-title,
 body.doctor-mode .field-card .field-title {
   color: #29425a;
@@ -1126,6 +1180,13 @@ body.doctor-mode .detail-link {
   color: #2469aa;
   font-size: 11px;
   box-shadow: none;
+}
+
+.detail-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .transcript-list,
@@ -1274,6 +1335,24 @@ body.doctor-mode .encounter-action-bar .button-group {
   gap: 6px;
 }
 
+.encounter-action-bar .button-group button[hidden],
+body.doctor-mode .encounter-action-bar .button-group button[hidden] {
+  display: none !important;
+}
+
+.encounter-action-bar.draft-generated .button-group,
+body.doctor-mode .encounter-action-bar.draft-generated .button-group,
+.encounter-action-bar.pending-review .button-group,
+body.doctor-mode .encounter-action-bar.pending-review .button-group,
+.encounter-action-bar.export-ready .button-group,
+body.doctor-mode .encounter-action-bar.export-ready .button-group,
+.encounter-action-bar.flow-failed .button-group,
+body.doctor-mode .encounter-action-bar.flow-failed .button-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .encounter-action-bar .button-group button,
 body.doctor-mode .encounter-action-bar .button-group button,
 body.doctor-mode .encounter-action-bar .button-group .danger-action {
@@ -1304,6 +1383,18 @@ body.doctor-mode .encounter-action-bar #exportButton {
   border-color: #df8b93;
   background: #fff;
   color: #a32935;
+}
+
+.encounter-action-bar.flow-failed .button-group button:disabled,
+body.doctor-mode .encounter-action-bar.flow-failed .button-group button:disabled,
+.encounter-action-bar.pending-review #exportButton:disabled,
+body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
+  border-color: #d9e1eb;
+  background: #f3f6fa;
+  color: #92a0b0;
+  box-shadow: none;
+  opacity: 1;
+  cursor: not-allowed;
 }
 
 .admin-grid {
@@ -1617,11 +1708,50 @@ body.doctor-mode .encounter-action-bar #exportButton {
 }
 
 .toast {
+  right: 26px;
+  bottom: 98px;
+  max-width: min(420px, calc(100vw - 52px));
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 9px;
   background: #132f4a;
   color: #fff;
   box-shadow: 0 12px 32px rgba(10, 31, 52, 0.24);
+}
+
+.reference-list {
+  display: grid;
+  gap: 8px;
+}
+
+.reference-list.compact {
+  gap: 6px;
+}
+
+.reference-item {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #dfe8f2;
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #f8fbff;
+}
+
+.reference-item strong {
+  color: #254059;
+  font-size: 12px;
+}
+
+.reference-item span,
+.reference-item a {
+  color: #5e7187;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.reference-item a {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
 }
 
 @media (min-width: 1680px) {
@@ -1699,7 +1829,17 @@ body.doctor-mode .encounter-action-bar #exportButton {
   }
 
   .dashboard-status-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .dashboard-status-card {
+    min-height: 72px;
+    padding: 10px 12px;
+  }
+
+  .dashboard-status-card strong {
+    font-size: 14px;
   }
 
   .encounter-patient-banner {

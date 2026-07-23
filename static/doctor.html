@@ -157,14 +157,18 @@
             <strong id="sessionId">-</strong>
           </div>
           <div>
-            <span class="meta-label">录音状态</span>
+            <span class="meta-label">输入方式</span>
             <strong id="recordingStatus">-</strong>
           </div>
           <div>
             <span class="meta-label">审核状态</span>
             <strong id="reviewStatus">-</strong>
           </div>
-          <div class="asr-engine-meta">
+          <div class="patient-data-cell">
+            <span class="meta-label">数据状态</span>
+            <strong id="patientDataStatus">等待输入</strong>
+          </div>
+          <div class="asr-engine-meta debug-only">
             <span class="meta-label">转写引擎</span>
             <label class="engine-select-wrap" for="topAsrEngineSelect">
               <select id="topAsrEngineSelect" aria-label="选择 ASR 模型">
@@ -208,6 +212,19 @@
           </section>
 
           <section id="nextActionPanel" class="next-action-panel" aria-live="polite"></section>
+        </section>
+
+        <section id="transcriptionFailurePanel" class="failure-recovery-panel" hidden aria-live="polite">
+          <div>
+            <span class="status-badge missing">转写异常</span>
+            <strong>转写服务暂时不可用，本次任务已暂停。</strong>
+            <p id="transcriptionFailureMessage">可以重新转写、改用文本输入，或查看技术详情后交给管理员处理。</p>
+          </div>
+          <div class="failure-actions">
+            <button type="button" class="primary-action" id="retryTranscriptionButton">重新转写</button>
+            <button type="button" id="fallbackTextInputButton">改用文本输入</button>
+            <button type="button" id="openTechnicalDetailButton">查看技术详情</button>
+          </div>
         </section>
 
       <section class="run-context debug-only" aria-label="当前运行与保存信息">

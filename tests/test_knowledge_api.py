@@ -25,8 +25,8 @@ class KnowledgeApiTests(unittest.TestCase):
         }
         os.environ["MEDICAL_RECORD_AGENT_DB"] = os.path.join(self.temp_dir.name, "knowledge.sqlite3")
         os.environ["MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP"] = "1"
-        os.environ["MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_USERNAME"] = "admin"
-        os.environ["MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD"] = "admin123456"
+        os.environ["MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_USERNAME"] = "docker"
+        os.environ["MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD"] = "a123456"
         init_db()
 
     def tearDown(self) -> None:

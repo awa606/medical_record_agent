@@ -207,9 +207,9 @@ def _bootstrap_admin_user(connection: sqlite3.Connection) -> None:
     if existing is not None and int(existing["count"]) > 0:
         return
 
-    username = os.environ.get("MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_USERNAME", "admin")
-    password = os.environ.get("MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD", "admin123456")
-    display_name = os.environ.get("MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_DISPLAY_NAME", "Local Admin")
+    username = os.environ.get("MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_USERNAME", "docker")
+    password = os.environ.get("MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD", "a123456")
+    display_name = os.environ.get("MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_DISPLAY_NAME", "演示管理员")
     mode = os.environ.get("RECORD_PROVIDER_MODE", "demo").strip().lower()
     using_default_password = "MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD" not in os.environ
     if mode in {"live", "edge"} and (using_default_password or _is_weak_password(password, username)):

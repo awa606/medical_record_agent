@@ -39,6 +39,7 @@ def test_doctor_product_shell_exposes_four_core_views() -> None:
     assert 'data-product-view="workbench"' in html
     assert 'data-product-view="encounter"' in html
     assert 'id="adminHome"' in html
+    assert 'id="adminKnowledgePanel"' in html
     assert 'id="dashboardEncounterList"' in html
     assert 'id="encounterView"' in html
     assert 'class="product-main"' in html
@@ -65,6 +66,7 @@ def test_doctor_product_shell_reuses_existing_business_endpoints() -> None:
     assert "dashboardEncounterList" in js
     assert "/api/encounters" in js
     assert "/api/auth/users" in js
+    assert "/api/knowledge" in js
     assert 'api("/ready")' in js
 
 
@@ -164,6 +166,9 @@ def test_admin_and_reference_copy_hide_debug_values() -> None:
     js = read_static("doctor.js")
 
     assert "function runtimeServiceLabel" in js
+    assert "function renderKnowledgeBasePanel" in js
+    assert "function knowledgeVersionLabel" in js
+    assert "本地临床知识目录 v1" in js
     assert "演示管理员" in js
     assert "演示模式可用" in js
     assert "音频存储服务" in js

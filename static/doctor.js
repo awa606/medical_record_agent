@@ -21,6 +21,8 @@ const appState = {
   productView: "workbench",
   adminUsers: [],
   adminRuntimeStatus: null,
+  adminKnowledgeBase: null,
+  adminKnowledgeError: "",
   adminStatus: "idle",
   adminError: "",
   selectedEngine: "funasr",
@@ -761,6 +763,92 @@ function renderDashboardSummary() {
   if ($("dashboardRecordingLabel")) $("dashboardRecordingLabel").textContent = recording;
 }
 
+function knowledgePackStatusLabel(status) {
+  const labels = {
+    active: "已启用",
+    demo_only: "仅演示",
+    disabled: "未启用",
+    review_limited: "待临床复核",
+  };
+  return labels[status] || status || "待确认";
+}
+
+function clinicalReviewStatusLabel(status) {
+  const labels = {
+    reviewed: "已完成临床复核",
+    approved: "已完成临床复核",
+    needs_medical_review: "来源已核验，临床映射待复核",
+    source_verified: "来源已核验",
+    unverified: "待核验",
+  };
+  return labels[status] || status || "待复核";
+}
+
+function knowledgeVersionLabel(version) {
+  const labels = {
+    clinical_knowledge_base_v1: "本地临床知识目录 v1",
+  };
+  return labels[version] || version || "-";
+}
+
+function renderKnowledgeBasePanel() {
+  const panel = $("adminKnowledgePanel");
+  if (!panel) return;
+  if (appState.adminStatus === "loading" && !appState.adminKnowledgeBase) {
+    panel.innerHTML = `<div class="empty-state">正在加载临床知识库...</div>`;
+    return;
+  }
+  if (appState.adminKnowledgeError) {
+    panel.innerHTML = `<div class="safety-strip warning">${escapeHtml(appState.adminKnowledgeError)}</div>`;
+    return;
+  }
+  const knowledge = appState.adminKnowledgeBase;
+  if (!knowledge) {
+    panel.innerHTML = `<div class="empty-state">尚未加载临床知识库。</div>`;
+    return;
+  }
+  const packs = Array.isArray(knowledge.packs) ? knowledge.packs : [];
+  const references = Array.isArray(knowledge.references) ? knowledge.references : [];
+  const limits = Array.isArray(knowledge.limits) ? knowledge.limits : [];
+  panel.innerHTML = `
+    <div class="knowledge-summary-row">
+      <div>
+        <span>知识库版本</span>
+        <strong>${escapeHtml(knowledgeVersionLabel(knowledge.version))}</strong>
+      </div>
+      <div>
+        <span>知识包</span>
+        <strong>${packs.length}</strong>
+      </div>
+      <div>
+        <span>来源目录</span>
+        <strong>${references.length}</strong>
+      </div>
+    </div>
+    <div class="knowledge-section">
+      <h3>知识包</h3>
+      ${packs.length ? packs.map((pack) => `
+        <div class="admin-list-row knowledge-pack-row">
+          <strong>${escapeHtml(pack.name || pack.pack_id || "未命名知识包")}</strong>
+          <span>${escapeHtml(knowledgePackStatusLabel(pack.status))} · 规则 ${escapeHtml(pack.rule_count ?? 0)} · 来源 ${escapeHtml(pack.reference_count ?? 0)} · ${escapeHtml(clinicalReviewStatusLabel(pack.clinical_review_status))}</span>
+          <small>${escapeHtml(pack.scope || pack.evidence_policy || "")}</small>
+        </div>
+      `).join("") : `<div class="empty-state">暂无知识包。</div>`}
+    </div>
+    <div class="knowledge-section">
+      <h3>来源目录</h3>
+      ${references.length ? references.map((reference) => `
+        <div class="admin-list-row knowledge-reference-row">
+          <strong>${escapeHtml(reference.title || reference.reference_id || "未命名来源")}</strong>
+          <span>${escapeHtml(reference.organization || "来源机构待补充")} · ${escapeHtml(reference.version || "版本待补充")} · ${escapeHtml(clinicalReviewStatusLabel(reference.verification_status))} · ${escapeHtml(clinicalReviewStatusLabel(reference.clinical_review_status))}</span>
+          ${reference.url ? `<a href="${escapeHtml(reference.url)}" target="_blank" rel="noopener noreferrer">查看来源</a>` : ""}
+        </div>
+      `).join("") : `<div class="empty-state">暂无来源目录。</div>`}
+    </div>
+    ${limits.length ? `<div class="knowledge-limits">${limits.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>` : ""}
+  `;
+}
+
 function renderAdminHome() {
   const usersPanel = $("adminUsersPanel");
   const runtimePanel = $("adminRuntimePanel");
@@ -810,16 +898,19 @@ function renderAdminHome() {
       runtimePanel.innerHTML = `<div class="empty-state">尚未检查运行状态。</div>`;
     }
   }
+  renderKnowledgeBasePanel();
 }
 
 async function refreshAdminHome() {
   appState.adminStatus = "loading";
   appState.adminError = "";
+  appState.adminKnowledgeError = "";
   renderAdminHome();
   try {
-    const [readyResult, usersResult] = await Promise.allSettled([
+    const [readyResult, usersResult, knowledgeResult] = await Promise.allSettled([
       api("/ready"),
       appState.authUser?.role === "admin" ? api("/api/auth/users") : Promise.resolve({ users: [] }),
+      api("/api/knowledge"),
     ]);
     if (readyResult.status === "fulfilled") {
       appState.adminRuntimeStatus = readyResult.value;
@@ -831,6 +922,13 @@ async function refreshAdminHome() {
     } else {
       appState.adminUsers = [];
       appState.adminError = usersResult.reason?.message || "无法加载用户列表。";
+    }
+    if (knowledgeResult.status === "fulfilled") {
+      appState.adminKnowledgeBase = knowledgeResult.value;
+      appState.adminKnowledgeError = "";
+    } else {
+      appState.adminKnowledgeBase = null;
+      appState.adminKnowledgeError = knowledgeResult.reason?.message || "无法加载临床知识库。";
     }
     appState.adminStatus = "ready";
   } catch (error) {

@@ -49,6 +49,12 @@ data/speaker_profiles/*
 !data/speaker_profiles/.gitkeep
 .env
 .env.local
+config/*.env
+config/*.env.local
+config/*.local
+config/*.secret
+config/*.secrets
+!config/*.example
 tools/ffmpeg/*
 !tools/ffmpeg/.gitkeep
 

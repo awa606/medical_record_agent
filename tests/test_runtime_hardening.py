@@ -88,10 +88,9 @@ class RuntimeHardeningTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 413)
 
-    def test_sqlite_backup_and_restore_roundtrip(self):
+    def test_sqlite_backup_and_restore_roundtrip_removes_post_backup_mutation(self):
         db_path = self.root / "source.sqlite3"
         backup_path = self.root / "backups" / "source.backup.sqlite3"
-        restored_path = self.root / "restored.sqlite3"
         with closing(sqlite3.connect(db_path)) as connection:
             connection.execute("CREATE TABLE sample (id INTEGER PRIMARY KEY, value TEXT NOT NULL)")
             connection.execute("INSERT INTO sample (value) VALUES ('ok')")
@@ -99,11 +98,18 @@ class RuntimeHardeningTests(unittest.TestCase):
 
         backup_sqlite(db_path, backup_path)
         self.assertTrue(backup_path.exists())
-        restore_sqlite(backup_path, restored_path)
+        with closing(sqlite3.connect(db_path)) as connection:
+            connection.execute("INSERT INTO sample (value) VALUES ('mutation')")
+            connection.commit()
 
-        with closing(sqlite3.connect(restored_path)) as connection:
-            value = connection.execute("SELECT value FROM sample WHERE id = 1").fetchone()[0]
-        self.assertEqual(value, "ok")
+        restore_sqlite(backup_path, db_path, force=True)
+
+        with closing(sqlite3.connect(db_path)) as connection:
+            values = [
+                row[0]
+                for row in connection.execute("SELECT value FROM sample ORDER BY id").fetchall()
+            ]
+        self.assertEqual(values, ["ok"])
 
 
 if __name__ == "__main__":

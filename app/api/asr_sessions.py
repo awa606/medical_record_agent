@@ -51,6 +51,7 @@ from app.services.asr import (
 )
 from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
+from app.services.asr.funasr_reliability import classify_funasr_error
 from app.services.asr.role_quality import attach_speaker_role_quality
 from app.services.asr.speaker_role_classifier import resolve_speaker_roles
 from app.services.runtime_limits import (
@@ -933,6 +934,7 @@ def _append_partial_segment_events(
 
 def _failed_event(session: ASRSessionRecord, message: str) -> list[ASRSessionEvent]:
     hint = _retry_hint(session.engine)
+    classified = classify_funasr_error(message) if session.engine == "funasr" else None
     return [
         ASRSessionEvent(
             id=1,
@@ -943,8 +945,10 @@ def _failed_event(session: ASRSessionRecord, message: str) -> list[ASRSessionEve
                 "engine": session.engine,
                 "status": "failed",
                 "error": message,
+                "error_category": classified["category"] if classified else "asr_failed",
                 "retryable": True,
                 "retry_hint": hint,
+                "fallback_action": "text_input" if session.engine == "funasr" else None,
             },
             created_at=_now(),
         )
@@ -1773,6 +1777,9 @@ def _fallback_from_streaming_failure(
             "retryable": True,
         },
     )
+    classified = classify_funasr_error(error)
+    if classified["category"] in {"dns_failure", "model_missing", "model_timeout", "dependency_missing"}:
+        raise RuntimeError(classified["user_message"]) from error
     offline_engine = create_asr_engine("funasr")
     return _transcribe_chunked_session(
         session_id,

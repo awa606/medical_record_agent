@@ -17,6 +17,7 @@ from app.api.records import ensure_record_provider_available, run_record_generat
 from app.db import set_task_owner
 from app.schemas import ASREvaluationRequest, ASREvaluationResult, ASRResult, AudioRecord
 from app.services.asr import ASREvaluator, apply_manifest_role_strategy, create_asr_engine
+from app.services.asr.funasr_reliability import funasr_failure_payload
 from app.services.asr.role_quality import attach_speaker_role_quality, build_speaker_role_quality
 from app.services.asr.role_strategy import find_sample_config
 from app.services.runtime_limits import audio_upload_max_bytes, copy_upload_with_limit
@@ -186,6 +187,8 @@ def transcribe_audio(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
+        if (engine or "").strip().lower() == "funasr":
+            raise HTTPException(status_code=503, detail=funasr_failure_payload(exc)) from exc
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     _write_transcript(result)

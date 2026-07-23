@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from contextlib import closing
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -28,6 +29,7 @@ class RuntimeHardeningTests(unittest.TestCase):
                 "MEDICAL_RECORD_AGENT_MIN_FREE_BYTES",
                 "MEDICAL_RECORD_AGENT_MAX_UPLOAD_BYTES",
                 "MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP",
+                "MEDICAL_RECORD_AGENT_REQUIRE_FUNASR",
                 "RECORD_PROVIDER_MODE",
                 "LLM_PROVIDER",
             ]
@@ -64,6 +66,8 @@ class RuntimeHardeningTests(unittest.TestCase):
         self.assertTrue(payload["checks"]["uploads"]["ok"])
         self.assertTrue(payload["checks"]["outputs"]["ok"])
         self.assertTrue(payload["checks"]["provider"]["ok"])
+        self.assertTrue(payload["checks"]["asr_models"]["ok"])
+        self.assertIn("model_cache", payload["checks"]["asr_models"])
 
     def test_ready_blocks_edge_mode_with_mock_provider(self):
         os.environ["MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP"] = "0"
@@ -76,6 +80,26 @@ class RuntimeHardeningTests(unittest.TestCase):
         payload = ready.json()
         self.assertEqual(payload["status"], "not_ready")
         self.assertFalse(payload["checks"]["provider"]["ok"])
+
+    def test_ready_can_require_funasr_prewarm_for_edge_audio(self):
+        os.environ["MEDICAL_RECORD_AGENT_REQUIRE_FUNASR"] = "1"
+        with patch(
+            "app.api.runtime.get_prewarm_status",
+            return_value={
+                "status": "failed",
+                "last_error": "NameResolutionError: Failed to resolve modelscope.cn",
+                "error_category": "dns_failure",
+                "retryable": True,
+                "components": [],
+                "model_cache": {"has_cached_files": False},
+            },
+        ):
+            ready = TestClient(app).get("/ready")
+
+        self.assertEqual(ready.status_code, 503)
+        payload = ready.json()
+        self.assertFalse(payload["checks"]["asr_models"]["ok"])
+        self.assertEqual(payload["checks"]["asr_models"]["error_category"], "dns_failure")
 
     def test_audio_upload_exceeding_limit_returns_413(self):
         os.environ["MEDICAL_RECORD_AGENT_MAX_UPLOAD_BYTES"] = "8"

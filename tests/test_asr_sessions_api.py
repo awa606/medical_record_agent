@@ -439,6 +439,31 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertEqual(first_segment.data["mode"], "model_native_streaming")
         self.assertEqual(first_segment.data["progress_kind"], "actual")
 
+    def test_funasr_model_load_failure_marks_session_retryable_without_second_fallback_load(self):
+        session = create_asr_session(engine="funasr")
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+
+        try:
+            with (
+                patch(
+                    "app.api.asr_sessions._create_funasr_streaming_engine",
+                    side_effect=RuntimeError("NameResolutionError: Failed to resolve modelscope.cn"),
+                ),
+                patch("app.api.asr_sessions._audio_duration_for_chunking", return_value=9.5),
+                patch("app.api.asr_sessions.create_asr_engine") as fallback_engine,
+            ):
+                uploaded = upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+
+        self.assertEqual(uploaded.status, "failed")
+        fallback_engine.assert_not_called()
+        events = _read_events(session.session_id)
+        failed = next(event for event in events if event.event == "failed")
+        self.assertEqual(failed.data["error_category"], "dns_failure")
+        self.assertTrue(failed.data["retryable"])
+        self.assertEqual(failed.data["fallback_action"], "text_input")
+
     def test_upload_route_starts_background_transcription_and_streams_events(self):
         client = TestClient(app)
         login_as_admin(client)

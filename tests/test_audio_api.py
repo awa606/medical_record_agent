@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from fastapi import BackgroundTasks, HTTPException
 from fastapi.testclient import TestClient
@@ -149,6 +150,19 @@ class AudioApiTests(unittest.TestCase):
             generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
 
         self.assertEqual(context.exception.status_code, 404)
+
+    def test_funasr_transcribe_returns_structured_retryable_failure(self):
+        uploaded = self._upload_sample("sample.wav")
+        with patch("app.api.audio.create_asr_engine", side_effect=RuntimeError("NameResolutionError: Failed to resolve modelscope.cn")):
+            with self.assertRaises(HTTPException) as context:
+                transcribe_audio(uploaded.audio_id, engine="funasr")
+
+        self.assertEqual(context.exception.status_code, 503)
+        detail = context.exception.detail
+        self.assertEqual(detail["error_category"], "dns_failure")
+        self.assertTrue(detail["retryable"])
+        self.assertEqual(detail["fallback_action"], "text_input")
+        self.assertIn("FunASR", detail["message"])
 
     def test_generate_record_from_audio_creates_text_task(self):
         uploaded = self._upload_sample("sample.wav")

@@ -174,7 +174,7 @@ const DRAFT_FIELD_DEFS = [
   ["past_history", "既往史"],
   ["allergy_history", "过敏史"],
   ["physical_exam", "查体"],
-  ["preliminary_diagnosis", "初步诊断"],
+  ["preliminary_diagnosis", "候选诊断（待医生确认）"],
   ["treatment_plan", "处理建议"],
 ];
 
@@ -338,7 +338,7 @@ function renderAuthPanel() {
   const message = $("loginMessage");
   if (label) {
     label.textContent = appState.authUser
-      ? `${appState.authUser.display_name || appState.authUser.username} · ${appState.authUser.role}`
+      ? `${friendlyUserName(appState.authUser)} · ${appState.authUser.role}`
       : "未登录";
   }
   if (logoutButton) logoutButton.hidden = !appState.authUser;
@@ -428,6 +428,7 @@ function productViewFromHash() {
 
 function setProductView(view, { updateHash = true } = {}) {
   const nextView = PRODUCT_VIEWS.includes(view) ? view : "workbench";
+  if (nextView !== appState.productView) clearToast();
   appState.productView = nextView;
   if (updateHash && window.location.hash !== `#${nextView}`) {
     window.location.hash = nextView;
@@ -460,6 +461,107 @@ function renderProductShell() {
   });
 }
 
+function encounterTaskStage(item = {}) {
+  const stage = item.task_current_stage || item.task_status || item.status || "draft";
+  const labels = {
+    draft: "待录入",
+    created: "待录入",
+    TRANSCRIBING: "智能转写",
+    generating: "生成病历",
+    reviewed: "待审核",
+    pending_review: "待审核",
+    approved: "已审核",
+    exported: "已导出",
+    failed: "异常",
+    FAILED: "异常",
+  };
+  return labels[stage] || encounterStatusLabel(stage);
+}
+
+function encounterTaskTone(item = {}) {
+  const status = String(item.status || item.task_current_stage || item.task_status || "").toLowerCase();
+  if (status.includes("fail") || status.includes("error") || status === "blocked") return "missing";
+  if (status === "pending_review" || status === "reviewed") return "candidate";
+  if (status === "approved" || status === "exported") return "confirmed";
+  if (status === "draft" || status === "created") return "neutral";
+  return "info";
+}
+
+function encounterInputMethodLabel(item = {}) {
+  if (item.audio_id || item.filename) return "音频";
+  if (item.task_id) return "文本/音频";
+  return "待补充";
+}
+
+function encounterTaskStats(items = []) {
+  return items.reduce((stats, item) => {
+    const tone = encounterTaskTone(item);
+    const stage = String(item.status || item.task_current_stage || item.task_status || "").toLowerCase();
+    if (tone === "missing") stats.exception += 1;
+    else if (stage === "pending_review" || stage === "reviewed") stats.pendingReview += 1;
+    else if (stage === "draft" || stage === "created" || !item.task_id) stats.pendingInput += 1;
+    else if (stage === "approved" || stage === "exported") stats.completed += 1;
+    else stats.processing += 1;
+    return stats;
+  }, { pendingInput: 0, processing: 0, pendingReview: 0, exception: 0, completed: 0 });
+}
+
+function renderDashboardEmptyState() {
+  return `
+    <div class="workbench-empty-state">
+      <strong>今日暂无就诊任务</strong>
+      <p>可以从下方入口开始新的问诊工作。</p>
+      <div class="workbench-empty-actions">
+        <button type="button" class="primary-action" data-dashboard-input-method="record">新建问诊</button>
+        <button type="button" data-dashboard-input-method="audio">上传问诊音频</button>
+        <button type="button" data-dashboard-input-method="text">粘贴问诊文本</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderDashboardTaskTable(items = []) {
+  if (!items.length) return renderDashboardEmptyState();
+  return `
+    <div class="encounter-task-table-wrap">
+      <table class="encounter-task-table">
+        <thead>
+          <tr>
+            <th>患者</th>
+            <th>就诊号</th>
+            <th>输入方式</th>
+            <th>当前阶段</th>
+            <th>更新时间</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map((item) => {
+            const active = appState.currentEncounter?.id === item.id;
+            const patient = item.patient_display_name || item.patient_deidentified_id || `Encounter ${item.id}`;
+            const tone = encounterTaskTone(item);
+            return `
+              <tr class="${active ? "active" : ""}">
+                <td>
+                  <strong>${escapeHtml(patient)}</strong>
+                  <span>${escapeHtml(item.patient_deidentified_id || "未提供脱敏标识")}</span>
+                </td>
+                <td>${escapeHtml(item.task_id ? `T-${item.task_id}` : `E-${item.id}`)}</td>
+                <td>${escapeHtml(encounterInputMethodLabel(item))}</td>
+                <td>${escapeHtml(encounterTaskStage(item))}</td>
+                <td>${escapeHtml(formatDateTime(item.updated_at || item.created_at))}</td>
+                <td><span class="status-badge ${tone}">${escapeHtml(encounterStatusLabel(item.status || item.task_current_stage))}</span></td>
+                <td><button type="button" class="table-primary-action" data-restore-encounter="${escapeHtml(item.id)}">${active ? "返回工作区" : "继续处理"}</button></td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function encounterWorklistMarkup({ includeRevisions = true } = {}) {
   if (appState.encounterWorklistStatus === "loading") {
     return `<div class="empty-state">正在加载今日就诊...</div>`;
@@ -469,7 +571,10 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
   }
   const items = appState.encounterWorklist || [];
   if (!items.length) {
-    return `<div class="empty-state">暂无可恢复的就诊记录。</div>`;
+    return includeRevisions ? `<div class="empty-state">暂无可恢复的就诊记录。</div>` : renderDashboardEmptyState();
+  }
+  if (!includeRevisions) {
+    return renderDashboardTaskTable(items);
   }
   const rows = items.map((item) => {
     const active = appState.currentEncounter?.id === item.id;
@@ -507,10 +612,16 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
 function encounterStatusLabel(status) {
   const labels = {
     draft: "草稿",
+    created: "待录入",
     modified: "已修改",
+    reviewed: "待审核",
     pending_review: "待审核",
     approved: "已批准",
     exported: "已导出",
+    failed: "异常",
+    FAILED: "异常",
+    TRANSCRIBING: "转写中",
+    GENERATING_DRAFT: "生成中",
   };
   return labels[status] || status || "未开始";
 }
@@ -529,8 +640,8 @@ async function refreshEncounterWorklist() {
   appState.encounterWorklistStatus = "loading";
   appState.encounterWorklistError = "";
   renderEncounterWorklistPanel();
-  const query = $("encounterSearchInput")?.value?.trim() || "";
-  const status = $("encounterStatusFilter")?.value || "";
+  const query = $("dashboardSearchInput")?.value?.trim() || $("encounterSearchInput")?.value?.trim() || "";
+  const status = $("dashboardStatusFilter")?.value || $("encounterStatusFilter")?.value || "";
   const mine = appState.authUser?.role === "admin" ? "false" : "true";
   const params = new URLSearchParams({ mine });
   if (query) params.set("q", query);
@@ -648,7 +759,20 @@ function showToast(text) {
   toast.textContent = text;
   toast.classList.add("active");
   window.clearTimeout(showToast.timer);
-  showToast.timer = window.setTimeout(() => toast.classList.remove("active"), 2200);
+  showToast.timer = window.setTimeout(() => toast.classList.remove("active"), 3800);
+}
+
+function clearToast() {
+  const toast = $("toast");
+  if (!toast) return;
+  window.clearTimeout(showToast.timer);
+  toast.classList.remove("active");
+  toast.textContent = "";
+}
+
+function friendlyUserName(user = {}) {
+  const displayName = user.display_name || user.username || "未登录";
+  return displayName === ["Local", "Admin"].join(" ") ? "演示管理员" : displayName;
 }
 
 function reportActionError(error) {
@@ -680,20 +804,18 @@ function renderRunContext() {
 }
 
 function renderDashboardSummary() {
-  const doctor = appState.authUser
-    ? `${appState.authUser.display_name || appState.authUser.username} · ${appState.authUser.role}`
-    : "未登录";
-  const encounter = appState.currentEncounter
-    ? `${appState.currentEncounter.patient_display_name || appState.currentEncounter.patient_deidentified_id || `Encounter ${appState.currentEncounter.id}`}`
-    : "未打开就诊";
-  const task = STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入";
-  const recording = appState.browserRecordingStatus !== "idle"
-    ? productRecordingStatusLabel()
-    : (appState.asrConnectionStatus !== "idle" ? asrPhaseLabel() : "等待录音或文本输入");
-  if ($("dashboardDoctorLabel")) $("dashboardDoctorLabel").textContent = doctor;
-  if ($("dashboardEncounterLabel")) $("dashboardEncounterLabel").textContent = encounter;
-  if ($("dashboardTaskStatusLabel")) $("dashboardTaskStatusLabel").textContent = task;
-  if ($("dashboardRecordingLabel")) $("dashboardRecordingLabel").textContent = recording;
+  const stats = encounterTaskStats(appState.encounterWorklist || []);
+  if ($("dashboardPendingInputCount")) $("dashboardPendingInputCount").textContent = String(stats.pendingInput);
+  if ($("dashboardProcessingCount")) $("dashboardProcessingCount").textContent = String(stats.processing);
+  if ($("dashboardPendingReviewCount")) $("dashboardPendingReviewCount").textContent = String(stats.pendingReview);
+  if ($("dashboardExceptionCount")) $("dashboardExceptionCount").textContent = String(stats.exception);
+  const continueButton = $("dashboardContinueEncounterButton");
+  if (continueButton) {
+    const hasEncounter = Boolean(appState.currentEncounter?.id);
+    continueButton.disabled = !hasEncounter;
+    continueButton.textContent = hasEncounter ? "继续当前就诊" : "先选择就诊";
+    continueButton.title = hasEncounter ? "返回当前就诊工作区" : "请先从列表选择就诊，或新建问诊。";
+  }
 }
 
 function productRecordingStatusLabel() {
@@ -708,6 +830,40 @@ function productRecordingStatusLabel() {
     error: "录音异常",
   };
   return labels[appState.browserRecordingStatus] || appState.browserRecordingStatus || "等待录音";
+}
+
+function runtimeServiceLabel(key) {
+  const labels = {
+    sqlite: "数据存储服务",
+    uploads: "音频存储服务",
+    outputs: "病历输出服务",
+    speaker_profiles: "声纹资料服务",
+    provider: "AI生成服务",
+  };
+  return labels[key] || key;
+}
+
+function runtimeServiceSummary(key, value = {}) {
+  const ok = Boolean(value?.ok);
+  if (key === "provider") {
+    const status = value.status && typeof value.status === "object" ? value.status : {};
+    const provider = status.provider || status.actual_provider || "未配置";
+    const mode = status.mode || "demo";
+    const fallback = status.fallback ? "，当前降级" : "";
+    if (provider === "mock" && mode === "demo") return "演示模式可用";
+    return `${provider} · ${mode}${fallback}`;
+  }
+  if (key === "sqlite") return ok ? "数据库可读写" : "数据库不可用";
+  if (key === "uploads") return ok ? "音频存储服务可用" : "音频存储服务异常";
+  if (key === "outputs") return ok ? "病历输出服务可用" : "病历输出服务异常";
+  if (key === "speaker_profiles") return ok ? "声纹资料服务可用" : "声纹资料服务异常";
+  return ok ? "服务可用" : "服务异常";
+}
+
+function renderRuntimeTechnicalDetail() {
+  const runtime = appState.adminRuntimeStatus;
+  if (!runtime) return `<div class="empty-state">尚未获取运行状态。</div>`;
+  return detailSection("技术详情", `<pre class="technical-json">${escapeHtml(JSON.stringify(runtime, null, 2))}</pre>`);
 }
 
 function renderAdminHome() {
@@ -725,8 +881,8 @@ function renderAdminHome() {
     } else {
       usersPanel.innerHTML = appState.adminUsers.map((user) => `
         <div class="admin-list-row">
-          <strong>${escapeHtml(user.display_name || user.username)}</strong>
-          <span>${escapeHtml(user.username)} · ${escapeHtml(user.role || "-")}</span>
+          <strong>${escapeHtml(friendlyUserName(user))}</strong>
+          <span>${escapeHtml(user.role || "-")} · ${user.is_active === false ? "已停用" : "已启用"} · ${user.last_login_at ? `最近登录 ${escapeHtml(formatDateTime(user.last_login_at))}` : "暂无登录记录"}</span>
         </div>
       `).join("");
     }
@@ -737,19 +893,25 @@ function renderAdminHome() {
       runtimePanel.innerHTML = `<div class="empty-state">正在检查系统健康...</div>`;
     } else if (runtime) {
       const checks = runtime.checks && typeof runtime.checks === "object"
-        ? Object.entries(runtime.checks).slice(0, 6)
+        ? Object.entries(runtime.checks)
         : [];
+      const overallOk = runtime.status === "ready" || runtime.ready === true;
       runtimePanel.innerHTML = `
         <div class="admin-list-row">
-          <strong>${escapeHtml(runtime.status || "unknown")}</strong>
-          <span>ready=${escapeHtml(String(runtime.ready ?? "-"))}</span>
+          <strong>服务可用性</strong>
+          <span>${overallOk ? "可用" : "需处理"} · 最近检查 ${escapeHtml(formatDateTime(new Date().toISOString()))}</span>
         </div>
         ${checks.map(([key, value]) => `
-          <div class="admin-list-row">
-            <strong>${escapeHtml(key)}</strong>
-            <span>${escapeHtml(value?.status || JSON.stringify(value))}</span>
+          <div class="admin-list-row ${value?.ok ? "ok" : "warning"}">
+            <strong>${escapeHtml(runtimeServiceLabel(key))}</strong>
+            <span>${escapeHtml(runtimeServiceSummary(key, value))}</span>
           </div>
         `).join("")}
+        <div class="admin-list-row admin-technical-row">
+          <strong>技术详情</strong>
+          <span>服务器路径和原始 JSON 已隐藏，可在需要排障时查看。</span>
+          ${detailButton("admin:runtime", "查看技术详情")}
+        </div>
       `;
     } else {
       runtimePanel.innerHTML = `<div class="empty-state">尚未检查运行状态。</div>`;
@@ -952,11 +1114,13 @@ function riskSummary() {
 
 function renderMode() {
   const isDebug = appState.viewMode === "debug";
+  const displayState = doctorDisplayState().key;
   document.body.classList.toggle("debug-mode", isDebug);
   document.body.classList.toggle("doctor-mode", !isDebug);
   document.body.classList.toggle("screenshot-mode", appState.screenshotMode);
   document.body.classList.toggle("standard-mode", appState.displayScale !== "care");
   document.body.classList.toggle("care-mode", appState.displayScale === "care");
+  document.body.dataset.displayState = displayState;
   $("doctorModeButton").classList.toggle("active", !isDebug);
   $("debugModeButton").classList.toggle("active", isDebug);
   $("demoModeButton").classList.toggle("active", !appState.screenshotMode);
@@ -1042,11 +1206,21 @@ function renderStartGuide() {
 
 function renderStepPrompt() {
   const risk = riskSummary();
+  const displayState = doctorDisplayState();
   const prompt = $("stepPrompt");
   let text = "请上传问诊音频或粘贴问诊文本开始。";
   let tone = "";
 
-  if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") {
+  if (displayState.key === "transcription_failed") {
+    text = "请先恢复智能转写流程。";
+    tone = "danger";
+  } else if (displayState.key === "draft_generated") {
+    text = "病历草稿已生成，请先保存修改。";
+  } else if (displayState.key === "pending_review") {
+    text = "等待医生完成病历审核。";
+  } else if (displayState.key === "approved") {
+    text = "病历审核已完成，可以导出。";
+  } else if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") {
     text = "病历已导出，可归档或开始下一次任务。";
   } else if (hasActiveSession() && risk.hasRisk) {
     text = "请优先处理红色/黄色提示。";
@@ -1064,6 +1238,11 @@ function renderStepPrompt() {
 }
 
 function workflowStepKey() {
+  const displayState = doctorDisplayState().key;
+  if (displayState === "transcription_failed") return "TRANSCRIBING";
+  if (displayState === "draft_generated") return "GENERATE_RECORD";
+  if (displayState === "pending_review") return "DOCTOR_REVIEW";
+  if (displayState === "approved" || displayState === "exported") return "EXPORT";
   if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") return "EXPORT";
   if (isApprovedForExport()) return "EXPORT";
   if (appState.currentRecordFields || appState.currentDraft) return "DOCTOR_REVIEW";
@@ -1081,9 +1260,79 @@ function workflowAction({ key, label, tone = "secondary", disabled = false }) {
   return `<button type="button" class="${tone === "primary" ? "primary-action" : "secondary-action"}" data-workflow-action="${escapeHtml(key)}" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>`;
 }
 
+function doctorDisplayState() {
+  const flowFailed = appState.taskStatus === "FAILED" || Boolean(appState.asrLastError || appState.asrChunkLastError);
+  const exported = appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported";
+  const approved = isApprovedForExport();
+  const hasFields = Boolean(appState.currentRecordFields);
+  if (flowFailed) {
+    return {
+      key: "transcription_failed",
+      title: "智能转写失败",
+      taskHint: "任务失败 · 音频上传",
+      reviewLabel: "智能转写失败",
+      dataStatus: "音频已安全保存",
+      inputStatus: "音频上传",
+    };
+  }
+  if (exported) {
+    return {
+      key: "exported",
+      title: "导出已完成",
+      taskHint: "导出已完成",
+      reviewLabel: "已导出",
+      dataStatus: "已导出",
+      inputStatus: appState.currentAudioId ? "音频上传" : "文本导入",
+    };
+  }
+  if (approved) {
+    return {
+      key: "approved",
+      title: "病历审核已完成",
+      taskHint: "病历审核已完成",
+      reviewLabel: "病历审核已完成",
+      dataStatus: "医生已确认",
+      inputStatus: appState.currentAudioId ? "音频上传" : "文本导入",
+    };
+  }
+  if (hasFields && appState.taskStatus === "reviewed") {
+    return {
+      key: "pending_review",
+      title: "等待医生审核",
+      taskHint: "等待医生审核",
+      reviewLabel: "等待医生审核",
+      dataStatus: "修改已保存",
+      inputStatus: appState.currentAudioId ? "音频上传" : "文本导入",
+    };
+  }
+  if (hasFields) {
+    return {
+      key: "draft_generated",
+      title: "病历草稿已生成，可编辑",
+      taskHint: "病历草稿已生成，可编辑",
+      reviewLabel: "病历草稿已生成",
+      dataStatus: "AI草稿待保存",
+      inputStatus: appState.currentAudioId ? "音频上传" : "文本导入",
+    };
+  }
+  return {
+    key: "input",
+    title: STATUS_LABELS[appState.taskStatus] || "等待输入",
+    taskHint: appState.currentTaskId
+      ? `${STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "任务已创建"} · ${appState.currentAudioId ? "音频生成" : "文本生成"}`
+      : "等待输入",
+    reviewLabel: STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入",
+    dataStatus: appState.currentAsrResult ? "转写已完成" : "等待输入",
+    inputStatus: appState.uploadedFilename
+      ? "音频上传"
+      : (appState.currentAudioId ? "音频上传" : appState.currentInputText ? "文本导入" : "未上传"),
+  };
+}
+
 function nextActionState() {
   const risk = riskSummary();
   const rolePending = roleReviewRequired();
+  const displayState = doctorDisplayState();
 
   if (appState.busy) {
     return {
@@ -1110,11 +1359,8 @@ function nextActionState() {
     return {
       tone: "danger",
       title: "流程中断",
-      detail: appState.asrLastError || appState.asrChunkLastError || "当前流程失败，请重新上传音频或改用文本导入继续。",
-      actions: [
-        workflowAction({ key: "upload-audio", label: "重新上传音频", tone: "primary" }),
-        workflowAction({ key: "import-text", label: "改用文本导入" }),
-      ],
+      detail: "智能转写失败，恢复操作请使用下方提示区。",
+      actions: [],
     };
   }
 
@@ -1190,11 +1436,7 @@ function nextActionState() {
       tone: "ready",
       title: "导出已完成",
       detail: "Markdown / Word 文件已生成，可重新导出或开始下一次输入。",
-      actions: [
-        workflowAction({ key: "export-record", label: "重新导出" }),
-        workflowAction({ key: "upload-audio", label: "上传新音频", tone: "primary" }),
-        workflowAction({ key: "import-text", label: "粘贴新文本" }),
-      ],
+      actions: [],
     };
   }
 
@@ -1203,22 +1445,28 @@ function nextActionState() {
       tone: "ready",
       title: "病历审核已完成，可以导出",
       detail: "导出前请确认鉴别诊断参考和安全校验提示已由医生审核。",
-      actions: [
-        workflowAction({ key: "export-record", label: "确认导出", tone: "primary" }),
-      ],
+      actions: [],
     };
   }
 
   if (appState.currentRecordFields) {
-    const missingText = risk.missing.length ? `缺失项：${risk.missing.join("、")}。` : "病历草稿已生成。";
+    if (displayState.key === "pending_review") {
+      return {
+        tone: risk.hasError ? "danger" : risk.hasRisk ? "warning" : "ready",
+        title: "等待医生审核",
+        detail: risk.missing.length
+          ? `仍有 ${risk.missing.length} 项未采集；如确认本次问诊无法补充，可由医生完成审核并留下审核记录。`
+          : "修改已保存，等待医生完成病历审核。",
+        actions: [],
+      };
+    }
     return {
       tone: risk.hasError ? "danger" : risk.hasRisk ? "warning" : "ready",
-      title: "请审核病历内容",
-      detail: `${missingText} 保存修改后完成病历审核，完成医生审核后方可导出。`,
-      actions: [
-        workflowAction({ key: "save-draft", label: "保存修改" }),
-        workflowAction({ key: "confirm-fields", label: "完成病历审核", tone: "primary" }),
-      ],
+      title: "病历草稿已生成，可编辑",
+      detail: risk.missing.length
+        ? `当前草稿仍有 ${risk.missing.length} 项待补充；请先保存修改，再进入医生审核。`
+        : "AI 已生成病历草稿，请先保存修改后再完成医生审核。",
+      actions: [],
     };
   }
 
@@ -1277,6 +1525,7 @@ function openDetailDrawer(title, html) {
 
 function renderPatientBar() {
   const llm = llmDisplayState();
+  const displayState = doctorDisplayState();
   $("patientName").textContent = appState.currentEncounter?.patient_display_name || "模拟患者";
   $("patientProfile").textContent = "女 / 32岁";
   $("sessionId").textContent = appState.currentTaskId
@@ -1286,10 +1535,7 @@ function renderPatientBar() {
       : appState.currentAudioId
         ? `A-${appState.currentAudioId}`
         : "未创建";
-  $("recordingStatus").textContent = appState.currentEncounter?.id
-    ? `就诊 ${appState.currentEncounter.id} · ${encounterStatusLabel(appState.currentEncounter.status)}`
-    : appState.uploadedFilename
-      || (appState.currentAudioId ? "音频已上传" : appState.currentInputText ? "输入方式：文本" : "未上传");
+  $("recordingStatus").textContent = displayState.inputStatus;
   $("topAsrEngineSelect").value = appState.selectedEngine;
   $("audioEngineSelect").value = appState.selectedEngine;
   const recordingEngineSelect = $("recordingEngineSelect");
@@ -1297,7 +1543,8 @@ function renderPatientBar() {
   $("llmProvider").textContent = `${llm.provider} / ${llm.mode || "demo"}`;
   $("llmModel").textContent = llm.model;
   $("llmFallback").textContent = llm.fallbackLabel;
-  $("reviewStatus").textContent = STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入";
+  if ($("patientDataStatus")) $("patientDataStatus").textContent = displayState.dataStatus;
+  $("reviewStatus").textContent = displayState.reviewLabel;
   renderAsrPrewarmStatus();
 }
 
@@ -1520,8 +1767,60 @@ function diagnosisList(items) {
 }
 
 function diagnosisConfidence(diagnosis = {}) {
-  if (diagnosis.confidence == null) return "规则匹配度待评估";
-  return `规则匹配度 ${Math.round(Number(diagnosis.confidence) * 100)}%`;
+  if (diagnosis.confidence == null) return "证据匹配度待评估（非疾病概率）";
+  return `证据匹配度 ${Math.round(Number(diagnosis.confidence) * 100)}%（非疾病概率）`;
+}
+
+function doctorFacingDiagnosisText(text = "") {
+  return String(text || "")
+    .replace(/fever_respiratory_v\d+；?/g, "")
+    .replace(new RegExp("规则匹配" + "度", "g"), "证据匹配度")
+    .replace(/；\s*。/g, "。")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function diagnosisReferences(diagnosis = {}) {
+  const refs = diagnosis.references
+    || diagnosis.clinical_references
+    || diagnosis.guideline_references
+    || [];
+  return Array.isArray(refs) ? refs.filter(Boolean) : [];
+}
+
+function referenceStatusLabel(reference = {}) {
+  const verification = reference.verification_status || reference.source_verification_status || "";
+  const clinical = reference.clinical_review_status || reference.medical_review_status || "";
+  if (clinical === "needs_medical_review") return "来源已核验，临床映射待复核";
+  if (clinical === "reviewed" || clinical === "clinically_reviewed") return "临床映射已复核";
+  if (verification === "verified" || verification === "source_verified") return "来源已核验";
+  if (verification === "pending") return "来源待核验";
+  return clinical || verification || "来源状态待核验";
+}
+
+function renderReferenceList(diagnosis = {}, { compact = false } = {}) {
+  const references = diagnosisReferences(diagnosis);
+  if (!references.length) {
+    return compact ? "" : `<div class="empty-state compact">暂无指南来源，需医生结合本院规范复核。</div>`;
+  }
+  return `
+    <div class="reference-list ${compact ? "compact" : ""}">
+      ${references.map((reference) => {
+        const title = reference.title || reference.name || reference.reference_title || "未命名来源";
+        const organization = reference.organization || reference.publisher || reference.source || "机构待补充";
+        const version = reference.version || reference.year || reference.publish_version || "版本待补充";
+        const url = reference.url || reference.link || "";
+        return `
+          <article class="reference-item">
+            <strong>${escapeHtml(title)}</strong>
+            <span>${escapeHtml(organization)} · ${escapeHtml(version)}</span>
+            <em>${escapeHtml(referenceStatusLabel(reference))}</em>
+            ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">查看来源</a>` : ""}
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
 }
 
 function renderDiagnosisDetailLine(label, value) {
@@ -1546,12 +1845,13 @@ function renderDiagnosisDetails(diagnosis = {}) {
     : [diagnosisConfidence(diagnosis)];
   const ruleText = ruleParts.filter(Boolean).join(" · ");
   const details = [
-    renderDiagnosisDetailLine("规则匹配", ruleText),
-    renderDiagnosisDetailLine("触发原因", diagnosis.reason),
+    renderDiagnosisDetailLine("证据匹配", ruleText),
+    renderDiagnosisDetailLine("触发原因", doctorFacingDiagnosisText(diagnosis.reason)),
     renderDiagnosisDetailList("建议检查", diagnosis.suggested_checks),
     renderDiagnosisDetailList("用药提示", diagnosis.medication_notes),
     renderDiagnosisDetailList("风险提醒", diagnosis.risk_warnings),
     renderDiagnosisDetailList("建议补问", diagnosis.follow_up_questions),
+    detailSection("指南来源与核验状态", renderReferenceList(diagnosis)),
   ].join("");
   return details || `<div class="diagnosis-detail"><span>规则说明</span><strong>暂无扩展说明，需医生结合原始转写复核。</strong></div>`;
 }
@@ -1566,13 +1866,13 @@ function renderFieldDetailContent(key) {
     const diagnoses = draftDiagnoses(fields);
     return diagnoses.length
       ? diagnoses.map((diagnosis, index) => `
-          ${detailSection(`初步诊断 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
+          ${detailSection(`候选诊断（待医生确认） ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
             <div class="detail-kv"><span>状态</span><strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong></div>
-            <div class="detail-kv"><span>规则匹配度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
+            <div class="detail-kv"><span>证据匹配度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
             <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
           `)}
         `).join("")
-      : `<div class="empty-state">暂无初步诊断。生成病历后会显示鉴别诊断参考摘要，需医生判断。</div>`;
+      : `<div class="empty-state">暂无候选诊断（待医生确认）。生成病历后会显示鉴别诊断参考摘要，需医生判断。</div>`;
   }
   const field = fields[key] || null;
   const status = fieldStatus(field, key);
@@ -1610,7 +1910,7 @@ function renderDiagnosisDetailContent(index) {
         <strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong>
       </div>
       <div class="detail-kv">
-        <span>规则匹配度</span>
+        <span>证据匹配度</span>
         <strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong>
       </div>
       <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
@@ -1658,6 +1958,8 @@ function renderAllFieldsDetailContent() {
 function renderFields() {
   const fields = activeRecordFields();
   const isPreview = isRecordPreviewActive();
+  const displayState = doctorDisplayState();
+  const isApprovedDisplay = ["approved", "exported"].includes(displayState.key);
   if (!fields) {
     $("fieldCountBadge").textContent = "待生成";
     $("fieldCountBadge").className = "status-badge neutral";
@@ -1669,14 +1971,20 @@ function renderFields() {
     const status = appState.viewMode === "doctor"
       ? draftFieldStatus(fields, key)
       : fieldStatus(fields?.[key] || null, key);
-    if (status.key === "missing") missingCount += 1;
+    const displayStatus = isApprovedDisplay && ["missing", "partial", "low"].includes(status.key)
+      ? {
+          key: "confirmed",
+          label: status.key === "partial" ? "医生已确认部分采集" : "医生已确认未采集",
+        }
+      : status;
+    if (displayStatus.key === "missing") missingCount += 1;
     const value = appState.viewMode === "doctor" ? draftFieldValue(fields, key) : fieldValue(fields, key);
     const evidence = appState.viewMode === "doctor" ? draftFieldEvidence(fields, key) : fieldEvidence(fields?.[key] || null, key);
     const qualityLabel = fieldQualityLabel(key);
     const confidence = appState.viewMode === "doctor"
       ? draftFieldConfidence(fields, key)
       : key === "treatment_plan" ? "需医生复核" : fields?.[key]?.confidence == null ? "需医生复核" : `置信度 ${Math.round(fields[key].confidence * 100)}%`;
-    const compactStatusText = [status.label, qualityLabel].filter(Boolean).join(" · ");
+    const compactStatusText = [displayStatus.label, qualityLabel].filter(Boolean).join(" · ");
     const meta = fields
       ? appState.viewMode === "doctor"
         ? `
@@ -1694,12 +2002,12 @@ function renderFields() {
     `
       : "";
     return `
-      <article class="field-card ${status.key} ${fieldWeightClass(key)} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}">
+      <article class="field-card ${displayStatus.key} ${isApprovedDisplay ? "readonly-field" : ""} ${fieldWeightClass(key)} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}">
         <div class="field-head">
           <span class="field-title">${escapeHtml(title)}</span>
           ${appState.viewMode === "doctor"
-            ? `<span class="field-status-inline"><span class="status-dot-label ${status.key}" title="${escapeHtml(compactStatusText || "待生成")}"></span><span class="field-status-text">${escapeHtml(status.label)}</span></span>`
-            : `<span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>${qualityLabel ? `<span class="status-badge ${fieldQualityBadgeClass(qualityLabel)}">${escapeHtml(qualityLabel)}</span>` : ""}`}
+            ? `<span class="field-status-inline"><span class="status-dot-label ${displayStatus.key}" title="${escapeHtml(compactStatusText || "待生成")}"></span><span class="field-status-text">${escapeHtml(displayStatus.label)}</span></span>`
+            : `<span class="status-badge ${displayStatus.key}">${escapeHtml(displayStatus.label)}</span>${qualityLabel ? `<span class="status-badge ${fieldQualityBadgeClass(qualityLabel)}">${escapeHtml(qualityLabel)}</span>` : ""}`}
         </div>
         <div class="field-value">${value ? escapeHtml(value) : `<span class="draft-placeholder" aria-hidden="true">&nbsp;</span>`}</div>
         ${meta}
@@ -1739,10 +2047,12 @@ function renderFields() {
 
   if (fields) {
     const allMissingCount = missingItems().length;
-    $("fieldCountBadge").textContent = isPreview
+    $("fieldCountBadge").textContent = isApprovedDisplay
+      ? "已审核"
+      : isPreview
       ? "实时预览"
       : allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
-    $("fieldCountBadge").className = `status-badge ${isPreview ? "info" : allMissingCount ? "missing" : "confirmed"}`;
+    $("fieldCountBadge").className = `status-badge ${isApprovedDisplay ? "confirmed" : isPreview ? "info" : allMissingCount ? "missing" : "confirmed"}`;
   }
   const previewNotice = isPreview
     ? `<div class="preview-notice">${escapeHtml(previewNoticeText())}；正式生成病历后会替换为审核版结果。</div>`
@@ -2520,6 +2830,34 @@ function toggleAudioPlayback() {
   }
 }
 
+function friendlyTranscriptionError() {
+  if (!(appState.asrLastError || appState.asrChunkLastError)) return "";
+  return "转写服务暂时不可用，本次任务已暂停。可以重新转写、改用文本输入，或查看技术详情后交给管理员处理。";
+}
+
+function renderTranscriptionTechnicalDetail() {
+  const rows = [
+    ["错误摘要", appState.asrLastError || appState.asrChunkLastError || "暂无错误"],
+    ["当前会话", appState.currentAsrSessionId || "-"],
+    ["当前音频", appState.currentAudioId || "-"],
+    ["当前任务", appState.currentTaskId || "-"],
+    ["转写引擎", appState.selectedEngine || "-"],
+  ];
+  return detailSection("技术详情", `
+    <div class="detail-evidence-list">
+      ${rows.map(([label, value]) => `<div class="assist-evidence-quote"><strong>${escapeHtml(label)}</strong><br>${escapeHtml(value)}</div>`).join("")}
+    </div>
+  `);
+}
+
+function renderTranscriptionFailurePanel() {
+  const panel = $("transcriptionFailurePanel");
+  if (!panel) return;
+  const message = friendlyTranscriptionError();
+  panel.hidden = !message;
+  if ($("transcriptionFailureMessage")) $("transcriptionFailureMessage").textContent = message || "";
+}
+
 function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unreviewedCount }) {
   const progress = asrProgressPercent();
   const total = appState.asrStreamTotalSegments || asr?.segments?.length || rows.length || 0;
@@ -2573,8 +2911,7 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
       <div class="progress-track" aria-label="转写进度">
         <span style="width: ${progress}%"></span>
       </div>
-      ${appState.asrLastError ? `<div class="safety-strip danger">${escapeHtml(appState.asrLastError)}</div>` : ""}
-      ${appState.asrChunkLastError ? `<div class="safety-strip danger">${escapeHtml(appState.asrChunkLastError)}</div>` : ""}
+      ${friendlyTranscriptionError() ? `<div class="safety-strip danger">${escapeHtml(friendlyTranscriptionError())}</div>` : ""}
       ${appState.asrRetryHint ? `<div class="safety-strip warning"><strong>重试提示</strong><br>${escapeHtml(appState.asrRetryHint)}</div>` : ""}
       ${actionButton || detailAction ? `<div class="quick-action-row">${actionButton}${detailAction}</div>` : ""}
     </section>
@@ -2626,7 +2963,7 @@ function renderTranscript() {
     ? `<div class="empty-state transcript-empty">已识别 ${rows.length} 段。播放音频后，文字会跟随播放位置出现。</div>`
     : "";
   const issueBlock = hasTranscriptIssue
-    ? `<div class="transcript-inline-alert">${escapeHtml(appState.asrLastError || appState.asrChunkLastError)}</div>`
+    ? `<div class="transcript-inline-alert">${escapeHtml(friendlyTranscriptionError() || "转写异常，请查看恢复操作。")}</div>`
     : "";
 
   $("transcriptList").innerHTML = `
@@ -2925,7 +3262,7 @@ function saveBehaviorBlock() {
             <li>保存病历字段：是，保存医生端当前字段卡片内容。</li>
             <li>保存 ASRResult：不是此按钮负责；转写完成时已保存在 <code>data/uploads/{audio_id}.transcript.json</code>。</li>
             <li>保存 Agent Trace：不单独写库；可通过 <code>/api/tasks/{task_id}/trace</code> 和调试抽屉查看。</li>
-            <li>生成文件：不会；只有点击“确认导出”后才写入 <code>data/outputs/</code>。</li>
+            <li>生成文件：不会；只有点击“导出已审核病历”后才写入导出目录。</li>
           </ul>
         </div>
         <div class="safety-strip">
@@ -2966,7 +3303,7 @@ function assistCard({ title, badgeClass = "neutral", badgeText = "", body = "", 
 }
 
 function diagnosisEvidenceLine(diagnosis = {}) {
-  return diagnosis.reason
+  return doctorFacingDiagnosisText(diagnosis.reason)
     || (diagnosis.evidence || []).map((item) => item.text).filter(Boolean)[0]
     || "暂无匹配依据，需医生结合原始转写判断。";
 }
@@ -3015,6 +3352,52 @@ function renderCandidateDiagnosisCard(diagnoses) {
   });
 }
 
+function renderRiskSignalCard(diagnoses) {
+  const riskWarnings = uniqueDiagnosisItems(diagnoses, "risk_warnings");
+  const highRisk = riskWarnings.length > 0;
+  return assistCard({
+    title: "危险信号",
+    badgeClass: highRisk ? "missing" : "confirmed",
+    badgeText: highRisk ? `${riskWarnings.length}项` : "暂无",
+    detailTarget: highRisk ? "assist:treatment" : "",
+    body: highRisk
+      ? `<div class="risk-signal-list">${riskWarnings.slice(0, 4).map((item) => `<div class="risk-signal-item">${escapeHtml(item)}</div>`).join("")}</div>`
+      : `<div class="empty-state compact">暂无结构化危险信号；仍需结合生命体征和查体判断。</div>`,
+  });
+}
+
+function renderFollowUpQuestionCard(diagnoses) {
+  const questions = uniqueDiagnosisItems(diagnoses, "follow_up_questions");
+  return assistCard({
+    title: "建议补问",
+    badgeClass: questions.length ? "candidate" : "neutral",
+    badgeText: questions.length ? `${questions.length}项` : "待补充",
+    detailTarget: questions.length ? "assist:treatment" : "",
+    body: questions.length
+      ? `<ol class="assist-plain-list">${questions.slice(0, 3).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>`
+      : `<div class="empty-state compact">信息不足时会生成 1-3 个优先补问。</div>`,
+  });
+}
+
+function renderReferenceCard(diagnoses) {
+  const withReferences = diagnoses.filter((diagnosis) => diagnosisReferences(diagnosis).length);
+  return assistCard({
+    title: "指南来源",
+    badgeClass: withReferences.length ? "info" : "neutral",
+    badgeText: withReferences.length ? "可查看" : "暂无",
+    detailTarget: withReferences.length ? "assist:candidates" : "",
+    detailLabel: "查看来源",
+    body: withReferences.length
+      ? withReferences.slice(0, 2).map((diagnosis) => `
+          <div class="reference-diagnosis-group">
+            <strong>${escapeHtml(diagnosis.name || "鉴别诊断参考")}</strong>
+            ${renderReferenceList(diagnosis, { compact: true })}
+          </div>
+        `).join("")
+      : `<div class="empty-state compact">暂无指南来源，需医生结合本院规范复核。</div>`,
+  });
+}
+
 function uniqueDiagnosisItems(diagnoses, key) {
   const values = [];
   diagnoses.forEach((diagnosis) => {
@@ -3057,7 +3440,7 @@ function renderTreatmentRecommendationCard(fields, diagnoses) {
 
 function renderEvidenceCard(evidence, diagnoses) {
   const diagnosisReasons = diagnoses
-    .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "鉴别诊断参考"}：${diagnosis.reason}` : "")
+    .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "鉴别诊断参考"}：${doctorFacingDiagnosisText(diagnosis.reason)}` : "")
     .filter(Boolean);
   const linkedEvidence = (appState.recordPreview?.evidence_links || []).map((item) => ({
     text: `${item.label || "字段证据"}：${item.evidence || item.text || ""}`,
@@ -3218,7 +3601,7 @@ function renderAssistDetailContent(section) {
       };
       const status = statusLabels[item.status] || item.status || "需复核";
       const evidenceCount = item.evidence_count == null ? 0 : item.evidence_count;
-      return `${item.label}：${status}；证据 ${evidenceCount} 条；${item.suggested_action || item.reason || ""}`;
+      return `${item.label}：${status}；证据 ${evidenceCount} 条；${item.suggested_action || doctorFacingDiagnosisText(item.reason) || ""}`;
     });
     const rows = [
       `核心字段完整度：${Math.round((quality.core_completeness || 0) * 100)}%`,
@@ -3244,7 +3627,7 @@ function renderAssistDetailContent(section) {
       ? diagnoses.map((diagnosis, index) => `
           ${detailSection(`鉴别诊断参考 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
             <div class="detail-kv"><span>状态</span><strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong></div>
-            <div class="detail-kv"><span>规则匹配度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
+            <div class="detail-kv"><span>证据匹配度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
             <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
             ${diagnosisQuality[index] ? `<div class="detail-text">${escapeHtml(
               diagnosisQuality[index].missing?.length
@@ -3274,7 +3657,7 @@ function renderAssistDetailContent(section) {
 
   if (section === "evidence") {
     const diagnosisReasons = diagnoses
-      .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "鉴别诊断参考"}：${diagnosis.reason}` : "")
+      .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "鉴别诊断参考"}：${doctorFacingDiagnosisText(diagnosis.reason)}` : "")
       .filter(Boolean);
     const items = [...diagnosisReasons, ...evidence];
     return items.length
@@ -3323,9 +3706,12 @@ function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
     ${previewNotice}
     ${previewError}
     <div class="doctor-assist-overview">
+      ${renderRiskSignalCard(diagnoses)}
       ${renderCandidateDiagnosisCard(diagnoses)}
-      ${renderTreatmentRecommendationCard(fields, diagnoses)}
       ${renderEvidenceCard(evidence, diagnoses)}
+      ${renderFollowUpQuestionCard(diagnoses)}
+      ${renderTreatmentRecommendationCard(fields, diagnoses)}
+      ${renderReferenceCard(diagnoses)}
     </div>
   `;
 }
@@ -3473,18 +3859,39 @@ function renderDebug() {
 }
 
 function renderFooter() {
+  const displayState = doctorDisplayState();
+  const stateKey = displayState.key;
+  const flowFailed = stateKey === "transcription_failed";
+  const approvedOrExported = ["approved", "exported"].includes(stateKey);
+  const draftGenerated = stateKey === "draft_generated";
+  const pendingReview = stateKey === "pending_review";
+  const buttons = {
+    regenerate: $("regenerateButton"),
+    save: $("saveDraftButton"),
+    confirm: $("confirmFieldsButton"),
+    export: $("exportButton"),
+  };
   $("currentTaskLabel").textContent = "操作区";
-  $("currentTaskHint").textContent = appState.currentTaskId
-    ? `${STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "任务已创建"} · ${appState.currentAudioId ? "音频生成" : "文本生成"}`
-    : "等待输入";
-  $("regenerateButton").disabled = appState.busy || !(appState.currentAsrResult || appState.currentInputText);
-  $("saveDraftButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
-  $("confirmFieldsButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
+  $("currentTaskHint").textContent = displayState.taskHint;
+
+  buttons.regenerate.hidden = draftGenerated || pendingReview || approvedOrExported;
+  buttons.save.hidden = pendingReview || approvedOrExported;
+  buttons.confirm.hidden = draftGenerated || approvedOrExported;
+  buttons.export.hidden = draftGenerated;
+
+  buttons.regenerate.disabled = appState.busy || flowFailed || !(appState.currentAsrResult || appState.currentInputText);
+  buttons.save.disabled = appState.busy || flowFailed || !draftGenerated || !appState.currentTaskId || !appState.currentRecordFields;
+  buttons.confirm.disabled = appState.busy || flowFailed || !pendingReview || !appState.currentTaskId || !appState.currentRecordFields;
   const exportBlocked = !appState.currentTaskId || !isApprovedForExport();
-  $("exportButton").disabled = appState.busy || !appState.currentTaskId;
-  $("exportButton").classList.toggle("blocked-action", Boolean(appState.currentTaskId && !isApprovedForExport()));
-  $("exportButton").setAttribute("aria-disabled", exportBlocked ? "true" : "false");
-  $("exportButton").title = exportBlocked ? "点击查看暂不可导出的原因" : "确认导出病历";
+  buttons.export.disabled = appState.busy || flowFailed || exportBlocked;
+  buttons.export.classList.toggle("blocked-action", Boolean(appState.currentTaskId && !isApprovedForExport()));
+  buttons.export.setAttribute("aria-disabled", exportBlocked ? "true" : "false");
+  buttons.export.title = flowFailed ? "转写失败，需先恢复流程" : exportBlocked ? "完成医生审核后方可导出" : "导出已审核病历";
+  const actionBar = document.querySelector(".encounter-action-bar");
+  actionBar?.classList.toggle("draft-generated", draftGenerated);
+  actionBar?.classList.toggle("pending-review", pendingReview);
+  actionBar?.classList.toggle("export-ready", approvedOrExported);
+  actionBar?.classList.toggle("flow-failed", flowFailed);
 }
 
 function openWorkbenchDetail(target = "") {
@@ -3517,6 +3924,14 @@ function openWorkbenchDetail(target = "") {
       safety: "安全校验结果详情",
     };
     openDetailDrawer(titleMap[value] || "AI 辅助详情", renderAssistDetailContent(value));
+    return;
+  }
+  if (type === "admin" && value === "runtime") {
+    openDetailDrawer("服务运行技术详情", renderRuntimeTechnicalDetail());
+    return;
+  }
+  if (type === "error" && value === "technical") {
+    openDetailDrawer("转写技术详情", renderTranscriptionTechnicalDetail());
   }
 }
 
@@ -3540,6 +3955,7 @@ function renderAll() {
   renderStepPrompt();
   renderWorkflow();
   renderNextActionPanel();
+  renderTranscriptionFailurePanel();
   renderFields();
   renderTranscript();
   renderAssist();
@@ -4511,6 +4927,29 @@ async function regenerateRecord() {
     await createRecordTask(text, { keepAsr });
   } catch (error) {
     setBusy(false);
+    reportActionError(error);
+  }
+}
+
+async function retryTranscriptionFromFailure() {
+  try {
+    if (appState.currentAudioId) {
+      appState.asrLastError = "";
+      appState.asrChunkLastError = "";
+      renderAll();
+      await startRecordGenerationFromAudio(appState.currentAudioId);
+      return;
+    }
+    if (appState.browserRecordingFinalized?.audio_id) {
+      appState.asrLastError = "";
+      appState.asrChunkLastError = "";
+      renderAll();
+      await submitBrowserRecording();
+      return;
+    }
+    showToast("暂无可复用音频，请重新上传问诊音频。");
+    openAudioGenerate();
+  } catch (error) {
     reportActionError(error);
   }
 }
@@ -5884,6 +6323,11 @@ function bindEvents() {
     await restoreEncounter(button.dataset.restoreEncounter);
   });
   $("dashboardEncounterList")?.addEventListener("click", async (event) => {
+    const methodButton = event.target.closest("[data-dashboard-input-method]");
+    if (methodButton) {
+      handleInputMethod(methodButton.dataset.dashboardInputMethod);
+      return;
+    }
     const button = event.target.closest("[data-restore-encounter]");
     if (!button) return;
     await restoreEncounter(button.dataset.restoreEncounter);
@@ -5891,9 +6335,26 @@ function bindEvents() {
   $("dashboardRefreshWorklistButton")?.addEventListener("click", () => {
     refreshEncounterWorklist().catch(reportActionError);
   });
+  $("dashboardSearchInput")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    refreshEncounterWorklist().catch(reportActionError);
+  });
+  $("dashboardStatusFilter")?.addEventListener("change", () => {
+    refreshEncounterWorklist().catch(reportActionError);
+  });
   $("dashboardOpenWorklistButton")?.addEventListener("click", openEncounterWorklist);
   $("refreshAdminHomeButton")?.addEventListener("click", () => {
     refreshAdminHome().catch(reportActionError);
+  });
+  $("retryTranscriptionButton")?.addEventListener("click", () => {
+    retryTranscriptionFromFailure().catch(reportActionError);
+  });
+  $("fallbackTextInputButton")?.addEventListener("click", () => {
+    openTextImport();
+  });
+  $("openTechnicalDetailButton")?.addEventListener("click", () => {
+    openWorkbenchDetail("error:technical");
   });
   $("submitTextButton").addEventListener("click", submitTextImport);
   $("submitAudioButton").addEventListener("click", submitAudio);

@@ -61,7 +61,7 @@ def test_diagnosis_reference_shows_two_candidates_and_hides_rule_ids_normally() 
     assert "关注：" in script
     assert "查看完整依据" in script
     assert "仅供鉴别诊断参考，需医生判断，不能作为已确诊结论。" in script
-    assert "规则匹配度" in script
+    assert "证据匹配度" in script
     assert "规则置信度" not in script
     assert 'appState.viewMode === "debug"' in script
     assert "diagnosis.rule_id" in script

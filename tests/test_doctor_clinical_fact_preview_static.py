@@ -32,4 +32,4 @@ def test_doctor_preview_explains_no_candidate_and_extraction_source() -> None:
     assert "字段抽取：" in script
     assert "extraction_info" in script
     assert "当前信息不足，完成关键补问后生成" in script
-    assert "输入方式：文本" in script
+    assert "文本导入" in script

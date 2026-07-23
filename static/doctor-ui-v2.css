@@ -8,7 +8,7 @@
   --primary: #1768c4;
   --primary-strong: #0f55a8;
   --primary-soft: #eaf3ff;
-  --bg: #f3f6fa;
+  --bg: #F5F7FA;
   --surface: #ffffff;
   --surface-soft: #f7f9fc;
   --line: #dfe6ee;
@@ -1979,5 +1979,443 @@ body.doctor-mode .encounter-action-bar #exportButton {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+/* Demo V2 clinical shell refinements */
+.task-stat-card small {
+  color: #8a97a8;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.task-stat-card.pending-input::before {
+  background: #4d7cff;
+}
+
+.task-stat-card.processing::before {
+  background: #d99024;
+}
+
+.task-stat-card.pending-review::before {
+  background: #2ba76c;
+}
+
+.task-stat-card.abnormal::before {
+  background: #d84f5d;
+}
+
+.dashboard-table-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.dashboard-table-actions input,
+.dashboard-table-actions select {
+  min-height: 36px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  background: #fff;
+  color: #304b64;
+  font-size: 12px;
+}
+
+.dashboard-table-actions input {
+  width: min(260px, 32vw);
+}
+
+.dashboard-table-actions select {
+  width: 132px;
+}
+
+.encounter-task-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.encounter-task-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.encounter-task-table th,
+.encounter-task-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 13px 10px;
+  text-align: left;
+  vertical-align: middle;
+  color: #344b63;
+  font-size: 12px;
+}
+
+.encounter-task-table th {
+  background: #f8fafc;
+  color: #66788d;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.encounter-task-table tr.active td {
+  background: #f4f9ff;
+}
+
+.encounter-task-table td strong,
+.encounter-task-table td span {
+  display: block;
+  min-width: 0;
+}
+
+.encounter-task-table td strong {
+  color: #18324c;
+  font-weight: 800;
+}
+
+.encounter-task-table td span {
+  margin-top: 3px;
+  color: #7c8a9a;
+  font-size: 11px;
+}
+
+.table-primary-action {
+  min-height: 32px;
+  border-color: var(--primary);
+  background: #fff;
+  color: var(--primary);
+}
+
+.workbench-empty-state {
+  min-height: 210px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  border: 1px dashed #cbd7e5;
+  border-radius: 10px;
+  background: #fbfdff;
+  text-align: center;
+}
+
+.workbench-empty-state strong {
+  color: #263b51;
+  font-size: 18px;
+}
+
+.workbench-empty-state p {
+  margin: 0;
+  color: #718197;
+}
+
+.workbench-empty-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.failure-recovery-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #efbdc5;
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  background: #fff8f9;
+  box-shadow: var(--shadow-soft);
+}
+
+.failure-recovery-panel[hidden] {
+  display: none !important;
+}
+
+.failure-recovery-panel strong {
+  display: block;
+  margin-top: 6px;
+  color: #7e2630;
+  font-size: 15px;
+}
+
+.failure-recovery-panel p {
+  margin: 5px 0 0;
+  color: #7c5960;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.failure-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.risk-signal-list,
+.assist-plain-list,
+.reference-list {
+  display: grid;
+  gap: 8px;
+}
+
+.risk-signal-item {
+  border-left: 3px solid #d84f5d;
+  border-radius: 7px;
+  padding: 8px 9px;
+  background: #fff5f6;
+  color: #78323a;
+  font-weight: 700;
+}
+
+.assist-plain-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #40566d;
+}
+
+.reference-diagnosis-group {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+.reference-diagnosis-group > strong {
+  color: #294159;
+  font-size: 12px;
+}
+
+.reference-item {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #e0e8f2;
+  border-radius: 8px;
+  padding: 8px 9px;
+  background: #f9fbfd;
+}
+
+.reference-item strong {
+  color: #233a52;
+  font-size: 12px;
+}
+
+.reference-item span,
+.reference-item em,
+.reference-item a {
+  color: #6b7c90;
+  font-size: 11px;
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
+.reference-item em {
+  color: #116b50;
+  font-weight: 800;
+}
+
+.reference-item a {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.admin-list-row.ok {
+  border-color: #cfe5dc;
+  background: #f7fcfa;
+}
+
+.admin-list-row.warning {
+  border-color: #f0d3d7;
+  background: #fff8f9;
+}
+
+.admin-technical-row {
+  grid-template-columns: minmax(120px, 0.55fr) minmax(0, 1fr) auto;
+}
+
+.technical-json {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #0f1f2f;
+  color: #e9f2fb;
+  white-space: pre-wrap;
+}
+
+.blocked-action[aria-disabled="true"] {
+  opacity: 0.7;
+}
+
+.encounter-action-bar.export-ready #confirmFieldsButton {
+  border-color: var(--line-strong);
+  background: #fff;
+  color: #6f7f91;
+  box-shadow: none;
+}
+
+.encounter-action-bar.export-ready #exportButton,
+body.doctor-mode .encounter-action-bar.export-ready #exportButton {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(23, 104, 196, 0.18);
+}
+
+.encounter-action-bar.flow-failed #confirmFieldsButton,
+.encounter-action-bar.flow-failed #exportButton,
+body.doctor-mode .encounter-action-bar.flow-failed #confirmFieldsButton,
+body.doctor-mode .encounter-action-bar.flow-failed #exportButton {
+  border-color: var(--line-strong);
+  background: #fff;
+  color: #8a97a8;
+  box-shadow: none;
+}
+
+body.doctor-mode .encounter-patient-banner .asr-engine-meta.debug-only {
+  display: none !important;
+}
+
+body.doctor-mode .debug-only {
+  display: none !important;
+}
+
+.top-actions > button,
+.top-actions > a,
+.top-actions .input-method-menu > button,
+.top-actions .display-settings-menu > button {
+  white-space: nowrap;
+}
+
+.workflow-steps,
+body.doctor-mode .workflow-steps {
+  grid-template-columns: repeat(5, minmax(96px, 1fr));
+}
+
+.workflow-label,
+body.doctor-mode .workflow-label {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 92px;
+  z-index: 90;
+  max-width: min(420px, calc(100vw - 48px));
+  pointer-events: none;
+}
+
+.field-card.readonly-field {
+  background: #fbfdff;
+}
+
+body[data-display-state="approved"] .field-card.readonly-field,
+body[data-display-state="exported"] .field-card.readonly-field {
+  border-color: #cfe2d9;
+}
+
+.encounter-action-bar .button-group button[hidden],
+body.doctor-mode .encounter-action-bar .button-group button[hidden] {
+  display: none !important;
+}
+
+.encounter-action-bar.draft-generated .button-group,
+.encounter-action-bar.pending-review .button-group,
+.encounter-action-bar.export-ready .button-group {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.encounter-action-bar.draft-generated #saveDraftButton,
+body.doctor-mode .encounter-action-bar.draft-generated #saveDraftButton,
+.encounter-action-bar.pending-review #confirmFieldsButton,
+body.doctor-mode .encounter-action-bar.pending-review #confirmFieldsButton {
+  min-width: 184px;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(23, 104, 196, 0.18);
+}
+
+.encounter-action-bar.pending-review #exportButton[disabled],
+body.doctor-mode .encounter-action-bar.pending-review #exportButton[disabled] {
+  border-color: var(--line-strong);
+  background: #fff;
+  color: #8a97a8;
+  box-shadow: none;
+}
+
+@media (min-width: 1367px) {
+  .workbench,
+  body.doctor-mode .workbench,
+  body.standard-mode .workbench,
+  body.care-mode .workbench {
+    min-height: min(690px, calc(100vh - 280px));
+    grid-template-columns: minmax(300px, 0.9fr) minmax(420px, 1.2fr) minmax(270px, 0.88fr);
+    grid-template-rows: minmax(520px, 1fr);
+    grid-template-areas: "transcript record assist";
+  }
+
+  .doctor-assist-overview,
+  body.doctor-mode .doctor-assist-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .doctor-assist-card-body,
+  body.doctor-mode .doctor-assist-card-body {
+    max-height: 170px;
+  }
+}
+
+@media (max-width: 1366px) {
+  .product-dashboard,
+  .admin-home,
+  .encounter-view {
+    padding: 14px 16px 22px;
+  }
+
+  .dashboard-hero {
+    min-height: 96px;
+  }
+
+  .dashboard-status-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .dashboard-status-card {
+    min-height: 72px;
+    padding: 10px 12px;
+  }
+
+  .dashboard-status-card strong {
+    font-size: 13px;
+  }
+
+  .dashboard-table-actions {
+    justify-content: flex-start;
+  }
+
+  .dashboard-table-actions input {
+    width: 220px;
+  }
+
+  .encounter-task-table {
+    min-width: 840px;
+  }
+
+  .failure-recovery-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .failure-actions {
+    justify-content: flex-start;
   }
 }

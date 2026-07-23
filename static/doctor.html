@@ -85,8 +85,8 @@
           <small>今日待办与就诊列表</small>
         </button>
         <button type="button" class="product-nav-item" data-product-view-target="encounter">
-          <span>就诊工作区</span>
-          <small>转写、病历与医生审核</small>
+          <span>就诊管理</span>
+          <small>打开就诊后进入工作区</small>
         </button>
         <button type="button" class="product-nav-item" data-product-view-target="admin">
           <span>管理后台</span>
@@ -111,35 +111,49 @@
             <p>优先处理待审核和异常任务，已保存的就诊可随时继续。</p>
           </div>
           <div class="dashboard-actions">
-            <button type="button" class="primary-action" data-product-view-target="encounter">继续当前就诊</button>
+            <button type="button" class="primary-action" id="dashboardContinueEncounterButton" data-product-view-target="encounter">继续当前就诊</button>
             <button type="button" id="dashboardRefreshWorklistButton">刷新列表</button>
           </div>
         </div>
-        <div class="dashboard-status-grid" aria-label="当前系统状态">
-          <div class="dashboard-status-card">
-            <span>当前账号</span>
-            <strong id="dashboardDoctorLabel">-</strong>
+        <div class="dashboard-status-grid task-stat-grid" aria-label="今日任务统计">
+          <div class="dashboard-status-card task-stat-card pending-input">
+            <span>待录入</span>
+            <strong id="dashboardPendingInputCount">0</strong>
+            <small>需要采集问诊</small>
           </div>
-          <div class="dashboard-status-card">
-            <span>当前患者</span>
-            <strong id="dashboardEncounterLabel">-</strong>
+          <div class="dashboard-status-card task-stat-card processing">
+            <span>处理中</span>
+            <strong id="dashboardProcessingCount">0</strong>
+            <small>转写或生成中</small>
           </div>
-          <div class="dashboard-status-card">
-            <span>处理阶段</span>
-            <strong id="dashboardTaskStatusLabel">-</strong>
+          <div class="dashboard-status-card task-stat-card pending-review">
+            <span>待审核</span>
+            <strong id="dashboardPendingReviewCount">0</strong>
+            <small>需要医生确认</small>
           </div>
-          <div class="dashboard-status-card">
-            <span>录音与转写</span>
-            <strong id="dashboardRecordingLabel">-</strong>
+          <div class="dashboard-status-card task-stat-card abnormal">
+            <span>异常任务</span>
+            <strong id="dashboardExceptionCount">0</strong>
+            <small>需要优先处理</small>
           </div>
         </div>
         <section class="dashboard-panel">
           <div class="panel-header">
             <div>
                 <h2>就诊任务</h2>
-                <p>从最近更新的记录继续，状态异常的任务会优先提示。</p>
+                <p>从真实就诊记录继续处理，异常和待审核任务优先显示。</p>
             </div>
-            <button type="button" id="dashboardOpenWorklistButton">搜索与筛选</button>
+            <div class="dashboard-table-actions">
+              <input id="dashboardSearchInput" type="search" placeholder="搜索患者或就诊号" aria-label="搜索就诊任务" />
+              <select id="dashboardStatusFilter" aria-label="筛选就诊状态">
+                <option value="">全部状态</option>
+                <option value="draft">待录入</option>
+                <option value="pending_review">待审核</option>
+                <option value="approved">已审核</option>
+                <option value="exported">已导出</option>
+              </select>
+              <button type="button" id="dashboardOpenWorklistButton">搜索与筛选</button>
+            </div>
           </div>
           <div id="dashboardEncounterList" class="encounter-worklist" aria-live="polite"></div>
         </section>
@@ -157,14 +171,18 @@
             <strong id="sessionId">-</strong>
           </div>
           <div>
-            <span class="meta-label">录音状态</span>
+            <span class="meta-label">输入方式</span>
             <strong id="recordingStatus">-</strong>
           </div>
           <div>
             <span class="meta-label">审核状态</span>
             <strong id="reviewStatus">-</strong>
           </div>
-          <div class="asr-engine-meta">
+          <div class="patient-data-cell">
+            <span class="meta-label">数据状态</span>
+            <strong id="patientDataStatus">等待输入</strong>
+          </div>
+          <div class="asr-engine-meta debug-only">
             <span class="meta-label">转写引擎</span>
             <label class="engine-select-wrap" for="topAsrEngineSelect">
               <select id="topAsrEngineSelect" aria-label="选择 ASR 模型">
@@ -208,6 +226,19 @@
           </section>
 
           <section id="nextActionPanel" class="next-action-panel" aria-live="polite"></section>
+        </section>
+
+        <section id="transcriptionFailurePanel" class="failure-recovery-panel" hidden aria-live="polite">
+          <div>
+            <span class="status-badge missing">转写异常</span>
+            <strong>转写服务暂时不可用，本次任务已暂停。</strong>
+            <p id="transcriptionFailureMessage">可以重新转写、改用文本输入，或查看技术详情后交给管理员处理。</p>
+          </div>
+          <div class="failure-actions">
+            <button type="button" class="primary-action" id="retryTranscriptionButton">重新转写</button>
+            <button type="button" id="fallbackTextInputButton">改用文本输入</button>
+            <button type="button" id="openTechnicalDetailButton">查看技术详情</button>
+          </div>
         </section>
 
       <section class="run-context debug-only" aria-label="当前运行与保存信息">
@@ -342,7 +373,7 @@
           <button type="button" id="regenerateButton">重新生成</button>
           <button type="button" id="saveDraftButton">保存修改</button>
           <button type="button" id="confirmFieldsButton">完成病历审核</button>
-          <button type="button" class="danger-action" id="exportButton">确认导出</button>
+          <button type="button" class="danger-action" id="exportButton">导出已审核病历</button>
         </div>
       </footer>
       </section>
@@ -351,8 +382,8 @@
         <div class="dashboard-hero">
           <div>
             <span class="page-eyebrow">系统管理</span>
-            <h2>试点环境管理</h2>
-            <p>查看账号权限与服务健康状态；临床规则和模型配置不在此处修改。</p>
+            <h2>系统管理</h2>
+            <p>查看真实账号、角色和服务可用性；临床规则、模型参数和原始运行数据不在正式页面展示。</p>
           </div>
           <button type="button" id="refreshAdminHomeButton">刷新状态</button>
         </div>
@@ -361,7 +392,7 @@
             <div class="panel-header">
               <div>
                 <h2>账号与角色</h2>
-                <p>管理员可查看本地试点账号；普通医生仅能访问自己的工作区。</p>
+                <p>管理员可查看本地账号、角色和启用状态；普通医生仅能访问自己的工作区。</p>
               </div>
             </div>
             <div id="adminUsersPanel" class="admin-list" aria-live="polite"></div>
@@ -369,8 +400,8 @@
           <section class="dashboard-panel">
             <div class="panel-header">
               <div>
-                <h2>服务运行状态</h2>
-                <p>检查应用是否可访问，以及关键依赖是否准备就绪。</p>
+                <h2>服务运行概览</h2>
+                <p>以业务名称展示服务可用性；服务器路径和原始 JSON 仅在技术详情中查看。</p>
               </div>
             </div>
             <div id="adminRuntimePanel" class="admin-list" aria-live="polite"></div>

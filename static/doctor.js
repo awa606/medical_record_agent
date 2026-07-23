@@ -18,6 +18,11 @@ const appState = {
   currentAgentTrace: null,
   currentLlmStatus: null,
   currentInputText: "",
+  productView: "workbench",
+  adminUsers: [],
+  adminRuntimeStatus: null,
+  adminStatus: "idle",
+  adminError: "",
   selectedEngine: "funasr",
   assistTab: "ai",
   viewMode: "doctor",
@@ -152,7 +157,7 @@ const DRAFT_FIELD_DEFS = [
   ["past_history", "既往史"],
   ["allergy_history", "过敏史"],
   ["physical_exam", "查体"],
-  ["preliminary_diagnosis", "初步诊断"],
+  ["preliminary_diagnosis", "候选诊断（待医生确认）"],
   ["treatment_plan", "处理建议"],
 ];
 
@@ -219,6 +224,7 @@ const ROLE_OPTIONS = [
   ["待确认", "暂不确定"],
 ];
 const FINAL_CLINICAL_ROLES = ["医生", "患者", "陪同人员", "其他"];
+const PRODUCT_VIEWS = ["workbench", "encounter", "admin"];
 
 const $ = (id) => document.getElementById(id);
 
@@ -346,7 +352,9 @@ async function submitLogin(event) {
     appState.authUser = data.user;
     appState.authStatus = "authenticated";
     appState.authMessage = "";
+    if (!productViewFromHash()) appState.productView = "workbench";
     renderAll();
+    refreshEncounterWorklist().catch(reportActionError);
     refreshLlmStatus();
     showToast("登录成功");
   } catch (error) {
@@ -395,6 +403,89 @@ function formatDateTime(value) {
   });
 }
 
+function productViewFromHash() {
+  const raw = window.location.hash.replace(/^#\/?/, "").split(/[/?]/)[0];
+  return PRODUCT_VIEWS.includes(raw) ? raw : "";
+}
+
+function setProductView(view, { updateHash = true } = {}) {
+  const nextView = PRODUCT_VIEWS.includes(view) ? view : "workbench";
+  appState.productView = nextView;
+  if (updateHash && window.location.hash !== `#${nextView}`) {
+    window.location.hash = nextView;
+  }
+  renderProductShell();
+  if (nextView === "workbench" && appState.authUser) {
+    refreshEncounterWorklist().catch(reportActionError);
+  }
+  if (nextView === "admin" && appState.authUser) {
+    refreshAdminHome().catch(reportActionError);
+  }
+}
+
+function renderProductShell() {
+  const view = appState.authStatus === "authenticated" ? appState.productView : "workbench";
+  const viewTitles = {
+    workbench: "工作台",
+    encounter: "就诊工作区",
+    admin: "管理后台",
+  };
+  document.body.dataset.productView = view;
+  document.title = `${viewTitles[view] || "医生端"} - 智能病历助手`;
+  document.querySelectorAll("[data-product-view]").forEach((element) => {
+    element.hidden = element.dataset.productView !== view;
+  });
+  document.querySelectorAll("[data-product-view-target]").forEach((button) => {
+    const active = button.dataset.productViewTarget === view;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+}
+
+function encounterWorklistMarkup({ includeRevisions = true } = {}) {
+  if (appState.encounterWorklistStatus === "loading") {
+    return `<div class="empty-state">正在加载今日就诊...</div>`;
+  }
+  if (appState.encounterWorklistError) {
+    return `<div class="safety-strip danger">${escapeHtml(appState.encounterWorklistError)}</div>`;
+  }
+  const items = appState.encounterWorklist || [];
+  if (!items.length) {
+    return `<div class="empty-state">暂无可恢复的就诊记录。</div>`;
+  }
+  const rows = items.map((item) => {
+    const active = appState.currentEncounter?.id === item.id;
+    const patient = item.patient_display_name || item.patient_deidentified_id || `Encounter ${item.id}`;
+    const status = encounterStatusLabel(item.status || item.task_current_stage);
+    return `
+      <article class="encounter-worklist-item ${active ? "active" : ""}">
+        <div>
+          <strong>${escapeHtml(patient)}</strong>
+          <span>${escapeHtml(item.patient_deidentified_id || "未提供患者标识")} · 最近更新 ${escapeHtml(formatDateTime(item.updated_at || item.created_at))}</span>
+          <small class="debug-only">版本 ${escapeHtml(item.current_revision_id || "-")} · Task ${escapeHtml(item.task_id || "-")}</small>
+        </div>
+        <div class="encounter-worklist-actions">
+          <span class="status-badge ${active ? "confirmed" : "neutral"}">${escapeHtml(status)}</span>
+          <button type="button" data-restore-encounter="${escapeHtml(item.id)}">${active ? "返回工作区" : "继续处理"}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+  const revisions = appState.currentEncounter?.revisions || [];
+  const revisionHistory = includeRevisions && revisions.length ? `
+    <section class="encounter-revision-history">
+      <h3>当前就诊版本</h3>
+      ${revisions.map((revision) => `
+        <div class="encounter-revision-row">
+          <strong>v${escapeHtml(revision.revision_no || "-")}</strong>
+          <span>${escapeHtml(revision.source || "-")} · ${escapeHtml(formatDateTime(revision.created_at))}</span>
+        </div>
+      `).join("")}
+    </section>
+  ` : "";
+  return rows + revisionHistory;
+}
+
 function encounterStatusLabel(status) {
   const labels = {
     draft: "草稿",
@@ -408,51 +499,12 @@ function encounterStatusLabel(status) {
 
 function renderEncounterWorklistPanel() {
   const list = $("encounterWorklist");
-  if (!list) return;
-  if (appState.encounterWorklistStatus === "loading") {
-    list.innerHTML = `<div class="empty-state">正在加载今日就诊...</div>`;
-    return;
-  }
-  if (appState.encounterWorklistError) {
-    list.innerHTML = `<div class="safety-strip danger">${escapeHtml(appState.encounterWorklistError)}</div>`;
-    return;
-  }
-  const items = appState.encounterWorklist || [];
-  if (!items.length) {
-    list.innerHTML = `<div class="empty-state">暂无可恢复的就诊记录。</div>`;
-    return;
-  }
-  const rows = items.map((item) => {
-    const active = appState.currentEncounter?.id === item.id;
-    const patient = item.patient_display_name || item.patient_deidentified_id || `Encounter ${item.id}`;
-    const status = encounterStatusLabel(item.status || item.task_current_stage);
-    return `
-      <article class="encounter-worklist-item ${active ? "active" : ""}">
-        <div>
-          <strong>${escapeHtml(patient)}</strong>
-          <span>${escapeHtml(item.patient_deidentified_id || "-")}</span>
-          <small>更新 ${escapeHtml(formatDateTime(item.updated_at || item.created_at))} · 版本 ${escapeHtml(item.current_revision_id || "-")} · Task ${escapeHtml(item.task_id || "-")}</small>
-        </div>
-        <div class="encounter-worklist-actions">
-          <span class="status-badge ${active ? "confirmed" : "neutral"}">${escapeHtml(status)}</span>
-          <button type="button" data-restore-encounter="${escapeHtml(item.id)}">${active ? "已打开" : "继续编辑"}</button>
-        </div>
-      </article>
-    `;
-  }).join("");
-  const revisions = appState.currentEncounter?.revisions || [];
-  const revisionHistory = revisions.length ? `
-    <section class="encounter-revision-history">
-      <h3>当前就诊版本</h3>
-      ${revisions.map((revision) => `
-        <div class="encounter-revision-row">
-          <strong>v${escapeHtml(revision.revision_no || "-")}</strong>
-          <span>${escapeHtml(revision.source || "-")} · ${escapeHtml(formatDateTime(revision.created_at))}</span>
-        </div>
-      `).join("")}
-    </section>
-  ` : "";
-  list.innerHTML = rows + revisionHistory;
+  const dashboardList = $("dashboardEncounterList");
+  const drawerHtml = encounterWorklistMarkup({ includeRevisions: true });
+  const dashboardHtml = encounterWorklistMarkup({ includeRevisions: false });
+  if (list) list.innerHTML = drawerHtml;
+  if (dashboardList) dashboardList.innerHTML = dashboardHtml;
+  renderDashboardSummary();
 }
 
 async function refreshEncounterWorklist() {
@@ -511,6 +563,7 @@ async function restoreEncounter(encounterId) {
     }
     await refreshEncounterWorklist();
     closeDrawer();
+    setProductView("encounter");
     showToast("已恢复就诊草稿");
   } catch (error) {
     reportActionError(error);
@@ -606,6 +659,110 @@ function renderRunContext() {
   $("currentTaskIdValue").textContent = appState.currentTaskId || "-";
   $("currentAudioIdValue").textContent = appState.currentAudioId || "-";
   $("runLogCommand").textContent = runLogCommand();
+}
+
+function productRecordingStatusLabel() {
+  const labels = {
+    idle: "等待录音",
+    requesting: "请求麦克风",
+    recording: "录音中",
+    paused: "已暂停",
+    uploading: "转写启动中",
+    error: "录音异常",
+  };
+  return labels[appState.browserRecordingStatus] || appState.browserRecordingStatus || "等待录音";
+}
+
+function renderDashboardSummary() {
+  const doctor = appState.authUser
+    ? `${appState.authUser.display_name || appState.authUser.username} · ${appState.authUser.role}`
+    : "未登录";
+  const encounter = appState.currentEncounter
+    ? `${appState.currentEncounter.patient_display_name || appState.currentEncounter.patient_deidentified_id || `Encounter ${appState.currentEncounter.id}`}`
+    : "未打开就诊";
+  const task = STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入";
+  const recording = appState.browserRecordingStatus !== "idle"
+    ? productRecordingStatusLabel()
+    : (appState.asrConnectionStatus !== "idle" ? asrPhaseLabel() : "等待录音或文本输入");
+  if ($("dashboardDoctorLabel")) $("dashboardDoctorLabel").textContent = doctor;
+  if ($("dashboardEncounterLabel")) $("dashboardEncounterLabel").textContent = encounter;
+  if ($("dashboardTaskStatusLabel")) $("dashboardTaskStatusLabel").textContent = task;
+  if ($("dashboardRecordingLabel")) $("dashboardRecordingLabel").textContent = recording;
+}
+
+function renderAdminHome() {
+  const usersPanel = $("adminUsersPanel");
+  const runtimePanel = $("adminRuntimePanel");
+  if (usersPanel) {
+    if (appState.adminStatus === "loading") {
+      usersPanel.innerHTML = `<div class="empty-state">正在加载用户...</div>`;
+    } else if (appState.authUser?.role !== "admin") {
+      usersPanel.innerHTML = `<div class="safety-strip warning"><strong>权限不足</strong><br>当前账号不是管理员，只能查看本人工作区。</div>`;
+    } else if (appState.adminError) {
+      usersPanel.innerHTML = `<div class="safety-strip danger">${escapeHtml(appState.adminError)}</div>`;
+    } else if (!appState.adminUsers.length) {
+      usersPanel.innerHTML = `<div class="empty-state">暂无用户数据。</div>`;
+    } else {
+      usersPanel.innerHTML = appState.adminUsers.map((user) => `
+        <div class="admin-list-row">
+          <strong>${escapeHtml(user.display_name || user.username)}</strong>
+          <span>${escapeHtml(user.username)} · ${escapeHtml(user.role || "-")}</span>
+        </div>
+      `).join("");
+    }
+  }
+  if (runtimePanel) {
+    const runtime = appState.adminRuntimeStatus;
+    if (appState.adminStatus === "loading" && !runtime) {
+      runtimePanel.innerHTML = `<div class="empty-state">正在检查系统健康...</div>`;
+    } else if (runtime) {
+      const checks = runtime.checks && typeof runtime.checks === "object"
+        ? Object.entries(runtime.checks).slice(0, 6)
+        : [];
+      runtimePanel.innerHTML = `
+        <div class="admin-list-row">
+          <strong>${escapeHtml(runtime.status || "unknown")}</strong>
+          <span>ready=${escapeHtml(String(runtime.ready ?? "-"))}</span>
+        </div>
+        ${checks.map(([key, value]) => `
+          <div class="admin-list-row">
+            <strong>${escapeHtml(key)}</strong>
+            <span>${escapeHtml(value?.status || JSON.stringify(value))}</span>
+          </div>
+        `).join("")}
+      `;
+    } else {
+      runtimePanel.innerHTML = `<div class="empty-state">尚未检查运行状态。</div>`;
+    }
+  }
+}
+
+async function refreshAdminHome() {
+  appState.adminStatus = "loading";
+  appState.adminError = "";
+  renderAdminHome();
+  try {
+    const [readyResult, usersResult] = await Promise.allSettled([
+      api("/ready"),
+      appState.authUser?.role === "admin" ? api("/api/auth/users") : Promise.resolve({ users: [] }),
+    ]);
+    if (readyResult.status === "fulfilled") {
+      appState.adminRuntimeStatus = readyResult.value;
+    } else {
+      appState.adminRuntimeStatus = { status: "not_ready", ready: false, checks: { ready: { status: readyResult.reason?.message || "检查失败" } } };
+    }
+    if (usersResult.status === "fulfilled") {
+      appState.adminUsers = usersResult.value.users || [];
+    } else {
+      appState.adminUsers = [];
+      appState.adminError = usersResult.reason?.message || "无法加载用户列表。";
+    }
+    appState.adminStatus = "ready";
+  } catch (error) {
+    appState.adminStatus = "error";
+    appState.adminError = error?.message || "管理后台状态加载失败。";
+  }
+  renderAdminHome();
 }
 
 function hasActiveSession() {
@@ -1027,7 +1184,7 @@ function nextActionState() {
       title: "病历审核已完成，可以导出",
       detail: "导出前请确认鉴别诊断参考和安全校验提示已由医生审核。",
       actions: [
-        workflowAction({ key: "export-record", label: "确认导出", tone: "primary" }),
+        workflowAction({ key: "export-record", label: "导出已审核病历", tone: "primary" }),
       ],
     };
   }
@@ -1359,6 +1516,18 @@ function renderDiagnosisDetailList(label, items) {
   return renderDiagnosisDetailLine(label, values.join("；"));
 }
 
+function diagnosisReferences(diagnosis = {}) {
+  const references = diagnosis.references || diagnosis.reference || diagnosis.source_references || [];
+  if (!Array.isArray(references)) return [];
+  return references
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (!item || typeof item !== "object") return "";
+      return [item.title, item.source, item.url].filter(Boolean).join(" · ");
+    })
+    .filter(Boolean);
+}
+
 function renderDiagnosisDetails(diagnosis = {}) {
   const ruleParts = appState.viewMode === "debug"
     ? [diagnosis.rule_id, diagnosisConfidence(diagnosis)]
@@ -1371,6 +1540,7 @@ function renderDiagnosisDetails(diagnosis = {}) {
     renderDiagnosisDetailList("用药提示", diagnosis.medication_notes),
     renderDiagnosisDetailList("风险提醒", diagnosis.risk_warnings),
     renderDiagnosisDetailList("建议补问", diagnosis.follow_up_questions),
+    renderDiagnosisDetailList("参考资料", diagnosisReferences(diagnosis)),
   ].join("");
   return details || `<div class="diagnosis-detail"><span>规则说明</span><strong>暂无扩展说明，需医生结合原始转写复核。</strong></div>`;
 }
@@ -1385,13 +1555,13 @@ function renderFieldDetailContent(key) {
     const diagnoses = draftDiagnoses(fields);
     return diagnoses.length
       ? diagnoses.map((diagnosis, index) => `
-          ${detailSection(`初步诊断 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
+          ${detailSection(`候选诊断 ${index + 1}（待医生确认）：${diagnosis.name || "未命名诊断"}`, `
             <div class="detail-kv"><span>状态</span><strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong></div>
             <div class="detail-kv"><span>规则匹配度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
             <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
           `)}
         `).join("")
-      : `<div class="empty-state">暂无初步诊断。生成病历后会显示鉴别诊断参考摘要，需医生判断。</div>`;
+      : `<div class="empty-state">暂无候选诊断（待医生确认）。生成病历后会显示鉴别诊断参考摘要，需医生判断。</div>`;
   }
   const field = fields[key] || null;
   const status = fieldStatus(field, key);
@@ -2721,7 +2891,7 @@ function saveBehaviorBlock() {
             <li>保存病历字段：是，保存医生端当前字段卡片内容。</li>
             <li>保存 ASRResult：不是此按钮负责；转写完成时已保存在 <code>data/uploads/{audio_id}.transcript.json</code>。</li>
             <li>保存 Agent Trace：不单独写库；可通过 <code>/api/tasks/{task_id}/trace</code> 和调试抽屉查看。</li>
-            <li>生成文件：不会；只有点击“确认导出”后才写入 <code>data/outputs/</code>。</li>
+            <li>生成文件：不会；只有点击“导出已审核病历”后才写入 <code>data/outputs/</code>。</li>
           </ul>
         </div>
         <div class="safety-strip">
@@ -3280,7 +3450,7 @@ function renderFooter() {
   $("exportButton").disabled = appState.busy || !appState.currentTaskId;
   $("exportButton").classList.toggle("blocked-action", Boolean(appState.currentTaskId && !isApprovedForExport()));
   $("exportButton").setAttribute("aria-disabled", exportBlocked ? "true" : "false");
-  $("exportButton").title = exportBlocked ? "点击查看暂不可导出的原因" : "确认导出病历";
+  $("exportButton").title = exportBlocked ? "点击查看暂不可导出的原因" : "导出已审核病历";
 }
 
 function openWorkbenchDetail(target = "") {
@@ -3323,12 +3493,15 @@ function isApprovedForExport() {
 function renderAll() {
   renderMode();
   renderAuthPanel();
+  renderProductShell();
   renderInputMethodMenu();
   renderDisplaySettingsMenu();
   renderPatientBar();
   renderEncounterWorklistPanel();
   renderBrowserRecordingPanel();
   renderRunContext();
+  renderDashboardSummary();
+  renderAdminHome();
   renderStartGuide();
   renderStepPrompt();
   renderWorkflow();
@@ -5124,6 +5297,13 @@ function bindEvents() {
       closeDisplaySettingsMenu();
     }
   });
+  document.querySelectorAll("[data-product-view-target]").forEach((button) => {
+    button.addEventListener("click", () => setProductView(button.dataset.productViewTarget));
+  });
+  window.addEventListener("hashchange", () => {
+    const view = productViewFromHash();
+    if (view) setProductView(view, { updateHash: false });
+  });
   $("openAudioTranscribeButton").addEventListener("click", openAudioTranscribe);
   $("guideUploadAudioButton").addEventListener("click", openAudioGenerate);
   $("guideTextImportButton").addEventListener("click", openTextImport);
@@ -5148,6 +5328,18 @@ function bindEvents() {
     const button = event.target.closest("[data-restore-encounter]");
     if (!button) return;
     await restoreEncounter(button.dataset.restoreEncounter);
+  });
+  $("dashboardEncounterList")?.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-restore-encounter]");
+    if (!button) return;
+    await restoreEncounter(button.dataset.restoreEncounter);
+  });
+  $("dashboardRefreshWorklistButton")?.addEventListener("click", () => {
+    refreshEncounterWorklist().catch(reportActionError);
+  });
+  $("dashboardOpenWorklistButton")?.addEventListener("click", openEncounterWorklist);
+  $("refreshAdminHomeButton")?.addEventListener("click", () => {
+    refreshAdminHome().catch(reportActionError);
   });
   $("submitTextButton").addEventListener("click", submitTextImport);
   $("submitAudioButton").addEventListener("click", submitAudio);
@@ -5393,9 +5585,13 @@ function bindEvents() {
 }
 
 async function init() {
+  appState.productView = productViewFromHash() || "workbench";
   bindEvents();
   await refreshAuth();
   renderAll();
+  if (appState.authUser) {
+    refreshEncounterWorklist().catch(reportActionError);
+  }
   startAsrPrewarmPolling();
   refreshLlmStatus();
   await restoreAsrSessionFromUrl();

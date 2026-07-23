@@ -9,6 +9,7 @@ from app.api import (
     asr_sessions_router,
     auth_router,
     encounters_router,
+    enterprise_router,
     audio_router,
     capabilities_router,
     llm_router,
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Medical Record Agent", lifespan=lifespan)
 app.include_router(auth_router, prefix="/api")
 app.include_router(encounters_router, prefix="/api")
+app.include_router(enterprise_router, prefix="/api")
 app.include_router(asr_prewarm_router, prefix="/api")
 app.include_router(asr_sessions_router, prefix="/api")
 app.include_router(audio_router, prefix="/api")

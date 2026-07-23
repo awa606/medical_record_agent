@@ -174,6 +174,38 @@ def test_admin_and_reference_copy_hide_debug_values() -> None:
     assert "证据匹配度（非疾病概率）" in js
 
 
+def test_novice_workbench_uses_task_stats_and_recoverable_empty_actions() -> None:
+    html = read_static("doctor.html")
+    js = read_static("doctor.js")
+    ui_css = read_static("doctor-ui-v2.css")
+
+    assert "dashboard-stat-card" in html
+    assert "function encounterInputMethodLabel" in js
+    assert "function encounterPhaseLabel" in js
+    assert "pendingInput" in js
+    assert "exceptions" in js
+    assert "dashboard-empty-state" in js
+    assert 'data-input-method="audio"' in js
+    assert 'data-input-method="text"' in js
+    assert ".encounter-worklist-meta" in ui_css
+    assert ".empty-state-actions" in ui_css
+
+
+def test_novice_layout_keeps_sidebar_full_height_and_action_bar_clear() -> None:
+    js = read_static("doctor.js")
+    ui_css = read_static("doctor-ui-v2.css")
+    next_action_body = function_body(js, "nextActionState")
+    footer_body = function_body(js, "renderFooter")
+
+    assert "min-height: calc(100dvh - 68px)" in ui_css
+    assert "height: calc(100dvh - 68px)" in ui_css
+    assert "grid-template-rows: auto auto minmax(260px, 1fr)" in ui_css
+    assert "padding-bottom: 148px" in ui_css
+    assert "min-height: max(520px, calc(100dvh - 330px))" in ui_css
+    assert "exportButton.dataset.disabledReason" in footer_body
+    assert "actions: []" in next_action_body
+
+
 def test_product_shell_normal_mode_blocks_forbidden_demo_copy() -> None:
     html = read_static("doctor.html")
     js = read_static("doctor.js")

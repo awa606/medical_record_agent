@@ -2121,3 +2121,182 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Demo V2 layout repair: keep the shell viewport-bounded and prevent fixed
+   encounter actions from covering the medical record editor. */
+html,
+body,
+.doctor-app {
+  height: 100%;
+}
+
+.doctor-app {
+  height: 100dvh;
+  min-height: 100dvh;
+  padding: 0;
+  grid-template-rows: 68px minmax(0, 1fr);
+}
+
+body.doctor-mode .doctor-app,
+body.standard-mode .doctor-app,
+body.care-mode .doctor-app {
+  height: 100dvh;
+  min-height: 100dvh;
+  grid-template-columns: 224px minmax(0, 1fr);
+  grid-template-rows: 68px minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+}
+
+body.doctor-mode .topbar,
+body.standard-mode .topbar,
+body.care-mode .topbar {
+  height: 68px;
+  min-height: 68px;
+  margin: 0;
+  padding: 0 22px;
+}
+
+.product-nav {
+  height: 100%;
+  min-height: 0;
+  align-self: stretch;
+}
+
+body.doctor-mode .encounter-patient-banner .asr-engine-meta {
+  display: none !important;
+}
+
+.product-main {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.product-view {
+  box-sizing: border-box;
+}
+
+.product-dashboard {
+  min-height: 100%;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.product-dashboard .dashboard-panel {
+  min-height: clamp(260px, calc(100dvh - 430px), 520px);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.product-dashboard .encounter-worklist {
+  min-height: 0;
+  align-content: start;
+  overflow: auto;
+}
+
+.encounter-view {
+  padding-bottom: 132px;
+}
+
+.encounter-view .workbench,
+body.doctor-mode .encounter-view .workbench,
+body.standard-mode .encounter-view .workbench,
+body.care-mode .encounter-view .workbench {
+  margin-bottom: 20px;
+}
+
+@media (max-width: 1366px) {
+  body.doctor-mode .doctor-app,
+  body.standard-mode .doctor-app,
+  body.care-mode .doctor-app {
+    grid-template-columns: 196px minmax(0, 1fr);
+  }
+
+  body.doctor-mode .topbar,
+  body.standard-mode .topbar,
+  body.care-mode .topbar {
+    padding-inline: 16px;
+  }
+
+  .product-dashboard {
+    grid-template-rows: auto auto minmax(0, 1fr);
+    padding-bottom: 18px;
+  }
+
+  .product-dashboard .dashboard-hero {
+    min-height: 96px;
+  }
+
+  .product-dashboard .dashboard-panel {
+    min-height: clamp(250px, calc(100dvh - 390px), 460px);
+  }
+
+  .encounter-view {
+    padding-bottom: 140px;
+  }
+
+  .encounter-view .workbench,
+  body.doctor-mode .encounter-view .workbench,
+  body.standard-mode .encounter-view .workbench,
+  body.care-mode .encounter-view .workbench {
+    margin-bottom: 24px;
+  }
+}
+
+@media (max-height: 900px) {
+  .encounter-view .workbench,
+  body.doctor-mode .encounter-view .workbench,
+  body.standard-mode .encounter-view .workbench,
+  body.care-mode .encounter-view .workbench {
+    height: clamp(300px, calc(100dvh - 468px), 520px);
+    min-height: clamp(300px, calc(100dvh - 468px), 520px);
+  }
+}
+
+@media (max-width: 1100px) {
+  html,
+  body,
+  .doctor-app {
+    height: auto;
+  }
+
+  .doctor-app {
+    min-height: 100vh;
+  }
+
+  body.doctor-mode .doctor-app,
+  body.standard-mode .doctor-app,
+  body.care-mode .doctor-app {
+    height: auto;
+    min-height: 100vh;
+    grid-template-columns: 74px minmax(0, 1fr);
+  }
+
+  .product-nav {
+    min-height: calc(100vh - 68px);
+  }
+
+  .product-main {
+    height: auto;
+    overflow: visible;
+  }
+
+  .encounter-view {
+    padding-bottom: 132px;
+  }
+}
+
+@media (max-width: 760px) {
+  body.doctor-mode .doctor-app,
+  body.standard-mode .doctor-app,
+  body.care-mode .doctor-app {
+    display: block;
+  }
+
+  .product-nav {
+    min-height: 60px;
+  }
+
+  .encounter-view {
+    padding-bottom: 142px;
+  }
+}

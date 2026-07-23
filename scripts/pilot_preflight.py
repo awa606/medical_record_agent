@@ -5,10 +5,15 @@ import json
 import os
 import shutil
 import sqlite3
+import sys
 import tempfile
 from contextlib import closing
 from pathlib import Path
 from typing import Any
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.api.audio import DEFAULT_UPLOAD_DIR
 from app.db.sqlite import DEFAULT_DB_PATH
@@ -17,7 +22,6 @@ from app.services.exporter import DEFAULT_OUTPUT_DIR
 from app.services.llm.factory import get_llm_status
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MIN_FREE_BYTES = 50 * 1024 * 1024
 SECRET_NAME_PARTS = ("PASSWORD", "TOKEN", "KEY", "SECRET")
 WEAK_PASSWORDS = {"admin", "admin123", "admin123456", "password", "12345678"}

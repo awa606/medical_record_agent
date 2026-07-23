@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +11,7 @@ from pathlib import Path
 from scripts.pilot_preflight import run_preflight, sanitized_for_output
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ENV_KEYS = [
     "MEDICAL_RECORD_AGENT_DB",
     "MEDICAL_RECORD_AGENT_UPLOAD_DIR",
@@ -130,6 +133,23 @@ class PilotPreflightTests(unittest.TestCase):
         self.assertTrue(report["checks"]["provider"]["ok"], report)
         self.assertNotIn(TEST_SECRET_VALUE, raw_json)
         self.assertEqual(sanitized_for_output({"ONLINE_LLM_API_KEY": TEST_SECRET_VALUE})["ONLINE_LLM_API_KEY"], "***REDACTED***")
+
+    def test_cli_runs_from_project_root_without_pythonpath(self):
+        env = os.environ.copy()
+        env.pop("PYTHONPATH", None)
+
+        completed = subprocess.run(
+            [sys.executable, "scripts/pilot_preflight.py", "--json"],
+            cwd=PROJECT_ROOT,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        report = json.loads(completed.stdout)
+        self.assertTrue(report["ok"], report)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+﻿用例编号,测试项,操作/输入,预期结果,结论,实测结果
+TC-001,健康检查,GET /health,返回 status=ok,通过,200，0.009s
+TC-002,就绪检查,GET /ready,返回 ready，SQLite/目录/provider 可用,通过,200，0.241s
+TC-003,登录认证,docker/a123456 登录,返回演示管理员 admin session,通过,200，0.467s
+TC-004,就诊列表,GET /api/encounters,可读取就诊记录,通过,200，已有多条模拟就诊
+TC-005,中文文本生成,发热39度、咳嗽两天、胸闷、气促、布洛芬,进入 doctor_review，并生成字段,通过,主诉=发热伴咳嗽伴胸闷伴气促两天
+TC-006,候选诊断,同 TC-005,生成候选诊断参考,通过,发热待查、肺部感染待排
+TC-007,医生审核,POST /api/tasks/15/approve,审核成功,通过,200，0.831s
+TC-008,导出门禁,GET /export-readiness,审核后 ready=true,通过,ready=true，blocked=false
+TC-009,导出下载,POST /export + GET /exports/markdown/docx,可下载文件,通过,Markdown 845 bytes，DOCX 1500 bytes
+TC-010,Mock 音频转写,small.wav + engine=mock,快速返回 ASRResult,通过,0.107s，6 segments，role_quality=passed
+TC-011,FunASR 音频转写,small.wav + engine=funasr,应在可接受时间返回或明确失败,未通过,60s timeout，日志显示 modelscope.cn DNS 失败

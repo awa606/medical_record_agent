@@ -12,10 +12,12 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.api.asr_sessions import (
+    _RECORDING_SESSION_LOCKS,
     _append_events,
     _asr_session_event_stream,
     _chunk_seconds_for_duration,
     _read_events,
+    _read_recording_chunk_state,
     _write_session_result,
     _should_use_realtime_upload_session,
     create_asr_session,
@@ -37,7 +39,7 @@ from app.schemas import (
 )
 from app.schemas.asr import DiarizationTurn
 from app.services.asr import AudioChunk
-from tests.auth_helpers import login_as_admin
+from tests.auth_helpers import create_user, login_as_admin, login_as_user
 
 
 class FakeUploadFile:
@@ -206,6 +208,25 @@ def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def upload_browser_recording_chunk(
+    client: TestClient,
+    session_id: str,
+    *,
+    chunk_index: int,
+    payload: bytes,
+    duration_seconds: str = "0.1",
+):
+    return client.post(
+        f"/api/asr/sessions/{session_id}/chunks",
+        data={
+            "chunk_index": str(chunk_index),
+            "sha256": sha256_bytes(payload),
+            "duration_seconds": duration_seconds,
+        },
+        files={"file": (f"chunk-{chunk_index}.wav", payload, "audio/wav")},
+    )
+
+
 class ASRSessionApiTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -221,6 +242,7 @@ class ASRSessionApiTests(unittest.TestCase):
     def tearDown(self):
         os.environ.pop("MEDICAL_RECORD_AGENT_UPLOAD_DIR", None)
         os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
+        os.environ.pop("MEDICAL_RECORD_AGENT_MAX_RECORDING_CHUNK_BYTES", None)
         self.temp_dir.cleanup()
 
     def test_asr_session_routes_are_registered(self):
@@ -231,7 +253,9 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("/api/asr/sessions/{session_id}/audio", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/chunks", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/chunks/status", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/finalize", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/complete", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/recording", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/events", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/result", route_paths)
 
@@ -297,9 +321,28 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertEqual(status.json()["chunk_count"], 2)
         self.assertEqual(status.json()["next_chunk_index"], 2)
 
+        blocked = client.post(f"/api/asr/sessions/{session_id}/complete")
+        self.assertEqual(blocked.status_code, 409)
+        self.assertIn("finalized", blocked.text)
+
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 200, finalized.text)
+        self.assertEqual(finalized.json()["status"], "recorded")
+        self.assertEqual(finalized.json()["duration_seconds"], 0.2)
+        self.assertTrue(finalized.json()["media_url"].endswith("/media"))
+
+        second_finalize = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(second_finalize.status_code, 200, second_finalize.text)
+        self.assertEqual(second_finalize.json()["audio_id"], finalized.json()["audio_id"])
+
         completed = client.post(f"/api/asr/sessions/{session_id}/complete")
         self.assertEqual(completed.status_code, 200, completed.text)
         self.assertEqual(completed.json()["status"], "transcribing")
+        self.assertEqual(completed.json()["audio_id"], finalized.json()["audio_id"])
+        second_complete = client.post(f"/api/asr/sessions/{session_id}/complete")
+        self.assertEqual(second_complete.status_code, 200, second_complete.text)
+        self.assertEqual(second_complete.json()["audio_id"], finalized.json()["audio_id"])
+        self.assertNotIn(session_id, _RECORDING_SESSION_LOCKS)
         result = client.get(f"/api/asr/sessions/{session_id}/result")
         self.assertEqual(result.status_code, 200, result.text)
         self.assertIn("蛇咬伤", result.json()["text"])
@@ -320,8 +363,191 @@ class ASRSessionApiTests(unittest.TestCase):
         )
         self.assertEqual(upload.status_code, 200, upload.text)
 
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 409)
+        self.assertEqual(finalized.json()["detail"]["missing_chunk_indices"], [0])
+
+    def test_browser_recording_finalize_rejects_corrupt_wav_and_stays_retryable(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        corrupt_chunk = b"not-a-valid-wav"
+        upload = upload_browser_recording_chunk(
+            client,
+            session_id,
+            chunk_index=0,
+            payload=corrupt_chunk,
+        )
+        self.assertEqual(upload.status_code, 200, upload.text)
+
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 400)
+        self.assertIn("invalid WAV", finalized.text)
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "recording")
+        self.assertEqual(status.json()["chunk_count"], 1)
+        state = _read_recording_chunk_state(session_id)
+        self.assertEqual(state["status"], "recording")
+        self.assertIn("last_finalize_error", state)
+
+    def test_browser_recording_finalize_rejects_mismatched_wav_format_and_stays_retryable(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(sample_rate=16000)
+        chunk_one = browser_wav_bytes(sample_rate=8000)
+        first = upload_browser_recording_chunk(client, session_id, chunk_index=0, payload=chunk_zero)
+        second = upload_browser_recording_chunk(client, session_id, chunk_index=1, payload=chunk_one)
+        self.assertEqual(first.status_code, 200, first.text)
+        self.assertEqual(second.status_code, 200, second.text)
+
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 400)
+        self.assertIn("different WAV formats", finalized.text)
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "recording")
+        self.assertEqual(status.json()["chunk_count"], 2)
+
+    def test_browser_recording_finalize_can_retry_after_transient_merge_failure(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = upload_browser_recording_chunk(client, session_id, chunk_index=0, payload=chunk_zero)
+        self.assertEqual(upload.status_code, 200, upload.text)
+
+        from app.api import asr_sessions as asr_sessions_module
+
+        real_combine = asr_sessions_module._combine_wav_chunks
+        calls = {"count": 0}
+
+        def flaky_combine(chunk_paths, destination):
+            if calls["count"] == 0:
+                calls["count"] += 1
+                raise OSError("simulated disk write failure")
+            return real_combine(chunk_paths, destination)
+
+        with patch("app.api.asr_sessions._combine_wav_chunks", side_effect=flaky_combine):
+            failed = client.post(f"/api/asr/sessions/{session_id}/finalize")
+            self.assertEqual(failed.status_code, 500)
+            status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+            self.assertEqual(status.json()["status"], "recording")
+            self.assertEqual(status.json()["chunk_count"], 1)
+
+            retried = client.post(f"/api/asr/sessions/{session_id}/finalize")
+            self.assertEqual(retried.status_code, 200, retried.text)
+            self.assertEqual(retried.json()["status"], "recorded")
+
+    def test_browser_recording_cancel_deletes_chunks_and_unused_audio(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "0",
+                "sha256": sha256_bytes(chunk_zero),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-0.wav", chunk_zero, "audio/wav")},
+        )
+        self.assertEqual(upload.status_code, 200, upload.text)
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 200, finalized.text)
+        audio_id = finalized.json()["audio_id"]
+        upload_dir = Path(os.environ["MEDICAL_RECORD_AGENT_UPLOAD_DIR"])
+        self.assertTrue((upload_dir / f"{audio_id}.wav").exists())
+        self.assertTrue((upload_dir / "asr_sessions" / session_id / "recording_chunks.json").exists())
+
+        cancelled = client.delete(f"/api/asr/sessions/{session_id}/recording")
+        self.assertEqual(cancelled.status_code, 200, cancelled.text)
+        self.assertEqual(cancelled.json()["status"], "cancelled")
+        self.assertFalse((upload_dir / f"{audio_id}.wav").exists())
+        self.assertFalse((upload_dir / f"{audio_id}.record.json").exists())
+        self.assertFalse((upload_dir / "asr_sessions" / session_id / "recording_chunks").exists())
+        self.assertFalse((upload_dir / "asr_sessions" / session_id / "recording_chunks.json").exists())
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "cancelled")
+
+        repeat = client.delete(f"/api/asr/sessions/{session_id}/recording")
+        self.assertEqual(repeat.status_code, 200, repeat.text)
+        self.assertNotIn(session_id, _RECORDING_SESSION_LOCKS)
+
+    def test_browser_recording_cancelled_session_rejects_late_chunks(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = upload_browser_recording_chunk(client, session_id, chunk_index=0, payload=chunk_zero)
+        self.assertEqual(upload.status_code, 200, upload.text)
+
+        cancelled = client.delete(f"/api/asr/sessions/{session_id}/recording")
+        self.assertEqual(cancelled.status_code, 200, cancelled.text)
+        late_chunk = browser_wav_bytes(amplitude=1500)
+        late_upload = upload_browser_recording_chunk(client, session_id, chunk_index=1, payload=late_chunk)
+        self.assertEqual(late_upload.status_code, 409)
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "cancelled")
+        self.assertEqual(status.json()["chunk_count"], 0)
+
+    def test_browser_recording_cancel_rejects_non_owner(self):
+        admin_client = TestClient(app)
+        create_user(admin_client, username="doctor-a")
+        create_user(admin_client, username="doctor-b")
+
+        owner_client = TestClient(app)
+        login_as_user(owner_client, username="doctor-a")
+        session_id = owner_client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+
+        other_client = TestClient(app)
+        login_as_user(other_client, username="doctor-b")
+        forbidden = other_client.delete(f"/api/asr/sessions/{session_id}/recording")
+        self.assertEqual(forbidden.status_code, 403)
+
+    def test_browser_recording_chunk_size_limit_returns_413(self):
+        os.environ["MEDICAL_RECORD_AGENT_MAX_RECORDING_CHUNK_BYTES"] = "16"
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "0",
+                "sha256": sha256_bytes(chunk_zero),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-0.wav", chunk_zero, "audio/wav")},
+        )
+        self.assertEqual(upload.status_code, 413)
+
+    def test_browser_recording_cancel_rejects_after_complete(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "0",
+                "sha256": sha256_bytes(chunk_zero),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-0.wav", chunk_zero, "audio/wav")},
+        )
+        self.assertEqual(upload.status_code, 200, upload.text)
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 200, finalized.text)
         completed = client.post(f"/api/asr/sessions/{session_id}/complete")
-        self.assertEqual(completed.status_code, 409)
+        self.assertEqual(completed.status_code, 200, completed.text)
+
+        cancelled = client.delete(f"/api/asr/sessions/{session_id}/recording")
+        self.assertEqual(cancelled.status_code, 409)
 
     def test_session_accepts_doctor_profile_and_diarization_engine(self):
         session = create_asr_session(

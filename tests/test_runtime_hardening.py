@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from contextlib import closing
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -28,6 +29,7 @@ class RuntimeHardeningTests(unittest.TestCase):
                 "MEDICAL_RECORD_AGENT_MIN_FREE_BYTES",
                 "MEDICAL_RECORD_AGENT_MAX_UPLOAD_BYTES",
                 "MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP",
+                "MEDICAL_RECORD_AGENT_REQUIRE_FUNASR",
                 "RECORD_PROVIDER_MODE",
                 "LLM_PROVIDER",
             ]
@@ -64,6 +66,8 @@ class RuntimeHardeningTests(unittest.TestCase):
         self.assertTrue(payload["checks"]["uploads"]["ok"])
         self.assertTrue(payload["checks"]["outputs"]["ok"])
         self.assertTrue(payload["checks"]["provider"]["ok"])
+        self.assertTrue(payload["checks"]["asr_models"]["ok"])
+        self.assertIn("model_cache", payload["checks"]["asr_models"])
 
     def test_ready_blocks_edge_mode_with_mock_provider(self):
         os.environ["MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP"] = "0"
@@ -77,6 +81,26 @@ class RuntimeHardeningTests(unittest.TestCase):
         self.assertEqual(payload["status"], "not_ready")
         self.assertFalse(payload["checks"]["provider"]["ok"])
 
+    def test_ready_can_require_funasr_prewarm_for_edge_audio(self):
+        os.environ["MEDICAL_RECORD_AGENT_REQUIRE_FUNASR"] = "1"
+        with patch(
+            "app.api.runtime.get_prewarm_status",
+            return_value={
+                "status": "failed",
+                "last_error": "NameResolutionError: Failed to resolve modelscope.cn",
+                "error_category": "dns_failure",
+                "retryable": True,
+                "components": [],
+                "model_cache": {"has_cached_files": False},
+            },
+        ):
+            ready = TestClient(app).get("/ready")
+
+        self.assertEqual(ready.status_code, 503)
+        payload = ready.json()
+        self.assertFalse(payload["checks"]["asr_models"]["ok"])
+        self.assertEqual(payload["checks"]["asr_models"]["error_category"], "dns_failure")
+
     def test_audio_upload_exceeding_limit_returns_413(self):
         os.environ["MEDICAL_RECORD_AGENT_MAX_UPLOAD_BYTES"] = "8"
         client = TestClient(app)
@@ -88,10 +112,9 @@ class RuntimeHardeningTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 413)
 
-    def test_sqlite_backup_and_restore_roundtrip(self):
+    def test_sqlite_backup_and_restore_roundtrip_removes_post_backup_mutation(self):
         db_path = self.root / "source.sqlite3"
         backup_path = self.root / "backups" / "source.backup.sqlite3"
-        restored_path = self.root / "restored.sqlite3"
         with closing(sqlite3.connect(db_path)) as connection:
             connection.execute("CREATE TABLE sample (id INTEGER PRIMARY KEY, value TEXT NOT NULL)")
             connection.execute("INSERT INTO sample (value) VALUES ('ok')")
@@ -99,11 +122,18 @@ class RuntimeHardeningTests(unittest.TestCase):
 
         backup_sqlite(db_path, backup_path)
         self.assertTrue(backup_path.exists())
-        restore_sqlite(backup_path, restored_path)
+        with closing(sqlite3.connect(db_path)) as connection:
+            connection.execute("INSERT INTO sample (value) VALUES ('mutation')")
+            connection.commit()
 
-        with closing(sqlite3.connect(restored_path)) as connection:
-            value = connection.execute("SELECT value FROM sample WHERE id = 1").fetchone()[0]
-        self.assertEqual(value, "ok")
+        restore_sqlite(backup_path, db_path, force=True)
+
+        with closing(sqlite3.connect(db_path)) as connection:
+            values = [
+                row[0]
+                for row in connection.execute("SELECT value FROM sample ORDER BY id").fetchall()
+            ]
+        self.assertEqual(values, ["ok"])
 
 
 if __name__ == "__main__":

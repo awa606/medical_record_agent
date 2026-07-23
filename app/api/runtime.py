@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from app.api.audio import DEFAULT_UPLOAD_DIR, get_upload_dir
 from app.db import get_connection, get_db_path, init_db
 from app.services.exporter import DEFAULT_OUTPUT_DIR
+from app.services.asr.prewarm import get_prewarm_status
 from app.services.llm.factory import get_llm_status
 from app.services.runtime_limits import directory_free_bytes
 
@@ -99,6 +100,25 @@ def _check_provider() -> dict[str, Any]:
     return {"ok": ok, "status": status, "error": error}
 
 
+def _check_asr_models() -> dict[str, Any]:
+    status = get_prewarm_status()
+    require_funasr = os.environ.get("MEDICAL_RECORD_AGENT_REQUIRE_FUNASR", "").lower() in {"1", "true", "yes"}
+    ok = True
+    error = None
+    if require_funasr and status.get("status") != "ready":
+        ok = False
+        error = status.get("last_error") or "FunASR model prewarm has not completed"
+    return {
+        "ok": ok,
+        "status": status.get("status"),
+        "error_category": status.get("error_category"),
+        "retryable": status.get("retryable"),
+        "components": status.get("components", []),
+        "model_cache": status.get("model_cache"),
+        "error": error,
+    }
+
+
 @router.get("/live")
 def live() -> dict[str, str]:
     return {"status": "alive"}
@@ -113,6 +133,7 @@ def ready() -> JSONResponse:
         "outputs": _check_directory("outputs", _output_dir(), min_free_bytes=min_free),
         "speaker_profiles": _check_directory("speaker_profiles", _speaker_profile_dir(), min_free_bytes=min_free),
         "provider": _check_provider(),
+        "asr_models": _check_asr_models(),
     }
     ok = all(check.get("ok") for check in checks.values())
     status_code = 200 if ok else 503

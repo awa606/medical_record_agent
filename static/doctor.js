@@ -475,18 +475,35 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
   }
   const items = appState.encounterWorklist || [];
   if (!items.length) {
-    return `<div class="empty-state">暂无可恢复的就诊记录。</div>`;
+    return `
+      <div class="empty-state dashboard-empty-state">
+        <strong>今日暂无就诊任务</strong>
+        <span>可以从下方入口开始一次新的问诊工作。</span>
+        <div class="empty-state-actions">
+          <button type="button" class="primary-action" data-product-view-target="encounter">新建问诊</button>
+          <button type="button" data-input-method="audio">上传问诊音频</button>
+          <button type="button" data-input-method="text">粘贴问诊文本</button>
+        </div>
+      </div>
+    `;
   }
   const rows = items.map((item) => {
     const active = appState.currentEncounter?.id === item.id;
     const patient = item.patient_display_name || item.patient_deidentified_id || `Encounter ${item.id}`;
+    const encounterNo = item.patient_deidentified_id || `E-${item.id}`;
+    const phase = encounterPhaseLabel(item);
     const status = encounterStatusLabel(item.status || item.task_current_stage);
     return `
       <article class="encounter-worklist-item ${active ? "active" : ""}">
-        <div>
+        <div class="encounter-worklist-primary">
           <strong>${escapeHtml(patient)}</strong>
-          <span>${escapeHtml(item.patient_deidentified_id || "未提供患者标识")} · 最近更新 ${escapeHtml(formatDateTime(item.updated_at || item.created_at))}</span>
+          <span>${escapeHtml(encounterNo)}</span>
           <small class="debug-only">版本 ${escapeHtml(item.current_revision_id || "-")} · Task ${escapeHtml(item.task_id || "-")}</small>
+        </div>
+        <div class="encounter-worklist-meta" aria-label="就诊任务摘要">
+          <span><b>录入方式</b>${escapeHtml(encounterInputMethodLabel(item))}</span>
+          <span><b>当前阶段</b>${escapeHtml(phase)}</span>
+          <span><b>更新时间</b>${escapeHtml(formatDateTime(item.updated_at || item.created_at))}</span>
         </div>
         <div class="encounter-worklist-actions">
           <span class="status-badge ${active ? "confirmed" : "neutral"}">${escapeHtml(status)}</span>
@@ -508,6 +525,24 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
     </section>
   ` : "";
   return rows + revisionHistory;
+}
+
+function encounterInputMethodLabel(item = {}) {
+  const stage = String(item.task_current_stage || item.task_status || item.status || "").toLowerCase();
+  if (!item.task_id) return "待录入";
+  if (stage.includes("transcrib") || stage.includes("asr")) return "音频";
+  return "文本/音频";
+}
+
+function encounterPhaseLabel(item = {}) {
+  const status = String(item.status || item.task_current_stage || item.task_status || "").toLowerCase();
+  if (status.includes("fail")) return "异常待处理";
+  if (status === "draft" || !item.task_id) return "待录入";
+  if (status === "pending_review" || status === "reviewed") return "等待医生审核";
+  if (status === "approved") return "病历已审核";
+  if (status === "exported") return "已导出";
+  if (status.includes("transcrib")) return "智能转写";
+  return encounterStatusLabel(item.status || item.task_current_stage || item.task_status);
 }
 
 function encounterStatusLabel(status) {
@@ -762,20 +797,23 @@ function runtimeServiceSummary(key, value) {
 }
 
 function renderDashboardSummary() {
-  const doctor = appState.authUser
-    ? `${friendlyUserName(appState.authUser)} · ${appState.authUser.role}`
-    : "未登录";
-  const encounter = appState.currentEncounter
-    ? `${appState.currentEncounter.patient_display_name || appState.currentEncounter.patient_deidentified_id || `Encounter ${appState.currentEncounter.id}`}`
-    : "未打开就诊";
-  const task = STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入";
-  const recording = appState.browserRecordingStatus !== "idle"
-    ? productRecordingStatusLabel()
-    : (appState.asrConnectionStatus !== "idle" ? asrPhaseLabel() : "等待录音或文本输入");
-  if ($("dashboardDoctorLabel")) $("dashboardDoctorLabel").textContent = doctor;
-  if ($("dashboardEncounterLabel")) $("dashboardEncounterLabel").textContent = encounter;
-  if ($("dashboardTaskStatusLabel")) $("dashboardTaskStatusLabel").textContent = task;
-  if ($("dashboardRecordingLabel")) $("dashboardRecordingLabel").textContent = recording;
+  const stats = (appState.encounterWorklist || []).reduce((acc, item) => {
+    const status = String(item.status || item.task_current_stage || item.task_status || "").toLowerCase();
+    if (!item.task_id || status === "draft") {
+      acc.pendingInput += 1;
+    } else if (status.includes("fail")) {
+      acc.exceptions += 1;
+    } else if (status === "pending_review" || status === "reviewed") {
+      acc.pendingReview += 1;
+    } else if (status !== "approved" && status !== "exported") {
+      acc.processing += 1;
+    }
+    return acc;
+  }, { pendingInput: 0, processing: 0, pendingReview: 0, exceptions: 0 });
+  if ($("dashboardDoctorLabel")) $("dashboardDoctorLabel").textContent = String(stats.pendingInput);
+  if ($("dashboardEncounterLabel")) $("dashboardEncounterLabel").textContent = String(stats.processing);
+  if ($("dashboardTaskStatusLabel")) $("dashboardTaskStatusLabel").textContent = String(stats.pendingReview);
+  if ($("dashboardRecordingLabel")) $("dashboardRecordingLabel").textContent = String(stats.exceptions);
 }
 
 function renderAdminHome() {
@@ -1347,12 +1385,8 @@ function nextActionState() {
     return {
       tone: "ready",
       title: "导出已完成",
-      detail: "Markdown / Word 文件已生成，可重新导出或开始下一次输入。",
-      actions: [
-        workflowAction({ key: "export-record", label: "重新导出" }),
-        workflowAction({ key: "upload-audio", label: "上传新音频", tone: "primary" }),
-        workflowAction({ key: "import-text", label: "粘贴新文本" }),
-      ],
+      detail: "Markdown / Word 文件已生成。需要再次下载时，请使用底部操作栏的导出按钮。",
+      actions: [],
     };
   }
 
@@ -1360,10 +1394,8 @@ function nextActionState() {
     return {
       tone: "ready",
       title: "病历审核已完成，可以导出",
-      detail: "导出前请确认鉴别诊断参考和安全校验提示已由医生审核。",
-      actions: [
-        workflowAction({ key: "export-record", label: "导出已审核病历", tone: "primary" }),
-      ],
+      detail: "底部操作栏只保留导出已审核病历，导出文件会绑定当前医生和病历版本。",
+      actions: [],
     };
   }
 
@@ -3744,8 +3776,15 @@ function renderFooter() {
   const saveButton = $("saveDraftButton");
   const confirmButton = $("confirmFieldsButton");
   const exportButton = $("exportButton");
+  const footerHints = {
+    draft_generated: "病历草稿已生成，可先保存修改；保存后进入医生审核。",
+    pending_review: "等待医生审核；完成医生审核后方可导出。",
+    transcription_failed: "流程中断；请先重新转写或改用文本输入。",
+    approved: "病历审核已完成；可以导出已审核病历。",
+    exported: "病历已导出；可以再次下载已审核病历。",
+  };
   $("currentTaskLabel").textContent = "操作区";
-  $("currentTaskHint").textContent = displayState.taskHint;
+  $("currentTaskHint").textContent = footerHints[displayState.key] || displayState.taskHint;
   actionBar?.classList.toggle("draft-generated", displayState.key === "draft_generated");
   actionBar?.classList.toggle("pending-review", displayState.key === "pending_review");
   actionBar?.classList.toggle("export-ready", ["approved", "exported"].includes(displayState.key));
@@ -3761,6 +3800,7 @@ function renderFooter() {
   exportButton.disabled = appState.busy || !appState.currentTaskId || !isApprovedForExport();
   exportButton.classList.toggle("blocked-action", Boolean(appState.currentTaskId && !isApprovedForExport()));
   exportButton.setAttribute("aria-disabled", exportButton.disabled ? "true" : "false");
+  exportButton.dataset.disabledReason = exportButton.disabled ? "完成医生审核后方可导出" : "";
   exportButton.title = exportButton.disabled ? "完成医生审核后方可导出" : "导出已审核病历";
 
   if (displayState.key === "draft_generated") {
@@ -3775,6 +3815,7 @@ function renderFooter() {
     exportButton.disabled = true;
     exportButton.classList.add("blocked-action");
     exportButton.setAttribute("aria-disabled", "true");
+    exportButton.dataset.disabledReason = "完成医生审核后方可导出";
     exportButton.title = "完成医生审核后方可导出";
   } else if (["approved", "exported"].includes(displayState.key)) {
     regenerateButton.hidden = true;
@@ -3783,6 +3824,7 @@ function renderFooter() {
     exportButton.disabled = appState.busy || !appState.currentTaskId;
     exportButton.classList.remove("blocked-action");
     exportButton.setAttribute("aria-disabled", exportButton.disabled ? "true" : "false");
+    exportButton.dataset.disabledReason = exportButton.disabled ? "暂无可导出的病历任务" : "";
   } else if (displayState.key === "transcription_failed") {
     regenerateButton.disabled = true;
     saveButton.disabled = true;
@@ -3790,6 +3832,7 @@ function renderFooter() {
     exportButton.disabled = true;
     exportButton.classList.add("blocked-action");
     exportButton.setAttribute("aria-disabled", "true");
+    exportButton.dataset.disabledReason = "转写失败，需先恢复流程";
     exportButton.title = "转写失败，需先恢复流程";
   }
 }
@@ -6280,9 +6323,21 @@ function bindEvents() {
     await restoreEncounter(button.dataset.restoreEncounter);
   });
   $("dashboardEncounterList")?.addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-restore-encounter]");
-    if (!button) return;
-    await restoreEncounter(button.dataset.restoreEncounter);
+    const restoreButton = event.target.closest("[data-restore-encounter]");
+    if (restoreButton) {
+      await restoreEncounter(restoreButton.dataset.restoreEncounter);
+      return;
+    }
+    const routeButton = event.target.closest("[data-product-view-target]");
+    if (routeButton) {
+      setProductView(routeButton.dataset.productViewTarget);
+      return;
+    }
+    const inputButton = event.target.closest("[data-input-method]");
+    if (inputButton) {
+      setProductView("encounter");
+      handleInputMethod(inputButton.dataset.inputMethod);
+    }
   });
   $("dashboardRefreshWorklistButton")?.addEventListener("click", () => {
     refreshEncounterWorklist().catch(reportActionError);

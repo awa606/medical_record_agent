@@ -273,7 +273,8 @@ textarea:focus {
 .product-nav {
   grid-column: 1;
   grid-row: 2;
-  min-height: 0;
+  min-height: calc(100dvh - 68px);
+  height: calc(100dvh - 68px);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -428,6 +429,11 @@ textarea:focus {
   gap: 16px;
 }
 
+.product-dashboard {
+  min-height: calc(100dvh - 68px);
+  grid-template-rows: auto auto minmax(260px, 1fr);
+}
+
 .dashboard-hero,
 .dashboard-panel,
 .dashboard-status-card,
@@ -520,6 +526,7 @@ textarea:focus {
 .dashboard-panel {
   min-height: 0;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 13px;
   border-radius: var(--radius-lg);
   padding: 0;
@@ -576,7 +583,7 @@ textarea:focus {
   min-width: 0;
   min-height: 72px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(170px, 0.9fr) minmax(280px, 1.4fr) auto;
   align-items: center;
   gap: 18px;
   border: 1px solid var(--line);
@@ -597,7 +604,7 @@ textarea:focus {
   box-shadow: inset 3px 0 0 var(--primary);
 }
 
-.encounter-worklist-item > div:first-child {
+.encounter-worklist-primary {
   min-width: 0;
   display: grid;
   gap: 4px;
@@ -617,6 +624,51 @@ textarea:focus {
   font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.encounter-worklist-meta {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.encounter-worklist-meta span {
+  display: grid;
+  gap: 2px;
+  color: #54687f;
+}
+
+.encounter-worklist-meta b {
+  color: #7b8da1;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.dashboard-empty-state {
+  min-height: 220px;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.dashboard-empty-state strong {
+  color: #20364c;
+  font-size: 16px;
+}
+
+.dashboard-empty-state span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.empty-state-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
 }
 
 .encounter-worklist-actions {
@@ -666,7 +718,7 @@ textarea:focus {
   display: grid;
   align-content: start;
   gap: 13px;
-  padding-bottom: 112px;
+  padding-bottom: 148px;
 }
 
 .encounter-patient-banner {
@@ -1012,7 +1064,7 @@ body.doctor-mode .workbench,
 body.standard-mode .workbench,
 body.care-mode .workbench {
   min-width: 0;
-  min-height: 760px;
+  min-height: max(560px, calc(100dvh - 356px));
   display: grid;
   grid-template-columns: minmax(340px, 0.78fr) minmax(500px, 1.22fr);
   grid-template-rows: minmax(390px, 1.15fr) minmax(300px, 0.85fr);
@@ -1878,7 +1930,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   body.doctor-mode .workbench,
   body.standard-mode .workbench,
   body.care-mode .workbench {
-    min-height: 720px;
+    min-height: max(520px, calc(100dvh - 330px));
     grid-template-columns: minmax(330px, 0.76fr) minmax(460px, 1.24fr);
   }
 

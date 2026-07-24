@@ -1188,6 +1188,103 @@ body.doctor-mode .field-card.readonly-field {
   color: #2d465d;
 }
 
+.approval-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  margin-top: 14px;
+  border: 1px solid #dbe7f3;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.approval-checklist-head,
+.approval-section-title,
+.approval-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.approval-checklist-head h3 {
+  margin: 2px 0;
+  font-size: 17px;
+}
+
+.approval-checklist-head p,
+.approval-item span {
+  margin: 0;
+  color: #60738b;
+  font-size: 13px;
+}
+
+.approval-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e3edf7;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.approval-item {
+  padding: 10px;
+  border: 1px solid #e5edf5;
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.approval-item.high-risk {
+  border-color: #fecdd3;
+  background: #fff7f8;
+}
+
+.approval-item-status {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.approval-item-status.done {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.approval-item-status.pending {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.approval-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.approval-primary-action,
+.approval-item-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #cbd9e8;
+  border-radius: 9px;
+  color: #16436f;
+  background: #ffffff;
+  font-weight: 700;
+}
+
+.approval-primary-action.active,
+.approval-item-actions button.active {
+  color: #ffffff;
+  border-color: #1d6dcc;
+  background: #1d6dcc;
+}
+
 .field-title,
 body.doctor-mode .field-card .field-title {
   color: #29425a;

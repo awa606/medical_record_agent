@@ -4,11 +4,11 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.db import (
@@ -18,9 +18,12 @@ from app.db import (
     create_record_revision_for_task,
     get_active_approval_for_task,
     get_audit_logs,
+    get_record_revision,
     get_task,
     get_task_steps,
     json_dumps,
+    list_approval_items_for_approval,
+    record_content_hash,
     update_task,
 )
 from app.schemas import MedicalRecordFields, SafetyCheckResult
@@ -49,6 +52,39 @@ class ReviewRequest(BaseModel):
     fields: MedicalRecordFields
 
 
+class FieldApprovalItem(BaseModel):
+    key: str
+    action: Literal[
+        "confirm_content",
+        "keep_pending",
+        "confirm_not_asked",
+        "accept_missing",
+    ]
+    note: str | None = None
+
+
+class DiagnosisApprovalItem(BaseModel):
+    index: int
+    action: Literal["confirm_candidate", "delete_ai_candidate", "keep_pending"]
+    high_risk_confirmed: bool = False
+    note: str | None = None
+
+
+class HighRiskConflictApprovalItem(BaseModel):
+    key: str
+    confirmed: bool
+    note: str | None = None
+
+
+class TaskApprovalRequest(BaseModel):
+    revision_id: int
+    content_hash: str
+    confirm_all_regular_fields: bool = False
+    fields: list[FieldApprovalItem] = Field(default_factory=list)
+    diagnoses: list[DiagnosisApprovalItem] = Field(default_factory=list)
+    high_risk_conflicts: list[HighRiskConflictApprovalItem] = Field(default_factory=list)
+
+
 class ExportReadinessResponse(BaseModel):
     task_id: int
     ready: bool
@@ -57,6 +93,11 @@ class ExportReadinessResponse(BaseModel):
     next_action: str
     current_stage: str | None = None
     exports: dict[str, str] | None = None
+    revision_id: int | None = None
+    revision_number: int | None = None
+    content_hash: str | None = None
+    approval_id: int | None = None
+    pending_review_count: int = 0
 
 
 def _decode_result_json(task: dict[str, Any]) -> dict[str, Any]:
@@ -137,6 +178,238 @@ def _record_generator_or_503():
         ) from exc
 
 
+FIELD_LABELS = {
+    "chief_complaint": "主诉",
+    "present_illness": "现病史",
+    "previous_treatment": "既往处理",
+    "accompanying_symptoms": "伴随症状",
+    "past_history": "既往史",
+    "allergy_history": "过敏史",
+    "physical_exam": "查体",
+}
+
+
+def _field_items(fields: MedicalRecordFields) -> list[tuple[str, str, Any]]:
+    return [
+        ("chief_complaint", "主诉", fields.chief_complaint),
+        ("present_illness", "现病史", fields.present_illness),
+        ("previous_treatment", "既往处理", fields.previous_treatment),
+        ("accompanying_symptoms", "伴随症状", fields.accompanying_symptoms),
+        ("past_history", "既往史", fields.past_history),
+        ("allergy_history", "过敏史", fields.allergy_history),
+        ("physical_exam", "查体", fields.physical_exam),
+    ]
+
+
+def _field_by_key(fields: MedicalRecordFields, key: str):
+    if key not in FIELD_LABELS:
+        raise HTTPException(status_code=422, detail=f"未知病历字段：{key}")
+    return getattr(fields, key)
+
+
+def _has_confirmable_content(field: Any) -> bool:
+    return bool(field and not field.missing and field.value)
+
+
+def _reset_review_state(fields: MedicalRecordFields) -> MedicalRecordFields:
+    for _key, _label, field in _field_items(fields):
+        field.confirmed_by_doctor = False
+        field.doctor_review_status = "pending"
+        field.high_risk_confirmed_by_doctor = False
+        field.doctor_review_note = None
+    for diagnosis in fields.candidate_diagnoses:
+        diagnosis.confirmed_by_doctor = False
+        diagnosis.doctor_review_status = "pending"
+        diagnosis.deleted_by_doctor = False
+        diagnosis.high_risk_confirmed_by_doctor = False
+        diagnosis.doctor_review_note = None
+    return fields
+
+
+def _current_revision_or_error(task: dict[str, Any]) -> dict[str, Any]:
+    revision_id = task.get("current_record_revision_id")
+    if revision_id is None:
+        raise HTTPException(status_code=409, detail="当前任务尚未创建病历版本，请先生成或保存病历。")
+    revision = get_record_revision(int(revision_id))
+    if revision is None:
+        raise HTTPException(status_code=409, detail="当前病历版本不存在，请刷新后重试。")
+    return revision
+
+
+def _revision_content_hash(revision: dict[str, Any]) -> str:
+    current = revision.get("content_hash")
+    if current:
+        return str(current)
+    try:
+        result = json.loads(revision.get("result_json") or "{}")
+    except json.JSONDecodeError:
+        result = {}
+    return record_content_hash(result)
+
+
+def _assert_approval_matches_revision(payload: TaskApprovalRequest, revision: dict[str, Any]) -> str:
+    revision_id = int(revision["id"])
+    content_hash = _revision_content_hash(revision)
+    if payload.revision_id != revision_id:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "病历版本已更新，请刷新后重新审核。",
+                "current_revision_id": revision_id,
+                "submitted_revision_id": payload.revision_id,
+            },
+        )
+    if payload.content_hash != content_hash:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "病历内容已变化，请刷新后重新审核。",
+                "current_revision_id": revision_id,
+                "content_hash": content_hash,
+            },
+        )
+    return content_hash
+
+
+def _apply_field_approval(fields: MedicalRecordFields, item: FieldApprovalItem) -> dict[str, Any] | None:
+    if item.action == "keep_pending":
+        return None
+    field = _field_by_key(fields, item.key)
+    if item.action == "confirm_content":
+        if not _has_confirmable_content(field):
+            raise HTTPException(status_code=422, detail=f"{FIELD_LABELS[item.key]}没有可确认内容")
+        field.confirmed_by_doctor = True
+        field.doctor_review_status = "content_confirmed"
+    elif item.action == "confirm_not_asked":
+        field.confirmed_by_doctor = True
+        field.doctor_review_status = "not_asked_confirmed"
+    elif item.action == "accept_missing":
+        field.confirmed_by_doctor = True
+        field.doctor_review_status = "missing_accepted"
+    field.doctor_review_note = item.note
+    return {
+        "item_type": "field",
+        "item_key": item.key,
+        "action": item.action,
+        "status": "completed",
+        "note": item.note,
+    }
+
+
+def _apply_diagnosis_approval(fields: MedicalRecordFields, item: DiagnosisApprovalItem) -> dict[str, Any] | None:
+    if item.action == "keep_pending":
+        return None
+    if item.index < 0 or item.index >= len(fields.candidate_diagnoses):
+        raise HTTPException(status_code=422, detail=f"候选诊断序号不存在：{item.index}")
+    diagnosis = fields.candidate_diagnoses[item.index]
+    if item.action == "confirm_candidate":
+        diagnosis.confirmed_by_doctor = True
+        diagnosis.doctor_review_status = "candidate_confirmed"
+        diagnosis.deleted_by_doctor = False
+    elif item.action == "delete_ai_candidate":
+        diagnosis.confirmed_by_doctor = True
+        diagnosis.doctor_review_status = "ai_candidate_deleted"
+        diagnosis.deleted_by_doctor = True
+    diagnosis.high_risk_confirmed_by_doctor = bool(item.high_risk_confirmed)
+    diagnosis.doctor_review_note = item.note
+    return {
+        "item_type": "candidate_diagnosis",
+        "item_key": str(item.index),
+        "action": item.action,
+        "status": "completed",
+        "high_risk_confirmed": bool(item.high_risk_confirmed),
+        "note": item.note,
+    }
+
+
+def _apply_high_risk_approval(
+    fields: MedicalRecordFields,
+    item: HighRiskConflictApprovalItem,
+) -> dict[str, Any] | None:
+    if not item.confirmed:
+        return None
+    if item.key.startswith("diagnosis:"):
+        try:
+            index = int(item.key.split(":", 1)[1])
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=f"高风险项标识无效：{item.key}") from exc
+        if index < 0 or index >= len(fields.candidate_diagnoses):
+            raise HTTPException(status_code=422, detail=f"高风险候选诊断不存在：{item.key}")
+        fields.candidate_diagnoses[index].high_risk_confirmed_by_doctor = True
+    elif item.key.startswith("field:"):
+        key = item.key.split(":", 1)[1]
+        _field_by_key(fields, key).high_risk_confirmed_by_doctor = True
+    return {
+        "item_type": "high_risk",
+        "item_key": item.key,
+        "action": "confirm_high_risk",
+        "status": "completed",
+        "high_risk_confirmed": True,
+        "note": item.note,
+    }
+
+
+def _approval_completion_errors(fields: MedicalRecordFields) -> list[str]:
+    errors: list[str] = []
+    unconfirmed_fields: list[str] = []
+    unresolved_missing: list[str] = []
+    for key, label, field in _field_items(fields):
+        if _has_confirmable_content(field):
+            if field.doctor_review_status != "content_confirmed" or not field.confirmed_by_doctor:
+                unconfirmed_fields.append(label)
+        else:
+            if field.doctor_review_status not in {"not_asked_confirmed", "missing_accepted"}:
+                unresolved_missing.append(label)
+        if field.status == "conflicting" and not field.high_risk_confirmed_by_doctor:
+            errors.append(f"{label}存在证据冲突，必须逐项单独确认。")
+    if unconfirmed_fields:
+        errors.append(f"存在未显式确认的普通字段：{'、'.join(unconfirmed_fields)}。")
+    if unresolved_missing:
+        errors.append(f"存在未处理缺失项：{'、'.join(unresolved_missing)}。")
+
+    pending_diagnoses: list[str] = []
+    unconfirmed_risks: list[str] = []
+    for index, diagnosis in enumerate(fields.candidate_diagnoses):
+        if diagnosis.doctor_review_status not in {"candidate_confirmed", "ai_candidate_deleted"}:
+            pending_diagnoses.append(diagnosis.name or f"候选{index + 1}")
+        if diagnosis.risk_warnings and not diagnosis.high_risk_confirmed_by_doctor:
+            unconfirmed_risks.append(diagnosis.name or f"候选{index + 1}")
+    if pending_diagnoses:
+        errors.append(f"存在未处理 AI 候选诊断：{'、'.join(pending_diagnoses)}。")
+    if unconfirmed_risks:
+        errors.append(f"存在未单独确认的高风险项：{'、'.join(unconfirmed_risks)}。")
+    return errors
+
+
+def _approval_review_state(fields: MedicalRecordFields) -> tuple[list[dict[str, Any]], list[str]]:
+    items: list[dict[str, Any]] = []
+    for key, _label, field in _field_items(fields):
+        if field.confirmed_by_doctor and field.doctor_review_status != "pending":
+            items.append(
+                {
+                    "item_type": "field",
+                    "item_key": key,
+                    "action": field.doctor_review_status,
+                    "status": "completed",
+                    "high_risk_confirmed": field.high_risk_confirmed_by_doctor,
+                    "note": field.doctor_review_note,
+                }
+            )
+    for index, diagnosis in enumerate(fields.candidate_diagnoses):
+        if diagnosis.doctor_review_status != "pending":
+            items.append(
+                {
+                    "item_type": "candidate_diagnosis",
+                    "item_key": str(index),
+                    "action": diagnosis.doctor_review_status,
+                    "status": "completed",
+                    "high_risk_confirmed": diagnosis.high_risk_confirmed_by_doctor,
+                    "note": diagnosis.doctor_review_note,
+                }
+            )
+    return items, _approval_completion_errors(fields)
+
+
 @router.get("/{task_id}")
 def read_task(task_id: int, request: Request = None) -> dict[str, Any]:
     task = get_task(task_id)
@@ -179,7 +452,7 @@ def read_task_agent_trace(
 @router.post("/{task_id}/review")
 def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request)
-    fields = payload.fields
+    fields = _reset_review_state(payload.fields)
     generator = _record_generator_or_503()
     draft = generator.generate_draft(fields)
     safety_check = generator.safety_check(draft, fields)
@@ -199,7 +472,7 @@ def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -
         event_detail={"task_id": task_id},
         request=request,
     )
-    create_record_revision_for_task(
+    revision = create_record_revision_for_task(
         task_id,
         result,
         actor_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
@@ -208,34 +481,73 @@ def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -
     )
     task["result_json"] = result
     task["current_stage"] = "reviewed"
+    task["current_record_revision_id"] = revision["id"]
+    task["current_record_revision_no"] = revision["revision_no"]
     return task
 
 
 @router.post("/{task_id}/approve")
-def approve_task(task_id: int, request: Request = None) -> dict[str, Any]:
+def approve_task(
+    task_id: int,
+    payload: TaskApprovalRequest | None = Body(default=None),
+    request: Request = None,
+) -> dict[str, Any]:
+    if payload is None:
+        raise HTTPException(status_code=400, detail="审核请求不能为空，请显式提交分项审核结果。")
     task, result = _load_task_result(task_id, request)
     if task.get("current_stage") == "approved" and get_active_approval_for_task(task_id) is not None:
         raise HTTPException(status_code=409, detail="Current record revision is already approved")
+    revision = _current_revision_or_error(task)
+    content_hash = _assert_approval_matches_revision(payload, revision)
     fields = MedicalRecordFields.model_validate(result["fields"])
 
-    for field in _iter_medical_fields(fields):
-        field.confirmed_by_doctor = True
-    for diagnosis in fields.candidate_diagnoses:
-        diagnosis.confirmed_by_doctor = True
+    approval_items: list[dict[str, Any]] = []
+    if payload.confirm_all_regular_fields:
+        for key, _label, field in _field_items(fields):
+            if _has_confirmable_content(field) and field.status != "conflicting":
+                field.confirmed_by_doctor = True
+                field.doctor_review_status = "content_confirmed"
+                approval_items.append(
+                    {
+                        "item_type": "field",
+                        "item_key": key,
+                        "action": "confirm_content",
+                        "status": "completed",
+                    }
+                )
+    for item in payload.fields:
+        applied = _apply_field_approval(fields, item)
+        if applied:
+            approval_items.append(applied)
+    for item in payload.diagnoses:
+        applied = _apply_diagnosis_approval(fields, item)
+        if applied:
+            approval_items.append(applied)
+    for item in payload.high_risk_conflicts:
+        applied = _apply_high_risk_approval(fields, item)
+        if applied:
+            approval_items.append(applied)
+
+    errors = _approval_completion_errors(fields)
+    if errors:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "病历分项审核尚未完成。",
+                "errors": errors,
+                "revision_id": int(revision["id"]),
+                "content_hash": content_hash,
+            },
+        )
 
     result["fields"] = fields.model_dump()
     result["approved"] = True
-    revision = create_record_revision_for_task(
-        task_id,
-        result,
-        actor_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
-        source="doctor_approval",
-        workflow_status="approved",
-    )
     try:
         approval = create_approval_for_task(
             task_id,
             actor_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
+            content_hash=content_hash,
+            approval_items=approval_items,
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -243,12 +555,18 @@ def approve_task(task_id: int, request: Request = None) -> dict[str, Any]:
         "id": revision["id"],
         "revision_no": revision["revision_no"],
         "source": revision["source"],
+        "content_hash": content_hash,
     }
     result["approval"] = {
         "id": approval["id"],
         "revision_id": approval["revision_id"],
+        "content_hash": approval.get("content_hash"),
         "approved_by_user_id": approval["approved_by_user_id"],
         "created_at": approval["created_at"],
+    }
+    result["approval_summary"] = {
+        "item_count": len(approval_items),
+        "items": approval_items,
     }
 
     _save_task_result(
@@ -273,6 +591,7 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
         result,
         current_stage=task.get("current_stage"),
         active_approval=approval,
+        current_revision=_current_revision_or_error(task),
     )
     if readiness["errors"]:
         raise HTTPException(status_code=400, detail=readiness)
@@ -316,6 +635,7 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
         result,
         current_stage="exported",
         active_approval=approval,
+        current_revision=_current_revision_or_error(task),
     )
     return {"task_id": task_id, "exports": exports, "export_readiness": export_readiness}
 
@@ -329,6 +649,7 @@ def read_export_readiness(task_id: int, request: Request = None) -> ExportReadin
             result,
             current_stage=task.get("current_stage"),
             active_approval=get_active_approval_for_task(task_id),
+            current_revision=_current_revision_or_error(task),
         )
     )
 
@@ -368,6 +689,7 @@ def download_task_export(task_id: int, export_format: str, request: Request = No
         result,
         current_stage=task.get("current_stage"),
         active_approval=approval,
+        current_revision=_current_revision_or_error(task),
     )
     exports = result.get("exports")
     if readiness["errors"] or not isinstance(exports, dict):
@@ -407,29 +729,7 @@ def _validate_export_ready(result: dict[str, Any]) -> list[str]:
     if not safety_check.passed or safety_check.blocked:
         errors.append("安全校验未通过，禁止导出。")
 
-    unconfirmed_fields = [
-        field_name
-        for field_name, field in [
-            ("主诉", fields.chief_complaint),
-            ("现病史", fields.present_illness),
-            ("既往处理", fields.previous_treatment),
-            ("伴随症状", fields.accompanying_symptoms),
-            ("既往史", fields.past_history),
-            ("过敏史", fields.allergy_history),
-            ("查体", fields.physical_exam),
-        ]
-        if not field.confirmed_by_doctor
-    ]
-    if unconfirmed_fields:
-        errors.append(f"存在未确认字段：{'、'.join(unconfirmed_fields)}。")
-
-    unconfirmed_diagnoses = [
-        diagnosis.name
-        for diagnosis in fields.candidate_diagnoses
-        if not diagnosis.confirmed_by_doctor
-    ]
-    if unconfirmed_diagnoses:
-        errors.append(f"存在未确认候选诊断：{'、'.join(unconfirmed_diagnoses)}。")
+    errors.extend(_approval_completion_errors(fields))
 
     return errors
 
@@ -451,10 +751,20 @@ def _build_export_readiness(
     *,
     current_stage: str | None = None,
     active_approval: dict[str, Any] | None = None,
+    current_revision: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     errors = _validate_export_ready(result)
+    revision_id = int(current_revision["id"]) if current_revision else None
+    revision_number = int(current_revision["revision_no"]) if current_revision else None
+    content_hash = _revision_content_hash(current_revision) if current_revision else None
     if active_approval is None:
         errors.append("病历尚未完成医生批准，禁止导出。")
+    elif current_revision is None:
+        errors.append("当前病历版本不存在，禁止导出。")
+    elif int(active_approval["revision_id"]) != int(current_revision["id"]):
+        errors.append("医生批准不属于当前病历版本，禁止导出。")
+    elif active_approval.get("content_hash") != content_hash:
+        errors.append("医生批准的内容哈希与当前病历不一致，禁止导出。")
     exports = result.get("exports")
     if not isinstance(exports, dict):
         exports = None
@@ -467,6 +777,11 @@ def _build_export_readiness(
         "next_action": "可以导出。" if not errors else "请先完成医生确认和安全校验，再导出。",
         "current_stage": current_stage,
         "exports": exports,
+        "revision_id": revision_id,
+        "revision_number": revision_number,
+        "content_hash": content_hash,
+        "approval_id": int(active_approval["id"]) if active_approval and not errors else None,
+        "pending_review_count": len(errors),
     }
 
 

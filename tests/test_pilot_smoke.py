@@ -38,9 +38,18 @@ class FakeSmokeClient:
         if method.upper() == "POST" and path == "/api/tasks/42/review":
             return {"id": 42, "result_json": {"fields": payload["fields"], "reviewed": True, "approved": False}}
         if method.upper() == "POST" and path == "/api/tasks/42/approve":
+            assert payload and payload["revision_id"] == 7
+            assert payload["content_hash"] == "hash-42"
             return {"id": 42, "result_json": {"fields": self._fields(), "reviewed": True, "approved": True}}
         if method.upper() == "GET" and path == "/api/tasks/42/export-readiness":
-            return {"task_id": 42, "ready": True, "blocked": False, "errors": []}
+            return {
+                "task_id": 42,
+                "ready": True,
+                "blocked": False,
+                "errors": [],
+                "revision_id": 7,
+                "content_hash": "hash-42",
+            }
         if method.upper() == "POST" and path == "/api/tasks/42/export":
             return {"task_id": 42, "exports": {"markdown_path": "out.md", "word_path": "out.docx"}}
         raise AssertionError(f"unexpected request: {method} {path}")

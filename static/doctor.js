@@ -128,6 +128,11 @@ const appState = {
   encounterWorklist: [],
   encounterWorklistStatus: "idle",
   encounterWorklistError: "",
+  approvalRegularFieldsConfirmed: false,
+  approvalMissingDecisions: {},
+  approvalDiagnosisDecisions: {},
+  approvalHighRiskConfirmations: {},
+  approvalRevisionId: null,
 };
 
 window.__MRA_APP_STATE__ = appState;
@@ -1942,6 +1947,256 @@ function renderAllFieldsDetailContent() {
   return fieldSections + diagnosisSection;
 }
 
+function clearApprovalReviewSelections() {
+  appState.approvalRegularFieldsConfirmed = false;
+  appState.approvalMissingDecisions = {};
+  appState.approvalDiagnosisDecisions = {};
+  appState.approvalHighRiskConfirmations = {};
+}
+
+function currentRevisionInfo(readiness = appState.currentExportReadiness) {
+  const task = appState.currentTask || {};
+  const result = task.result_json || {};
+  const revision = result.record_revision || {};
+  return {
+    revisionId: readiness?.revision_id || task.current_record_revision_id || revision.id || null,
+    revisionNumber: readiness?.revision_number || task.current_record_revision_no || revision.revision_no || null,
+    contentHash: readiness?.content_hash || revision.content_hash || "",
+  };
+}
+
+function currentApprovalRevisionKey(readiness = appState.currentExportReadiness) {
+  const info = currentRevisionInfo(readiness);
+  if (!info.revisionId && !info.contentHash) return "";
+  return `${info.revisionId || ""}:${info.contentHash || ""}`;
+}
+
+function syncApprovalReviewStateWithRevision(readiness = appState.currentExportReadiness) {
+  const key = currentApprovalRevisionKey(readiness);
+  if (!key) return;
+  if (appState.approvalRevisionId !== key) {
+    clearApprovalReviewSelections();
+    appState.approvalRevisionId = key;
+  }
+}
+
+function approvalFieldItems(fields) {
+  if (!fields) return [];
+  return FIELD_DEFS
+    .map(([key, title]) => ({ key, title, field: fields[key] || null }))
+    .filter((item) => item.field);
+}
+
+function fieldHasReviewableContent(field) {
+  return Boolean(field && !field.missing && field.value);
+}
+
+function fieldReviewComplete(field) {
+  return ["content_confirmed", "not_asked_confirmed", "missing_accepted"].includes(field?.doctor_review_status);
+}
+
+function diagnosisReviewComplete(diagnosis) {
+  return ["candidate_confirmed", "ai_candidate_deleted"].includes(diagnosis?.doctor_review_status);
+}
+
+function highRiskReviewItems(fields) {
+  if (!fields) return [];
+  const items = [];
+  approvalFieldItems(fields).forEach(({ key, title, field }) => {
+    if (field?.status === "conflicting") {
+      items.push({
+        key: `field:${key}`,
+        label: `${title}证据冲突`,
+        confirmed: Boolean(field.high_risk_confirmed_by_doctor),
+      });
+    }
+  });
+  (fields.candidate_diagnoses || []).forEach((diagnosis, index) => {
+    if ((diagnosis.risk_warnings || []).length) {
+      items.push({
+        key: `diagnosis:${index}`,
+        label: `${diagnosis.name || `候选诊断${index + 1}`}高风险提示`,
+        confirmed: Boolean(diagnosis.high_risk_confirmed_by_doctor),
+      });
+    }
+  });
+  return items;
+}
+
+function pendingApprovalCount(fields) {
+  if (!fields) return 0;
+  let pending = 0;
+  const fieldItems = approvalFieldItems(fields);
+  const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
+  if (regularFields.some(({ field }) => !fieldReviewComplete(field)) && !appState.approvalRegularFieldsConfirmed) {
+    pending += 1;
+  }
+  fieldItems
+    .filter(({ field }) => !fieldHasReviewableContent(field))
+    .forEach(({ key, field }) => {
+      if (!fieldReviewComplete(field) && !appState.approvalMissingDecisions[key]) pending += 1;
+    });
+  (fields.candidate_diagnoses || []).forEach((diagnosis, index) => {
+    if (!diagnosisReviewComplete(diagnosis) && !appState.approvalDiagnosisDecisions[index]) pending += 1;
+  });
+  highRiskReviewItems(fields).forEach((item) => {
+    if (!item.confirmed && !appState.approvalHighRiskConfirmations[item.key]) pending += 1;
+  });
+  return pending;
+}
+
+function approvalStatusPill(done) {
+  return `<span class="approval-item-status ${done ? "done" : "pending"}">${done ? "已处理" : "待处理"}</span>`;
+}
+
+function renderApprovalChecklist(fields) {
+  if (!fields || isRecordPreviewActive() || !appState.currentTaskId) return "";
+  syncApprovalReviewStateWithRevision();
+  const revision = currentRevisionInfo();
+  const fieldItems = approvalFieldItems(fields);
+  const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
+  const missingFields = fieldItems.filter(({ field }) => !fieldHasReviewableContent(field));
+  const diagnoses = fields.candidate_diagnoses || [];
+  const risks = highRiskReviewItems(fields);
+  const pending = pendingApprovalCount(fields);
+  const regularDone = regularFields.length === 0
+    || regularFields.every(({ field }) => fieldReviewComplete(field))
+    || appState.approvalRegularFieldsConfirmed;
+  const missingRows = missingFields.map(({ key, title, field }) => {
+    const selected = appState.approvalMissingDecisions[key] || field.doctor_review_status || "";
+    const done = fieldReviewComplete(field) || Boolean(appState.approvalMissingDecisions[key]);
+    return `
+      <div class="approval-item" data-approval-item="field:${escapeHtml(key)}">
+        <div>
+          <strong>${escapeHtml(title)}</strong>
+          <span>${escapeHtml(field?.hint || "本次未采集，需要医生处理")}</span>
+        </div>
+        ${approvalStatusPill(done)}
+        <div class="approval-item-actions">
+          <button type="button" class="${selected === "confirm_not_asked" ? "active" : ""}" data-approval-missing-key="${escapeHtml(key)}" data-approval-action="confirm_not_asked">确认未询问</button>
+          <button type="button" class="${selected === "accept_missing" || selected === "missing_accepted" ? "active" : ""}" data-approval-missing-key="${escapeHtml(key)}" data-approval-action="accept_missing">接受本次缺失</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+  const diagnosisRows = diagnoses.map((diagnosis, index) => {
+    const selected = appState.approvalDiagnosisDecisions[index] || diagnosis.doctor_review_status || "";
+    const done = diagnosisReviewComplete(diagnosis) || Boolean(appState.approvalDiagnosisDecisions[index]);
+    return `
+      <div class="approval-item" data-approval-item="diagnosis:${index}">
+        <div>
+          <strong>${escapeHtml(diagnosis.name || `候选诊断${index + 1}`)}</strong>
+          <span>AI候选诊断需医生明确保留或删除。</span>
+        </div>
+        ${approvalStatusPill(done)}
+        <div class="approval-item-actions">
+          <button type="button" class="${selected === "confirm_candidate" || selected === "candidate_confirmed" ? "active" : ""}" data-approval-diagnosis-index="${index}" data-approval-action="confirm_candidate">接受保留</button>
+          <button type="button" class="${selected === "delete_ai_candidate" || selected === "ai_candidate_deleted" ? "active" : ""}" data-approval-diagnosis-index="${index}" data-approval-action="delete_ai_candidate">删除AI候选</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+  const riskRows = risks.map((item) => {
+    const selected = item.confirmed || appState.approvalHighRiskConfirmations[item.key];
+    return `
+      <div class="approval-item high-risk" data-approval-item="${escapeHtml(item.key)}">
+        <div>
+          <strong>${escapeHtml(item.label)}</strong>
+          <span>高风险或证据冲突项必须逐项单独确认。</span>
+        </div>
+        ${approvalStatusPill(Boolean(selected))}
+        <div class="approval-item-actions">
+          <button type="button" class="${selected ? "active" : ""}" data-approval-risk-key="${escapeHtml(item.key)}">已单独确认</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+  return `
+    <section class="approval-checklist" aria-label="分项审核">
+      <div class="approval-checklist-head">
+        <div>
+          <span class="eyebrow">医生分项审核</span>
+          <h3>当前版本 #${escapeHtml(revision.revisionNumber || revision.revisionId || "-")}</h3>
+          <p>${pending ? `还有 ${pending} 项未处理，完成后才能导出。` : "所有审核项已处理，可完成病历审核。"}</p>
+        </div>
+        <span class="status-badge ${pending ? "missing" : "confirmed"}">${pending ? `${pending}项待处理` : "可完成审核"}</span>
+      </div>
+      <div class="approval-section">
+        <div class="approval-section-title">
+          <strong>普通字段</strong>
+          ${approvalStatusPill(regularDone)}
+        </div>
+        <button type="button" class="approval-primary-action ${regularDone ? "active" : ""}" data-approval-confirm-regular>
+          确认当前全部普通字段
+        </button>
+      </div>
+      ${missingFields.length ? `<div class="approval-section"><div class="approval-section-title"><strong>缺失项处理</strong></div>${missingRows}</div>` : ""}
+      ${diagnoses.length ? `<div class="approval-section"><div class="approval-section-title"><strong>候选诊断处理</strong></div>${diagnosisRows}</div>` : ""}
+      ${risks.length ? `<div class="approval-section"><div class="approval-section-title"><strong>高风险与冲突确认</strong></div>${riskRows}</div>` : ""}
+    </section>
+  `;
+}
+
+async function buildTaskApprovalPayload() {
+  if (!appState.currentTaskId) throw new Error("暂无可确认的任务");
+  const fields = activeRecordFields();
+  if (!fields) throw new Error("暂无可审核的病历字段");
+  const readiness = await refreshExportReadiness();
+  const revision = currentRevisionInfo(readiness);
+  syncApprovalReviewStateWithRevision(readiness);
+  if (!revision.revisionId || !revision.contentHash) {
+    throw new Error("缺少当前病历版本信息，请刷新后重试。");
+  }
+  const payload = {
+    revision_id: Number(revision.revisionId),
+    content_hash: revision.contentHash,
+    confirm_all_regular_fields: Boolean(appState.approvalRegularFieldsConfirmed),
+    fields: [],
+    diagnoses: [],
+    high_risk_conflicts: [],
+  };
+  const fieldItems = approvalFieldItems(fields);
+  const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
+  if (regularFields.some(({ field }) => !fieldReviewComplete(field)) && !appState.approvalRegularFieldsConfirmed) {
+    throw new Error("请先显式确认当前全部普通字段。");
+  }
+  fieldItems
+    .filter(({ field }) => !fieldHasReviewableContent(field))
+    .forEach(({ key, title, field }) => {
+      const action = appState.approvalMissingDecisions[key] || field.doctor_review_status;
+      if (!["confirm_not_asked", "missing_accepted", "accept_missing"].includes(action)) {
+        throw new Error(`请处理缺失项：${title}`);
+      }
+      payload.fields.push({
+        key,
+        action: action === "missing_accepted" ? "accept_missing" : action,
+      });
+    });
+  (fields.candidate_diagnoses || []).forEach((diagnosis, index) => {
+    const action = appState.approvalDiagnosisDecisions[index] || diagnosis.doctor_review_status;
+    if (!["candidate_confirmed", "ai_candidate_deleted", "confirm_candidate", "delete_ai_candidate"].includes(action)) {
+      throw new Error(`请处理候选诊断：${diagnosis.name || `候选诊断${index + 1}`}`);
+    }
+    payload.diagnoses.push({
+      index,
+      action: action === "candidate_confirmed" ? "confirm_candidate" : action === "ai_candidate_deleted" ? "delete_ai_candidate" : action,
+    });
+  });
+  highRiskReviewItems(fields).forEach((item) => {
+    if (!item.confirmed && !appState.approvalHighRiskConfirmations[item.key]) {
+      throw new Error(`请单独确认高风险项：${item.label}`);
+    }
+    if (item.key.startsWith("field:")) {
+      const fieldKey = item.key.split(":", 2)[1];
+      if (!payload.fields.some((fieldItem) => fieldItem.key === fieldKey)) {
+        payload.fields.push({ key: fieldKey, action: "confirm_content" });
+      }
+    }
+    payload.high_risk_conflicts.push({ key: item.key, confirmed: true });
+  });
+  return payload;
+}
+
 function renderFields() {
   const fields = activeRecordFields();
   const isPreview = isRecordPreviewActive();
@@ -2044,7 +2299,7 @@ function renderFields() {
   const previewNotice = isPreview
     ? `<div class="preview-notice">${escapeHtml(previewNoticeText())}；正式生成病历后会替换为审核版结果。</div>`
     : "";
-  $("recordFields").innerHTML = previewNotice + cards + diagnoses + summaryFooter + draftLegend;
+  $("recordFields").innerHTML = previewNotice + cards + diagnoses + renderApprovalChecklist(fields) + summaryFooter + draftLegend;
 }
 
 function classifySpeaker(line, segment = {}) {
@@ -3871,6 +4126,9 @@ function openWorkbenchDetail(target = "") {
 }
 
 function isApprovedForExport() {
+  if (appState.currentExportReadiness && Number(appState.currentExportReadiness.task_id) === Number(appState.currentTaskId)) {
+    return Boolean(appState.currentExportReadiness.ready);
+  }
   return ["approved", "exported", "EXPORTED"].includes(appState.taskStatus)
     || ["approved", "exported"].includes(appState.currentTask?.current_stage);
 }
@@ -3945,6 +4203,8 @@ function resetTaskState({ keepAsr = false } = {}) {
   appState.currentExportReadiness = null;
   appState.currentExports = null;
   appState.currentAgentTrace = null;
+  clearApprovalReviewSelections();
+  appState.approvalRevisionId = null;
   appState.currentInputText = "";
   appState.taskStatus = "CREATED";
   resetRecordPreview();
@@ -3980,6 +4240,7 @@ function resetTaskState({ keepAsr = false } = {}) {
 }
 
 async function refreshTask(taskId, taskFromEvent = null) {
+  const previousApprovalRevisionKey = appState.approvalRevisionId;
   const task = taskFromEvent || await api(`/api/tasks/${taskId}`);
   const steps = await api(`/api/tasks/${taskId}/steps`);
   appState.currentTask = task;
@@ -3992,6 +4253,14 @@ async function refreshTask(taskId, taskFromEvent = null) {
   appState.currentSafetyCheck = result.safety_check || appState.currentSafetyCheck;
   appState.currentQualityReport = result.quality_report || appState.currentQualityReport;
   appState.currentExports = result.exports || appState.currentExports;
+  const taskRevisionId = task.current_record_revision_id || result.record_revision?.id || null;
+  if (appState.currentExportReadiness?.revision_id && taskRevisionId && Number(appState.currentExportReadiness.revision_id) !== Number(taskRevisionId)) {
+    appState.currentExportReadiness = null;
+  }
+  syncApprovalReviewStateWithRevision(null);
+  if (previousApprovalRevisionKey && previousApprovalRevisionKey !== appState.approvalRevisionId) {
+    appState.currentExportReadiness = null;
+  }
   await refreshAgentTrace(appState.currentTaskId);
   renderAll();
 }
@@ -4929,9 +5198,16 @@ async function confirmFields() {
   try {
     if (!appState.currentTaskId) throw new Error("暂无可确认的任务");
     setBusy(true, "正在完成审核...");
-    appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/approve`, { method: "POST" });
+    const payload = await buildTaskApprovalPayload();
+    appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
     appState.taskStatus = "approved";
     await refreshTask(appState.currentTaskId, appState.currentTask);
+    await refreshExportReadiness();
+    renderAll();
     setBusy(false);
     showToast("病历审核已完成");
   } catch (error) {
@@ -6456,6 +6732,30 @@ function bindEvents() {
     renderPatientBar();
   });
   $("recordFields").addEventListener("click", (event) => {
+    const confirmRegular = event.target.closest("[data-approval-confirm-regular]");
+    if (confirmRegular) {
+      appState.approvalRegularFieldsConfirmed = true;
+      renderFields();
+      return;
+    }
+    const missingAction = event.target.closest("[data-approval-missing-key]");
+    if (missingAction) {
+      appState.approvalMissingDecisions[missingAction.dataset.approvalMissingKey] = missingAction.dataset.approvalAction;
+      renderFields();
+      return;
+    }
+    const diagnosisAction = event.target.closest("[data-approval-diagnosis-index]");
+    if (diagnosisAction) {
+      appState.approvalDiagnosisDecisions[diagnosisAction.dataset.approvalDiagnosisIndex] = diagnosisAction.dataset.approvalAction;
+      renderFields();
+      return;
+    }
+    const riskAction = event.target.closest("[data-approval-risk-key]");
+    if (riskAction) {
+      appState.approvalHighRiskConfirmations[riskAction.dataset.approvalRiskKey] = true;
+      renderFields();
+      return;
+    }
     const detail = event.target.closest("[data-open-detail]");
     if (detail) {
       openWorkbenchDetail(detail.dataset.openDetail);

@@ -86,12 +86,39 @@ class TaskPersistenceAfterRestartTests(unittest.TestCase):
         login_as_user(client, username="restart-doctor")
         return client
 
+    def _approval_payload(self, client: TestClient, task_id: int) -> dict:
+        task = client.get(f"/api/tasks/{task_id}")
+        self.assertEqual(task.status_code, 200, task.text)
+        readiness = client.get(f"/api/tasks/{task_id}/export-readiness")
+        self.assertEqual(readiness.status_code, 200, readiness.text)
+        fields = task.json()["result_json"]["fields"]
+        return {
+            "revision_id": readiness.json()["revision_id"],
+            "content_hash": readiness.json()["content_hash"],
+            "confirm_all_regular_fields": True,
+            "fields": [
+                {"key": key, "action": "accept_missing", "note": "测试接受本次缺失"}
+                for key, field in fields.items()
+                if key != "candidate_diagnoses"
+                and isinstance(field, dict)
+                and (field.get("missing") or not field.get("value"))
+            ],
+            "diagnoses": [
+                {
+                    "index": index,
+                    "action": "confirm_candidate",
+                    "high_risk_confirmed": bool(diagnosis.get("risk_warnings")),
+                }
+                for index, diagnosis in enumerate(fields.get("candidate_diagnoses") or [])
+            ],
+        }
+
     def test_exported_record_survives_app_restart_and_remains_downloadable(self):
         task_id, doctor_id = self._create_doctor_and_generate_task()
 
         with TestClient(app) as client:
             login_as_user(client, username="restart-doctor")
-            approved = client.post(f"/api/tasks/{task_id}/approve")
+            approved = client.post(f"/api/tasks/{task_id}/approve", json=self._approval_payload(client, task_id))
             self.assertEqual(approved.status_code, 200, approved.text)
             exported = client.post(f"/api/tasks/{task_id}/export")
             self.assertEqual(exported.status_code, 200, exported.text)
@@ -121,7 +148,7 @@ class TaskPersistenceAfterRestartTests(unittest.TestCase):
             self.assertEqual(encounter_detail.status_code, 200, encounter_detail.text)
             detail_payload = encounter_detail.json()
             self.assertEqual(detail_payload["task"]["id"], task_id)
-            self.assertGreaterEqual(len(detail_payload["revisions"]), 2)
+            self.assertGreaterEqual(len(detail_payload["revisions"]), 1)
             self.assertIsNotNone(detail_payload["current_revision"])
 
             readiness = restarted_client.get(f"/api/tasks/{task_id}/export-readiness")
@@ -150,7 +177,7 @@ class TaskPersistenceAfterRestartTests(unittest.TestCase):
 
         with TestClient(app) as client:
             login_as_user(client, username="restart-doctor")
-            self.assertEqual(client.post(f"/api/tasks/{task_id}/approve").status_code, 200)
+            self.assertEqual(client.post(f"/api/tasks/{task_id}/approve", json=self._approval_payload(client, task_id)).status_code, 200)
             self.assertIsNotNone(get_active_approval_for_task(task_id))
 
         restarted_client = self._restart_app_and_login()
@@ -171,7 +198,7 @@ class TaskPersistenceAfterRestartTests(unittest.TestCase):
             self.assertIsNone(get_active_approval_for_task(task_id))
 
             revisions = list_record_revisions_for_task(task_id)
-            self.assertGreaterEqual(len(revisions), 3)
+            self.assertGreaterEqual(len(revisions), 2)
             self.assertEqual(revisions[-1]["source"], "doctor_review")
 
             readiness = restarted_client.get(f"/api/tasks/{task_id}/export-readiness")

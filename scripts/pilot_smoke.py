@@ -100,7 +100,7 @@ def run_smoke(
     _require(_task_result(reviewed).get("reviewed") is True, "review did not mark task reviewed")
     steps.append({"name": "review", "ok": True})
 
-    approved = client.request("POST", f"/api/tasks/{task_id}/approve")
+    approved = client.request("POST", f"/api/tasks/{task_id}/approve", _approval_payload(client, task_id))
     _require(_task_result(approved).get("approved") is True, "approval did not mark task approved")
     steps.append({"name": "approve", "ok": True})
 
@@ -140,6 +140,35 @@ def _task_result(task_payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(result, dict):
         raise PilotSmokeError("task response has no result_json")
     return result
+
+
+def _approval_payload(client: JsonClient, task_id: int) -> dict[str, Any]:
+    task = client.request("GET", f"/api/tasks/{task_id}")
+    readiness = client.request("GET", f"/api/tasks/{task_id}/export-readiness")
+    fields = _task_result(task).get("fields")
+    if not isinstance(fields, dict):
+        raise PilotSmokeError("task response has no fields for approval")
+    return {
+        "revision_id": readiness.get("revision_id"),
+        "content_hash": readiness.get("content_hash"),
+        "confirm_all_regular_fields": True,
+        "fields": [
+            {"key": key, "action": "accept_missing", "note": "smoke test accepts this missing item"}
+            for key, field in fields.items()
+            if key != "candidate_diagnoses"
+            and isinstance(field, dict)
+            and (field.get("missing") or not field.get("value"))
+        ],
+        "diagnoses": [
+            {
+                "index": index,
+                "action": "confirm_candidate",
+                "high_risk_confirmed": bool(diagnosis.get("risk_warnings")),
+            }
+            for index, diagnosis in enumerate(fields.get("candidate_diagnoses") or [])
+            if isinstance(diagnosis, dict)
+        ],
+    }
 
 
 def _require(condition: bool, message: str) -> None:

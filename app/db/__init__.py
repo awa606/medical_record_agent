@@ -24,6 +24,7 @@ from app.db.sqlite import (
     increment_task_retry_count,
     init_db,
     json_dumps,
+    list_approval_items_for_approval,
     list_export_events_for_task,
     list_encounters,
     list_record_revisions_for_task,
@@ -33,6 +34,7 @@ from app.db.sqlite import (
     set_task_owner,
     update_task,
     update_user_last_login,
+    record_content_hash,
 )
 
 __all__ = [
@@ -61,6 +63,7 @@ __all__ = [
     "increment_task_retry_count",
     "init_db",
     "json_dumps",
+    "list_approval_items_for_approval",
     "list_export_events_for_task",
     "list_encounters",
     "list_record_revisions_for_task",
@@ -70,4 +73,5 @@ __all__ = [
     "set_task_owner",
     "update_task",
     "update_user_last_login",
+    "record_content_hash",
 ]

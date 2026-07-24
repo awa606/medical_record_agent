@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import sqlite3
 from contextlib import closing
@@ -125,6 +126,7 @@ def init_db() -> None:
                 task_id INTEGER,
                 revision_no INTEGER NOT NULL,
                 source TEXT NOT NULL,
+                content_hash TEXT,
                 fields_json TEXT,
                 draft_text TEXT,
                 safety_check_json TEXT,
@@ -142,11 +144,30 @@ def init_db() -> None:
                 revision_id INTEGER NOT NULL,
                 task_id INTEGER,
                 approved_by_user_id INTEGER,
+                content_hash TEXT,
                 status TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 invalidated_at TEXT,
                 invalidation_reason TEXT,
                 FOREIGN KEY(encounter_id) REFERENCES encounter(id),
+                FOREIGN KEY(revision_id) REFERENCES record_revision(id),
+                FOREIGN KEY(task_id) REFERENCES agent_task(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS approval_item (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                approval_id INTEGER NOT NULL,
+                task_id INTEGER NOT NULL,
+                revision_id INTEGER NOT NULL,
+                item_type TEXT NOT NULL,
+                item_key TEXT NOT NULL,
+                action TEXT NOT NULL,
+                status TEXT NOT NULL,
+                high_risk_confirmed INTEGER NOT NULL DEFAULT 0,
+                note TEXT,
+                actor_user_id INTEGER,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(approval_id) REFERENCES approval(id),
                 FOREIGN KEY(revision_id) REFERENCES record_revision(id),
                 FOREIGN KEY(task_id) REFERENCES agent_task(id)
             );
@@ -182,6 +203,51 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, "agent_task_step", "attempt_no", "INTEGER NOT NULL DEFAULT 1")
     _ensure_column(connection, "agent_task_step", "input_snapshot_json", "TEXT")
     _ensure_column(connection, "agent_task_step", "output_snapshot_json", "TEXT")
+    _ensure_column(connection, "record_revision", "content_hash", "TEXT")
+    _ensure_column(connection, "approval", "content_hash", "TEXT")
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS approval_item (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            approval_id INTEGER NOT NULL,
+            task_id INTEGER NOT NULL,
+            revision_id INTEGER NOT NULL,
+            item_type TEXT NOT NULL,
+            item_key TEXT NOT NULL,
+            action TEXT NOT NULL,
+            status TEXT NOT NULL,
+            high_risk_confirmed INTEGER NOT NULL DEFAULT 0,
+            note TEXT,
+            actor_user_id INTEGER,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(approval_id) REFERENCES approval(id),
+            FOREIGN KEY(revision_id) REFERENCES record_revision(id),
+            FOREIGN KEY(task_id) REFERENCES agent_task(id)
+        )
+        """
+    )
+    for row in connection.execute(
+        "SELECT id, result_json FROM record_revision WHERE content_hash IS NULL OR content_hash = ''"
+    ).fetchall():
+        try:
+            result = json.loads(row["result_json"] or "{}")
+        except json.JSONDecodeError:
+            result = {}
+        connection.execute(
+            "UPDATE record_revision SET content_hash = ? WHERE id = ?",
+            (record_content_hash(result), row["id"]),
+        )
+    connection.execute(
+        """
+        UPDATE approval
+        SET content_hash = (
+            SELECT record_revision.content_hash
+            FROM record_revision
+            WHERE record_revision.id = approval.revision_id
+        )
+        WHERE content_hash IS NULL OR content_hash = ''
+        """
+    )
 
 
 def _ensure_column(
@@ -253,6 +319,61 @@ def json_or_none(value: Any) -> str | None:
     if value is None:
         return None
     return json_dumps(value)
+
+
+RECORD_CONTENT_KEYS = {
+    "fields",
+    "draft",
+    "safety_check",
+    "quality_report",
+    "degraded",
+    "degraded_messages",
+    "llm_trace",
+}
+
+REVIEW_METADATA_KEYS = {
+    "confirmed_by_doctor",
+    "doctor_review_status",
+    "doctor_review_note",
+    "deleted_by_doctor",
+    "high_risk_confirmed_by_doctor",
+    "approval",
+    "approval_summary",
+    "approved",
+    "reviewed",
+    "record_revision",
+    "exports",
+    "export_event",
+}
+
+
+def _normalize_record_content(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _normalize_record_content(item)
+            for key, item in sorted(value.items())
+            if key not in REVIEW_METADATA_KEYS
+        }
+    if isinstance(value, list):
+        return [_normalize_record_content(item) for item in value]
+    return value
+
+
+def record_content_hash(result: dict[str, Any]) -> str:
+    content = {
+        key: result.get(key)
+        for key in sorted(RECORD_CONTENT_KEYS)
+        if key in result
+    }
+    normalized = _normalize_record_content(content)
+    payload = json.dumps(
+        normalized,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def create_task(
@@ -421,20 +542,22 @@ def create_record_revision_for_task(
         ).fetchone()
         revision_no = int(row["max_revision"]) + 1 if row is not None else 1
         now = utc_now()
+        content_hash = record_content_hash(result)
         cursor = connection.execute(
             """
             INSERT INTO record_revision (
-                encounter_id, task_id, revision_no, source, fields_json,
+                encounter_id, task_id, revision_no, source, content_hash, fields_json,
                 draft_text, safety_check_json, quality_report_json,
                 result_json, created_by_user_id, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 encounter_id,
                 task_id,
                 revision_no,
                 source,
+                content_hash,
                 json_or_none(result.get("fields")),
                 result.get("draft"),
                 json_or_none(result.get("safety_check")),
@@ -623,6 +746,8 @@ def create_approval_for_task(
     task_id: int,
     *,
     actor_user_id: int | None = None,
+    content_hash: str | None = None,
+    approval_items: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     init_db()
     with closing(get_connection()) as connection:
@@ -633,6 +758,17 @@ def create_approval_for_task(
         revision_id = task["current_record_revision_id"]
         if encounter_id is None or revision_id is None:
             raise ValueError("Task has no current record revision")
+        revision = connection.execute(
+            "SELECT * FROM record_revision WHERE id = ?",
+            (revision_id,),
+        ).fetchone()
+        if revision is None:
+            raise ValueError("Current record revision not found")
+        revision_hash = revision["content_hash"] or record_content_hash(
+            json.loads(revision["result_json"] or "{}")
+        )
+        if content_hash is not None and content_hash != revision_hash:
+            raise ValueError("Approval content hash does not match current revision")
         active = connection.execute(
             """
             SELECT *
@@ -653,13 +789,36 @@ def create_approval_for_task(
             """
             INSERT INTO approval (
                 encounter_id, revision_id, task_id, approved_by_user_id,
-                status, created_at, invalidated_at, invalidation_reason
+                content_hash, status, created_at, invalidated_at, invalidation_reason
             )
-            VALUES (?, ?, ?, ?, 'active', ?, NULL, NULL)
+            VALUES (?, ?, ?, ?, ?, 'active', ?, NULL, NULL)
             """,
-            (encounter_id, revision_id, task_id, actor_user_id, now),
+            (encounter_id, revision_id, task_id, actor_user_id, revision_hash, now),
         )
         approval_id = int(cursor.lastrowid)
+        for item in approval_items or []:
+            connection.execute(
+                """
+                INSERT INTO approval_item (
+                    approval_id, task_id, revision_id, item_type, item_key,
+                    action, status, high_risk_confirmed, note, actor_user_id, created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    approval_id,
+                    task_id,
+                    revision_id,
+                    item.get("item_type"),
+                    item.get("item_key"),
+                    item.get("action"),
+                    item.get("status", "completed"),
+                    1 if item.get("high_risk_confirmed") else 0,
+                    item.get("note"),
+                    actor_user_id,
+                    now,
+                ),
+            )
         connection.execute(
             "UPDATE encounter SET status = 'approved', updated_at = ? WHERE id = ?",
             (now, encounter_id),
@@ -685,6 +844,21 @@ def get_active_approval_for_task(task_id: int) -> dict[str, Any] | None:
             (task_id,),
         ).fetchone()
     return row_to_dict(row)
+
+
+def list_approval_items_for_approval(approval_id: int) -> list[dict[str, Any]]:
+    init_db()
+    with closing(get_connection()) as connection:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM approval_item
+            WHERE approval_id = ?
+            ORDER BY id ASC
+            """,
+            (approval_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def create_export_event_for_task(

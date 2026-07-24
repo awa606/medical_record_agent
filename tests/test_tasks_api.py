@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from app.agents import MedicalRecordOrchestrator
 from app.api.tasks import (
     ReviewRequest,
+    TaskApprovalRequest,
     _event_from_audit_log,
     _validate_export_ready,
     approve_task,
@@ -23,9 +24,14 @@ from app.api.tasks import (
     review_task,
 )
 from app.db import get_audit_logs, set_task_owner
+from app.db import (
+    get_active_approval_for_task,
+    list_approval_items_for_approval,
+    list_record_revisions_for_task,
+)
 from app.main import app
 from app.services import WORD_NOTICE
-from app.schemas import SafetyCheckResult
+from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, SafetyCheckResult, SourceSpan
 from tests.auth_helpers import create_user, login_as_user
 
 
@@ -64,6 +70,123 @@ class TaskApiTests(unittest.TestCase):
             else:
                 os.environ[key] = value
         self.temp_dir.cleanup()
+
+    def approval_payload_for_task(self, task_id: int) -> dict:
+        task = read_task(task_id)
+        fields = task["result_json"]["fields"]
+        readiness = read_export_readiness(task_id)
+        field_items = []
+        for key, field in fields.items():
+            if key == "candidate_diagnoses":
+                continue
+            if isinstance(field, dict) and (field.get("missing") or not field.get("value")):
+                field_items.append({"key": key, "action": "accept_missing", "note": "测试接受本次缺失"})
+        diagnoses = [
+            {
+                "index": index,
+                "action": "confirm_candidate",
+                "high_risk_confirmed": bool(diagnosis.get("risk_warnings")),
+            }
+            for index, diagnosis in enumerate(fields.get("candidate_diagnoses") or [])
+        ]
+        return {
+            "revision_id": readiness.revision_id,
+            "content_hash": readiness.content_hash,
+            "confirm_all_regular_fields": True,
+            "fields": field_items,
+            "diagnoses": diagnoses,
+        }
+
+    def _custom_fields(
+        self,
+        *,
+        include_candidate: bool = True,
+        candidate_high_risk: bool = False,
+        field_conflict: bool = False,
+    ) -> MedicalRecordFields:
+        chief_status = "conflicting" if field_conflict else "complete"
+        candidates = []
+        if include_candidate:
+            candidates.append(
+                CandidateDiagnosis(
+                    name="发热待查",
+                    evidence=[SourceSpan(text="发热")],
+                    reason="测试候选诊断",
+                    risk_warnings=["高热需进一步评估"] if candidate_high_risk else [],
+                )
+            )
+        return MedicalRecordFields(
+            chief_complaint=MedicalField(
+                value="发热3天",
+                missing=False,
+                status=chief_status,
+                source_spans=[SourceSpan(text="发热3天")],
+            ),
+            present_illness=MedicalField(
+                value="患者自述发热3天。",
+                missing=False,
+                status="complete",
+                source_spans=[SourceSpan(text="发热3天")],
+            ),
+            previous_treatment=MedicalField.missing_field("未询问既往处理"),
+            accompanying_symptoms=MedicalField.missing_field("未询问伴随症状"),
+            past_history=MedicalField.missing_field("未询问既往史"),
+            allergy_history=MedicalField.missing_field("未询问过敏史"),
+            physical_exam=MedicalField.missing_field("待医生查体补充"),
+            candidate_diagnoses=candidates,
+        )
+
+    def _create_reviewed_task(self, fields: MedicalRecordFields | None = None) -> int:
+        result = MedicalRecordOrchestrator().run_from_text("seed task for approval tests")
+        task_id = result["task_id"]
+        review_task(task_id, ReviewRequest(fields=fields or self._custom_fields()))
+        return task_id
+
+    def _minimal_payload(
+        self,
+        task_id: int,
+        *,
+        include_missing: bool = True,
+        include_candidates: bool = True,
+        include_high_risk: bool = False,
+        stale: dict | None = None,
+    ) -> dict:
+        task = read_task(task_id)
+        fields = task["result_json"]["fields"]
+        readiness = read_export_readiness(task_id)
+        payload = {
+            "revision_id": readiness.revision_id,
+            "content_hash": readiness.content_hash,
+            "confirm_all_regular_fields": True,
+            "fields": [],
+            "diagnoses": [],
+            "high_risk_conflicts": [],
+        }
+        if include_missing:
+            for key, field in fields.items():
+                if key == "candidate_diagnoses":
+                    continue
+                if isinstance(field, dict) and (field.get("missing") or not field.get("value")):
+                    payload["fields"].append({"key": key, "action": "accept_missing"})
+        if include_candidates:
+            for index, _diagnosis in enumerate(fields.get("candidate_diagnoses") or []):
+                payload["diagnoses"].append({"index": index, "action": "confirm_candidate"})
+        if include_high_risk:
+            for index, diagnosis in enumerate(fields.get("candidate_diagnoses") or []):
+                if diagnosis.get("risk_warnings"):
+                    payload["high_risk_conflicts"].append(
+                        {"key": f"diagnosis:{index}", "confirmed": True}
+                    )
+            for key, field in fields.items():
+                if key == "candidate_diagnoses":
+                    continue
+                if isinstance(field, dict) and field.get("status") == "conflicting":
+                    payload["high_risk_conflicts"].append(
+                        {"key": f"field:{key}", "confirmed": True}
+                    )
+        if stale:
+            payload.update(stale)
+        return payload
 
     def test_task_routes_are_registered(self):
         route_paths = set(app.openapi()["paths"])
@@ -162,7 +285,10 @@ class TaskApiTests(unittest.TestCase):
         self.assertTrue(readiness_before_approval.blocked)
         self.assertIn("医生确认", readiness_before_approval.next_action)
 
-        approved = approve_task(task_id)
+        approved = approve_task(
+            task_id,
+            TaskApprovalRequest.model_validate(self.approval_payload_for_task(task_id)),
+        )
         approved_fields = approved["result_json"]["fields"]
         self.assertTrue(approved_fields["chief_complaint"]["confirmed_by_doctor"])
         self.assertTrue(approved_fields["candidate_diagnoses"][0]["confirmed_by_doctor"])
@@ -192,7 +318,7 @@ class TaskApiTests(unittest.TestCase):
         set_task_owner(task_id, doctor["id"])
 
         login_as_user(client, username="download-doctor")
-        approved = client.post(f"/api/tasks/{task_id}/approve")
+        approved = client.post(f"/api/tasks/{task_id}/approve", json=self.approval_payload_for_task(task_id))
         self.assertEqual(approved.status_code, 200, approved.text)
         exported = client.post(f"/api/tasks/{task_id}/export")
         self.assertEqual(exported.status_code, 200, exported.text)
@@ -220,13 +346,190 @@ class TaskApiTests(unittest.TestCase):
         set_task_owner(task_id, doctor_a["id"])
 
         login_as_user(client, username="download-owner")
-        self.assertEqual(client.post(f"/api/tasks/{task_id}/approve").status_code, 200)
+        self.assertEqual(client.post(f"/api/tasks/{task_id}/approve", json=self.approval_payload_for_task(task_id)).status_code, 200)
         self.assertEqual(client.post(f"/api/tasks/{task_id}/export").status_code, 200)
         client.post("/api/auth/logout")
 
         login_as_user(client, username="download-other")
         forbidden = client.get(f"/api/tasks/{task_id}/exports/docx")
         self.assertEqual(forbidden.status_code, 403)
+
+    def test_empty_approval_request_is_rejected(self):
+        task_id = self._create_reviewed_task()
+        client = TestClient(app)
+        doctor = create_user(client, username="empty-approval-doctor")
+        set_task_owner(task_id, doctor["id"])
+        login_as_user(client, username="empty-approval-doctor")
+
+        response = client.post(f"/api/tasks/{task_id}/approve", json={})
+
+        self.assertIn(response.status_code, {400, 422})
+        self.assertIsNone(get_active_approval_for_task(task_id))
+
+    def test_explicit_regular_field_confirmation_persists_approval_items(self):
+        task_id = self._create_reviewed_task()
+
+        approved = approve_task(
+            task_id,
+            TaskApprovalRequest.model_validate(self._minimal_payload(task_id)),
+        )
+
+        approval = get_active_approval_for_task(task_id)
+        self.assertIsNotNone(approval)
+        self.assertEqual(
+            approval["content_hash"],
+            approved["result_json"]["record_revision"]["content_hash"],
+        )
+        items = list_approval_items_for_approval(int(approval["id"]))
+        self.assertTrue(
+            any(item["item_type"] == "field" and item["action"] == "confirm_content" for item in items)
+        )
+        self.assertTrue(
+            any(item["item_type"] == "field" and item["action"] == "accept_missing" for item in items)
+        )
+
+    def test_missing_items_block_completion_until_explicitly_handled(self):
+        task_id = self._create_reviewed_task()
+
+        with self.assertRaises(HTTPException) as blocked:
+            approve_task(
+                task_id,
+                TaskApprovalRequest.model_validate(
+                    self._minimal_payload(task_id, include_missing=False)
+                ),
+            )
+
+        self.assertEqual(blocked.exception.status_code, 409)
+        self.assertIsNone(get_active_approval_for_task(task_id))
+
+    def test_unprocessed_candidate_diagnosis_blocks_completion(self):
+        task_id = self._create_reviewed_task()
+
+        with self.assertRaises(HTTPException) as blocked:
+            approve_task(
+                task_id,
+                TaskApprovalRequest.model_validate(
+                    self._minimal_payload(task_id, include_candidates=False)
+                ),
+            )
+
+        self.assertEqual(blocked.exception.status_code, 409)
+        self.assertIsNone(get_active_approval_for_task(task_id))
+
+    def test_high_risk_candidate_requires_separate_confirmation(self):
+        task_id = self._create_reviewed_task(
+            self._custom_fields(candidate_high_risk=True)
+        )
+
+        with self.assertRaises(HTTPException) as blocked:
+            approve_task(
+                task_id,
+                TaskApprovalRequest.model_validate(self._minimal_payload(task_id)),
+            )
+
+        self.assertEqual(blocked.exception.status_code, 409)
+        self.assertIsNone(get_active_approval_for_task(task_id))
+
+        approved = approve_task(
+            task_id,
+            TaskApprovalRequest.model_validate(
+                self._minimal_payload(task_id, include_high_risk=True)
+            ),
+        )
+        self.assertTrue(
+            approved["result_json"]["fields"]["candidate_diagnoses"][0][
+                "high_risk_confirmed_by_doctor"
+            ]
+        )
+
+    def test_conflicting_field_is_not_covered_by_bulk_regular_confirmation(self):
+        task_id = self._create_reviewed_task(self._custom_fields(field_conflict=True))
+
+        with self.assertRaises(HTTPException) as blocked:
+            approve_task(
+                task_id,
+                TaskApprovalRequest.model_validate(self._minimal_payload(task_id)),
+            )
+
+        self.assertEqual(blocked.exception.status_code, 409)
+        payload = self._minimal_payload(task_id, include_high_risk=True)
+        payload["fields"].append({"key": "chief_complaint", "action": "confirm_content"})
+        approved = approve_task(task_id, TaskApprovalRequest.model_validate(payload))
+        self.assertTrue(
+            approved["result_json"]["fields"]["chief_complaint"][
+                "high_risk_confirmed_by_doctor"
+            ]
+        )
+
+    def test_approval_is_bound_to_current_revision_and_content_hash(self):
+        task_id = self._create_reviewed_task()
+        payload = self._minimal_payload(task_id)
+        approved = approve_task(task_id, TaskApprovalRequest.model_validate(payload))
+
+        approval = get_active_approval_for_task(task_id)
+        self.assertIsNotNone(approval)
+        self.assertEqual(int(approval["revision_id"]), payload["revision_id"])
+        self.assertEqual(approval["content_hash"], payload["content_hash"])
+        self.assertEqual(
+            approved["result_json"]["approval"]["content_hash"],
+            payload["content_hash"],
+        )
+
+    def test_stale_revision_approval_returns_409(self):
+        task_id = self._create_reviewed_task()
+        stale_payload = self._minimal_payload(task_id)
+        updated_fields = self._custom_fields()
+        updated_fields.chief_complaint.value = "发热4天"
+        review_task(task_id, ReviewRequest(fields=updated_fields))
+
+        with self.assertRaises(HTTPException) as blocked:
+            approve_task(task_id, TaskApprovalRequest.model_validate(stale_payload))
+
+        self.assertEqual(blocked.exception.status_code, 409)
+
+    def test_edit_creates_new_revision_and_invalidates_old_approval(self):
+        task_id = self._create_reviewed_task()
+        approve_task(task_id, TaskApprovalRequest.model_validate(self._minimal_payload(task_id)))
+        old_approval = get_active_approval_for_task(task_id)
+        self.assertIsNotNone(old_approval)
+
+        updated_fields = self._custom_fields()
+        updated_fields.chief_complaint.value = "发热4天"
+        reviewed = review_task(task_id, ReviewRequest(fields=updated_fields))
+
+        revisions = list_record_revisions_for_task(task_id)
+        self.assertGreaterEqual(len(revisions), 3)
+        self.assertNotEqual(
+            reviewed["current_record_revision_id"],
+            int(old_approval["revision_id"]),
+        )
+        self.assertIsNone(get_active_approval_for_task(task_id))
+
+    def test_old_approval_cannot_export_new_revision(self):
+        task_id = self._create_reviewed_task()
+        approve_task(task_id, TaskApprovalRequest.model_validate(self._minimal_payload(task_id)))
+        updated_fields = self._custom_fields()
+        updated_fields.chief_complaint.value = "发热4天"
+        review_task(task_id, ReviewRequest(fields=updated_fields))
+
+        with self.assertRaises(HTTPException) as blocked:
+            export_task(task_id)
+
+        self.assertEqual(blocked.exception.status_code, 400)
+        self.assertFalse(blocked.exception.detail["ready"])
+
+    def test_current_revision_full_approval_allows_export(self):
+        task_id = self._create_reviewed_task(
+            self._custom_fields(candidate_high_risk=True, field_conflict=True)
+        )
+        payload = self._minimal_payload(task_id, include_high_risk=True)
+        payload["fields"].append({"key": "chief_complaint", "action": "confirm_content"})
+        approve_task(task_id, TaskApprovalRequest.model_validate(payload))
+
+        exported = export_task(task_id)
+
+        self.assertTrue(exported["export_readiness"]["ready"])
+        self.assertTrue(Path(exported["exports"]["word_path"]).exists())
 
     def test_export_readiness_blocks_provider_fallback_trace(self):
         result = MedicalRecordOrchestrator().run_from_text(

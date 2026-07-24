@@ -153,7 +153,7 @@ class AudioApiTests(unittest.TestCase):
 
     def test_funasr_transcribe_returns_structured_retryable_failure(self):
         uploaded = self._upload_sample("sample.wav")
-        with patch("app.api.audio.create_asr_engine", side_effect=RuntimeError("NameResolutionError: Failed to resolve modelscope.cn")):
+        with patch("app.api.audio._create_audio_asr_engine", side_effect=RuntimeError("NameResolutionError: Failed to resolve modelscope.cn")):
             with self.assertRaises(HTTPException) as context:
                 transcribe_audio(uploaded.audio_id, engine="funasr")
 

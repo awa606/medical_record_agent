@@ -18,7 +18,7 @@ class FunASREngine:
 
     def __init__(
         self,
-        model: str = "Paraformer",
+        model: str | None = None,
         device: str = "cpu",
         hotword_path: str | Path | None = DEFAULT_HOTWORD_PATH,
         enable_punctuation: bool = True,
@@ -29,16 +29,16 @@ class FunASREngine:
         self.hotwords = self._load_hotwords(hotword_path)
         self.speaker_diarization_enabled = enable_speaker_diarization
         model_kwargs: dict[str, Any] = {
-            "model": model,
+            "model": model or os.environ.get("FUNASR_MODEL_ID") or "Paraformer",
             "device": device,
             "disable_update": _disable_update_check(),
         }
         if enable_vad:
-            model_kwargs["vad_model"] = "fsmn-vad"
+            model_kwargs["vad_model"] = os.environ.get("FUNASR_VAD_MODEL_ID") or "fsmn-vad"
         if enable_punctuation:
-            model_kwargs["punc_model"] = "ct-punc"
+            model_kwargs["punc_model"] = os.environ.get("FUNASR_PUNC_MODEL_ID") or "ct-punc"
         if enable_speaker_diarization:
-            model_kwargs["spk_model"] = "cam++"
+            model_kwargs["spk_model"] = os.environ.get("FUNASR_SPK_MODEL_ID") or "cam++"
         if model_instance is not None:
             self.model = model_instance
             return

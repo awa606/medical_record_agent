@@ -105,6 +105,14 @@ def _read_transcript(audio_id: str) -> ASRResult:
     return ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
 
 
+def _create_audio_asr_engine(engine: str):
+    if (engine or "").strip().lower() == "funasr":
+        from app.api.asr_sessions import _create_funasr_reconciliation_engine
+
+        return _create_funasr_reconciliation_engine()
+    return create_asr_engine(engine)
+
+
 def _require_passed_role_quality(result: ASRResult) -> ASRResult:
     quality = result.role_quality or build_speaker_role_quality(result)
     if quality.status != "passed":
@@ -180,7 +188,7 @@ def transcribe_audio(
     record = _read_audio_record(audio_id)
     _assert_audio_access(record, request)
     try:
-        asr_engine = create_asr_engine(engine)
+        asr_engine = _create_audio_asr_engine(engine)
         result = asr_engine.transcribe(audio_id, Path(record.path))
         result = apply_manifest_role_strategy(result, _sample_id_from_record(record))
         result = attach_speaker_role_quality(result)

@@ -188,6 +188,26 @@ class ASRFactoryTests(unittest.TestCase):
         self.assertTrue(all(segment.speaker_normalized == "speaker_unassigned" for segment in result.segments))
         self.assertTrue(all(segment.diarization_source == "missing_label" for segment in result.segments))
 
+    def test_funasr_engine_uses_registered_model_key_and_disables_update_check(self):
+        module = types.ModuleType("funasr")
+        calls = []
+
+        class FakeAutoModel:
+            def __init__(self, **kwargs):
+                calls.append(kwargs)
+
+        module.AutoModel = FakeAutoModel
+        with patch.dict(sys.modules, {"funasr": module}):
+            FunASREngine(
+                hotword_path=None,
+                enable_vad=False,
+                enable_punctuation=False,
+                enable_speaker_diarization=False,
+            )
+
+        self.assertEqual(calls[0]["model"], "Paraformer")
+        self.assertTrue(calls[0]["disable_update"])
+
     def test_whisper_engine_requires_optional_dependencies(self):
         original_import = builtins.__import__
 

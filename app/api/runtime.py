@@ -103,9 +103,13 @@ def _check_provider() -> dict[str, Any]:
 def _check_asr_models() -> dict[str, Any]:
     status = get_prewarm_status()
     require_funasr = os.environ.get("MEDICAL_RECORD_AGENT_REQUIRE_FUNASR", "").lower() in {"1", "true", "yes"}
+    model_cache = status.get("model_cache") or {}
     ok = True
     error = None
-    if require_funasr and status.get("status") != "ready":
+    if require_funasr and not model_cache.get("has_required_cache", model_cache.get("has_cached_files", False)):
+        ok = False
+        error = "FunASR local model cache is missing or incomplete"
+    elif require_funasr and status.get("status") != "ready":
         ok = False
         error = status.get("last_error") or "FunASR model prewarm has not completed"
     return {
@@ -114,7 +118,7 @@ def _check_asr_models() -> dict[str, Any]:
         "error_category": status.get("error_category"),
         "retryable": status.get("retryable"),
         "components": status.get("components", []),
-        "model_cache": status.get("model_cache"),
+        "model_cache": model_cache,
         "error": error,
     }
 

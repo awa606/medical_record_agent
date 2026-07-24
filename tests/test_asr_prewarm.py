@@ -23,7 +23,7 @@ class ASRPrewarmApiTests(unittest.TestCase):
                 "status": "ready",
                 "last_error": None,
                 "model_load_seconds": 1.23,
-                "components": ["paraformer-zh-streaming"],
+                "components": ["ParaformerStreaming"],
             },
         ):
             response = TestClient(app).get("/api/asr/prewarm/status")

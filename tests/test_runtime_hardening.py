@@ -101,6 +101,31 @@ class RuntimeHardeningTests(unittest.TestCase):
         self.assertFalse(payload["checks"]["asr_models"]["ok"])
         self.assertEqual(payload["checks"]["asr_models"]["error_category"], "dns_failure")
 
+    def test_ready_rejects_required_funasr_when_model_cache_is_incomplete(self):
+        os.environ["MEDICAL_RECORD_AGENT_REQUIRE_FUNASR"] = "1"
+        with patch(
+            "app.api.runtime.get_prewarm_status",
+            return_value={
+                "status": "ready",
+                "last_error": None,
+                "error_category": None,
+                "retryable": False,
+                "components": ["ParaformerStreaming", "Paraformer"],
+                "model_cache": {
+                    "has_cached_files": True,
+                    "has_required_cache": False,
+                    "total_file_count": 1,
+                    "min_file_count": 5,
+                },
+            },
+        ):
+            ready = TestClient(app).get("/ready")
+
+        self.assertEqual(ready.status_code, 503)
+        payload = ready.json()
+        self.assertFalse(payload["checks"]["asr_models"]["ok"])
+        self.assertIn("cache", payload["checks"]["asr_models"]["error"])
+
     def test_audio_upload_exceeding_limit_returns_413(self):
         os.environ["MEDICAL_RECORD_AGENT_MAX_UPLOAD_BYTES"] = "8"
         client = TestClient(app)

@@ -12,7 +12,7 @@ import numpy as np
 from app.schemas.asr import ASRResult, ASRSegment
 from app.services.asr.evaluator import ASREvaluator
 from app.services.asr.ffmpeg_utils import find_ffmpeg_executable, find_ffprobe_executable
-from app.services.asr.funasr_engine import DEFAULT_HOTWORD_PATH
+from app.services.asr.funasr_engine import DEFAULT_HOTWORD_PATH, _disable_update_check
 from app.services.asr.chunking import probe_audio_duration
 
 
@@ -47,7 +47,7 @@ class FunASRStreamingEngine:
         model_instance: Any | None = None,
         config: StreamingConfig | None = None,
     ) -> None:
-        self.model_id = model_id or os.environ.get("FUNASR_STREAMING_MODEL_ID") or "paraformer-zh-streaming"
+        self.model_id = model_id or os.environ.get("FUNASR_STREAMING_MODEL_ID") or "ParaformerStreaming"
         self.device = device or os.environ.get("FUNASR_DEVICE") or "cpu"
         self.config = config or StreamingConfig(
             segment_seconds=_env_float("FUNASR_STREAMING_SEGMENT_SECONDS", 6.0)
@@ -197,7 +197,11 @@ class FunASRStreamingEngine:
             raise RuntimeError(
                 "FunASR streaming import failed. Install requirements-asr.txt before using engine=funasr."
             ) from exc
-        kwargs: dict[str, Any] = {"model": self.model_id, "device": self.device}
+        kwargs: dict[str, Any] = {
+            "model": self.model_id,
+            "device": self.device,
+            "disable_update": _disable_update_check(),
+        }
         hub = os.environ.get("FUNASR_HUB")
         if hub:
             kwargs["hub"] = hub

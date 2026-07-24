@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import tempfile
+import sys
+import types
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 
@@ -20,6 +23,22 @@ class FakeStreamingModel:
 
 
 class FunASRStreamingEngineTests(unittest.TestCase):
+    def test_streaming_engine_uses_registered_model_key_and_disables_update_check(self):
+        module = types.ModuleType("funasr")
+        calls = []
+
+        class FakeAutoModel:
+            def __init__(self, **kwargs):
+                calls.append(kwargs)
+
+        module.AutoModel = FakeAutoModel
+        with patch.dict(sys.modules, {"funasr": module}):
+            engine = FunASRStreamingEngine(hotword_path=None)
+
+        self.assertEqual(engine.model_id, "ParaformerStreaming")
+        self.assertEqual(calls[0]["model"], "ParaformerStreaming")
+        self.assertTrue(calls[0]["disable_update"])
+
     def test_streaming_updates_use_actual_audio_time_and_stable_segment_id(self):
         model = FakeStreamingModel(["您好", "哪里不舒服？", "我发热三天。"])
         engine = FunASRStreamingEngine(

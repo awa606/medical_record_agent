@@ -2141,7 +2141,13 @@ def _fallback_from_streaming_failure(
         },
     )
     classified = classify_funasr_error(error)
-    if classified["category"] in {"dns_failure", "model_missing", "model_timeout", "dependency_missing"}:
+    if classified["category"] in {
+        "dns_failure",
+        "model_config_mismatch",
+        "model_missing",
+        "model_timeout",
+        "dependency_missing",
+    }:
         raise RuntimeError(classified["user_message"]) from error
     offline_engine = create_asr_engine("funasr")
     return _transcribe_chunked_session(

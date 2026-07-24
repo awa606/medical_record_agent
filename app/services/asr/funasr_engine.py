@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,7 @@ class FunASREngine:
 
     def __init__(
         self,
-        model: str = "paraformer-zh",
+        model: str = "Paraformer",
         device: str = "cpu",
         hotword_path: str | Path | None = DEFAULT_HOTWORD_PATH,
         enable_punctuation: bool = True,
@@ -27,7 +28,11 @@ class FunASREngine:
     ) -> None:
         self.hotwords = self._load_hotwords(hotword_path)
         self.speaker_diarization_enabled = enable_speaker_diarization
-        model_kwargs: dict[str, Any] = {"model": model, "device": device}
+        model_kwargs: dict[str, Any] = {
+            "model": model,
+            "device": device,
+            "disable_update": _disable_update_check(),
+        }
         if enable_vad:
             model_kwargs["vad_model"] = "fsmn-vad"
         if enable_punctuation:
@@ -192,3 +197,8 @@ class FunASREngine:
             return float(value)
         except (TypeError, ValueError):
             return None
+
+
+def _disable_update_check() -> bool:
+    value = os.environ.get("FUNASR_DISABLE_UPDATE", "1").strip().lower()
+    return value not in {"0", "false", "no", "off"}

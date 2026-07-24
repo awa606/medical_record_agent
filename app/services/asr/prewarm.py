@@ -102,9 +102,9 @@ def _run_prewarm() -> None:
         )
 
         _create_funasr_streaming_engine()
-        components.append("paraformer-zh-streaming")
+        components.append("ParaformerStreaming")
         _create_funasr_reconciliation_engine()
-        components.extend(["paraformer-zh", "fsmn-vad", "ct-punc", "cam++"])
+        components.extend(["Paraformer", "fsmn-vad", "ct-punc", "cam++"])
         with _LOCK:
             _STATE.status = "ready"
             _STATE.completed_at = _now()

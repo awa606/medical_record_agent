@@ -434,7 +434,7 @@ textarea:focus {
 
 .product-dashboard {
   min-height: calc(100dvh - 68px);
-  grid-template-rows: auto auto minmax(260px, 1fr);
+  grid-template-rows: auto auto auto minmax(260px, 1fr);
 }
 
 .dashboard-hero,
@@ -548,6 +548,35 @@ textarea:focus {
   padding: 4px 16px 16px;
 }
 
+.local-registration-panel {
+  min-height: 0;
+  gap: 0;
+}
+
+.local-registration-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 14px 18px 6px;
+}
+
+.local-registration-form label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: #667891;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.local-registration-panel > .form-help {
+  margin: 0;
+  padding: 0 18px 14px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .panel-header {
   min-height: 62px;
   display: flex;
@@ -632,7 +661,7 @@ textarea:focus {
 .encounter-worklist-meta {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -678,6 +707,8 @@ textarea:focus {
   display: flex;
   align-items: center;
   gap: 9px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .status-badge {

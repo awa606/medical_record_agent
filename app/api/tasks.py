@@ -20,6 +20,7 @@ from app.db import (
     get_audit_logs,
     get_record_revision,
     get_task,
+    get_task_encounter,
     get_task_steps,
     json_dumps,
     list_approval_items_for_approval,
@@ -115,13 +116,61 @@ def _decode_step_json(step: dict[str, Any]) -> dict[str, Any]:
     return step
 
 
-def _assert_task_access(task: dict[str, Any], request: Request | None) -> None:
+def _assert_task_access(
+    task: dict[str, Any],
+    request: Request | None,
+    *,
+    high_risk_operation: bool = False,
+) -> None:
     owner_user_id = task.get("owner_user_id")
     assert_owner_or_admin(
         int(owner_user_id) if owner_user_id is not None else None,
         request,
         resource_name="task",
     )
+    user = current_user_from_request(request)
+    if user is None:
+        return
+
+    encounter = get_task_encounter(int(task["id"]))
+    if encounter is None:
+        return
+    task_encounter_id = task.get("encounter_id")
+    if task_encounter_id is not None and int(task_encounter_id) != int(encounter["id"]):
+        if user.role == "admin" and not high_risk_operation:
+            return
+        raise HTTPException(
+            status_code=409 if high_risk_operation else 403,
+            detail="Task encounter link is inconsistent",
+        )
+    encounter_task_id = encounter.get("task_id")
+    if encounter_task_id is not None and int(encounter_task_id) != int(task["id"]):
+        if user.role == "admin" and not high_risk_operation:
+            return
+        raise HTTPException(
+            status_code=409 if high_risk_operation else 403,
+            detail="Encounter task link is inconsistent",
+        )
+    encounter_doctor_id = encounter.get("doctor_user_id")
+    if encounter_doctor_id is None:
+        if high_risk_operation:
+            raise HTTPException(status_code=409, detail="Task encounter has no doctor owner")
+        if user.role != "admin":
+            raise HTTPException(status_code=403, detail="You are not allowed to access this task encounter")
+        return
+    if user.role != "admin" and int(encounter_doctor_id) != user.id:
+        raise HTTPException(status_code=403, detail="You are not allowed to access this task encounter")
+    if owner_user_id is None:
+        if high_risk_operation:
+            raise HTTPException(status_code=409, detail="Task has no owner")
+        return
+    if int(owner_user_id) != int(encounter_doctor_id):
+        if user.role == "admin" and not high_risk_operation:
+            return
+        raise HTTPException(
+            status_code=409 if high_risk_operation else 403,
+            detail="Task owner does not match encounter doctor",
+        )
 
 
 def _actor_detail(request: Request | None) -> dict[str, Any]:
@@ -135,11 +184,16 @@ def _actor_detail(request: Request | None) -> dict[str, Any]:
     }
 
 
-def _load_task_result(task_id: int, request: Request | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
+def _load_task_result(
+    task_id: int,
+    request: Request | None = None,
+    *,
+    high_risk_operation: bool = False,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     task = get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    _assert_task_access(task, request)
+    _assert_task_access(task, request, high_risk_operation=high_risk_operation)
     decoded_task = _decode_result_json(task)
     result = decoded_task.get("result_json")
     if not isinstance(result, dict):
@@ -451,7 +505,7 @@ def read_task_agent_trace(
 
 @router.post("/{task_id}/review")
 def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -> dict[str, Any]:
-    task, result = _load_task_result(task_id, request)
+    task, result = _load_task_result(task_id, request, high_risk_operation=True)
     fields = _reset_review_state(payload.fields)
     generator = _record_generator_or_503()
     draft = generator.generate_draft(fields)
@@ -494,7 +548,7 @@ def approve_task(
 ) -> dict[str, Any]:
     if payload is None:
         raise HTTPException(status_code=400, detail="审核请求不能为空，请显式提交分项审核结果。")
-    task, result = _load_task_result(task_id, request)
+    task, result = _load_task_result(task_id, request, high_risk_operation=True)
     if task.get("current_stage") == "approved" and get_active_approval_for_task(task_id) is not None:
         raise HTTPException(status_code=409, detail="Current record revision is already approved")
     revision = _current_revision_or_error(task)
@@ -584,7 +638,7 @@ def approve_task(
 
 @router.post("/{task_id}/export")
 def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
-    task, result = _load_task_result(task_id, request)
+    task, result = _load_task_result(task_id, request, high_risk_operation=True)
     approval = get_active_approval_for_task(task_id)
     readiness = _build_export_readiness(
         task_id,
@@ -642,7 +696,7 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
 
 @router.get("/{task_id}/export-readiness", response_model=ExportReadinessResponse)
 def read_export_readiness(task_id: int, request: Request = None) -> ExportReadinessResponse:
-    task, result = _load_task_result(task_id, request)
+    task, result = _load_task_result(task_id, request, high_risk_operation=True)
     return ExportReadinessResponse(
         **_build_export_readiness(
             task_id,
@@ -682,7 +736,7 @@ def _resolve_export_download_path(exports: dict[str, str], export_format: str) -
 
 @router.get("/{task_id}/exports/{export_format}")
 def download_task_export(task_id: int, export_format: str, request: Request = None) -> FileResponse:
-    task, result = _load_task_result(task_id, request)
+    task, result = _load_task_result(task_id, request, high_risk_operation=True)
     approval = get_active_approval_for_task(task_id)
     readiness = _build_export_readiness(
         task_id,

@@ -99,11 +99,16 @@ def assert_owner_or_admin(
     *,
     resource_name: str = "resource",
 ) -> None:
-    if owner_user_id is None:
-        return
     user = current_user_from_request(request)
     if user is None:
         return
+    if owner_user_id is None:
+        if user.role == "admin":
+            return
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"You are not allowed to access this {resource_name}",
+        )
     if user.role == "admin" or user.id == int(owner_user_id):
         return
     raise HTTPException(

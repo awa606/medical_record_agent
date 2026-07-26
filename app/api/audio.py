@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse
 from app.agents import MedicalRecordOrchestrator
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.api.records import ensure_record_provider_available, run_record_generation_task
-from app.db import set_task_owner
+from app.db import bind_task_to_encounter, get_encounter, set_task_owner
 from app.schemas import ASREvaluationRequest, ASREvaluationResult, ASRResult, AudioRecord
 from app.services.asr import ASREvaluator, apply_manifest_role_strategy, create_asr_engine
 from app.services.asr.funasr_reliability import funasr_failure_payload
@@ -118,6 +118,28 @@ def _require_passed_role_quality(result: ASRResult) -> ASRResult:
     return result.model_copy(update={"role_quality": quality})
 
 
+def _generation_owner_for_encounter(encounter_id: int, request: Request | None) -> int:
+    user = current_user_from_request(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    encounter = get_encounter(encounter_id)
+    if encounter is None:
+        raise HTTPException(status_code=404, detail="Encounter not found")
+    encounter_doctor_id = encounter.get("doctor_user_id")
+    if encounter_doctor_id is None:
+        raise HTTPException(status_code=409, detail="Encounter has no doctor owner")
+    if user.role != "admin" and int(encounter_doctor_id) != user.id:
+        raise HTTPException(status_code=403, detail="You are not allowed to access this encounter")
+    check_in_status = encounter.get("check_in_status") or "checked_in"
+    if check_in_status == "registered":
+        raise HTTPException(status_code=409, detail="Encounter must be checked in before record generation")
+    if check_in_status in {"completed", "cancelled"}:
+        raise HTTPException(status_code=409, detail="Encounter is closed and cannot generate a record")
+    if encounter.get("task_id") is not None:
+        raise HTTPException(status_code=409, detail="Encounter is already bound to a task")
+    return int(encounter_doctor_id)
+
+
 def _sample_id_from_record(record: AudioRecord) -> str:
     return Path(record.filename).stem or record.audio_id
 
@@ -200,7 +222,10 @@ def transcribe_audio(
 
 
 @router.get("/{audio_id}/transcript")
-def read_audio_transcript(audio_id: str) -> ASRResult:
+def read_audio_transcript(audio_id: str, request: Request = None) -> ASRResult:
+    if request is not None:
+        record = _read_audio_record(audio_id)
+        _assert_audio_access(record, request)
     return _read_transcript(audio_id)
 
 
@@ -210,9 +235,9 @@ def evaluate_audio(
     payload: ASREvaluationRequest,
     request: Request = None,
 ) -> ASREvaluationResult:
-    transcript = _read_transcript(audio_id)
     record = _read_audio_record(audio_id)
     _assert_audio_access(record, request)
+    transcript = _read_transcript(audio_id)
     expected_keywords = payload.expected_keywords
     sample = find_sample_config(_sample_id_from_record(record))
     if not expected_keywords and sample:
@@ -231,8 +256,8 @@ def generate_record_from_audio(
     audio_id: str,
     background_tasks: BackgroundTasks,
     request: Request = None,
+    encounter_id: int | None = None,
 ) -> dict[str, object]:
-    result = _read_transcript(audio_id)
     try:
         record = _read_audio_record(audio_id)
     except HTTPException as exc:
@@ -241,16 +266,32 @@ def generate_record_from_audio(
         record = None
     if record is not None:
         _assert_audio_access(record, request)
+    result = _read_transcript(audio_id)
     result = _require_passed_role_quality(result)
     conversation_text = result.conversation_text.strip()
     if not conversation_text:
         raise HTTPException(status_code=400, detail="Transcript conversation_text is empty")
 
     ensure_record_provider_available()
+    encounter_owner_id = (
+        _generation_owner_for_encounter(encounter_id, request)
+        if encounter_id is not None
+        else None
+    )
     orchestrator = MedicalRecordOrchestrator()
     task_id = orchestrator.create_text_task(conversation_text)
     user = current_user_from_request(request)
-    if user is not None:
+    if encounter_id is not None:
+        try:
+            bind_task_to_encounter(
+                task_id,
+                encounter_id,
+                owner_user_id=encounter_owner_id,
+                check_in_status="in_progress",
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    elif user is not None:
         set_task_owner(task_id, user.id)
     background_tasks.add_task(
         run_record_generation_task,

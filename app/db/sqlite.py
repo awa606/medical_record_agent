@@ -13,6 +13,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB_PATH = PROJECT_ROOT / "data" / "medical_record_agent.sqlite3"
 TERMINAL_TASK_STATUSES = {"WAITING_DOCTOR_REVIEW", "DONE", "FAILED"}
+CHECK_IN_STATUSES = {"registered", "checked_in", "in_progress", "completed", "cancelled"}
 
 
 def utc_now() -> str:
@@ -113,6 +114,7 @@ def init_db() -> None:
                 doctor_user_id INTEGER,
                 task_id INTEGER,
                 status TEXT NOT NULL,
+                check_in_status TEXT NOT NULL DEFAULT 'checked_in',
                 current_revision_id INTEGER,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
@@ -200,6 +202,7 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, "agent_task", "owner_user_id", "INTEGER")
     _ensure_column(connection, "agent_task", "encounter_id", "INTEGER")
     _ensure_column(connection, "agent_task", "current_record_revision_id", "INTEGER")
+    _ensure_column(connection, "encounter", "check_in_status", "TEXT NOT NULL DEFAULT 'checked_in'")
     _ensure_column(connection, "agent_task_step", "attempt_no", "INTEGER NOT NULL DEFAULT 1")
     _ensure_column(connection, "agent_task_step", "input_snapshot_json", "TEXT")
     _ensure_column(connection, "agent_task_step", "output_snapshot_json", "TEXT")
@@ -411,6 +414,21 @@ def set_task_owner(task_id: int, owner_user_id: int | None) -> None:
             """,
             (owner_user_id, utc_now(), task_id),
         )
+        if owner_user_id is not None:
+            now = utc_now()
+            connection.execute(
+                """
+                UPDATE encounter
+                SET doctor_user_id = ?,
+                    updated_at = ?
+                WHERE doctor_user_id IS NULL
+                  AND (
+                    task_id = ?
+                    OR id = (SELECT encounter_id FROM agent_task WHERE id = ?)
+                  )
+                """,
+                (owner_user_id, now, task_id, task_id),
+            )
         connection.commit()
 
 
@@ -431,6 +449,13 @@ def _update_task_workflow_links(
         """,
         (encounter_id, revision_id, utc_now(), task_id),
     )
+
+
+def _validate_check_in_status(status: str) -> str:
+    normalized = (status or "").strip().lower()
+    if normalized not in CHECK_IN_STATUSES:
+        raise ValueError(f"Unsupported check_in_status: {status}")
+    return normalized
 
 
 def ensure_task_encounter(
@@ -477,10 +502,10 @@ def ensure_task_encounter(
         cursor = connection.execute(
             """
             INSERT INTO encounter (
-                patient_id, doctor_user_id, task_id, status,
+                patient_id, doctor_user_id, task_id, status, check_in_status,
                 current_revision_id, created_at, updated_at
             )
-            VALUES (?, ?, ?, 'draft', NULL, ?, ?)
+            VALUES (?, ?, ?, 'draft', 'in_progress', NULL, ?, ?)
             """,
             (patient_id, doctor_user_id, task_id, now, now),
         )
@@ -603,8 +628,11 @@ def get_task_encounter(task_id: int) -> dict[str, Any] | None:
             """
             SELECT e.*
             FROM encounter e
-            JOIN agent_task t ON t.encounter_id = e.id
+            JOIN agent_task t
+              ON (t.encounter_id = e.id OR e.task_id = t.id)
             WHERE t.id = ?
+            ORDER BY CASE WHEN t.encounter_id = e.id THEN 0 ELSE 1 END
+            LIMIT 1
             """,
             (task_id,),
         ).fetchone()
@@ -616,9 +644,11 @@ def create_encounter(
     doctor_user_id: int | None,
     deidentified_id: str,
     display_name: str | None = None,
+    check_in_status: str = "registered",
 ) -> dict[str, Any]:
     init_db()
     now = utc_now()
+    normalized_check_in_status = _validate_check_in_status(check_in_status)
     with closing(get_connection()) as connection:
         patient = connection.execute(
             "SELECT * FROM patient WHERE deidentified_id = ?",
@@ -640,14 +670,94 @@ def create_encounter(
         cursor = connection.execute(
             """
             INSERT INTO encounter (
-                patient_id, doctor_user_id, task_id, status,
+                patient_id, doctor_user_id, task_id, status, check_in_status,
                 current_revision_id, created_at, updated_at
             )
-            VALUES (?, ?, NULL, 'draft', NULL, ?, ?)
+            VALUES (?, ?, NULL, 'draft', ?, NULL, ?, ?)
             """,
-            (patient_id, doctor_user_id, now, now),
+            (patient_id, doctor_user_id, normalized_check_in_status, now, now),
         )
         encounter_id = int(cursor.lastrowid)
+        connection.commit()
+    return get_encounter(encounter_id) or {}
+
+
+def update_encounter_check_in_status(encounter_id: int, check_in_status: str) -> dict[str, Any]:
+    init_db()
+    normalized_check_in_status = _validate_check_in_status(check_in_status)
+    with closing(get_connection()) as connection:
+        connection.execute(
+            """
+            UPDATE encounter
+            SET check_in_status = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (normalized_check_in_status, utc_now(), encounter_id),
+        )
+        connection.commit()
+    return get_encounter(encounter_id) or {}
+
+
+def bind_task_to_encounter(
+    task_id: int,
+    encounter_id: int,
+    *,
+    owner_user_id: int,
+    check_in_status: str | None = "in_progress",
+) -> dict[str, Any]:
+    init_db()
+    if owner_user_id is None:
+        raise ValueError("Task owner is required when binding an encounter")
+    normalized_check_in_status = (
+        _validate_check_in_status(check_in_status)
+        if check_in_status is not None
+        else None
+    )
+    with closing(get_connection()) as connection:
+        task = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
+        if task is None:
+            raise ValueError(f"Task not found: {task_id}")
+        encounter = connection.execute("SELECT * FROM encounter WHERE id = ?", (encounter_id,)).fetchone()
+        if encounter is None:
+            raise ValueError(f"Encounter not found: {encounter_id}")
+        if encounter["doctor_user_id"] is None:
+            raise ValueError("Encounter has no doctor owner")
+        if int(encounter["doctor_user_id"]) != int(owner_user_id):
+            raise ValueError("Task owner does not match encounter doctor")
+        if encounter["task_id"] is not None and int(encounter["task_id"]) != int(task_id):
+            raise ValueError("Encounter is already bound to a different task")
+        if task["encounter_id"] is not None and int(task["encounter_id"]) != int(encounter_id):
+            raise ValueError("Task is already bound to a different encounter")
+
+        now = utc_now()
+        connection.execute(
+            """
+            UPDATE agent_task
+            SET owner_user_id = ?,
+                encounter_id = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (owner_user_id, encounter_id, now, task_id),
+        )
+        if normalized_check_in_status is None:
+            connection.execute(
+                """
+                UPDATE encounter
+                SET task_id = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (task_id, now, encounter_id),
+            )
+        else:
+            connection.execute(
+                """
+                UPDATE encounter
+                SET task_id = ?, check_in_status = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (task_id, normalized_check_in_status, now, encounter_id),
+            )
         connection.commit()
     return get_encounter(encounter_id) or {}
 

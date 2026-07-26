@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.agents import MedicalRecordOrchestrator
 from app.api.auth import current_user_from_request, require_current_user
-from app.db import set_task_owner
+from app.db import bind_task_to_encounter, get_encounter, set_task_owner
 from app.schemas import ASRResult, ASRSegment, MedicalRecordFields, SafetyCheckResult, SourceSpan
 from app.services import LLMProviderUnavailableError, create_llm_record_generator
 from app.services.asr.role_quality import build_speaker_role_quality
@@ -22,6 +22,7 @@ router = APIRouter(prefix="/records", tags=["records"], dependencies=[Depends(re
 
 class GenerateRecordRequest(BaseModel):
     conversation_text: str = Field(min_length=1)
+    encounter_id: int | None = None
 
 
 class PreviewRecordRequest(BaseModel):
@@ -475,6 +476,29 @@ def ensure_record_provider_available() -> dict[str, Any]:
     return _extraction_info(generator.get_trace())
 
 
+def _generation_owner_for_encounter(encounter_id: int, request: Request | None) -> int:
+    user = current_user_from_request(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    encounter = get_encounter(encounter_id)
+    if encounter is None:
+        raise HTTPException(status_code=404, detail="Encounter not found")
+    encounter_doctor_id = encounter.get("doctor_user_id")
+    if encounter_doctor_id is None:
+        raise HTTPException(status_code=409, detail="Encounter has no doctor owner")
+    if user.role != "admin" and int(encounter_doctor_id) != user.id:
+        raise HTTPException(status_code=403, detail="You are not allowed to access this encounter")
+    check_in_status = encounter.get("check_in_status") or "checked_in"
+    if check_in_status == "registered":
+        raise HTTPException(status_code=409, detail="Encounter must be checked in before record generation")
+    if check_in_status in {"completed", "cancelled"}:
+        raise HTTPException(status_code=409, detail="Encounter is closed and cannot generate a record")
+    existing_task_id = encounter.get("task_id")
+    if existing_task_id is not None:
+        raise HTTPException(status_code=409, detail="Encounter is already bound to a task")
+    return int(encounter_doctor_id)
+
+
 def _extract_fields_for_service(
     conversation_text: str,
     segments: list[dict[str, Any]],
@@ -573,10 +597,25 @@ def generate_record(
     request: Request = None,
 ) -> dict[str, object]:
     ensure_record_provider_available()
+    encounter_owner_id = (
+        _generation_owner_for_encounter(payload.encounter_id, request)
+        if payload.encounter_id is not None
+        else None
+    )
     orchestrator = MedicalRecordOrchestrator()
     task_id = orchestrator.create_text_task(payload.conversation_text)
     user = current_user_from_request(request)
-    if user is not None:
+    if payload.encounter_id is not None:
+        try:
+            bind_task_to_encounter(
+                task_id,
+                payload.encounter_id,
+                owner_user_id=encounter_owner_id,
+                check_in_status="in_progress",
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    elif user is not None:
         set_task_owner(task_id, user.id)
     background_tasks.add_task(run_record_generation_task, task_id, payload.conversation_text)
 

@@ -133,6 +133,26 @@
             <strong id="dashboardRecordingLabel">-</strong>
           </div>
         </div>
+        <section class="dashboard-panel local-registration-panel" aria-label="本地患者登记">
+          <div class="panel-header">
+            <div>
+              <h2>本地患者登记</h2>
+              <p>用于未接入 HIS 的演示环境，只录入脱敏标识并绑定当前登录医生。</p>
+            </div>
+          </div>
+          <form id="localEncounterForm" class="local-registration-form">
+            <label>
+              <span>脱敏患者标识</span>
+              <input id="localPatientDeidentifiedId" type="text" maxlength="80" placeholder="例如 SIM-0001" autocomplete="off" />
+            </label>
+            <label>
+              <span>显示名称</span>
+              <input id="localPatientDisplayName" type="text" maxlength="80" placeholder="模拟患者" autocomplete="off" />
+            </label>
+            <button type="submit" class="primary-action" id="createLocalEncounterButton">登记患者</button>
+          </form>
+          <p class="form-help">新登记患者默认“已登记”，需报到后才能开始问诊和生成病历。</p>
+        </section>
         <section class="dashboard-panel">
           <div class="panel-header">
             <div>

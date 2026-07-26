@@ -471,6 +471,41 @@ function renderProductShell() {
   });
 }
 
+function encounterCheckInStatusLabel(status) {
+  const labels = {
+    registered: "已登记",
+    checked_in: "已报到",
+    in_progress: "问诊中",
+    completed: "已完成",
+    cancelled: "已取消",
+  };
+  return labels[status] || status || "已报到";
+}
+
+function encounterActionButtons(item = {}, active = false) {
+  const encounterId = escapeHtml(item.id);
+  const checkInStatus = item.check_in_status || "checked_in";
+  if (checkInStatus === "registered") {
+    return `
+      <button type="button" class="primary-action" data-encounter-action="check-in" data-encounter-id="${encounterId}">报到</button>
+      <button type="button" data-encounter-action="cancel" data-encounter-id="${encounterId}">取消</button>
+    `;
+  }
+  if (checkInStatus === "checked_in") {
+    return `
+      <button type="button" class="primary-action" data-encounter-action="start" data-encounter-id="${encounterId}">开始问诊</button>
+      <button type="button" data-encounter-action="cancel" data-encounter-id="${encounterId}">取消</button>
+    `;
+  }
+  if (checkInStatus === "completed") {
+    return `<button type="button" data-restore-encounter="${encounterId}">查看</button>`;
+  }
+  if (checkInStatus === "cancelled") {
+    return `<button type="button" data-restore-encounter="${encounterId}">只读查看</button>`;
+  }
+  return `<button type="button" data-restore-encounter="${encounterId}">${active ? "返回工作区" : "继续处理"}</button>`;
+}
+
 function encounterWorklistMarkup({ includeRevisions = true } = {}) {
   if (appState.encounterWorklistStatus === "loading") {
     return `<div class="empty-state">正在加载今日就诊...</div>`;
@@ -498,6 +533,7 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
     const encounterNo = item.patient_deidentified_id || `E-${item.id}`;
     const phase = encounterPhaseLabel(item);
     const status = encounterStatusLabel(item.status || item.task_current_stage);
+    const checkInStatus = encounterCheckInStatusLabel(item.check_in_status || "checked_in");
     return `
       <article class="encounter-worklist-item ${active ? "active" : ""}">
         <div class="encounter-worklist-primary">
@@ -507,12 +543,13 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
         </div>
         <div class="encounter-worklist-meta" aria-label="就诊任务摘要">
           <span><b>录入方式</b>${escapeHtml(encounterInputMethodLabel(item))}</span>
+          <span><b>报到状态</b>${escapeHtml(checkInStatus)}</span>
           <span><b>当前阶段</b>${escapeHtml(phase)}</span>
           <span><b>更新时间</b>${escapeHtml(formatDateTime(item.updated_at || item.created_at))}</span>
         </div>
         <div class="encounter-worklist-actions">
           <span class="status-badge ${active ? "confirmed" : "neutral"}">${escapeHtml(status)}</span>
-          <button type="button" data-restore-encounter="${escapeHtml(item.id)}">${active ? "返回工作区" : "继续处理"}</button>
+          ${encounterActionButtons(item, active)}
         </div>
       </article>
     `;
@@ -629,6 +666,55 @@ async function restoreEncounter(encounterId) {
     closeDrawer();
     setProductView("encounter");
     showToast("已恢复就诊草稿");
+  } catch (error) {
+    reportActionError(error);
+  } finally {
+    setBusy(false);
+    renderAll();
+  }
+}
+
+async function performEncounterAction(encounterId, action) {
+  if (!encounterId || !action) return;
+  setBusy(true, "正在更新就诊状态...");
+  try {
+    const detail = await api(`/api/encounters/${encodeURIComponent(encounterId)}/${encodeURIComponent(action)}`, {
+      method: "POST",
+    });
+    if (appState.currentEncounter?.id === detail.id || action === "start") {
+      applyEncounterDetail(detail);
+      setProductView("encounter");
+    }
+    await refreshEncounterWorklist();
+    showToast("就诊状态已更新");
+  } catch (error) {
+    reportActionError(error);
+  } finally {
+    setBusy(false);
+    renderAll();
+  }
+}
+
+async function createLocalEncounterFromForm(event) {
+  event?.preventDefault();
+  const deidentifiedId = $("localPatientDeidentifiedId")?.value?.trim() || "";
+  const displayName = $("localPatientDisplayName")?.value?.trim() || "";
+  setBusy(true, "正在登记患者...");
+  try {
+    const detail = await api("/api/encounters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        patient_deidentified_id: deidentifiedId || undefined,
+        patient_display_name: displayName || undefined,
+      }),
+    });
+    applyEncounterDetail(detail);
+    if ($("localPatientDeidentifiedId")) $("localPatientDeidentifiedId").value = "";
+    if ($("localPatientDisplayName")) $("localPatientDisplayName").value = "";
+    await refreshEncounterWorklist();
+    setProductView("encounter");
+    showToast("患者已登记，请先报到后开始问诊");
   } catch (error) {
     reportActionError(error);
   } finally {
@@ -4190,11 +4276,12 @@ function resetRecordPreview() {
   appState.recordPreviewInFlight = false;
 }
 
-function resetTaskState({ keepAsr = false } = {}) {
+function resetTaskState({ keepAsr = false, keepEncounter = false } = {}) {
+  const preservedEncounter = keepEncounter ? appState.currentEncounter : null;
   appState.currentTaskId = null;
   appState.currentEvaluation = null;
   appState.currentTask = null;
-  appState.currentEncounter = null;
+  appState.currentEncounter = preservedEncounter;
   appState.currentSteps = [];
   appState.currentRecordFields = null;
   appState.currentDraft = "";
@@ -4619,7 +4706,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
 }
 
 async function createRecordTask(conversationText, { keepAsr = false } = {}) {
-  resetTaskState({ keepAsr });
+  resetTaskState({ keepAsr, keepEncounter: true });
   appState.currentInputText = conversationText;
   if (!keepAsr) {
     appState.currentAsrResult = {
@@ -4639,7 +4726,10 @@ async function createRecordTask(conversationText, { keepAsr = false } = {}) {
   const created = await api("/api/records/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ conversation_text: conversationText }),
+    body: JSON.stringify({
+      conversation_text: conversationText,
+      encounter_id: appState.currentEncounter?.id || undefined,
+    }),
   });
   appState.currentTaskId = created.task_id;
   appState.taskStatus = created.status;
@@ -5040,7 +5130,12 @@ function applyRoleQualityGateError(error) {
 async function startRecordGenerationFromAudio(audioId) {
   setBusy(true, "正在从转写文本生成病历...");
   try {
-    const created = await api(`/api/audio/${audioId}/generate-record`, { method: "POST" });
+    const params = new URLSearchParams();
+    if (appState.currentEncounter?.id) {
+      params.set("encounter_id", appState.currentEncounter.id);
+    }
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    const created = await api(`/api/audio/${audioId}/generate-record${suffix}`, { method: "POST" });
     appState.currentTaskId = created.task_id;
     appState.taskStatus = created.status;
     appState.currentTask = { id: created.task_id, status: created.status };
@@ -5054,7 +5149,7 @@ async function startRecordGenerationFromAudio(audioId) {
 }
 
 async function runAudioWorkflowFromFile(file, engine, mode = appState.audioMode) {
-  resetTaskState();
+  resetTaskState({ keepEncounter: true });
   appState.selectedEngine = engine;
   const transcribed = await uploadAndTranscribe(file, engine);
   if (mode === "generate") {
@@ -6594,11 +6689,21 @@ function bindEvents() {
     refreshEncounterWorklist();
   });
   $("encounterWorklist").addEventListener("click", async (event) => {
+    const actionButton = event.target.closest("[data-encounter-action]");
+    if (actionButton) {
+      await performEncounterAction(actionButton.dataset.encounterId, actionButton.dataset.encounterAction);
+      return;
+    }
     const button = event.target.closest("[data-restore-encounter]");
     if (!button) return;
     await restoreEncounter(button.dataset.restoreEncounter);
   });
   $("dashboardEncounterList")?.addEventListener("click", async (event) => {
+    const actionButton = event.target.closest("[data-encounter-action]");
+    if (actionButton) {
+      await performEncounterAction(actionButton.dataset.encounterId, actionButton.dataset.encounterAction);
+      return;
+    }
     const restoreButton = event.target.closest("[data-restore-encounter]");
     if (restoreButton) {
       await restoreEncounter(restoreButton.dataset.restoreEncounter);
@@ -6618,6 +6723,7 @@ function bindEvents() {
   $("dashboardRefreshWorklistButton")?.addEventListener("click", () => {
     refreshEncounterWorklist().catch(reportActionError);
   });
+  $("localEncounterForm")?.addEventListener("submit", createLocalEncounterFromForm);
   $("dashboardOpenWorklistButton")?.addEventListener("click", openEncounterWorklist);
   $("refreshAdminHomeButton")?.addEventListener("click", () => {
     refreshAdminHome().catch(reportActionError);

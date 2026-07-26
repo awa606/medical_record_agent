@@ -13,6 +13,10 @@ def test_doctor_worklist_drawer_is_present() -> None:
     assert 'id="encounterStatusFilter"' in html
     assert 'id="refreshWorklistButton"' in html
     assert 'id="encounterWorklist"' in html
+    assert 'id="localEncounterForm"' in html
+    assert 'id="localPatientDeidentifiedId"' in html
+    assert 'id="localPatientDisplayName"' in html
+    assert 'id="createLocalEncounterButton"' in html
 
 
 def test_doctor_worklist_uses_encounter_api_and_restore_path() -> None:
@@ -26,6 +30,12 @@ def test_doctor_worklist_uses_encounter_api_and_restore_path() -> None:
     assert "appState.currentEncounter" in script
     assert "encounterStatusFilter" in script
     assert "encounter-revision-history" in script
+    assert "function createLocalEncounterFromForm" in script
+    assert "function performEncounterAction" in script
+    assert "data-encounter-action" in script
+    assert "check_in_status" in script
+    assert "encounter_id: appState.currentEncounter?.id" in script
+    assert "generate-record${suffix}" in script
 
 
 def test_doctor_worklist_styles_are_scoped_to_drawer() -> None:

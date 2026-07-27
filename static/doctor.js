@@ -23,12 +23,13 @@ const appState = {
   adminRuntimeStatus: null,
   adminStatus: "idle",
   adminError: "",
-  selectedEngine: "funasr",
+  selectedEngine: "system",
   assistTab: "ai",
   viewMode: "doctor",
   displayScale: "standard",
   screenshotMode: false,
   audioMode: "transcribe",
+  recognitionMode: "fast",
   pendingGenerateAfterRoleReview: false,
   uploadedFilename: "",
   taskStatus: "CREATED",
@@ -118,6 +119,7 @@ const appState = {
   audioPlaybackRate: 1,
   audioSeekDragging: false,
   transcriptPacing: "fast",
+  transcriptAutoFollow: true,
   activeTranscriptSegmentId: "",
   asrPrewarmStatus: null,
   asrPrewarmCheckedAt: "",
@@ -650,6 +652,22 @@ function applyEncounterDetail(detail) {
   appState.currentExports = result.exports || null;
   appState.currentExportReadiness = null;
   appState.currentInputText = "";
+}
+
+function selectedEncounterId() {
+  return appState.currentEncounter?.encounter_id || appState.currentEncounter?.id || null;
+}
+
+function encounterReadyForInput() {
+  const status = String(appState.currentEncounter?.check_in_status || "checked_in").toLowerCase();
+  return Boolean(selectedEncounterId() && ["checked_in", "in_progress"].includes(status));
+}
+
+function requireEncounterBeforeInput() {
+  if (encounterReadyForInput()) return true;
+  showToast("请先从今日已报到患者列表选择患者，再开始录音或导入音频。");
+  openEncounterWorklist().catch(reportActionError);
+  return false;
 }
 
 async function restoreEncounter(encounterId) {
@@ -1372,7 +1390,6 @@ function doctorFacingTranscriptionIssue() {
 
 function nextActionState() {
   const risk = riskSummary();
-  const rolePending = roleReviewRequired();
   const displayState = doctorDisplayState();
 
   if (appState.busy) {
@@ -1409,7 +1426,7 @@ function nextActionState() {
     return {
       tone: "neutral",
       title: "开始一次病历生成",
-      detail: "优先上传中文问诊音频；演示兜底可选择 Mock ASR，文本导入可直接验证病历生成。",
+      detail: "优先上传中文问诊音频；系统会按配置自动选择识别服务，文本导入可直接验证病历生成。",
       actions: [
         workflowAction({ key: "upload-audio", label: "音频生成", tone: "primary" }),
         workflowAction({ key: "import-text", label: "文本生成" }),
@@ -1429,7 +1446,7 @@ function nextActionState() {
     };
   }
 
-  if (appState.currentAsrResult && (rolePending || appState.roleReviewDirty)) {
+  if (appState.currentAsrResult && appState.roleReviewDirty && appState.viewMode === "debug") {
     const pendingCount = roleReviewPendingCount();
     const pendingText = pendingCount
       ? `仍有 ${pendingCount} 位说话人需要确认；已可靠识别的说话人不会重复要求确认。`
@@ -1439,12 +1456,12 @@ function nextActionState() {
       : "保存后可继续生成病历。";
     return {
       tone: "warning",
-      title: rolePending ? "请确认说话人身份" : "请保存身份确认",
+      title: "保存调试更正",
       detail: `${pendingText}${resumeText}`,
       actions: [
         workflowAction({
-          key: rolePending ? "open-role-review" : "save-role-review",
-          label: appState.roleReviewSaving ? "保存中" : rolePending ? "确认说话人身份" : "保存身份确认",
+          key: "save-role-review",
+          label: appState.roleReviewSaving ? "保存中" : "保存调试更正",
           tone: "primary",
           disabled: appState.roleReviewSaving,
         }),
@@ -1598,10 +1615,6 @@ function renderPatientBar() {
         ? `A-${appState.currentAudioId}`
         : "未创建";
   $("recordingStatus").textContent = displayState.inputStatus;
-  $("topAsrEngineSelect").value = appState.selectedEngine;
-  $("audioEngineSelect").value = appState.selectedEngine;
-  const recordingEngineSelect = $("recordingEngineSelect");
-  if (recordingEngineSelect) recordingEngineSelect.value = appState.selectedEngine;
   $("llmProvider").textContent = `${llm.provider} / ${llm.mode || "demo"}`;
   $("llmModel").textContent = llm.model;
   $("llmFallback").textContent = llm.fallbackLabel;
@@ -2846,6 +2859,7 @@ function transcriptRows() {
         roleConfidence: displaySegment.role_confidence,
         roleSource: displaySegment.role_source,
         roleNote: displaySegment.role_note,
+        roleWarning: displaySegment.role_warning,
         needsReview: transcriptRoleNeedsReview(displaySegment, label),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
@@ -2873,6 +2887,7 @@ function transcriptRows() {
         roleConfidence: displaySegment.role_confidence,
         roleSource: displaySegment.role_source,
         roleNote: displaySegment.role_note,
+        roleWarning: displaySegment.role_warning,
         needsReview: transcriptRoleNeedsReview(displaySegment, label),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
@@ -3041,8 +3056,6 @@ async function restoreAsrSessionFromUrl() {
       updateBrowserRecordingChunkStatusText();
       appState.taskStatus = "CREATED";
     }
-    $("topAsrEngineSelect").value = appState.selectedEngine;
-    $("audioEngineSelect").value = appState.selectedEngine;
     renderAll();
   } catch (error) {
     appState.asrLastError = `会话恢复失败：${error?.message || error}`;
@@ -3269,6 +3282,10 @@ function renderTranscript() {
     : "";
 
   $("transcriptList").innerHTML = `
+    <label class="transcript-follow-toggle">
+      <input type="checkbox" data-transcript-auto-follow ${appState.transcriptAutoFollow ? "checked" : ""}>
+      <span>自动跟随最新内容</span>
+    </label>
     ${issueBlock}
     ${streamingEmptyBlock}
     ${followEmptyBlock}
@@ -3284,12 +3301,16 @@ function renderTranscript() {
         >
           <span class="transcript-row-time">${escapeHtml(item.time)}</span>
           <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount, speakerAliases))}】</span>
+          ${item.roleWarning ? `<span class="transcript-role-warning">系统自动推定</span>` : ""}
           <span class="transcript-row-text">${escapeHtml(item.text || "（无文本）")}</span>
           <button type="button" class="transcript-row-link" data-open-detail="transcript:${item.index}" data-busy-allowed="true">详情</button>
         </div>
       `).join("")}
     </div>
   `;
+  if (appState.transcriptAutoFollow && isStreaming) {
+    $("transcriptList").scrollTop = $("transcriptList").scrollHeight;
+  }
 }
 
 function renderTranscriptDetailContent(target = "all") {
@@ -4728,7 +4749,7 @@ async function createRecordTask(conversationText, { keepAsr = false } = {}) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       conversation_text: conversationText,
-      encounter_id: appState.currentEncounter?.id || undefined,
+      encounter_id: selectedEncounterId() || undefined,
     }),
   });
   appState.currentTaskId = created.task_id;
@@ -4890,39 +4911,18 @@ function transcriptSpeakerGroups(rows = transcriptRows()) {
 }
 
 function roleReviewRequired() {
-  const asr = appState.currentAsrResult;
-  if (!asr) return false;
-  if (roleQualityPassed(asr)) return false;
-  if (roleQualityNeedsIdentityReview(asr)) return true;
-  const segments = currentReviewSegments();
-  const assignments = asr?.speaker_assignments || appState.speakerAssignments || [];
-  if (assignments.length) {
-    return assignments.some((item) => speakerAssignmentNeedsReview(item))
-      || appState.speakerMappingRequired;
-  }
-  return Boolean(
-    asr?.needs_review
-      || asr?.role_strategy === "single_segment_needs_review"
-      || segments.some((segment) => segment.needs_review || !segment.role || segment.role === "待确认"),
-  );
+  return false;
 }
 
 function roleReviewPendingCount() {
-  if (roleQualityPassed()) return 0;
-  const assignments = appState.currentAsrResult?.speaker_assignments || appState.speakerAssignments || [];
-  if (assignments.length) {
-    return pendingSpeakerAssignments().length;
-  }
-  return currentReviewSegments()
-    .filter((segment) => segment.needs_review || !segment.role || segment.role === "待确认")
-    .length;
+  return 0;
 }
 
 function focusNextActionPanel() {
   const panel = $("nextActionPanel");
   if (!panel) return;
   panel.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
-  panel.querySelector("[data-workflow-action='generate-record'], [data-workflow-action='open-role-review'], [data-workflow-action='save-role-review']")?.focus?.();
+  panel.querySelector("[data-workflow-action='generate-record'], [data-workflow-action='save-role-review']")?.focus?.();
 }
 
 function speakerRolesForReviewSave() {
@@ -5052,21 +5052,16 @@ async function uploadAndTranscribe(file, engine) {
   appState.asrChunkStatus = "";
   appState.asrChunkLastError = "";
   appState.asrRetryHint = "";
-  if (engine === "funasr") {
-    const prewarm = await refreshAsrPrewarmStatus();
-    if (prewarm?.status === "warming") {
-      appState.asrLastError = "FunASR 模型仍在准备中，首次真实转写可能需要等待；Mock ASR 可作为现场保底。";
-    } else if (prewarm?.status === "failed") {
-      appState.asrLastError = "FunASR 自动预热失败，真实转写可能回退为按需加载；如现场演示受阻请切换 Mock ASR。";
-    }
+  if (appState.recognitionMode === "fast") {
+    renderAll();
+    return uploadAndTranscribeFast(file, engine);
   }
+  await refreshAsrPrewarmStatus();
   renderAll();
 
   setBusy(true, "正在创建 ASR 实时转写会话...");
-  const sessionParams = new URLSearchParams({
-    engine,
-    diarization_engine: "auto",
-  });
+  const sessionParams = new URLSearchParams({ recognition_mode: "follow", diarization_engine: "auto" });
+  if (selectedEncounterId()) sessionParams.set("encounter_id", selectedEncounterId());
   if (appState.selectedDoctorProfileId) {
     sessionParams.set("doctor_profile_id", appState.selectedDoctorProfileId);
   }
@@ -5084,7 +5079,7 @@ async function uploadAndTranscribe(file, engine) {
   appState.taskStatus = "TRANSCRIBING";
   renderAll();
 
-  setBusy(true, `正在使用 ${ENGINE_LABELS[engine] || engine} 实时转写...`);
+  setBusy(true, "正在跟随识别音频...");
   return new Promise((resolve, reject) => {
     listenForAsrEvents(uploaded.events_url, { resolve, reject });
   });
@@ -5131,14 +5126,17 @@ async function startRecordGenerationFromAudio(audioId) {
   setBusy(true, "正在从转写文本生成病历...");
   try {
     const params = new URLSearchParams();
-    if (appState.currentEncounter?.id) {
-      params.set("encounter_id", appState.currentEncounter.id);
-    }
+    if (selectedEncounterId()) params.set("encounter_id", selectedEncounterId());
     const suffix = params.toString() ? `?${params.toString()}` : "";
     const created = await api(`/api/audio/${audioId}/generate-record${suffix}`, { method: "POST" });
     appState.currentTaskId = created.task_id;
     appState.taskStatus = created.status;
-    appState.currentTask = { id: created.task_id, status: created.status };
+    appState.currentTask = {
+      id: created.task_id,
+      status: created.status,
+      encounter_id: created.encounter_id || selectedEncounterId(),
+      patient_id: created.patient_id || appState.currentEncounter?.patient_id,
+    };
     renderAll();
     listenForEvents(created.task_id, created.events_url);
     return created;
@@ -5160,8 +5158,40 @@ async function runAudioWorkflowFromFile(file, engine, mode = appState.audioMode)
   return transcribed;
 }
 
+async function uploadAndTranscribeFast(file, engine) {
+  const form = new FormData();
+  form.append("file", file);
+  const uploadParams = new URLSearchParams({ recognition_mode: "fast" });
+  if (selectedEncounterId()) uploadParams.set("encounter_id", selectedEncounterId());
+  setBusy(true, "正在上传音频并准备尽快识别...");
+  const uploaded = await api(`/api/audio/upload?${uploadParams.toString()}`, { method: "POST", body: form });
+  appState.currentAudioId = uploaded.audio_id;
+  appState.uploadedFilename = uploaded.filename || uploaded.audio_id;
+  applyUploadedAudioMetadata(uploaded);
+  appState.taskStatus = "TRANSCRIBING";
+  renderAll();
+
+  const transcribeParams = new URLSearchParams({ recognition_mode: "fast" });
+  setBusy(true, "正在尽快识别完整音频...");
+  const transcribed = await api(`/api/audio/${encodeURIComponent(uploaded.audio_id)}/transcribe?${transcribeParams.toString()}`, {
+    method: "POST",
+  });
+  appState.currentAsrResult = transcribed.asr_result;
+  appState.liveTranscriptSegments = transcribed.asr_result?.segments || [];
+  appState.provisionalTranscriptSegments = [];
+  appState.speakerAssignments = transcribed.asr_result?.speaker_assignments || [];
+  appState.speakerMappingRequired = false;
+  appState.taskStatus = "TRANSCRIBED";
+  appState.asrProcessedAudioSeconds = Number(transcribed.audio_duration_seconds || 0);
+  appState.asrAudioDurationSeconds = Number(transcribed.audio_duration_seconds || 0);
+  setBusy(false);
+  renderAll();
+  return transcribed;
+}
+
 async function submitTextImport() {
   try {
+    if (!requireEncounterBeforeInput()) return;
     const text = $("conversationInput").value.trim();
     if (!text) throw new Error("请输入问诊文本");
     closeDrawer();
@@ -5174,9 +5204,11 @@ async function submitTextImport() {
 
 async function submitAudio() {
   try {
+    if (!requireEncounterBeforeInput()) return;
     const file = $("audioFileInput").files[0];
     if (!file) throw new Error("请选择音频文件");
-    const engine = $("audioEngineSelect").value;
+    const engine = appState.selectedEngine;
+    appState.recognitionMode = $("recognitionModeSelect")?.value || "fast";
     closeDrawer();
     await runAudioWorkflowFromFile(file, engine, appState.audioMode);
   } catch (error) {
@@ -5244,7 +5276,7 @@ async function retryTranscriptionFromFailure() {
     appState.taskStatus = "TRANSCRIBING";
     setBusy(true, "正在重新执行 ASR 转写...");
     renderAll();
-    const params = new URLSearchParams({ engine: appState.selectedEngine || "mock" });
+    const params = new URLSearchParams();
     const transcribed = await api(`/api/audio/${encodeURIComponent(appState.currentAudioId)}/transcribe?${params.toString()}`, {
       method: "POST",
     });
@@ -5410,10 +5442,6 @@ async function handleWorkflowAction(action) {
     await saveRoleReview();
     return;
   }
-  if (action === "open-role-review") {
-    openRoleReview();
-    return;
-  }
   if (action === "generate-record") {
     await regenerateRecord();
     return;
@@ -5432,18 +5460,16 @@ async function handleWorkflowAction(action) {
 }
 
 function handleInputMethod(method) {
+  if (!requireEncounterBeforeInput()) return;
   if (method === "record") {
     openReservedRecording();
     return;
   }
   if (method === "mock") {
     closeInputMethodMenu();
-    appState.selectedEngine = "mock";
-    const topSelect = $("topAsrEngineSelect");
-    const audioSelect = $("audioEngineSelect");
-    if (topSelect) topSelect.value = "mock";
-    if (audioSelect) audioSelect.value = "mock";
-    showToast("已切换为 Mock ASR 演示，可上传任意 MP3/WAV 跑通流程");
+    appState.recognitionMode = "fast";
+    if ($("recognitionModeSelect")) $("recognitionModeSelect").value = appState.recognitionMode;
+    showToast("已切换为尽快识别演示模式，可上传 MP3/WAV 跑通流程");
     openAudioGenerate();
     return;
   }
@@ -5457,25 +5483,30 @@ function handleInputMethod(method) {
 }
 
 function openTextImport() {
+  if (!requireEncounterBeforeInput()) return;
   clearActionError();
   openDrawer("textImportPanel", "文本导入生成病历");
 }
 
 function openAudioTranscribe() {
+  if (!requireEncounterBeforeInput()) return;
   clearActionError();
   appState.audioMode = "transcribe";
-  $("audioEngineSelect").value = appState.selectedEngine;
-  $("audioPanelHint").textContent = "上传 MP3/WAV 预录音频，系统创建 ASR 会话并通过 SSE 实时显示分段转写。";
+  appState.recognitionMode = "follow";
+  if ($("recognitionModeSelect")) $("recognitionModeSelect").value = appState.recognitionMode;
+  $("audioPanelHint").textContent = "跟随识别会对已录好的完整音频逐段处理，并通过 SSE 持续追加转写、角色和进度。";
   $("submitAudioButton").textContent = "上传并实时转写";
   openDrawer("audioPanel", "MP3/WAV 实时转写");
   refreshDoctorProfiles();
 }
 
 function openAudioGenerate() {
+  if (!requireEncounterBeforeInput()) return;
   clearActionError();
   appState.audioMode = "generate";
-  $("audioEngineSelect").value = appState.selectedEngine;
-  $("audioPanelHint").textContent = "上传 MP3/WAV 预录音频，先完成 SSE 实时转写，再进入病历生成流程。";
+  appState.recognitionMode = "follow";
+  if ($("recognitionModeSelect")) $("recognitionModeSelect").value = appState.recognitionMode;
+  $("audioPanelHint").textContent = "选择尽快识别可批量处理完整音频；选择跟随识别会逐段显示转写并在完成后生成草稿。";
   $("submitAudioButton").textContent = "实时转写并生成病历";
   openDrawer("audioPanel", "MP3/WAV 生成病历");
   refreshDoctorProfiles();
@@ -5867,16 +5898,17 @@ async function refreshBrowserRecordingQueueCounts(sessionId = appState.browserRe
   };
 }
 
-async function ensureBrowserRecordingSession(engine) {
+async function ensureBrowserRecordingSession() {
   if (appState.browserRecordingSessionId) return appState.browserRecordingSessionId;
-  const sessionParams = new URLSearchParams({ engine });
+  const sessionParams = new URLSearchParams({ recognition_mode: "follow" });
+  if (selectedEncounterId()) sessionParams.set("encounter_id", selectedEncounterId());
   if (appState.selectedDoctorProfileId) {
     sessionParams.set("doctor_profile_id", appState.selectedDoctorProfileId);
   }
   const session = await api(`/api/asr/sessions?${sessionParams.toString()}`, { method: "POST" });
   appState.currentAsrSessionId = session.session_id;
   appState.browserRecordingSessionId = session.session_id;
-  appState.selectedEngine = session.engine || engine || appState.selectedEngine;
+  appState.selectedEngine = session.engine || appState.selectedEngine;
   updateSessionUrl(session.session_id);
   return session.session_id;
 }
@@ -6298,7 +6330,7 @@ async function completeBrowserRecordingUpload() {
   appState.uploadedFilename = completed.filename || completed.audio_id;
   applyUploadedAudioMetadata(completed);
   appState.taskStatus = "TRANSCRIBING";
-  setBusy(true, `正在使用 ${ENGINE_LABELS[completed.engine] || completed.engine} 转写录音...`);
+  setBusy(true, "正在跟随识别录音...");
   return new Promise((resolve, reject) => {
     listenForAsrEvents(completed.events_url, { resolve, reject });
   });
@@ -6306,6 +6338,7 @@ async function completeBrowserRecordingUpload() {
 
 async function startBrowserRecording() {
   clearActionError();
+  if (!requireEncounterBeforeInput()) return;
   releaseBrowserRecordingPreview();
   appState.browserRecordingChunkBuffer = [];
   appState.browserRecordingChunkIndex = 0;
@@ -6366,8 +6399,7 @@ async function startBrowserRecording() {
     if (!stream.getAudioTracks().length) {
       throw new DOMException("No audio input track", "NotFoundError");
     }
-    const engine = $("recordingEngineSelect").value;
-    await ensureBrowserRecordingSession(engine);
+    await ensureBrowserRecordingSession();
     if (!browserRecordingRequestActive(requestId)) {
       stream.getTracks().forEach((track) => track.stop());
       return;
@@ -6562,6 +6594,7 @@ async function cancelBrowserRecording({ silent = false } = {}) {
 
 async function submitBrowserRecording() {
   try {
+    if (!requireEncounterBeforeInput()) return;
     if (!appState.browserRecordingFinalized?.audio_id) {
       throw new Error("请先完成录音并试听确认。");
     }
@@ -6585,10 +6618,10 @@ async function submitBrowserRecording() {
 }
 
 function openReservedRecording() {
+  if (!requireEncounterBeforeInput()) return;
   closeInputMethodMenu();
   clearActionError();
   appState.audioMode = "generate";
-  $("recordingEngineSelect").value = appState.selectedEngine;
   openDrawer("recordingPanel", "浏览器录音生成病历");
 }
 
@@ -6819,23 +6852,8 @@ function bindEvents() {
       reportActionError(error);
     }
   });
-  $("topAsrEngineSelect").addEventListener("change", () => {
-    appState.selectedEngine = $("topAsrEngineSelect").value;
-    $("audioEngineSelect").value = appState.selectedEngine;
-    $("recordingEngineSelect").value = appState.selectedEngine;
-    renderPatientBar();
-  });
-  $("audioEngineSelect").addEventListener("change", () => {
-    appState.selectedEngine = $("audioEngineSelect").value;
-    $("topAsrEngineSelect").value = appState.selectedEngine;
-    $("recordingEngineSelect").value = appState.selectedEngine;
-    renderPatientBar();
-  });
-  $("recordingEngineSelect").addEventListener("change", () => {
-    appState.selectedEngine = $("recordingEngineSelect").value;
-    $("topAsrEngineSelect").value = appState.selectedEngine;
-    $("audioEngineSelect").value = appState.selectedEngine;
-    renderPatientBar();
+  $("recognitionModeSelect")?.addEventListener("change", () => {
+    appState.recognitionMode = $("recognitionModeSelect").value || "fast";
   });
   $("recordFields").addEventListener("click", (event) => {
     const confirmRegular = event.target.closest("[data-approval-confirm-regular]");
@@ -6872,6 +6890,14 @@ function bindEvents() {
     }
   });
   $("transcriptList").addEventListener("change", (event) => {
+    const autoFollow = event.target.closest("[data-transcript-auto-follow]");
+    if (autoFollow) {
+      appState.transcriptAutoFollow = autoFollow.checked;
+      if (appState.transcriptAutoFollow) {
+        $("transcriptList").scrollTop = $("transcriptList").scrollHeight;
+      }
+      return;
+    }
     const roleSelect = event.target.closest("[data-role-select]");
     if (!roleSelect) return;
     const card = roleSelect.closest("[data-segment-index]");
@@ -6906,6 +6932,15 @@ function bindEvents() {
       await saveRoleReview();
     } catch (error) {
       reportActionError(error);
+    }
+  });
+  $("transcriptList").addEventListener("scroll", () => {
+    const list = $("transcriptList");
+    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 24;
+    if (!atBottom && appState.transcriptAutoFollow) {
+      appState.transcriptAutoFollow = false;
+      const toggle = list.querySelector("[data-transcript-auto-follow]");
+      if (toggle) toggle.checked = false;
     }
   });
   $("transcriptList").addEventListener("keydown", (event) => {

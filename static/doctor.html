@@ -188,20 +188,7 @@
             <span class="meta-label">数据状态</span>
             <strong id="patientDataStatus">等待输入</strong>
           </div>
-          <div class="asr-engine-meta debug-only">
-            <span class="meta-label">转写引擎</span>
-            <label class="engine-select-wrap" for="topAsrEngineSelect">
-              <select id="topAsrEngineSelect" aria-label="选择 ASR 模型">
-                <option value="funasr" selected>FunASR</option>
-                <option value="sensevoice">SenseVoice</option>
-                <option value="whisper">Whisper</option>
-                <option value="mock">Mock ASR</option>
-                <option value="qwen3">Qwen3-ASR</option>
-                <option value="online">Online ASR</option>
-              </select>
-            </label>
-            <span id="asrModelStatus" class="model-status neutral">模型状态未知</span>
-          </div>
+          <span id="asrModelStatus" class="model-status neutral debug-only">模型状态未知</span>
           <div class="debug-only">
             <span class="meta-label">LLM Provider</span>
             <strong id="llmProvider">-</strong>
@@ -451,8 +438,14 @@
       </section>
 
       <section id="audioPanel" class="drawer-panel">
-        <p id="audioPanelHint" class="form-help">选择 MP3/WAV 音频与 ASR 引擎，系统将通过 SSE 在中间转写栏显示分段结果。</p>
+        <p id="audioPanelHint" class="form-help">上传已录好的 MP3/WAV 问诊音频，选择识别模式后系统自动转写并推定医患角色。</p>
         <input id="audioFileInput" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" />
+        <label class="recognition-mode-control" for="recognitionModeSelect">识别模式
+          <select id="recognitionModeSelect">
+            <option value="fast">尽快识别</option>
+            <option value="follow">跟随识别</option>
+          </select>
+        </label>
         <div class="speaker-profile-control">
           <label for="doctorProfileSelect">医生声纹（可选）</label>
           <select id="doctorProfileSelect">
@@ -465,27 +458,11 @@
           </div>
           <small>注册音频提取 CAM++ 向量后立即删除，只在本机保存声纹向量。</small>
         </div>
-          <select id="audioEngineSelect">
-            <option value="funasr" selected>FunASR</option>
-            <option value="sensevoice">SenseVoice Small</option>
-            <option value="whisper">Whisper Base</option>
-            <option value="mock">Mock ASR</option>
-            <option value="qwen3">Qwen3-ASR 0.6B</option>
-            <option value="online">Online ASR</option>
-        </select>
         <button type="button" class="primary-action wide-action" id="submitAudioButton">上传</button>
       </section>
 
       <section id="recordingPanel" class="drawer-panel">
         <p class="form-help">使用浏览器麦克风录制最长 30 分钟 WAV 音频，支持暂停/恢复、分块上传、刷新后按 session 恢复转写。</p>
-        <select id="recordingEngineSelect">
-          <option value="funasr" selected>FunASR</option>
-          <option value="sensevoice">SenseVoice Small</option>
-          <option value="whisper">Whisper Base</option>
-          <option value="mock">Mock ASR</option>
-          <option value="qwen3">Qwen3-ASR 0.6B</option>
-          <option value="online">Online ASR</option>
-        </select>
         <div class="browser-recording-panel" aria-live="polite">
           <div class="browser-recording-meter">
             <span id="browserRecordingStatusLabel">等待录音</span>

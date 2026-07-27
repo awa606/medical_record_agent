@@ -185,6 +185,15 @@ textarea:focus {
   z-index: 30;
 }
 
+.recognition-mode-control {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .brand-block {
   min-width: 0;
   display: flex;
@@ -1601,6 +1610,35 @@ body.doctor-mode .encounter-action-bar #exportButton {
   border-color: #df8b93;
   background: #fff;
   color: #a32935;
+}
+
+.transcript-follow-toggle,
+body.doctor-mode .transcript-follow-toggle {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.transcript-follow-toggle input {
+  width: 14px;
+  height: 14px;
+}
+
+.transcript-role-warning {
+  align-self: center;
+  border: 1px solid #f3c26b;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #fffaeb;
+  color: #9a6700;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .encounter-action-bar.flow-failed .button-group button:disabled,

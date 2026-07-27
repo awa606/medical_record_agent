@@ -49,6 +49,7 @@ from app.services.asr import (
     merge_chunk_transcriptions,
     split_audio_to_chunks,
 )
+from app.services.asr.auto_roles import ensure_automatic_speaker_roles
 from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 from app.services.asr.funasr_reliability import classify_funasr_error
@@ -1012,6 +1013,7 @@ def _offset_segment_for_chunk(segment: ASRSegment, chunk_start_seconds: float) -
         role_confidence=segment.role_confidence,
         role_source=segment.role_source,
         role_note=segment.role_note,
+        role_warning=segment.role_warning,
         speaker_turn=segment.speaker_turn,
         needs_review=True if not segment.role else segment.needs_review,
         reviewed_by_doctor=segment.reviewed_by_doctor,
@@ -2492,7 +2494,7 @@ def _write_transcription_success(
     result: ASRResult,
     emit_segments: bool = True,
 ) -> None:
-    result = attach_speaker_role_quality(result)
+    result = ensure_automatic_speaker_roles(result)
     _write_transcript(result)
     _write_session_result(session_id, result)
     ready_session = session.model_copy(

@@ -866,7 +866,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertEqual(same.status_code, 400)
         self.assertEqual(missing.status_code, 404)
 
-    def test_generate_record_gate_recovers_after_merge_and_role_confirmation(self):
+    def test_generate_record_does_not_block_pending_speaker_roles(self):
         session = create_asr_session(engine="funasr")
         result = ASRResult(
             audio_id="merge-gate",
@@ -890,27 +890,13 @@ class ASRSessionApiTests(unittest.TestCase):
         client = TestClient(app)
         login_as_admin(client)
 
-        blocked = client.post("/api/audio/merge-gate/generate-record")
-        self.assertEqual(blocked.status_code, 409)
-
-        merge_asr_session_speakers(
-            session.session_id,
-            ASRSpeakerMergeRequest(source_speaker="spk3", target_speaker="spk2"),
-        )
-        still_blocked = client.post("/api/audio/merge-gate/generate-record")
-        self.assertEqual(still_blocked.status_code, 409)
-
-        update_asr_session_result(
-            session.session_id,
-            ASRSessionCorrectionRequest(
-                speaker_roles=[
-                    {"speaker_id": "spk1", "role": "医生"},
-                    {"speaker_id": "spk2", "role": "患者"},
-                ]
-            ),
-        )
         allowed = client.post("/api/audio/merge-gate/generate-record")
+        transcript = read_audio_transcript("merge-gate")
+
         self.assertEqual(allowed.status_code, 200)
+        self.assertFalse(transcript.needs_review)
+        self.assertEqual({segment.speaker_id for segment in transcript.segments}, {"spk1", "spk2", "spk3"})
+        self.assertTrue(any(segment.role_warning for segment in transcript.segments))
 
     def test_companion_and_pending_roles_are_accepted_for_speaker_review(self):
         session = create_asr_session(engine="mock")

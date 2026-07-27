@@ -23,6 +23,7 @@ class ASRSegment(BaseModel):
     role_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     role_source: str | None = None
     role_note: str | None = None
+    role_warning: str | None = None
     speaker_turn: int | None = None
     needs_review: bool = False
     reviewed_by_doctor: bool = False

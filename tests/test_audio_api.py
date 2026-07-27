@@ -17,6 +17,7 @@ from app.api.audio import (
 from app.api.tasks import read_task
 from app.main import app
 from app.schemas import ASREvaluationRequest, ASRResult, ASRSegment, SpeakerRoleAssignment
+from app.services.asr.auto_roles import AUTO_ROLE_WARNING
 from tests.auth_helpers import login_as_admin
 
 
@@ -123,10 +124,12 @@ class AudioApiTests(unittest.TestCase):
         asr_result = transcribed["asr_result"]
 
         self.assertEqual(asr_result["manifest_sample_id"], "snakebite_01")
-        self.assertEqual(asr_result["role_strategy"], "single_speaker_script_split")
+        self.assertEqual(asr_result["role_strategy"], "automatic_provisional_roles")
         self.assertFalse(asr_result["evaluate_diarization"])
-        self.assertIn("[医生]", asr_result["conversation_text"])
-        self.assertIn("[患者]", asr_result["conversation_text"])
+        self.assertNotIn("[医生]", asr_result["conversation_text"])
+        self.assertEqual({segment["speaker_id"] for segment in asr_result["segments"]}, {"script"})
+        self.assertEqual({segment["role"] for segment in asr_result["segments"]}, {PATIENT})
+        self.assertTrue(any(segment["role_warning"] == AUTO_ROLE_WARNING for segment in asr_result["segments"]))
 
     def test_evaluate_audio_returns_cer_and_keywords(self):
         uploaded = self._upload_sample("sample.wav")
@@ -188,7 +191,7 @@ class AudioApiTests(unittest.TestCase):
         self.assertFalse(raised.exception.detail["fallback"])
         self.assertEqual(raised.exception.detail["mode"], "live")
 
-    def test_generate_record_from_audio_rejects_unmapped_speaker(self):
+    def test_generate_record_from_audio_auto_assigns_unmapped_speaker(self):
         uploaded = self._upload_sample("sample.wav")
         _write_transcript(
             ASRResult(
@@ -203,13 +206,16 @@ class AudioApiTests(unittest.TestCase):
             )
         )
 
-        with self.assertRaises(HTTPException) as raised:
-            generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+        response = generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+        transcript = read_audio_transcript(uploaded.audio_id)
 
-        self.assertEqual(raised.exception.status_code, 409)
-        self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
+        self.assertEqual(response["status"], "CREATED")
+        self.assertFalse(transcript.needs_review)
+        self.assertEqual(transcript.segments[0].role, PATIENT)
+        self.assertEqual(transcript.segments[0].role_source, "auto_provisional_single_speaker")
+        self.assertEqual(transcript.segments[0].role_warning, AUTO_ROLE_WARNING)
 
-    def test_generate_record_from_audio_rejects_low_confidence_role(self):
+    def test_generate_record_from_audio_auto_warns_low_confidence_role(self):
         uploaded = self._upload_sample("sample.wav")
         _write_transcript(
             ASRResult(
@@ -237,13 +243,16 @@ class AudioApiTests(unittest.TestCase):
             )
         )
 
-        with self.assertRaises(HTTPException) as raised:
-            generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+        response = generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+        transcript = read_audio_transcript(uploaded.audio_id)
 
-        self.assertEqual(raised.exception.status_code, 409)
-        self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
+        self.assertEqual(response["status"], "CREATED")
+        self.assertFalse(transcript.needs_review)
+        self.assertEqual(transcript.segments[0].role, PATIENT)
+        self.assertEqual(transcript.segments[0].role_warning, AUTO_ROLE_WARNING)
+        self.assertIn(AUTO_ROLE_WARNING, transcript.warnings)
 
-    def test_generate_record_from_audio_rejects_mixed_utterance(self):
+    def test_generate_record_from_audio_preserves_mixed_utterance_quality(self):
         uploaded = self._upload_sample("sample.wav")
         mixed_text = "请问哪里不舒服，我发热三天"
         _write_transcript(
@@ -264,11 +273,12 @@ class AudioApiTests(unittest.TestCase):
             )
         )
 
-        with self.assertRaises(HTTPException) as raised:
-            generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+        response = generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+        transcript = read_audio_transcript(uploaded.audio_id)
 
-        self.assertEqual(raised.exception.status_code, 409)
-        self.assertEqual(raised.exception.detail["role_quality"]["status"], "blocked")
+        self.assertEqual(response["status"], "CREATED")
+        self.assertFalse(transcript.needs_review)
+        self.assertEqual(transcript.role_quality.status, "blocked")
 
     def _upload_sample(self, filename: str):
         fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")

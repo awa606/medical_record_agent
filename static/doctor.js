@@ -5307,12 +5307,24 @@ async function saveDraftReview() {
   try {
     if (!appState.currentTaskId || !appState.currentRecordFields) throw new Error("暂无可保存的病历字段");
     setBusy(true, "正在保存修改到 SQLite...");
+    if (!appState.currentExportReadiness?.revision_id || !appState.currentExportReadiness?.content_hash) {
+      await refreshExportReadiness();
+    }
+    const revision = appState.currentExportReadiness;
+    if (!revision?.revision_id || !revision?.content_hash) {
+      throw new Error("Unable to verify the current record revision; refresh and retry.");
+    }
     appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fields: appState.currentRecordFields }),
+      body: JSON.stringify({
+        fields: appState.currentRecordFields,
+        expected_revision_id: revision.revision_id,
+        expected_content_hash: revision.content_hash,
+      }),
     });
     await refreshTask(appState.currentTaskId, appState.currentTask);
+    await refreshExportReadiness();
     setBusy(false);
     showToast("修改已保存到 SQLite");
   } catch (error) {
@@ -5900,7 +5912,7 @@ async function refreshBrowserRecordingQueueCounts(sessionId = appState.browserRe
 
 async function ensureBrowserRecordingSession() {
   if (appState.browserRecordingSessionId) return appState.browserRecordingSessionId;
-  const sessionParams = new URLSearchParams({ recognition_mode: "follow" });
+  const sessionParams = new URLSearchParams({ recognition_mode: appState.recognitionMode || "fast" });
   if (selectedEncounterId()) sessionParams.set("encounter_id", selectedEncounterId());
   if (appState.selectedDoctorProfileId) {
     sessionParams.set("doctor_profile_id", appState.selectedDoctorProfileId);

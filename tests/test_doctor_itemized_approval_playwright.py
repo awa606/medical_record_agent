@@ -125,10 +125,15 @@ def _prepare_review_fixture(page) -> int:
             doctor_review_status: 'pending',
             high_risk_confirmed_by_doctor: false
           }];
+          const readiness = await api(`/api/tasks/${state.currentTaskId}/export-readiness`);
           const task = await api(`/api/tasks/${state.currentTaskId}/review`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fields })
+            body: JSON.stringify({
+              fields,
+              expected_revision_id: readiness.revision_id,
+              expected_content_hash: readiness.content_hash
+            })
           });
           await refreshTask(state.currentTaskId, task);
           await refreshExportReadiness();

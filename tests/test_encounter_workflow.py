@@ -121,8 +121,16 @@ class EncounterWorkflowTests(unittest.TestCase):
                 "missing_elements": ["duration"],
             }
         )
-        reviewed = review_task(task_id, ReviewRequest(fields=fields))
-        self.assertEqual(reviewed["current_stage"], "reviewed")
+        readiness = read_export_readiness(task_id)
+        reviewed = review_task(
+            task_id,
+            ReviewRequest(
+                fields=fields,
+                expected_revision_id=readiness.revision_id,
+                expected_content_hash=readiness.content_hash,
+            ),
+        )
+        self.assertEqual(reviewed["current_stage"], "waiting_doctor_review")
 
         self.assertIsNone(get_active_approval_for_task(task_id))
         revisions = list_record_revisions_for_task(task_id)

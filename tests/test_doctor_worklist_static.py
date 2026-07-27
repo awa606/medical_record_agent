@@ -34,7 +34,8 @@ def test_doctor_worklist_uses_encounter_api_and_restore_path() -> None:
     assert "function performEncounterAction" in script
     assert "data-encounter-action" in script
     assert "check_in_status" in script
-    assert "encounter_id: appState.currentEncounter?.id" in script
+    assert "function selectedEncounterId" in script
+    assert "encounter_id: selectedEncounterId() || undefined" in script
     assert "generate-record${suffix}" in script
 
 

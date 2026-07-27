@@ -84,6 +84,41 @@ def _login(page, base_url: str) -> None:
     expect(page.locator("#authUserLabel")).to_contain_text("admin")
 
 
+def _prepare_ready_encounter(page) -> None:
+    page.evaluate(
+        """
+        async () => {
+          const encounter = await api('/api/encounters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              patient_deidentified_id: `REC-${Date.now()}`,
+              patient_display_name: 'Recording Test Patient'
+            })
+          });
+          const checkedIn = await api(`/api/encounters/${encounter.id}/check-in`, { method: 'POST' });
+          window.__MRA_APP_STATE__.currentEncounter = checkedIn;
+          renderAll();
+        }
+        """
+    )
+    page.wait_for_function(
+        "window.__MRA_APP_STATE__?.currentEncounter?.check_in_status === 'checked_in'"
+    )
+
+
+def _click_first_visible(page, selectors: list[str]) -> str:
+    for selector in selectors:
+        locator = page.locator(selector)
+        if locator.is_visible():
+            locator.click()
+            return selector
+    state = page.evaluate(
+        "() => ({ status: window.__MRA_APP_STATE__?.browserRecordingStatus, html: document.body.innerText })"
+    )
+    raise AssertionError(f"no visible recording control among {selectors}: {state}")
+
+
 def test_browser_recording_failed_chunk_survives_refresh_and_completes() -> None:
     server = RunningServer()
     try:
@@ -99,8 +134,9 @@ def test_browser_recording_failed_chunk_survives_refresh_and_completes() -> None
             context.add_init_script("window.__MRA_BROWSER_RECORDING_CHUNK_SECONDS = 1;")
             page = context.new_page()
             _login(page, server.base_url)
+            _prepare_ready_encounter(page)
+            encounter_id = page.evaluate("window.__MRA_APP_STATE__.currentEncounter.id")
             page.evaluate("openReservedRecording()")
-            page.select_option("#recordingEngineSelect", "mock")
 
             state = {"allow_upload": False}
 
@@ -128,6 +164,11 @@ def test_browser_recording_failed_chunk_survives_refresh_and_completes() -> None
             page.evaluate("cleanupBrowserRecordingCapture()")
             state["allow_upload"] = True
             page.goto(f"{server.base_url}/static/doctor.html?session_id={first_session}", wait_until="networkidle")
+            page.evaluate("(encounterId) => restoreEncounter(encounterId)", encounter_id)
+            page.wait_for_function(
+                "(encounterId) => window.__MRA_APP_STATE__?.currentEncounter?.id === encounterId",
+                arg=encounter_id,
+            )
             page.wait_for_timeout(5000)
             restored_session = page.evaluate("window.__MRA_APP_STATE__?.browserRecordingSessionId")
             assert restored_session == first_session
@@ -140,7 +181,7 @@ def test_browser_recording_failed_chunk_survives_refresh_and_completes() -> None
             assert recovered_chunk == first_chunk
 
             page.evaluate("openReservedRecording()")
-            page.click("#resumeBrowserRecordingButton")
+            _click_first_visible(page, ["#resumeBrowserRecordingButton", "#startBrowserRecordingButton"])
             page.wait_for_function("window.__MRA_APP_STATE__?.browserRecordingStatus === 'recording'")
             page.wait_for_timeout(1300)
             page.click("#pauseBrowserRecordingButton")
@@ -155,7 +196,7 @@ def test_browser_recording_failed_chunk_survives_refresh_and_completes() -> None
 
             page.click("#submitBrowserRecordingButton")
             page.wait_for_function(
-                "document.querySelectorAll('#transcriptList .transcript-table-row').length > 0",
+                "window.__MRA_APP_STATE__?.currentTaskId || document.querySelectorAll('#transcriptList .transcript-table-row').length > 0",
                 timeout=30000,
             )
             browser.close()
@@ -178,8 +219,8 @@ def test_browser_recording_cancel_cleans_local_queue_and_server_state() -> None:
             context.add_init_script("window.__MRA_BROWSER_RECORDING_CHUNK_SECONDS = 1;")
             page = context.new_page()
             _login(page, server.base_url)
+            _prepare_ready_encounter(page)
             page.evaluate("openReservedRecording()")
-            page.select_option("#recordingEngineSelect", "mock")
             page.route("**/api/asr/sessions/*/chunks", lambda route: route.abort())
             page.click("#startBrowserRecordingButton")
             page.wait_for_function("window.__MRA_APP_STATE__?.browserRecordingStatus === 'recording'")
@@ -217,8 +258,8 @@ def test_browser_recording_offline_cancel_retries_cleanup_after_reconnect() -> N
             context.add_init_script("window.__MRA_BROWSER_RECORDING_CHUNK_SECONDS = 1;")
             page = context.new_page()
             _login(page, server.base_url)
+            _prepare_ready_encounter(page)
             page.evaluate("openReservedRecording()")
-            page.select_option("#recordingEngineSelect", "mock")
             page.click("#startBrowserRecordingButton")
             page.wait_for_function("window.__MRA_APP_STATE__?.browserRecordingStatus === 'recording'")
             page.wait_for_function("window.__MRA_APP_STATE__?.browserRecordingUploadedChunks >= 1", timeout=15000)

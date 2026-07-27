@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.db import (
@@ -507,9 +507,18 @@ def read_task_agent_trace(
 
 
 @router.post("/{task_id}/review")
-def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -> dict[str, Any]:
+def review_task(
+    task_id: int,
+    payload: dict[str, Any] | None = Body(default=None),
+    request: Request = None,
+) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
-    fields = _reset_review_state(payload.fields)
+    try:
+        review_payload = ReviewRequest.model_validate(payload or {})
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+
+    fields = _reset_review_state(review_payload.fields)
     generator = _record_generator_or_503()
     draft = generator.generate_draft(fields)
     safety_check = generator.safety_check(draft, fields)
@@ -526,8 +535,8 @@ def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -
         updated_task = apply_review_revision_transaction(
             task_id,
             result,
-            expected_revision_id=payload.expected_revision_id,
-            expected_content_hash=payload.expected_content_hash,
+            expected_revision_id=review_payload.expected_revision_id,
+            expected_content_hash=review_payload.expected_content_hash,
             actor_user_id=actor.id if actor else None,
             status="WAITING_DOCTOR_REVIEW",
             current_stage="waiting_doctor_review",

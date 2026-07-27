@@ -60,6 +60,28 @@ class MedicalField(BaseModel):
         return self
 
 
+class ClinicalReference(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reference_id: str
+    title: str
+    organization: str
+    source_type: Literal[
+        "national_guideline",
+        "clinical_guideline",
+        "official_clinical_resource",
+    ]
+    version: str
+    published_at: str
+    url: str
+    evidence_scope: str
+    verification_status: Literal["source_verified"] = "source_verified"
+    clinical_review_status: Literal["needs_medical_review", "reviewed"] = (
+        "needs_medical_review"
+    )
+    retrieved_at: str
+
+
 class CandidateDiagnosis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -73,6 +95,7 @@ class CandidateDiagnosis(BaseModel):
     medication_notes: list[str] = Field(default_factory=list)
     risk_warnings: list[str] = Field(default_factory=list)
     follow_up_questions: list[str] = Field(default_factory=list)
+    references: list[ClinicalReference] = Field(default_factory=list)
     confirmed_by_doctor: bool = False
 
 

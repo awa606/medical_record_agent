@@ -1,0 +1,128 @@
+﻿{
+    "baseUrl":  "http://127.0.0.1:8765",
+    "capturedAt":  "2026-07-27T03:01:21.4894800Z",
+    "screenshots":  [
+                        {
+                            "viewport":  "1366x768",
+                            "label":  "detail_drawer",
+                            "file":  "docs/ui_audit/screenshots_v1/1366x768_detail_drawer.png"
+                        },
+                        {
+                            "viewport":  "1366x768",
+                            "label":  "empty_state",
+                            "file":  "docs/ui_audit/screenshots_v1/1366x768_empty_state.png"
+                        },
+                        {
+                            "viewport":  "1366x768",
+                            "label":  "export_blocked",
+                            "file":  "docs/ui_audit/screenshots_v1/1366x768_export_blocked.png"
+                        },
+                        {
+                            "viewport":  "1366x768",
+                            "label":  "export_success",
+                            "file":  "docs/ui_audit/screenshots_v1/1366x768_export_success.png"
+                        },
+                        {
+                            "viewport":  "1366x768",
+                            "label":  "generated_record",
+                            "file":  "docs/ui_audit/screenshots_v1/1366x768_generated_record.png"
+                        },
+                        {
+                            "viewport":  "1366x768",
+                            "label":  "input_menu_open",
+                            "file":  "docs/ui_audit/screenshots_v1/1366x768_input_menu_open.png"
+                        },
+                        {
+                            "viewport":  "1366x768",
+                            "label":  "role_review_state",
+                            "file":  "docs/ui_audit/screenshots_v1/1366x768_role_review_state.png"
+                        },
+                        {
+                            "viewport":  "1366x768",
+                            "label":  "transcription_preview",
+                            "file":  "docs/ui_audit/screenshots_v1/1366x768_transcription_preview.png"
+                        },
+                        {
+                            "viewport":  "1440x900",
+                            "label":  "detail_drawer",
+                            "file":  "docs/ui_audit/screenshots_v1/1440x900_detail_drawer.png"
+                        },
+                        {
+                            "viewport":  "1440x900",
+                            "label":  "empty_state",
+                            "file":  "docs/ui_audit/screenshots_v1/1440x900_empty_state.png"
+                        },
+                        {
+                            "viewport":  "1440x900",
+                            "label":  "export_blocked",
+                            "file":  "docs/ui_audit/screenshots_v1/1440x900_export_blocked.png"
+                        },
+                        {
+                            "viewport":  "1440x900",
+                            "label":  "export_success",
+                            "file":  "docs/ui_audit/screenshots_v1/1440x900_export_success.png"
+                        },
+                        {
+                            "viewport":  "1440x900",
+                            "label":  "generated_record",
+                            "file":  "docs/ui_audit/screenshots_v1/1440x900_generated_record.png"
+                        },
+                        {
+                            "viewport":  "1440x900",
+                            "label":  "input_menu_open",
+                            "file":  "docs/ui_audit/screenshots_v1/1440x900_input_menu_open.png"
+                        },
+                        {
+                            "viewport":  "1440x900",
+                            "label":  "role_review_state",
+                            "file":  "docs/ui_audit/screenshots_v1/1440x900_role_review_state.png"
+                        },
+                        {
+                            "viewport":  "1440x900",
+                            "label":  "transcription_preview",
+                            "file":  "docs/ui_audit/screenshots_v1/1440x900_transcription_preview.png"
+                        },
+                        {
+                            "viewport":  "1920x1080",
+                            "label":  "detail_drawer",
+                            "file":  "docs/ui_audit/screenshots_v1/1920x1080_detail_drawer.png"
+                        },
+                        {
+                            "viewport":  "1920x1080",
+                            "label":  "empty_state",
+                            "file":  "docs/ui_audit/screenshots_v1/1920x1080_empty_state.png"
+                        },
+                        {
+                            "viewport":  "1920x1080",
+                            "label":  "export_blocked",
+                            "file":  "docs/ui_audit/screenshots_v1/1920x1080_export_blocked.png"
+                        },
+                        {
+                            "viewport":  "1920x1080",
+                            "label":  "export_success",
+                            "file":  "docs/ui_audit/screenshots_v1/1920x1080_export_success.png"
+                        },
+                        {
+                            "viewport":  "1920x1080",
+                            "label":  "generated_record",
+                            "file":  "docs/ui_audit/screenshots_v1/1920x1080_generated_record.png"
+                        },
+                        {
+                            "viewport":  "1920x1080",
+                            "label":  "input_menu_open",
+                            "file":  "docs/ui_audit/screenshots_v1/1920x1080_input_menu_open.png"
+                        },
+                        {
+                            "viewport":  "1920x1080",
+                            "label":  "role_review_state",
+                            "file":  "docs/ui_audit/screenshots_v1/1920x1080_role_review_state.png"
+                        },
+                        {
+                            "viewport":  "1920x1080",
+                            "label":  "transcription_preview",
+                            "file":  "docs/ui_audit/screenshots_v1/1920x1080_transcription_preview.png"
+                        }
+                    ],
+    "contactSheet":  "docs/ui_audit/screenshots_v1/browser_acceptance_contact_sheet.png",
+    "note":  "Paths are relative to the UI worktree root."
+}

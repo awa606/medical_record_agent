@@ -28,6 +28,7 @@ from app.schemas.auth import (
 )
 from app.schemas.medical_record import (
     CandidateDiagnosis,
+    ClinicalReference,
     MedicalField,
     MedicalRecordFields,
     SafetyCheckResult,
@@ -64,6 +65,7 @@ __all__ = [
     "SpeakerRoleQualityMetrics",
     "SpeakerRoleQualityResult",
     "CandidateDiagnosis",
+    "ClinicalReference",
     "DoctorSpeakerProfile",
     "MedicalField",
     "MedicalRecordFields",

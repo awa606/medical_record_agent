@@ -2868,8 +2868,8 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
         </div>
         <span class="status-badge ${appState.asrLastError ? "missing" : asr ? "confirmed" : isStreaming ? "info" : "neutral"}">${escapeHtml(ENGINE_LABELS[asr?.engine || appState.selectedEngine] || asr?.engine || appState.selectedEngine || "ASR")}</span>
       </div>
-      <div class="progress-track" aria-label="转写进度">
-        <span style="width: ${progress}%"></span>
+      <div class="progress-track" role="progressbar" aria-label="转写进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}">
+        <span style="transform: scaleX(${Math.max(0, Math.min(progress, 100)) / 100})"></span>
       </div>
       ${friendlyIssue ? `<div class="safety-strip danger">${escapeHtml(friendlyIssue)}</div>` : ""}
       ${appState.asrRetryHint ? `<div class="safety-strip warning"><strong>重试提示</strong><br>${escapeHtml(appState.asrRetryHint)}</div>` : ""}
@@ -3769,6 +3769,14 @@ function renderDebug() {
   renderJson($("debugSafetyJson"), appState.currentSafetyCheck);
 }
 
+function exportDisabledReason(displayState) {
+  if (appState.busy) return "系统处理中，请等待当前操作完成";
+  if (displayState.key === "transcription_failed") return "转写失败，需先恢复流程";
+  if (!appState.currentTaskId) return "暂无可导出的病历任务";
+  if (!isApprovedForExport()) return "完成医生审核后方可导出";
+  return "";
+}
+
 function renderFooter() {
   const displayState = doctorDisplayState();
   const actionBar = document.querySelector(".encounter-action-bar");
@@ -3776,6 +3784,7 @@ function renderFooter() {
   const saveButton = $("saveDraftButton");
   const confirmButton = $("confirmFieldsButton");
   const exportButton = $("exportButton");
+  const taskHint = $("currentTaskHint");
   const footerHints = {
     draft_generated: "病历草稿已生成，可先保存修改；保存后进入医生审核。",
     pending_review: "等待医生审核；完成医生审核后方可导出。",
@@ -3784,7 +3793,7 @@ function renderFooter() {
     exported: "病历已导出；可以再次下载已审核病历。",
   };
   $("currentTaskLabel").textContent = "操作区";
-  $("currentTaskHint").textContent = footerHints[displayState.key] || displayState.taskHint;
+  taskHint.textContent = footerHints[displayState.key] || displayState.taskHint;
   actionBar?.classList.toggle("draft-generated", displayState.key === "draft_generated");
   actionBar?.classList.toggle("pending-review", displayState.key === "pending_review");
   actionBar?.classList.toggle("export-ready", ["approved", "exported"].includes(displayState.key));
@@ -3800,8 +3809,9 @@ function renderFooter() {
   exportButton.disabled = appState.busy || !appState.currentTaskId || !isApprovedForExport();
   exportButton.classList.toggle("blocked-action", Boolean(appState.currentTaskId && !isApprovedForExport()));
   exportButton.setAttribute("aria-disabled", exportButton.disabled ? "true" : "false");
-  exportButton.dataset.disabledReason = exportButton.disabled ? "完成医生审核后方可导出" : "";
+  exportButton.dataset.disabledReason = exportButton.disabled ? exportDisabledReason(displayState) : "";
   exportButton.title = exportButton.disabled ? "完成医生审核后方可导出" : "导出已审核病历";
+  exportButton.setAttribute("aria-describedby", "currentTaskHint");
 
   if (displayState.key === "draft_generated") {
     regenerateButton.hidden = true;
@@ -3815,7 +3825,7 @@ function renderFooter() {
     exportButton.disabled = true;
     exportButton.classList.add("blocked-action");
     exportButton.setAttribute("aria-disabled", "true");
-    exportButton.dataset.disabledReason = "完成医生审核后方可导出";
+    exportButton.dataset.disabledReason = exportDisabledReason(displayState);
     exportButton.title = "完成医生审核后方可导出";
   } else if (["approved", "exported"].includes(displayState.key)) {
     regenerateButton.hidden = true;
@@ -3832,8 +3842,14 @@ function renderFooter() {
     exportButton.disabled = true;
     exportButton.classList.add("blocked-action");
     exportButton.setAttribute("aria-disabled", "true");
-    exportButton.dataset.disabledReason = "转写失败，需先恢复流程";
+    exportButton.dataset.disabledReason = exportDisabledReason(displayState);
     exportButton.title = "转写失败，需先恢复流程";
+  }
+  if (exportButton.disabled && exportButton.dataset.disabledReason) {
+    exportButton.title = exportButton.dataset.disabledReason;
+  }
+  if (!exportButton.hidden && exportButton.disabled && exportButton.dataset.disabledReason) {
+    taskHint.textContent = `${taskHint.textContent} 导出门禁：${exportButton.dataset.disabledReason}。`;
   }
 }
 

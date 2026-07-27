@@ -202,7 +202,8 @@ def test_novice_layout_keeps_sidebar_full_height_and_action_bar_clear() -> None:
     assert "height: calc(100dvh - 68px)" in ui_css
     assert "grid-template-rows: auto auto minmax(260px, 1fr)" in ui_css
     assert "padding-bottom: 148px" in ui_css
-    assert "min-height: max(520px, calc(100dvh - 330px))" in ui_css
+    assert "min-height: max(468px, calc(100dvh - 318px))" in ui_css
+    assert "gap: 10px" in ui_css
     assert "exportButton.dataset.disabledReason" in footer_body
     assert "actions: []" in next_action_body
 

@@ -26,7 +26,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: Arial, "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
 }
 
 button,
@@ -417,7 +417,7 @@ pre {
 }
 
 .safety-strip {
-  border-left: 5px solid var(--primary);
+  border: 1px solid var(--primary);
   border-radius: 12px;
   padding: 10px 12px;
   background: var(--blue-soft);
@@ -425,17 +425,17 @@ pre {
 }
 
 .safety-strip.danger {
-  border-left-color: var(--red);
+  border-color: var(--red);
   background: var(--red-soft);
 }
 
 .safety-strip.warning {
-  border-left-color: var(--yellow);
+  border-color: var(--yellow);
   background: var(--yellow-soft);
 }
 
 .safety-strip.success {
-  border-left-color: var(--green);
+  border-color: var(--green);
   background: var(--green-soft);
 }
 

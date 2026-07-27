@@ -41,7 +41,7 @@ body {
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font-family: Inter, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -915,11 +915,10 @@ body.doctor-mode #stepPrompt {
   grid-column: 3;
   grid-row: 1;
   min-height: 0;
-  border: 0;
-  border-left: 3px solid #7eaade;
-  border-radius: 0;
-  padding: 3px 0 3px 11px;
-  background: transparent;
+  border: 1px solid #c9d9ea;
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: #f7fbff;
   box-shadow: none;
   color: #294b6d;
   font-size: 12px;
@@ -928,12 +927,14 @@ body.doctor-mode #stepPrompt {
 }
 
 .step-prompt.risk {
-  border-left-color: #d99d31;
+  border-color: #e3c477;
+  background: #fffaf0;
   color: #7d5215;
 }
 
 .step-prompt.danger {
-  border-left-color: #cf4652;
+  border-color: #e2a9b0;
+  background: #fff5f6;
   color: #942d38;
 }
 
@@ -1137,7 +1138,6 @@ body.doctor-mode .field-card.doctor-summary-card {
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 7px;
   border: 1px solid var(--line);
-  border-left: 3px solid #b9c9da;
   border-radius: 9px;
   padding: 10px 11px;
   background: #fff;
@@ -1163,24 +1163,25 @@ body.doctor-mode .field-card.is-empty.weight-low {
 }
 
 .field-card.confirmed {
-  border-left-color: #45a989;
+  border-color: #a9d7c7;
+  background: #fbfefd;
 }
 
 .field-card.missing,
 .field-card.conflicting {
-  border-left-color: #d14a56;
+  border-color: #e5a9b0;
   background: #fffafb;
 }
 
 .field-card.low,
 .field-card.candidate {
-  border-left-color: #d39b38;
+  border-color: #e6cb89;
   background: #fffdf8;
 }
 
 .field-card.readonly-field,
 body.doctor-mode .field-card.readonly-field {
-  border-left-color: #45a989;
+  border-color: #a9d7c7;
   background: #f8fbfa;
 }
 
@@ -1486,11 +1487,13 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
 }
 
 .drawer-backdrop {
+  z-index: 80;
   background: rgba(10, 28, 46, 0.34);
   backdrop-filter: blur(2px);
 }
 
 .drawer {
+  z-index: 90;
   width: min(560px, 42vw);
   min-width: 440px;
   border-left: 1px solid var(--line);
@@ -1521,6 +1524,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   border-radius: 10px;
   background: #fff;
   box-shadow: 0 16px 38px rgba(12, 34, 57, 0.18);
+  z-index: 120;
 }
 
 .input-method-popover button,
@@ -1551,6 +1555,12 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   font-size: 12px;
   line-height: 1.5;
   text-align: center;
+}
+
+.encounter-action-bar .operation-heading span,
+body.doctor-mode .encounter-action-bar .operation-heading span {
+  max-width: 64ch;
+  white-space: normal;
 }
 
 .safety-strip {
@@ -1877,7 +1887,12 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   .product-dashboard,
   .admin-home,
   .encounter-view {
-    padding: 16px 18px 22px;
+    padding: 14px 16px 22px;
+  }
+
+  .encounter-view {
+    gap: 10px;
+    padding-bottom: 122px;
   }
 
   .dashboard-status-grid {
@@ -1898,9 +1913,16 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
     grid-template-columns: minmax(170px, 1.2fr) repeat(3, minmax(115px, 0.8fr)) minmax(135px, 0.9fr);
   }
 
+  .encounter-patient-banner > div {
+    min-height: 60px;
+    padding: 9px 12px;
+  }
+
   .encounter-command-center {
     grid-template-columns: 180px minmax(0, 1fr);
     grid-template-rows: auto auto;
+    gap: 8px 12px;
+    padding: 10px 12px;
   }
 
   .encounter-command-copy {
@@ -1930,8 +1952,9 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   body.doctor-mode .workbench,
   body.standard-mode .workbench,
   body.care-mode .workbench {
-    min-height: max(520px, calc(100dvh - 330px));
+    min-height: max(468px, calc(100dvh - 318px));
     grid-template-columns: minmax(330px, 0.76fr) minmax(460px, 1.24fr);
+    gap: 10px;
   }
 
   .field-list,

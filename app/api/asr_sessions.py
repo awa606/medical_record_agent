@@ -13,7 +13,7 @@ import uuid
 import wave
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -51,6 +51,7 @@ from app.services.asr import (
 )
 from app.services.asr.auto_roles import ensure_automatic_speaker_roles
 from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
+from app.services.asr.config import backend_capabilities, configured_asr_backend
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 from app.services.asr.funasr_reliability import classify_funasr_error
 from app.services.asr.role_quality import attach_speaker_role_quality
@@ -1037,6 +1038,7 @@ def _append_partial_segment_events(
     progress = round(chunk_index / total_chunks, 4) if total_chunks else 1.0
     for offset, segment in enumerate(segments):
         adjusted = _offset_segment_for_chunk(segment, chunk_start_seconds)
+        sequence = start_index + offset
         events.append(
             _session_event(
                 session=session,
@@ -1047,11 +1049,19 @@ def _append_partial_segment_events(
                     "mode": mode,
                     "chunk_index": chunk_index,
                     "total_chunks": total_chunks,
-                    "index": start_index + offset,
+                    "index": sequence,
+                    "sequence": sequence,
                     "total": start_index + len(segments),
                     "progress": progress,
                     "role": adjusted.role,
                     "speaker": adjusted.speaker,
+                    "original_speaker": adjusted.speaker_id or adjusted.speaker,
+                    "inferred_role": adjusted.role,
+                    "role_confidence": adjusted.role_confidence,
+                    "role_source": adjusted.role_source,
+                    "role_warning": adjusted.role_warning,
+                    "start_time": adjusted.start_time,
+                    "end_time": adjusted.end_time,
                     "text": adjusted.text,
                     "segment": adjusted.model_dump(),
                 },
@@ -1288,9 +1298,16 @@ def create_asr_session(
     engine: str = Query(default="mock"),
     doctor_profile_id: str | None = Query(default=None),
     diarization_engine: str = Query(default="auto"),
+    recognition_mode: Literal["fast", "follow"] = Query(default="fast"),
     request: Request = None,
 ) -> ASRSessionRecord:
-    normalized_engine = _normalize_engine_name(engine)
+    user = current_user_from_request(request)
+    resolved_recognition_mode: Literal["fast", "follow"] = (
+        recognition_mode if recognition_mode in {"fast", "follow"} else "fast"
+    )
+    normalized_engine = _normalize_engine_name(
+        configured_asr_backend(engine, user_role=user.role if user is not None else None)
+    )
     if not isinstance(doctor_profile_id, str):
         doctor_profile_id = None
     normalized_diarization_engine = (
@@ -1315,7 +1332,8 @@ def create_asr_session(
         diarization_engine=normalized_diarization_engine,
         created_at=now,
         updated_at=now,
-        owner_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
+        owner_user_id=user.id if user is not None else None,
+            recognition_mode=resolved_recognition_mode,
     )
     _write_session(session)
     return session
@@ -1757,10 +1775,15 @@ def _run_asr_session_transcription(
     )
     try:
         use_chunked, original_duration = _should_use_chunked_session(session.engine, audio_path)
-        use_realtime, realtime_duration = _should_use_realtime_upload_session(
-            session.engine,
-            audio_path,
-            duration=original_duration,
+        follow_mode = session.recognition_mode == "follow"
+        use_realtime, realtime_duration = (
+            _should_use_realtime_upload_session(
+                session.engine,
+                audio_path,
+                duration=original_duration,
+            )
+            if follow_mode
+            else (False, original_duration)
         )
         if use_realtime and session.engine == "funasr":
             stop_heartbeat.set()
@@ -1812,6 +1835,17 @@ def _run_asr_session_transcription(
                 duration=original_duration,
             )
             emit_segments = True
+        processing_duration = max(time.perf_counter() - started_at, 0.0)
+        audio_duration = result.duration or realtime_duration or original_duration
+        rtf = round(processing_duration / audio_duration, 4) if audio_duration and audio_duration > 0 else None
+        result = result.model_copy(
+            update={
+                "recognition_mode": session.recognition_mode or "fast",
+                "audio_duration_seconds": audio_duration,
+                "processing_duration_seconds": round(processing_duration, 4),
+                "rtf": rtf,
+            }
+        )
         _write_transcription_success(session_id, session=session, result=result, emit_segments=emit_segments)
     except Exception as exc:  # noqa: BLE001
         message = _compact_error(exc)
@@ -2215,7 +2249,7 @@ def _transcribe_chunked_session(
             )
             try:
                 chunk_result = engine.transcribe(f"{record.audio_id}_chunk_{chunk.index:03d}", chunk.path)
-                chunk_result = enhance_speaker_diarization(chunk_result)
+                chunk_result = ensure_automatic_speaker_roles(enhance_speaker_diarization(chunk_result))
             except Exception as exc:  # noqa: BLE001
                 error = _compact_error(exc)
                 _append_session_event(
@@ -2294,6 +2328,7 @@ def _transcribe_realtime_upload_session(
             record=record,
             audio_path=audio_path,
             chunk_seconds=chunk_seconds,
+            original_duration=original_duration,
             pace_realtime=pace_realtime,
         )
     return _transcribe_chunked_session(
@@ -2367,117 +2402,20 @@ def _transcribe_mock_realtime_upload_session(
     record: AudioRecord,
     audio_path: Path,
     chunk_seconds: int,
+    original_duration: float | None = None,
     pace_realtime: bool = False,
 ) -> ASRResult:
-    result = engine.transcribe(record.audio_id, audio_path)
-    duration = result.duration or _infer_result_duration(result)
-    chunks = [
-        (index, start_seconds, duration_seconds)
-        for index, (start_seconds, duration_seconds) in enumerate(
-            build_chunk_plan(duration, chunk_seconds),
-            start=1,
-        )
-    ]
-    total_chunks = len(chunks)
-    _append_session_event(
+    return _transcribe_chunked_session(
         session_id,
         session=session,
-        event="chunk_plan",
-        data={
-            "status": "chunk_plan",
-            "mode": "realtime_upload",
-            "chunk_seconds": chunk_seconds,
-            "chunk_count": total_chunks,
-            "total_chunks": total_chunks,
-            "duration": duration,
-            "progress": 0,
-        },
+        engine=engine,
+        record=record,
+        audio_path=audio_path,
+        original_duration=original_duration,
+        chunk_seconds=chunk_seconds,
+        mode="realtime_upload",
+        engine_suffix="realtime",
     )
-
-    transcriptions: list[ChunkTranscription] = []
-    emitted_segments = 0
-    for index, start_seconds, duration_seconds in chunks:
-        started_at = time.perf_counter()
-        common = {
-            "chunk_index": index,
-            "total_chunks": total_chunks,
-            "chunk_start_seconds": start_seconds,
-            "chunk_duration_seconds": duration_seconds,
-            "mode": "realtime_upload",
-        }
-        _append_session_event(
-            session_id,
-            session=session,
-            event="chunk_started",
-            data={
-                **common,
-                "status": "chunk_transcribing",
-                "progress": round((index - 1) / total_chunks, 4) if total_chunks else 0,
-                "retryable": False,
-            },
-        )
-        chunk_segments = _segments_for_realtime_chunk(
-            result.segments,
-            chunk_start_seconds=start_seconds,
-            chunk_duration_seconds=duration_seconds,
-        )
-        chunk_result = ASRResult(
-            audio_id=f"{record.audio_id}_chunk_{index:03d}",
-            engine=result.engine,
-            text="\n".join(segment.text for segment in chunk_segments if segment.text.strip()),
-            conversation_text=_conversation_from_segments(chunk_segments),
-            segments=chunk_segments,
-            duration=duration_seconds,
-            medical_keywords=result.medical_keywords,
-        )
-        transcriptions.append(
-            ChunkTranscription(
-                chunk=AudioChunk(
-                    index=index,
-                    path=audio_path,
-                    start_seconds=start_seconds,
-                    duration_seconds=duration_seconds,
-                ),
-                result=chunk_result,
-            )
-        )
-        _append_session_event(
-            session_id,
-            session=session,
-            event="chunk_completed",
-            data={
-                **common,
-                "status": "chunk_completed",
-                "progress": round(index / total_chunks, 4) if total_chunks else 1,
-                "segments": len(chunk_segments),
-                "text_length": len(chunk_result.text),
-                "elapsed_seconds": round(time.perf_counter() - started_at, 3),
-            },
-        )
-        emitted_segments += _append_partial_segment_events(
-            session_id,
-            session=session,
-            chunk_index=index,
-            total_chunks=total_chunks,
-            chunk_start_seconds=start_seconds,
-            chunk_result=chunk_result,
-            start_index=emitted_segments,
-            mode="realtime_upload",
-        )
-        if chunk_segments and index < total_chunks:
-            _maybe_sleep_mock_realtime(pace_realtime)
-
-    merged = merge_chunk_transcriptions(
-        record.audio_id,
-        transcriptions,
-        original_duration=duration,
-        engine_name=f"{result.engine}-realtime",
-    )
-    merged.medical_keywords = result.medical_keywords
-    merged.warnings = [warning for warning in merged.warnings if warning != CHUNKED_LONG_AUDIO_WARNING]
-    if REALTIME_UPLOAD_WARNING not in merged.warnings:
-        merged.warnings.insert(0, REALTIME_UPLOAD_WARNING)
-    return enhance_speaker_diarization(apply_manifest_role_strategy(merged, _sample_id_from_record(record)))
 
 
 def _infer_result_duration(result: ASRResult) -> float:
@@ -2538,6 +2476,7 @@ def upload_asr_session_audio(
         size_bytes=size_bytes,
         created_at=_now(),
         owner_user_id=session.owner_user_id,
+        recognition_mode=session.recognition_mode or "fast",
     )
     _write_audio_record(record)
 
@@ -2547,6 +2486,7 @@ def upload_asr_session_audio(
             "audio_id": audio_id,
             "filename": record.filename,
             "updated_at": _now(),
+            "recognition_mode": session.recognition_mode or "follow",
         }
     )
     _write_session(transcribing_session)
@@ -2582,6 +2522,98 @@ def upload_asr_session_audio(
         result_url=current_session.result_url or f"/api/asr/sessions/{session_id}/result",
         media_url=f"/api/audio/{audio_id}/media",
         duration_seconds=duration_seconds,
+        recognition_mode=session.recognition_mode,
+    )
+
+
+def start_follow_session_for_audio_record(
+    record: AudioRecord,
+    *,
+    engine: str,
+    owner_user_id: int | None = None,
+    background_tasks: BackgroundTasks | None = None,
+) -> ASRSessionUploadResponse:
+    normalized_engine = _normalize_engine_name(engine)
+    capabilities = backend_capabilities(normalized_engine)
+    if not capabilities.supports_chunked_audio and not capabilities.supports_live_streaming:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error_code": "follow_not_supported_by_backend",
+                "engine": normalized_engine,
+                "message": "Selected ASR backend does not support follow chunk processing.",
+            },
+        )
+
+    audio_path = Path(record.path)
+    duration = _audio_duration_for_chunking(audio_path)
+    use_chunked, chunked_duration = _should_use_chunked_session(normalized_engine, audio_path)
+    use_realtime, realtime_duration = _should_use_realtime_upload_session(
+        normalized_engine,
+        audio_path,
+        duration=chunked_duration if chunked_duration is not None else duration,
+    )
+    if not use_chunked and not use_realtime:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error_code": "follow_not_supported_by_backend",
+                "engine": normalized_engine,
+                "message": "Selected ASR backend cannot process this audio with the follow chunk pipeline.",
+            },
+        )
+
+    session_id = uuid.uuid4().hex
+    now = _now()
+    transcribing_session = ASRSessionRecord(
+        session_id=session_id,
+        engine=normalized_engine,
+        status="transcribing",
+        audio_id=record.audio_id,
+        filename=record.filename,
+        events_url=f"/api/asr/sessions/{session_id}/events",
+        result_url=f"/api/asr/sessions/{session_id}/result",
+        created_at=now,
+        updated_at=now,
+        owner_user_id=owner_user_id if owner_user_id is not None else record.owner_user_id,
+        recognition_mode="follow",
+    )
+    _write_session(transcribing_session)
+    _write_events(session_id, _initial_asr_stream_events(transcribing_session))
+
+    follow_record = record.model_copy(
+        update={
+            "status": "transcribing",
+            "recognition_mode": "follow",
+            "owner_user_id": owner_user_id if owner_user_id is not None else record.owner_user_id,
+        }
+    )
+    _write_audio_record(follow_record)
+
+    if background_tasks is None:
+        _run_asr_session_transcription(session_id, record=follow_record, audio_path=audio_path)
+        current_session = _read_session(session_id)
+    else:
+        background_tasks.add_task(
+            _run_asr_session_transcription,
+            session_id,
+            record=follow_record,
+            audio_path=audio_path,
+            pace_realtime=True,
+        )
+        current_session = transcribing_session
+
+    return ASRSessionUploadResponse(
+        session_id=session_id,
+        audio_id=record.audio_id,
+        status=current_session.status,
+        filename=record.filename,
+        engine=current_session.engine,
+        events_url=current_session.events_url or f"/api/asr/sessions/{session_id}/events",
+        result_url=current_session.result_url or f"/api/asr/sessions/{session_id}/result",
+        media_url=f"/api/audio/{record.audio_id}/media",
+        duration_seconds=realtime_duration if realtime_duration is not None else duration,
+        recognition_mode="follow",
     )
 
 

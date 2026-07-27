@@ -17,6 +17,7 @@ from app.api.audio import (
 from app.api.tasks import read_task
 from app.main import app
 from app.schemas import ASREvaluationRequest, ASRResult, ASRSegment, SpeakerRoleAssignment
+from app.services.asr import AudioChunk
 from app.services.asr.auto_roles import AUTO_ROLE_WARNING
 from tests.auth_helpers import login_as_admin
 
@@ -51,6 +52,9 @@ class AudioApiTests(unittest.TestCase):
                 "ONLINE_LLM_MODEL",
                 "OLLAMA_BASE_URL",
                 "OLLAMA_MODEL",
+                "MEDICAL_RECORD_AGENT_ASR_ENGINE",
+                "ASR_ENGINE",
+                "ASR_DEBUG_ENGINE_SELECTOR_ENABLED",
             ]
         }
         for key in self.original_env:
@@ -166,6 +170,83 @@ class AudioApiTests(unittest.TestCase):
         self.assertTrue(detail["retryable"])
         self.assertEqual(detail["fallback_action"], "text_input")
         self.assertIn("FunASR", detail["message"])
+
+    def test_public_audio_follow_uses_chunk_pipeline(self):
+        uploaded = self._upload_sample("sample.wav")
+        calls: list[str] = []
+
+        class FakeChunkEngine:
+            name = "fake-chunk"
+
+            def transcribe(self, audio_id, audio_path):
+                if "_chunk_" not in audio_id:
+                    raise AssertionError("follow mode must not transcribe full audio")
+                calls.append(audio_id)
+                return ASRResult(
+                    audio_id=audio_id,
+                    engine="fake-chunk",
+                    text=f"text {len(calls)}",
+                    conversation_text=f"[spk1] text {len(calls)}",
+                    segments=[
+                        ASRSegment(
+                            speaker="spk1",
+                            speaker_id="spk1",
+                            role=PATIENT,
+                            role_confidence=0.88,
+                            role_source="fake",
+                            text=f"text {len(calls)}",
+                            start_time=0.0,
+                            end_time=1.0,
+                        )
+                    ],
+                    duration=3.0,
+                )
+
+        def fake_split(audio_path, temp_dir, chunk_seconds):
+            first = temp_dir / "chunk_001.wav"
+            second = temp_dir / "chunk_002.wav"
+            first.write_bytes(b"RIFF....WAVEfmt ")
+            second.write_bytes(b"RIFF....WAVEfmt ")
+            return [
+                AudioChunk(index=1, path=first, start_seconds=0.0, duration_seconds=3.0),
+                AudioChunk(index=2, path=second, start_seconds=3.0, duration_seconds=3.0),
+            ]
+
+        with patch("app.api.asr_sessions._audio_duration_for_chunking", return_value=6.0), \
+             patch("app.api.asr_sessions.split_audio_to_chunks", side_effect=fake_split), \
+             patch("app.api.asr_sessions.create_asr_engine", return_value=FakeChunkEngine()), \
+             patch("app.api.audio.create_asr_engine", side_effect=AssertionError("full transcribe must not be called")):
+            response = transcribe_audio(uploaded.audio_id, engine="mock", recognition_mode="follow")
+
+        self.assertEqual(response["recognition_mode"], "follow")
+        self.assertIn("session_id", response)
+        self.assertEqual(calls, [f"{uploaded.audio_id}_chunk_001", f"{uploaded.audio_id}_chunk_002"])
+
+    def test_unsupported_backend_does_not_fallback_to_fake_follow(self):
+        uploaded = self._upload_sample("sample.wav")
+        with self.assertRaises(HTTPException) as context:
+            transcribe_audio(uploaded.audio_id, engine="online", recognition_mode="follow")
+
+        self.assertEqual(context.exception.status_code, 422)
+        self.assertEqual(context.exception.detail["error_code"], "follow_not_supported_by_backend")
+
+    def test_doctor_request_cannot_override_configured_asr_backend(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "mock"
+        client = TestClient(app)
+        login_as_admin(client)
+
+        uploaded = client.post(
+            "/api/audio/upload?recognition_mode=fast",
+            files={"file": ("sample.wav", b"RIFF....WAVEfmt ", "audio/wav")},
+        )
+        self.assertEqual(uploaded.status_code, 200, uploaded.text)
+
+        response = client.post(
+            f"/api/audio/{uploaded.json()['audio_id']}/transcribe?recognition_mode=fast&engine=online",
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["asr_result"]["engine"], "mock-asr-v0.2")
 
     def test_generate_record_from_audio_creates_text_task(self):
         uploaded = self._upload_sample("sample.wav")

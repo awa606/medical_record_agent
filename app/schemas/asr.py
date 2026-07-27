@@ -94,6 +94,10 @@ class ASRResult(BaseModel):
     diarization_turns: list[DiarizationTurn] = Field(default_factory=list)
     speaker_assignments: list[SpeakerRoleAssignment] = Field(default_factory=list)
     role_quality: SpeakerRoleQualityResult | None = None
+    recognition_mode: Literal["fast", "follow"] | None = None
+    audio_duration_seconds: float | None = None
+    processing_duration_seconds: float | None = None
+    rtf: float | None = None
 
 
 class AudioRecord(BaseModel):
@@ -105,6 +109,7 @@ class AudioRecord(BaseModel):
     size_bytes: int | None = None
     created_at: str | None = None
     owner_user_id: int | None = None
+    recognition_mode: Literal["fast", "follow"] | None = None
 
 
 class ASREvaluationRequest(BaseModel):
@@ -136,6 +141,7 @@ class ASRSessionRecord(BaseModel):
     created_at: str | None = None
     updated_at: str | None = None
     owner_user_id: int | None = None
+    recognition_mode: Literal["fast", "follow"] | None = None
 
 
 class ASRSessionEvent(BaseModel):
@@ -155,6 +161,7 @@ class ASRSessionUploadResponse(BaseModel):
     result_url: str
     media_url: str | None = None
     duration_seconds: float | None = None
+    recognition_mode: Literal["fast", "follow"] | None = None
 
 
 class ASRSegmentCorrection(BaseModel):

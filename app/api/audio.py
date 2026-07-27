@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
@@ -18,6 +19,7 @@ from app.db import bind_task_to_encounter, get_encounter, set_task_owner
 from app.schemas import ASREvaluationRequest, ASREvaluationResult, ASRResult, AudioRecord
 from app.services.asr import ASREvaluator, apply_manifest_role_strategy, create_asr_engine
 from app.services.asr.auto_roles import ensure_automatic_speaker_roles
+from app.services.asr.config import configured_asr_backend
 from app.services.asr.funasr_reliability import funasr_failure_payload
 from app.services.asr.role_strategy import find_sample_config
 from app.services.runtime_limits import audio_upload_max_bytes, copy_upload_with_limit
@@ -136,7 +138,11 @@ def _sample_id_from_record(record: AudioRecord) -> str:
 
 
 @router.post("/upload")
-def upload_audio(file: UploadFile = File(...), request: Request = None) -> AudioRecord:
+def upload_audio(
+    file: UploadFile = File(...),
+    request: Request = None,
+    recognition_mode: Literal["fast", "follow"] = "fast",
+) -> AudioRecord:
     extension = _safe_extension(file.filename or "")
     upload_dir = get_upload_dir()
     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -159,6 +165,7 @@ def upload_audio(file: UploadFile = File(...), request: Request = None) -> Audio
         size_bytes=size_bytes,
         created_at=datetime.now(UTC).isoformat(),
         owner_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
+        recognition_mode=recognition_mode,
     )
     _write_audio_record(record)
     return record
@@ -189,25 +196,70 @@ def transcribe_audio(
     audio_id: str,
     request: Request = None,
     engine: str = Query(default="mock"),
+    recognition_mode: Literal["fast", "follow"] = "fast",
 ) -> dict[str, Any]:
     record = _read_audio_record(audio_id)
     _assert_audio_access(record, request)
+    user = current_user_from_request(request)
+    resolved_engine = configured_asr_backend(engine, user_role=user.role if user is not None else None)
+    if recognition_mode == "follow":
+        from app.api.asr_sessions import start_follow_session_for_audio_record
+
+        session = start_follow_session_for_audio_record(
+            record,
+            engine=resolved_engine,
+            owner_user_id=user.id if user is not None else None,
+        )
+        return {
+            "audio_id": audio_id,
+            "status": session.status,
+            "recognition_mode": "follow",
+            "session_id": session.session_id,
+            "events_url": session.events_url,
+            "result_url": session.result_url,
+            "media_url": f"/api/audio/{audio_id}/media",
+        }
+
+    started_at = time.perf_counter()
     try:
-        asr_engine = create_asr_engine(engine)
+        asr_engine = create_asr_engine(resolved_engine)
         result = asr_engine.transcribe(audio_id, Path(record.path))
         result = apply_manifest_role_strategy(result, _sample_id_from_record(record))
         result = _ensure_nonblocking_role_quality(result)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
-        if (engine or "").strip().lower() == "funasr":
+        if (resolved_engine or "").strip().lower() == "funasr":
             raise HTTPException(status_code=503, detail=funasr_failure_payload(exc)) from exc
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
+    processing_duration = max(time.perf_counter() - started_at, 0.0)
+    audio_duration = result.duration or result.audio_duration_seconds
+    rtf = round(processing_duration / audio_duration, 4) if audio_duration and audio_duration > 0 else None
+    result = result.model_copy(
+        update={
+            "recognition_mode": recognition_mode,
+            "audio_duration_seconds": audio_duration,
+            "processing_duration_seconds": round(processing_duration, 4),
+            "rtf": rtf,
+        }
+    )
     _write_transcript(result)
+    _write_audio_record(
+        record.model_copy(
+            update={
+                "status": "completed",
+                "recognition_mode": recognition_mode,
+            }
+        )
+    )
     return {
         "audio_id": audio_id,
         "status": "completed",
+        "recognition_mode": recognition_mode,
+        "audio_duration_seconds": audio_duration,
+        "processing_duration_seconds": round(processing_duration, 4),
+        "rtf": rtf,
         "asr_result": result.model_dump(),
     }
 

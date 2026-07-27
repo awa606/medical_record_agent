@@ -86,6 +86,39 @@ class FakeChunkEngine:
         )
 
 
+class FakeRealtimeChunkEngine:
+    name = "fake-follow"
+
+    def __init__(self):
+        self.calls: list[str] = []
+
+    def transcribe(self, audio_id: str, audio_path: Path) -> ASRResult:
+        if "_chunk_" not in audio_id:
+            raise AssertionError("follow mode must not transcribe the full upload before chunk events")
+        self.calls.append(audio_id)
+        index = int(audio_id.rsplit("_", 1)[-1])
+        return ASRResult(
+            audio_id=audio_id,
+            engine=self.name,
+            text=f"chunk {index}",
+            conversation_text=f"[spk-shared] chunk {index}",
+            segments=[
+                ASRSegment(
+                    speaker="spk-shared",
+                    speaker_id="spk-shared",
+                    role="患者",
+                    role_confidence=0.72,
+                    role_source="system_auto_inference",
+                    role_warning="系统自动推定",
+                    text=f"chunk {index}",
+                    start_time=0.0,
+                    end_time=1.0,
+                )
+            ],
+            duration=2.0,
+        )
+
+
 class FakeNativeStreamingEngine:
     name = "fake-funasr-streaming"
     model_load_time_seconds = 0.01
@@ -190,6 +223,13 @@ def fake_audio_chunks() -> list[AudioChunk]:
     return [
         AudioChunk(index=1, path=Path("chunk_001.wav"), start_seconds=0.0, duration_seconds=300.0),
         AudioChunk(index=2, path=Path("chunk_002.wav"), start_seconds=300.0, duration_seconds=120.0),
+    ]
+
+
+def fake_realtime_audio_chunks() -> list[AudioChunk]:
+    return [
+        AudioChunk(index=1, path=Path("chunk_001.wav"), start_seconds=0.0, duration_seconds=2.0),
+        AudioChunk(index=2, path=Path("chunk_002.wav"), start_seconds=2.0, duration_seconds=2.0),
     ]
 
 
@@ -577,7 +617,7 @@ class ASRSessionApiTests(unittest.TestCase):
 
         result = read_asr_session_result(session.session_id)
         self.assertEqual(result.audio_id, uploaded.audio_id)
-        self.assertEqual(result.engine, "mock-asr-v0.2-realtime")
+        self.assertEqual(result.engine, "mock-asr-v0.2")
         self.assertGreaterEqual(len(result.segments), 1)
 
         legacy_transcript = read_audio_transcript(uploaded.audio_id)
@@ -586,9 +626,6 @@ class ASRSessionApiTests(unittest.TestCase):
         events = _read_events(session.session_id)
         event_names = [event.event for event in events]
         self.assertEqual(event_names[:3], ["session_created", "audio_uploaded", "transcribing"])
-        self.assertIn("chunk_plan", event_names)
-        self.assertIn("chunk_started", event_names)
-        self.assertIn("chunk_completed", event_names)
         self.assertIn("segment", event_names)
         self.assertEqual(event_names[-1], "completed")
 
@@ -615,7 +652,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertEqual(duration, 1800.0)
 
     def test_funasr_realtime_upload_uses_model_native_streaming_without_temp_chunks(self):
-        session = create_asr_session(engine="funasr")
+        session = create_asr_session(engine="funasr", recognition_mode="follow")
         fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
 
         try:
@@ -666,7 +703,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertEqual(first_segment.data["progress_kind"], "actual")
 
     def test_funasr_model_load_failure_marks_session_retryable_without_second_fallback_load(self):
-        session = create_asr_session(engine="funasr")
+        session = create_asr_session(engine="funasr", recognition_mode="follow")
         fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
 
         try:
@@ -899,7 +936,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertTrue(any(segment.role_warning for segment in transcript.segments))
 
     def test_companion_and_pending_roles_are_accepted_for_speaker_review(self):
-        session = create_asr_session(engine="mock")
+        session = create_asr_session(engine="mock", recognition_mode="follow")
         result = ASRResult(
             audio_id="companion-role",
             engine="mock",
@@ -948,7 +985,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("event: completed", stream)
 
     def test_sse_batches_500_events_without_per_event_delay_and_resumes(self):
-        session = create_asr_session(engine="mock")
+        session = create_asr_session(engine="mock", recognition_mode="follow")
         progress_events = [
             ASRSessionEvent(
                 id=1,
@@ -1015,6 +1052,81 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("event: chunk_completed", stream)
         self.assertIn("\"partial\": true", stream)
         self.assertIn("event: completed", stream)
+
+    def test_follow_transcribes_audio_chunk_by_chunk_without_full_audio_call(self):
+        session = create_asr_session(engine="mock", recognition_mode="follow")
+        engine = FakeRealtimeChunkEngine()
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+        try:
+            with (
+                patch("app.api.asr_sessions._audio_duration_for_chunking", return_value=4.0),
+                patch("app.api.asr_sessions.split_audio_to_chunks", return_value=fake_realtime_audio_chunks()),
+                patch("app.api.asr_sessions.create_asr_engine", return_value=engine),
+            ):
+                uploaded = upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+
+        self.assertEqual(uploaded.status, "stream_ready")
+        self.assertEqual(uploaded.recognition_mode, "follow")
+        self.assertEqual(
+            engine.calls,
+            [
+                f"{uploaded.audio_id}_chunk_001",
+                f"{uploaded.audio_id}_chunk_002",
+            ],
+        )
+        result = read_asr_session_result(session.session_id)
+        self.assertEqual(result.engine, "fake-follow-realtime")
+        self.assertEqual(result.recognition_mode, "follow")
+        self.assertGreaterEqual(len(result.segments), 1)
+        self.assertEqual({segment.speaker_id for segment in result.segments}, {"spk-shared"})
+        self.assertEqual(len({segment.role for segment in result.segments}), 1)
+        self.assertEqual(result.duration, 4.0)
+        self.assertEqual(result.audio_duration_seconds, 4.0)
+        self.assertIsNotNone(result.processing_duration_seconds)
+        self.assertIsNotNone(result.rtf)
+        self.assertTrue(any("realtime upload" in warning for warning in result.warnings))
+
+    def test_follow_sse_segment_precedes_final_chunk_and_contains_evidence_fields(self):
+        session = create_asr_session(engine="mock", recognition_mode="follow")
+        engine = FakeRealtimeChunkEngine()
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+        try:
+            with (
+                patch("app.api.asr_sessions._audio_duration_for_chunking", return_value=4.0),
+                patch("app.api.asr_sessions.split_audio_to_chunks", return_value=fake_realtime_audio_chunks()),
+                patch("app.api.asr_sessions.create_asr_engine", return_value=engine),
+            ):
+                upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+
+        events = _read_events(session.session_id)
+        event_names = [event.event for event in events]
+        first_segment_index = event_names.index("segment")
+        second_chunk_started_index = next(
+            index
+            for index, event in enumerate(events)
+            if event.event == "chunk_started" and event.data["chunk_index"] == 2
+        )
+        completed_index = event_names.index("completed")
+        self.assertLess(first_segment_index, second_chunk_started_index)
+        self.assertLess(first_segment_index, completed_index)
+        self.assertEqual(event_names.count("completed"), 1)
+
+        segment_events = [event for event in events if event.event == "segment"]
+        self.assertEqual([event.data["sequence"] for event in segment_events], [0, 1])
+        self.assertEqual([event.data["chunk_index"] for event in segment_events], [1, 2])
+        self.assertEqual([event.data["start_time"] for event in segment_events], [0.0, 2.0])
+        self.assertEqual([event.data["end_time"] for event in segment_events], [1.0, 3.0])
+        first_segment = segment_events[0].data
+        self.assertIsInstance(segment_events[0].id, int)
+        self.assertEqual(first_segment["original_speaker"], "spk-shared")
+        self.assertTrue(first_segment["inferred_role"])
+        self.assertLess(first_segment["role_confidence"], 0.9)
+        self.assertTrue(str(first_segment["role_source"]).startswith("auto_"))
+        self.assertTrue(first_segment["role_warning"])
 
     def test_chunk_failure_events_include_retry_hint(self):
         session = create_asr_session(engine="sensevoice")

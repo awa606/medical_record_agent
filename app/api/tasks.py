@@ -12,10 +12,11 @@ from pydantic import BaseModel, Field
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.db import (
+    StaleRecordRevisionError,
+    apply_review_revision_transaction,
     create_approval_for_task,
     create_audit_log,
     create_export_event_for_task,
-    create_record_revision_for_task,
     get_active_approval_for_task,
     get_audit_logs,
     get_record_revision,
@@ -51,6 +52,8 @@ EXPORT_DOWNLOADS = {
 
 class ReviewRequest(BaseModel):
     fields: MedicalRecordFields
+    expected_revision_id: int
+    expected_content_hash: str
 
 
 class FieldApprovalItem(BaseModel):
@@ -518,26 +521,34 @@ def review_task(task_id: int, payload: ReviewRequest, request: Request = None) -
     result["reviewed"] = True
     result["approved"] = False
 
-    _save_task_result(
-        task_id,
-        result,
-        current_stage="reviewed",
-        event_type="doctor_review_saved",
-        event_detail={"task_id": task_id},
-        request=request,
-    )
-    revision = create_record_revision_for_task(
-        task_id,
-        result,
-        actor_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
-        source="doctor_review",
-        workflow_status="modified",
-    )
-    task["result_json"] = result
-    task["current_stage"] = "reviewed"
-    task["current_record_revision_id"] = revision["id"]
-    task["current_record_revision_no"] = revision["revision_no"]
-    return task
+    actor = current_user_from_request(request)
+    try:
+        updated_task = apply_review_revision_transaction(
+            task_id,
+            result,
+            expected_revision_id=payload.expected_revision_id,
+            expected_content_hash=payload.expected_content_hash,
+            actor_user_id=actor.id if actor else None,
+            status="WAITING_DOCTOR_REVIEW",
+            current_stage="waiting_doctor_review",
+            source="doctor_review",
+            workflow_status="waiting_review",
+            event_type="doctor_review_saved",
+            event_detail={"task_id": task_id, **_actor_detail(request)},
+        )
+    except StaleRecordRevisionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error_code": "stale_record_revision",
+                "expected_revision_id": exc.expected_revision_id,
+                "current_revision_id": exc.current_revision_id,
+                "current_content_hash": exc.current_content_hash,
+                "message": "Record revision is stale; reload the latest record before saving.",
+            },
+        ) from exc
+    updated_task["result_json"] = result
+    return updated_task
 
 
 @router.post("/{task_id}/approve")

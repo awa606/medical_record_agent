@@ -379,6 +379,22 @@ def record_content_hash(result: dict[str, Any]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+class StaleRecordRevisionError(ValueError):
+    def __init__(
+        self,
+        *,
+        expected_revision_id: int | None,
+        expected_content_hash: str | None,
+        current_revision_id: int | None,
+        current_content_hash: str | None,
+    ) -> None:
+        super().__init__("Record revision is stale")
+        self.expected_revision_id = expected_revision_id
+        self.expected_content_hash = expected_content_hash
+        self.current_revision_id = current_revision_id
+        self.current_content_hash = current_content_hash
+
+
 def create_task(
     input_type: str,
     status: str,
@@ -538,6 +554,217 @@ def _invalidate_active_approvals(
     return int(cursor.rowcount or 0)
 
 
+def _ensure_task_encounter_with_connection(
+    connection: sqlite3.Connection,
+    *,
+    task_id: int,
+    actor_user_id: int | None = None,
+    patient_label: str | None = None,
+) -> dict[str, Any]:
+    task = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
+    if task is None:
+        raise ValueError(f"Task not found: {task_id}")
+    if task["encounter_id"] is not None:
+        encounter = connection.execute(
+            "SELECT * FROM encounter WHERE id = ?",
+            (task["encounter_id"],),
+        ).fetchone()
+        if encounter is not None:
+            return dict(encounter)
+
+    now = utc_now()
+    doctor_user_id = actor_user_id if actor_user_id is not None else task["owner_user_id"]
+    deidentified_id = f"SIM-{task_id:06d}"
+    display_name = patient_label or "模拟患者"
+    patient = connection.execute(
+        "SELECT * FROM patient WHERE deidentified_id = ?",
+        (deidentified_id,),
+    ).fetchone()
+    if patient is None:
+        cursor = connection.execute(
+            """
+            INSERT INTO patient (
+                deidentified_id, display_name, created_by_user_id, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (deidentified_id, display_name, actor_user_id, now, now),
+        )
+        patient_id = int(cursor.lastrowid)
+    else:
+        patient_id = int(patient["id"])
+
+    cursor = connection.execute(
+        """
+        INSERT INTO encounter (
+            patient_id, doctor_user_id, task_id, status, check_in_status,
+            current_revision_id, created_at, updated_at
+        )
+        VALUES (?, ?, ?, 'draft', 'in_progress', NULL, ?, ?)
+        """,
+        (patient_id, doctor_user_id, task_id, now, now),
+    )
+    encounter_id = int(cursor.lastrowid)
+    _update_task_workflow_links(connection, task_id=task_id, encounter_id=encounter_id)
+    encounter = connection.execute("SELECT * FROM encounter WHERE id = ?", (encounter_id,)).fetchone()
+    return dict(encounter)
+
+
+def _insert_record_revision_row(
+    connection: sqlite3.Connection,
+    *,
+    task_id: int,
+    encounter_id: int,
+    result: dict[str, Any],
+    actor_user_id: int | None,
+    source: str,
+) -> int:
+    row = connection.execute(
+        "SELECT COALESCE(MAX(revision_no), 0) AS max_revision FROM record_revision WHERE encounter_id = ?",
+        (encounter_id,),
+    ).fetchone()
+    revision_no = int(row["max_revision"]) + 1 if row is not None else 1
+    now = utc_now()
+    content_hash = record_content_hash(result)
+    cursor = connection.execute(
+        """
+        INSERT INTO record_revision (
+            encounter_id, task_id, revision_no, source, content_hash, fields_json,
+            draft_text, safety_check_json, quality_report_json,
+            result_json, created_by_user_id, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            encounter_id,
+            task_id,
+            revision_no,
+            source,
+            content_hash,
+            json_or_none(result.get("fields")),
+            result.get("draft"),
+            json_or_none(result.get("safety_check")),
+            json_or_none(result.get("quality_report")),
+            json_dumps(result),
+            actor_user_id,
+            now,
+        ),
+    )
+    return int(cursor.lastrowid)
+
+
+def _update_encounter_revision_row(
+    connection: sqlite3.Connection,
+    *,
+    encounter_id: int,
+    revision_id: int,
+    workflow_status: str,
+) -> None:
+    connection.execute(
+        """
+        UPDATE encounter
+        SET status = ?, current_revision_id = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (workflow_status, revision_id, utc_now(), encounter_id),
+    )
+
+
+def _update_task_result_revision_row(
+    connection: sqlite3.Connection,
+    *,
+    task_id: int,
+    result: dict[str, Any],
+    status: str | None,
+    current_stage: str,
+    encounter_id: int,
+    revision_id: int,
+    expected_previous_revision_id: int | None = None,
+    expected_previous_content_hash: str | None = None,
+) -> None:
+    completed_at_value = utc_now() if status in TERMINAL_TASK_STATUSES else None
+    params: list[Any] = [
+        status,
+        current_stage,
+        json_dumps(result),
+        encounter_id,
+        revision_id,
+        completed_at_value,
+        utc_now(),
+        task_id,
+    ]
+    where = "WHERE id = ?"
+    if expected_previous_revision_id is not None:
+        where += """
+            AND current_record_revision_id = ?
+            AND EXISTS (
+                SELECT 1
+                FROM record_revision rr
+                WHERE rr.id = ?
+                  AND rr.task_id = agent_task.id
+                  AND (
+                        rr.content_hash = ?
+                        OR (rr.content_hash IS NULL AND ? IS NULL)
+                      )
+            )
+        """
+        params.extend(
+            [
+                expected_previous_revision_id,
+                expected_previous_revision_id,
+                expected_previous_content_hash,
+                expected_previous_content_hash,
+            ]
+        )
+    cursor = connection.execute(
+        f"""
+        UPDATE agent_task
+        SET status = COALESCE(?, status),
+            current_stage = ?,
+            result_json = ?,
+            encounter_id = COALESCE(?, encounter_id),
+            current_record_revision_id = ?,
+            completed_at = COALESCE(?, completed_at),
+            updated_at = ?
+        {where}
+        """,
+        params,
+    )
+    if cursor.rowcount != 1:
+        row = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
+        current_revision_id = row["current_record_revision_id"] if row is not None else None
+        current_hash = None
+        if current_revision_id is not None:
+            revision = connection.execute(
+                "SELECT content_hash FROM record_revision WHERE id = ?",
+                (current_revision_id,),
+            ).fetchone()
+            current_hash = revision["content_hash"] if revision is not None else None
+        raise StaleRecordRevisionError(
+            expected_revision_id=expected_previous_revision_id,
+            expected_content_hash=expected_previous_content_hash,
+            current_revision_id=current_revision_id,
+            current_content_hash=current_hash,
+        )
+
+
+def _insert_audit_log_row(
+    connection: sqlite3.Connection,
+    *,
+    task_id: int,
+    event_type: str,
+    event_detail: Any,
+) -> int:
+    cursor = connection.execute(
+        """
+        INSERT INTO audit_log (task_id, event_type, event_detail, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (task_id, event_type, json_dumps(event_detail), utc_now()),
+    )
+    return int(cursor.lastrowid)
+
+
 def create_record_revision_for_task(
     task_id: int,
     result: dict[str, Any],
@@ -609,6 +836,95 @@ def create_record_revision_for_task(
         )
         connection.commit()
         return get_record_revision(revision_id) or {}
+
+
+def apply_review_revision_transaction(
+    task_id: int,
+    result: dict[str, Any],
+    *,
+    expected_revision_id: int,
+    expected_content_hash: str,
+    actor_user_id: int | None = None,
+    status: str,
+    current_stage: str,
+    source: str,
+    workflow_status: str,
+    event_type: str,
+    event_detail: dict[str, Any],
+) -> dict[str, Any]:
+    init_db()
+    with closing(get_connection()) as connection:
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            task = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
+            if task is None:
+                raise ValueError(f"Task not found: {task_id}")
+            current_revision_id = task["current_record_revision_id"]
+            if current_revision_id is None:
+                raise ValueError("Task has no current record revision")
+            revision = connection.execute(
+                "SELECT id, content_hash FROM record_revision WHERE id = ? AND task_id = ?",
+                (current_revision_id, task_id),
+            ).fetchone()
+            if revision is None:
+                raise ValueError("Current record revision not found")
+            current_content_hash = revision["content_hash"]
+            if int(expected_revision_id) != int(current_revision_id) or expected_content_hash != current_content_hash:
+                raise StaleRecordRevisionError(
+                    expected_revision_id=expected_revision_id,
+                    expected_content_hash=expected_content_hash,
+                    current_revision_id=int(current_revision_id),
+                    current_content_hash=current_content_hash,
+                )
+
+            encounter = _ensure_task_encounter_with_connection(
+                connection,
+                task_id=task_id,
+                actor_user_id=actor_user_id,
+            )
+            encounter_id = int(encounter["id"])
+            _invalidate_active_approvals(
+                connection,
+                encounter_id=encounter_id,
+                reason=f"new_revision:{source}",
+            )
+            revision_id = _insert_record_revision_row(
+                connection,
+                task_id=task_id,
+                encounter_id=encounter_id,
+                result=result,
+                actor_user_id=actor_user_id,
+                source=source,
+            )
+            _update_encounter_revision_row(
+                connection,
+                encounter_id=encounter_id,
+                revision_id=revision_id,
+                workflow_status=workflow_status,
+            )
+            _update_task_result_revision_row(
+                connection,
+                task_id=task_id,
+                result=result,
+                status=status,
+                current_stage=current_stage,
+                encounter_id=encounter_id,
+                revision_id=revision_id,
+                expected_previous_revision_id=int(current_revision_id),
+                expected_previous_content_hash=current_content_hash,
+            )
+            _insert_audit_log_row(
+                connection,
+                task_id=task_id,
+                event_type=event_type,
+                event_detail=event_detail,
+            )
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        row = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
+    return row_to_dict(row) or {}
 
 
 def get_record_revision(revision_id: int) -> dict[str, Any] | None:
@@ -967,6 +1283,21 @@ def list_approval_items_for_approval(approval_id: int) -> list[dict[str, Any]]:
             ORDER BY id ASC
             """,
             (approval_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def list_approvals_for_task(task_id: int) -> list[dict[str, Any]]:
+    init_db()
+    with closing(get_connection()) as connection:
+        rows = connection.execute(
+            """
+            SELECT *
+            FROM approval
+            WHERE task_id = ?
+            ORDER BY id ASC
+            """,
+            (task_id,),
         ).fetchall()
     return [dict(row) for row in rows]
 

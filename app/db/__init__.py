@@ -1,5 +1,7 @@
 from app.db.sqlite import (
     CHECK_IN_STATUSES,
+    StaleRecordRevisionError,
+    apply_review_revision_transaction,
     bind_task_to_encounter,
     create_auth_session,
     create_audit_log,
@@ -27,6 +29,7 @@ from app.db.sqlite import (
     init_db,
     json_dumps,
     list_approval_items_for_approval,
+    list_approvals_for_task,
     list_export_events_for_task,
     list_encounters,
     list_record_revisions_for_task,
@@ -42,6 +45,8 @@ from app.db.sqlite import (
 
 __all__ = [
     "CHECK_IN_STATUSES",
+    "StaleRecordRevisionError",
+    "apply_review_revision_transaction",
     "bind_task_to_encounter",
     "create_auth_session",
     "create_audit_log",
@@ -69,6 +74,7 @@ __all__ = [
     "init_db",
     "json_dumps",
     "list_approval_items_for_approval",
+    "list_approvals_for_task",
     "list_export_events_for_task",
     "list_encounters",
     "list_record_revisions_for_task",

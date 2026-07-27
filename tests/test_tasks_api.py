@@ -139,8 +139,16 @@ class TaskApiTests(unittest.TestCase):
     def _create_reviewed_task(self, fields: MedicalRecordFields | None = None) -> int:
         result = MedicalRecordOrchestrator().run_from_text("seed task for approval tests")
         task_id = result["task_id"]
-        review_task(task_id, ReviewRequest(fields=fields or self._custom_fields()))
+        review_task(task_id, self._review_request(task_id, fields or self._custom_fields()))
         return task_id
+
+    def _review_request(self, task_id: int, fields: MedicalRecordFields) -> ReviewRequest:
+        readiness = read_export_readiness(task_id)
+        return ReviewRequest(
+            fields=fields,
+            expected_revision_id=readiness.revision_id,
+            expected_content_hash=readiness.content_hash,
+        )
 
     def _minimal_payload(
         self,
@@ -270,7 +278,7 @@ class TaskApiTests(unittest.TestCase):
 
         fields = result["fields"]
         fields.chief_complaint.value = "左手手掌被咬伤后肿痛约2小时（医生修订）"
-        reviewed = review_task(task_id, ReviewRequest(fields=fields))
+        reviewed = review_task(task_id, self._review_request(task_id, fields))
         self.assertIn("医生修订", reviewed["result_json"]["fields"]["chief_complaint"]["value"])
 
         with self.assertRaises(HTTPException) as blocked:
@@ -480,7 +488,7 @@ class TaskApiTests(unittest.TestCase):
         stale_payload = self._minimal_payload(task_id)
         updated_fields = self._custom_fields()
         updated_fields.chief_complaint.value = "发热4天"
-        review_task(task_id, ReviewRequest(fields=updated_fields))
+        review_task(task_id, self._review_request(task_id, updated_fields))
 
         with self.assertRaises(HTTPException) as blocked:
             approve_task(task_id, TaskApprovalRequest.model_validate(stale_payload))
@@ -495,7 +503,7 @@ class TaskApiTests(unittest.TestCase):
 
         updated_fields = self._custom_fields()
         updated_fields.chief_complaint.value = "发热4天"
-        reviewed = review_task(task_id, ReviewRequest(fields=updated_fields))
+        reviewed = review_task(task_id, self._review_request(task_id, updated_fields))
 
         revisions = list_record_revisions_for_task(task_id)
         self.assertGreaterEqual(len(revisions), 3)
@@ -510,7 +518,7 @@ class TaskApiTests(unittest.TestCase):
         approve_task(task_id, TaskApprovalRequest.model_validate(self._minimal_payload(task_id)))
         updated_fields = self._custom_fields()
         updated_fields.chief_complaint.value = "发热4天"
-        review_task(task_id, ReviewRequest(fields=updated_fields))
+        review_task(task_id, self._review_request(task_id, updated_fields))
 
         with self.assertRaises(HTTPException) as blocked:
             export_task(task_id)

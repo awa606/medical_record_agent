@@ -189,10 +189,16 @@ class TaskPersistenceAfterRestartTests(unittest.TestCase):
             fields["chief_complaint"]["status"] = "partial"
             fields["chief_complaint"]["missing"] = False
             fields["chief_complaint"]["missing_elements"] = ["duration"]
+            current_readiness = restarted_client.get(f"/api/tasks/{task_id}/export-readiness")
+            self.assertEqual(current_readiness.status_code, 200, current_readiness.text)
 
             reviewed = restarted_client.post(
                 f"/api/tasks/{task_id}/review",
-                json={"fields": fields},
+                json={
+                    "fields": fields,
+                    "expected_revision_id": current_readiness.json()["revision_id"],
+                    "expected_content_hash": current_readiness.json()["content_hash"],
+                },
             )
             self.assertEqual(reviewed.status_code, 200, reviewed.text)
             self.assertIsNone(get_active_approval_for_task(task_id))

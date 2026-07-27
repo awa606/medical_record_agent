@@ -81,7 +81,8 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL UNIQUE,
                 display_name TEXT NOT NULL,
-                role TEXT NOT NULL CHECK(role IN ('admin', 'doctor')),
+                role TEXT NOT NULL CHECK(role IN ('admin', 'doctor', 'frontdesk', 'intake', 'intake_admin')),
+                department_id TEXT,
                 password_hash TEXT NOT NULL,
                 is_active INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL,
@@ -196,6 +197,8 @@ def init_db() -> None:
 
 
 def _migrate_schema(connection: sqlite3.Connection) -> None:
+    _migrate_auth_user_role_check(connection)
+    _ensure_column(connection, "auth_user", "department_id", "TEXT")
     _ensure_column(connection, "agent_task", "input_text", "TEXT")
     _ensure_column(connection, "agent_task", "retry_count", "INTEGER NOT NULL DEFAULT 0")
     _ensure_column(connection, "agent_task", "completed_at", "TEXT")
@@ -251,6 +254,140 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
         WHERE content_hash IS NULL OR content_hash = ''
         """
     )
+
+
+AUTH_USER_ROLE_CHECK = "CHECK(role IN ('admin', 'doctor', 'frontdesk', 'intake', 'intake_admin'))"
+AUTH_USER_REQUIRED_COLUMNS: dict[str, str] = {
+    "id": "INTEGER PRIMARY KEY AUTOINCREMENT",
+    "username": "TEXT NOT NULL UNIQUE",
+    "display_name": "TEXT NOT NULL",
+    "role": f"TEXT NOT NULL {AUTH_USER_ROLE_CHECK}",
+    "department_id": "TEXT",
+    "password_hash": "TEXT NOT NULL",
+    "is_active": "INTEGER NOT NULL DEFAULT 1",
+    "created_at": "TEXT NOT NULL",
+    "updated_at": "TEXT NOT NULL",
+    "last_login_at": "TEXT",
+}
+
+
+def _quote_identifier(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
+
+
+def _auth_user_role_check_needs_migration(connection: sqlite3.Connection) -> bool:
+    row = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'auth_user'"
+    ).fetchone()
+    if row is None or not row["sql"]:
+        return False
+    sql = str(row["sql"]).lower()
+    columns = {item["name"] for item in connection.execute("PRAGMA table_info(auth_user)").fetchall()}
+    required_roles_present = all(role in sql for role in ("frontdesk", "intake", "intake_admin"))
+    required_columns_present = set(AUTH_USER_REQUIRED_COLUMNS).issubset(columns)
+    return not (required_roles_present and required_columns_present)
+
+
+def _column_definition_from_info(column: sqlite3.Row) -> str:
+    definition = column["type"] or "TEXT"
+    if column["notnull"]:
+        definition += " NOT NULL"
+    if column["dflt_value"] is not None:
+        definition += f" DEFAULT {column['dflt_value']}"
+    return definition
+
+
+def _copy_auth_user_rows_for_migration(
+    connection: sqlite3.Connection,
+    *,
+    new_columns: list[str],
+    old_columns: set[str],
+) -> None:
+    now = utc_now()
+    select_parts: list[str] = []
+    for column in new_columns:
+        if column in old_columns:
+            select_parts.append(_quote_identifier(column))
+        elif column == "department_id":
+            select_parts.append("NULL")
+        elif column == "is_active":
+            select_parts.append("1")
+        elif column in {"created_at", "updated_at"}:
+            select_parts.append("?")
+        elif column == "last_login_at":
+            select_parts.append("NULL")
+        else:
+            select_parts.append("NULL")
+    timestamp_params = [now for column in new_columns if column not in old_columns and column in {"created_at", "updated_at"}]
+    connection.execute(
+        f"""
+        INSERT INTO auth_user_new ({", ".join(_quote_identifier(column) for column in new_columns)})
+        SELECT {", ".join(select_parts)}
+        FROM auth_user
+        """,
+        timestamp_params,
+    )
+
+
+def _migrate_auth_user_role_check(connection: sqlite3.Connection) -> None:
+    if not _auth_user_role_check_needs_migration(connection):
+        return
+    if connection.in_transaction:
+        connection.commit()
+
+    old_foreign_keys = int(connection.execute("PRAGMA foreign_keys").fetchone()[0])
+    table_info = connection.execute("PRAGMA table_info(auth_user)").fetchall()
+    old_columns = {column["name"] for column in table_info}
+    indexes = connection.execute(
+        """
+        SELECT name, sql
+        FROM sqlite_master
+        WHERE type = 'index'
+          AND tbl_name = 'auth_user'
+          AND sql IS NOT NULL
+        ORDER BY name
+        """
+    ).fetchall()
+
+    new_definitions = dict(AUTH_USER_REQUIRED_COLUMNS)
+    for column in table_info:
+        name = column["name"]
+        if name not in new_definitions:
+            new_definitions[name] = _column_definition_from_info(column)
+    new_columns = list(new_definitions)
+
+    connection.execute("PRAGMA foreign_keys=OFF")
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute("DROP TABLE IF EXISTS auth_user_new")
+        connection.execute(
+            f"""
+            CREATE TABLE auth_user_new (
+                {", ".join(f"{_quote_identifier(name)} {definition}" for name, definition in new_definitions.items())}
+            )
+            """
+        )
+        _copy_auth_user_rows_for_migration(
+            connection,
+            new_columns=new_columns,
+            old_columns=old_columns,
+        )
+        connection.execute("DROP TABLE auth_user")
+        connection.execute("ALTER TABLE auth_user_new RENAME TO auth_user")
+        for index in indexes:
+            connection.execute(index["sql"])
+        foreign_key_issues = connection.execute("PRAGMA foreign_key_check").fetchall()
+        if foreign_key_issues:
+            raise RuntimeError(f"auth_user migration failed foreign_key_check: {len(foreign_key_issues)}")
+        integrity = connection.execute("PRAGMA integrity_check").fetchone()
+        if integrity is None or integrity[0] != "ok":
+            raise RuntimeError(f"auth_user migration failed integrity_check: {integrity[0] if integrity else 'no result'}")
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.execute(f"PRAGMA foreign_keys={old_foreign_keys}")
 
 
 def _ensure_column(
@@ -1557,9 +1694,10 @@ def create_user(
     password: str,
     display_name: str,
     role: str,
+    department_id: str | None = None,
 ) -> int:
     init_db()
-    if role not in {"admin", "doctor"}:
+    if role not in {"admin", "doctor", "frontdesk", "intake", "intake_admin"}:
         raise ValueError("Unsupported user role")
     from app.services.auth import hash_password
 
@@ -1569,12 +1707,12 @@ def create_user(
             cursor = connection.execute(
                 """
                 INSERT INTO auth_user (
-                    username, display_name, role, password_hash,
+                    username, display_name, role, department_id, password_hash,
                     is_active, created_at, updated_at, last_login_at
                 )
-                VALUES (?, ?, ?, ?, 1, ?, ?, NULL)
+                VALUES (?, ?, ?, ?, ?, 1, ?, ?, NULL)
                 """,
-                (username, display_name, role, hash_password(password), now, now),
+                (username, display_name, role, department_id, hash_password(password), now, now),
             )
             user_id = int(cursor.lastrowid)
             connection.commit()

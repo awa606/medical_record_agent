@@ -175,6 +175,7 @@ def create_user_route(
             password=payload.password,
             display_name=payload.display_name,
             role=payload.role,
+            department_id=payload.department_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

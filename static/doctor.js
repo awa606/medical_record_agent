@@ -135,6 +135,9 @@ const appState = {
   approvalDiagnosisDecisions: {},
   approvalHighRiskConfirmations: {},
   approvalRevisionId: null,
+  currentKnowledgeEvidence: null,
+  knowledgeEvidenceStatus: "idle",
+  knowledgeEvidenceError: "",
 };
 
 window.__MRA_APP_STATE__ = appState;
@@ -417,6 +420,30 @@ async function refreshExportReadiness() {
     return readiness;
   } catch (error) {
     appState.currentExportReadiness = null;
+    return null;
+  }
+}
+
+async function refreshKnowledgeEvidence(taskId = appState.currentTaskId) {
+  if (!taskId) {
+    appState.currentKnowledgeEvidence = null;
+    appState.knowledgeEvidenceStatus = "idle";
+    appState.knowledgeEvidenceError = "";
+    return null;
+  }
+  appState.knowledgeEvidenceStatus = "loading";
+  appState.knowledgeEvidenceError = "";
+  try {
+    const evidence = await api(`/api/tasks/${encodeURIComponent(taskId)}/evidence`);
+    appState.currentKnowledgeEvidence = evidence;
+    appState.knowledgeEvidenceStatus = "ready";
+    if ($("assistPanels")) renderAssist();
+    return evidence;
+  } catch (error) {
+    appState.currentKnowledgeEvidence = null;
+    appState.knowledgeEvidenceStatus = "failed";
+    appState.knowledgeEvidenceError = error?.message || "相关知识参考加载失败";
+    if ($("assistPanels")) renderAssist();
     return null;
   }
 }
@@ -3744,6 +3771,60 @@ function renderEvidenceCard(evidence, diagnoses) {
   });
 }
 
+function knowledgeStatusText(status) {
+  const labels = {
+    verified_demo: "人工核验演示资料",
+    unverified: "未核验资料",
+    mock: "模拟资料",
+    withdrawn: "资料已撤回，不作为当前参考",
+  };
+  return labels[status] || status || "状态未标注";
+}
+
+function knowledgeResults() {
+  return appState.currentKnowledgeEvidence?.results || [];
+}
+
+function renderKnowledgeReferenceCard() {
+  const results = knowledgeResults();
+  if (appState.knowledgeEvidenceStatus === "loading") {
+    return assistCard({
+      title: "相关知识参考",
+      badgeClass: "neutral",
+      badgeText: "加载中",
+      body: `<div class="empty-state">正在匹配与当前病历字段相关的人工核验演示资料。</div>`,
+    });
+  }
+  if (appState.knowledgeEvidenceStatus === "failed") {
+    return assistCard({
+      title: "相关知识参考",
+      badgeClass: "missing",
+      badgeText: "加载失败",
+      detailTarget: "assist:knowledge",
+      body: `<div class="empty-state">${escapeHtml(appState.knowledgeEvidenceError || "相关知识参考加载失败。")}</div>`,
+    });
+  }
+  return assistCard({
+    title: "相关知识参考",
+    badgeClass: results.length ? "info" : "neutral",
+    badgeText: results.length ? `${results.length} 条` : "暂无",
+    detailTarget: "assist:knowledge",
+    body: results.length
+      ? `<div class="knowledge-reference-list compact">
+          ${results.slice(0, 2).map((item) => `
+            <div class="knowledge-reference-item">
+              <strong>${escapeHtml(item.title || item.source_id || "演示资料")}</strong>
+              <span>${escapeHtml(item.publisher || "发布机构未标注")} · ${escapeHtml(item.year || "-")} · ${escapeHtml(item.version || "-")}</span>
+              <em>${escapeHtml(item.status_label || knowledgeStatusText(item.review_status))}</em>
+              <p>${escapeHtml(item.match_reason || "与当前病历字段相关。")}</p>
+            </div>
+          `).join("")}
+          ${results.length > 2 ? `<div class="summary-note">另有 ${results.length - 2} 条参考，点击详情查看。</div>` : ""}
+        </div>`
+      : `<div class="empty-state">暂无与当前任务字段匹配的知识参考。</div>`,
+  });
+}
+
 function renderQualitySummaryCard() {
   const quality = activeQualityReport();
   if (!quality) {
@@ -3946,6 +4027,24 @@ function renderAssistDetailContent(section) {
       : `<div class="empty-state">暂无判断证据。</div>`;
   }
 
+  if (section === "knowledge") {
+    const results = knowledgeResults();
+    if (appState.knowledgeEvidenceStatus === "failed") {
+      return detailSection("相关知识参考", `<div class="detail-text">${escapeHtml(appState.knowledgeEvidenceError || "相关知识参考加载失败。")}</div>`);
+    }
+    return results.length
+      ? results.map((item) => detailSection(item.title || item.source_id || "演示资料", `
+          <div class="detail-kv"><span>发布机构</span><strong>${escapeHtml(item.publisher || "未标注")}</strong></div>
+          <div class="detail-kv"><span>年份与版本</span><strong>${escapeHtml(item.year || "-")} · ${escapeHtml(item.version || "-")}</strong></div>
+          <div class="detail-kv"><span>来源状态</span><strong>${escapeHtml(item.status_label || knowledgeStatusText(item.review_status))}</strong></div>
+          <div class="detail-kv"><span>关联字段</span><strong>${escapeHtml((item.matched_fields || item.related_fields || []).join("、") || "未匹配字段")}</strong></div>
+          <div class="detail-kv"><span>引用锚点</span><strong>${escapeHtml(item.citation_anchor || "-")}</strong></div>
+          <div class="detail-text">${escapeHtml(item.excerpt || "暂无片段。")}</div>
+          <div class="summary-note">${escapeHtml(item.match_reason || "与当前病历字段相关。")} 本模块仅展示相关知识参考，不自动确认诊断或处置。</div>
+        `)).join("")
+      : `<div class="empty-state">暂无与当前任务字段匹配的相关知识参考。</div>`;
+  }
+
   const rows = [
     missing.length ? `存在 ${missing.length} 项未补充字段：${missing.join("、")}` : "关键字段完整性校验通过",
     safety ? `安全校验：${safety.passed ? "通过" : "未通过"}${safety.blocked ? "，暂不可导出" : ""}` : "等待生成病历后执行安全校验",
@@ -3985,6 +4084,7 @@ function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}
       ${renderEvidenceCard(evidence, diagnoses)}
+      ${renderKnowledgeReferenceCard()}
     </div>
   `;
 }
@@ -4225,6 +4325,7 @@ function openWorkbenchDetail(target = "") {
       candidates: "鉴别诊断参考完整依据",
       treatment: "治疗方案推荐详情",
       evidence: "判断证据详情",
+      knowledge: "相关知识参考",
       quality: "病历质量摘要",
       safety: "安全校验结果详情",
     };
@@ -4311,6 +4412,9 @@ function resetTaskState({ keepAsr = false, keepEncounter = false } = {}) {
   appState.currentExportReadiness = null;
   appState.currentExports = null;
   appState.currentAgentTrace = null;
+  appState.currentKnowledgeEvidence = null;
+  appState.knowledgeEvidenceStatus = "idle";
+  appState.knowledgeEvidenceError = "";
   clearApprovalReviewSelections();
   appState.approvalRevisionId = null;
   appState.currentInputText = "";
@@ -4369,6 +4473,7 @@ async function refreshTask(taskId, taskFromEvent = null) {
   if (previousApprovalRevisionKey && previousApprovalRevisionKey !== appState.approvalRevisionId) {
     appState.currentExportReadiness = null;
   }
+  await refreshKnowledgeEvidence(appState.currentTaskId);
   await refreshAgentTrace(appState.currentTaskId);
   renderAll();
 }

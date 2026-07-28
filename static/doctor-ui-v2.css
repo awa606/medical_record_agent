@@ -2010,6 +2010,45 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   text-decoration: none;
 }
 
+.knowledge-reference-list {
+  display: grid;
+  gap: 8px;
+}
+
+.knowledge-reference-list.compact {
+  gap: 7px;
+}
+
+.knowledge-reference-item {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #dbe7f3;
+  border-radius: 8px;
+  padding: 10px 11px;
+  background: #f8fbff;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-reference-item strong {
+  color: #15324c;
+  font-size: 12px;
+}
+
+.knowledge-reference-item span,
+.knowledge-reference-item p {
+  margin: 0;
+  color: #5e7187;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.knowledge-reference-item em {
+  color: #0f766e;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
 @media (min-width: 1680px) {
   .workbench,
   body.doctor-mode .workbench,

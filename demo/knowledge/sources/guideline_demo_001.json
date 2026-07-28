@@ -1,0 +1,14 @@
+{
+  "source_id": "guideline_demo_001",
+  "title": "演示资料：发热伴咳嗽问诊要点",
+  "publisher": "MediListen 课程演示资料组",
+  "document_type": "clinical_guideline",
+  "year": 2025,
+  "version": "2025-demo",
+  "review_status": "verified_demo",
+  "excerpt": "发热伴咳嗽问诊应记录起病时间、最高体温、咳嗽性质、咳痰情况、胸痛或呼吸困难等伴随表现，并由医生结合查体判断。",
+  "related_fields": ["主诉", "现病史", "风险提示"],
+  "keywords": ["发热", "咳嗽", "咳痰", "体温", "胸痛", "呼吸困难"],
+  "citation_anchor": "demo-fever-cough-history",
+  "source_url": null
+}

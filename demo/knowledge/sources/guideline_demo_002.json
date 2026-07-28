@@ -1,0 +1,14 @@
+{
+  "source_id": "guideline_demo_002",
+  "title": "演示资料：呼吸道症状危险信号",
+  "publisher": "MediListen 课程演示资料组",
+  "document_type": "clinical_guideline",
+  "year": 2025,
+  "version": "2025-demo",
+  "review_status": "verified_demo",
+  "excerpt": "出现持续高热、气促、胸痛、意识异常、咯血、口唇发绀或基础疾病明显加重时，应提示医生优先评估风险并决定是否进一步检查或转诊。",
+  "related_fields": ["风险提示", "候选诊断（待医生确认）", "处理建议"],
+  "keywords": ["持续高热", "气促", "胸痛", "意识异常", "咯血", "发绀", "风险"],
+  "citation_anchor": "demo-respiratory-red-flags",
+  "source_url": null
+}

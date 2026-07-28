@@ -28,7 +28,7 @@ from app.api.asr_sessions import (
     update_asr_session_result,
     upload_asr_session_audio,
 )
-from app.api.audio import _write_transcript, read_audio_transcript
+from app.api.audio import _read_audio_record, _write_transcript, read_audio_transcript
 from app.main import app
 from app.schemas import (
     ASRResult,
@@ -1153,6 +1153,9 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIsNotNone(result.processing_duration_seconds)
         self.assertIsNotNone(result.rtf)
         self.assertTrue(any("realtime upload" in warning for warning in result.warnings))
+        audio_record = _read_audio_record(uploaded.audio_id)
+        self.assertEqual(audio_record.status, "completed")
+        self.assertEqual(audio_record.recognition_mode, "follow")
 
     def test_follow_sse_segment_precedes_final_chunk_and_contains_evidence_fields(self):
         session = create_asr_session(engine="mock", recognition_mode="follow")

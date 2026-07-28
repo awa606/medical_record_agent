@@ -250,6 +250,26 @@ class AudioApiTests(unittest.TestCase):
         self.assertIn("session_id", response)
         self.assertEqual(calls, [f"{uploaded.audio_id}_chunk_001", f"{uploaded.audio_id}_chunk_002"])
 
+    def test_public_audio_follow_with_background_task_returns_before_asr_work(self):
+        uploaded = self._upload_sample("sample.wav")
+        background_tasks = BackgroundTasks()
+
+        with patch("app.api.asr_sessions._audio_duration_for_chunking", return_value=6.0), \
+             patch("app.api.asr_sessions._should_use_chunked_session", return_value=(True, 6.0)), \
+             patch("app.api.asr_sessions._run_asr_session_transcription", side_effect=AssertionError("ASR must be scheduled, not run inline")):
+            response = transcribe_audio(
+                uploaded.audio_id,
+                background_tasks=background_tasks,
+                engine="mock",
+                recognition_mode="follow",
+            )
+
+        self.assertEqual(response["recognition_mode"], "follow")
+        self.assertEqual(response["status"], "transcribing")
+        self.assertIn("events_url", response)
+        record = _read_audio_record(uploaded.audio_id)
+        self.assertEqual(record.status, "transcribing")
+
     def test_unsupported_backend_does_not_fallback_to_fake_follow(self):
         uploaded = self._upload_sample("sample.wav")
         with self.assertRaises(HTTPException) as context:

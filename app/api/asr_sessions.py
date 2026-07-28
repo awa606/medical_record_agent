@@ -1867,9 +1867,23 @@ def _run_asr_session_transcription(
                 "rtf": rtf,
             }
         )
-        _write_transcription_success(session_id, session=session, result=result, emit_segments=emit_segments)
+        _write_transcription_success(
+            session_id,
+            session=session,
+            result=result,
+            record=record,
+            emit_segments=emit_segments,
+        )
     except Exception as exc:  # noqa: BLE001
         message = _compact_error(exc)
+        _write_audio_record(
+            record.model_copy(
+                update={
+                    "status": "failed",
+                    "recognition_mode": session.recognition_mode or record.recognition_mode,
+                }
+            )
+        )
         failed = session.model_copy(
             update={
                 "status": "failed",
@@ -2462,10 +2476,20 @@ def _write_transcription_success(
     *,
     session: ASRSessionRecord,
     result: ASRResult,
+    record: AudioRecord | None = None,
     emit_segments: bool = True,
 ) -> None:
     result = ensure_automatic_speaker_roles(result)
     _write_transcript(result)
+    if record is not None:
+        _write_audio_record(
+            record.model_copy(
+                update={
+                    "status": "completed",
+                    "recognition_mode": result.recognition_mode or session.recognition_mode or record.recognition_mode,
+                }
+            )
+        )
     _write_session_result(session_id, result)
     ready_session = session.model_copy(
         update={

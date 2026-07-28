@@ -194,6 +194,7 @@ def stream_audio_media(audio_id: str, request: Request = None) -> FileResponse:
 @router.post("/{audio_id}/transcribe")
 def transcribe_audio(
     audio_id: str,
+    background_tasks: BackgroundTasks = None,
     request: Request = None,
     engine: str = Query(default="mock"),
     recognition_mode: Literal["fast", "follow"] = "fast",
@@ -212,6 +213,7 @@ def transcribe_audio(
             record,
             engine=resolved_engine,
             owner_user_id=user.id if user is not None else None,
+            background_tasks=background_tasks,
         )
         return {
             "audio_id": audio_id,

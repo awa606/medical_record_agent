@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.services.asr.funasr_reliability import classify_funasr_error, funasr_cache_status
+from app.services.asr.funasr_reliability import classify_funasr_error, funasr_cache_status, funasr_failure_payload
 
 
 class FunASRReliabilityTests(unittest.TestCase):
@@ -19,6 +19,18 @@ class FunASRReliabilityTests(unittest.TestCase):
         self.assertIn("模型缓存", dns["user_message"])
         self.assertEqual(missing["category"], "model_missing")
         self.assertEqual(damaged["category"], "audio_damaged")
+
+    def test_invalid_result_payload_is_structured_for_doctor_recovery(self):
+        payload = funasr_failure_payload(TypeError("None argument after ** must be a mapping, not NoneType"))
+
+        self.assertEqual(payload["error_code"], "ASR_RESULT_INVALID")
+        self.assertEqual(payload["error_category"], "result_invalid")
+        self.assertEqual(payload["stage"], "transcription")
+        self.assertTrue(payload["retryable"])
+        self.assertTrue(payload["audio_preserved"])
+        self.assertEqual(payload["error"]["code"], "ASR_RESULT_INVALID")
+        self.assertNotIn("NoneType", payload["message"])
+        self.assertIn("NoneType", payload["technical_detail"])
 
     def test_cache_status_reports_configured_cache_dirs(self):
         with tempfile.TemporaryDirectory() as temp_dir:

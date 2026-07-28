@@ -16,7 +16,9 @@ from app.api.asr_sessions import (
     _append_events,
     _asr_session_event_stream,
     _chunk_seconds_for_duration,
+    _failed_event,
     _read_events,
+    _recording_chunk_summary,
     _read_recording_chunk_state,
     _write_session_result,
     _should_use_realtime_upload_session,
@@ -35,6 +37,7 @@ from app.schemas import (
     ASRSegmentCorrection,
     ASRSessionCorrectionRequest,
     ASRSessionEvent,
+    ASRSessionRecord,
     SpeakerRoleAssignment,
 )
 from app.schemas.asr import DiarizationTurn
@@ -280,14 +283,48 @@ class ASRSessionApiTests(unittest.TestCase):
         }
         for key in self.original_env:
             os.environ.pop(key, None)
-        os.environ["MEDICAL_RECORD_AGENT_UPLOAD_DIR"] = os.path.join(
-            self.temp_dir.name,
-            "uploads",
-        )
         os.environ["MEDICAL_RECORD_AGENT_DB"] = os.path.join(
             self.temp_dir.name,
             "asr_sessions.sqlite3",
         )
+        os.environ["MEDICAL_RECORD_AGENT_UPLOAD_DIR"] = os.path.join(
+            self.temp_dir.name,
+            "uploads",
+        )
+
+    def test_failed_event_hides_python_exception_and_keeps_technical_detail(self):
+        session = ASRSessionRecord(
+            session_id="S-safe-error",
+            engine="funasr",
+            status="failed",
+            audio_id="A-safe-error",
+        )
+
+        events = _failed_event(session, "None argument after ** must be a mapping, not NoneType")
+
+        self.assertEqual(len(events), 1)
+        data = events[0].data
+        self.assertEqual(data["error_code"], "ASR_RESULT_INVALID")
+        self.assertEqual(data["error_category"], "result_invalid")
+        self.assertEqual(data["stage"], "transcription")
+        self.assertTrue(data["retryable"])
+        self.assertTrue(data["audio_preserved"])
+        self.assertNotIn("NoneType", str(data["message"]))
+        self.assertNotIn("must be a mapping", str(data["error"]))
+        self.assertIn("NoneType", str(data["technical_detail"]))
+
+    def test_recording_chunk_summary_tolerates_legacy_null_metadata(self):
+        summary = _recording_chunk_summary(
+            {
+                "session_id": "S-legacy-null-chunk",
+                "chunks": {"0": None},
+            }
+        )
+
+        self.assertEqual(summary["chunk_count"], 1)
+        self.assertEqual(summary["chunks"][0]["chunk_index"], 0)
+        self.assertEqual(summary["chunks"][0]["status"], "invalid_metadata")
+        self.assertIn("not a mapping", summary["chunks"][0]["metadata_error"])
 
     def tearDown(self):
         os.environ.pop("MEDICAL_RECORD_AGENT_UPLOAD_DIR", None)

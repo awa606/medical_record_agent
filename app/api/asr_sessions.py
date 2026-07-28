@@ -53,7 +53,7 @@ from app.services.asr.auto_roles import ensure_automatic_speaker_roles
 from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
 from app.services.asr.config import backend_capabilities, configured_asr_backend, requested_asr_engine_mismatch
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
-from app.services.asr.funasr_reliability import classify_funasr_error
+from app.services.asr.funasr_reliability import classify_funasr_error, funasr_error_code
 from app.services.asr.role_quality import attach_speaker_role_quality
 from app.services.asr.speaker_role_classifier import resolve_speaker_roles
 from app.services.runtime_limits import (
@@ -239,13 +239,19 @@ def _recording_missing_indices(chunks: dict[str, Any]) -> list[int]:
 
 def _recording_chunk_summary(state: dict[str, Any]) -> dict[str, Any]:
     chunks = state.get("chunks") or {}
-    ordered = [
-        {
-            "chunk_index": int(index),
-            **metadata,
-        }
-        for index, metadata in sorted(chunks.items(), key=lambda item: int(item[0]))
-    ]
+    ordered: list[dict[str, Any]] = []
+    for index, metadata in sorted(chunks.items(), key=lambda item: int(item[0])):
+        item: dict[str, Any] = {"chunk_index": int(index)}
+        if isinstance(metadata, dict):
+            item.update(metadata)
+        else:
+            item.update(
+                {
+                    "status": "invalid_metadata",
+                    "metadata_error": "recording chunk metadata is not a mapping",
+                }
+            )
+        ordered.append(item)
     missing_indices = _recording_missing_indices(chunks)
     expected_next = 0
     for item in ordered:
@@ -1075,6 +1081,13 @@ def _append_partial_segment_events(
 def _failed_event(session: ASRSessionRecord, message: str) -> list[ASRSessionEvent]:
     hint = _retry_hint(session.engine)
     classified = classify_funasr_error(message) if session.engine == "funasr" else None
+    user_message = (
+        classified["user_message"]
+        if classified
+        else "转写服务暂时不可用，本次任务已暂停。音频已安全保存，可重新转写或改用文本输入。"
+    )
+    error_category = classified["category"] if classified else "asr_failed"
+    error_code = funasr_error_code(error_category) if classified else "ASR_FAILED"
     return [
         ASRSessionEvent(
             id=1,
@@ -1084,11 +1097,16 @@ def _failed_event(session: ASRSessionRecord, message: str) -> list[ASRSessionEve
                 "audio_id": session.audio_id,
                 "engine": session.engine,
                 "status": "failed",
-                "error": message,
-                "error_category": classified["category"] if classified else "asr_failed",
+                "error": user_message,
+                "message": user_message,
+                "error_code": error_code,
+                "error_category": error_category,
+                "stage": "transcription",
                 "retryable": True,
+                "audio_preserved": True,
                 "retry_hint": hint,
                 "fallback_action": "text_input" if session.engine == "funasr" else None,
+                "technical_detail": message,
             },
             created_at=_now(),
         )
@@ -1923,6 +1941,8 @@ def _transcribe_funasr_streaming_session(
 
     def on_progress(data: dict[str, object]) -> None:
         nonlocal last_progress_audio_seconds, last_progress_elapsed_seconds, last_progress_phase
+        if not isinstance(data, dict):
+            raise RuntimeError("ASR_RESULT_INVALID: FunASR streaming progress event must be a mapping")
         processed = float(data.get("processed_audio_seconds") or 0.0)
         elapsed = float(data.get("elapsed_seconds") or 0.0)
         phase = str(data.get("phase") or "streaming")
@@ -1948,6 +1968,8 @@ def _transcribe_funasr_streaming_session(
         )
 
     def on_segment(event_name: str, segment: ASRSegment, metadata: dict[str, object]) -> None:
+        if not isinstance(metadata, dict):
+            raise RuntimeError("ASR_RESULT_INVALID: FunASR streaming segment metadata must be a mapping")
         duration = metadata.get("audio_duration_seconds") or original_duration
         processed = metadata.get("processed_audio_seconds")
         progress = (
@@ -2164,6 +2186,9 @@ def _fallback_from_streaming_failure(
     original_duration: float | None,
     error: Exception,
 ) -> ASRResult:
+    classified = classify_funasr_error(error)
+    user_message = classified["user_message"]
+    error_code = funasr_error_code(classified["category"])
     _append_session_event(
         session_id,
         session=session,
@@ -2175,13 +2200,17 @@ def _fallback_from_streaming_failure(
             "progress_kind": "indeterminate",
             "processed_audio_seconds": None,
             "audio_duration_seconds": original_duration,
-            "error": _compact_error(error),
+            "error": user_message,
+            "message": user_message,
+            "error_code": error_code,
+            "error_category": classified["category"],
+            "technical_detail": _compact_error(error),
             "retryable": True,
+            "audio_preserved": True,
         },
     )
-    classified = classify_funasr_error(error)
-    if classified["category"] in {"dns_failure", "model_missing", "model_timeout", "dependency_missing"}:
-        raise RuntimeError(classified["user_message"]) from error
+    if classified["category"] in {"dns_failure", "model_missing", "model_timeout", "dependency_missing", "result_invalid"}:
+        raise RuntimeError(f"{error_code}: {classified['user_message']}") from error
     offline_engine = create_asr_engine("funasr")
     return _transcribe_chunked_session(
         session_id,

@@ -12,6 +12,7 @@ RETRYABLE_CATEGORIES = {
     "audio_damaged",
     "dependency_missing",
     "model_load_failed",
+    "result_invalid",
 }
 
 
@@ -20,7 +21,7 @@ def classify_funasr_error(error: BaseException | str) -> dict[str, Any]:
     lowered = message.lower()
     category = "model_load_failed"
 
-    if any(token in lowered for token in ("nameresolutionerror", "failed to resolve", "temporary failure in name resolution", "dns")):
+    if any(token in lowered for token in ("asr_dns_failure", "nameresolutionerror", "failed to resolve", "temporary failure in name resolution", "dns")):
         category = "dns_failure"
     elif any(token in lowered for token in ("modelscope.cn", "huggingface.co", "hf_hub", "download")):
         category = "dns_failure"
@@ -32,6 +33,18 @@ def classify_funasr_error(error: BaseException | str) -> dict[str, Any]:
         category = "dependency_missing"
     elif any(token in lowered for token in ("ffmpeg audio decode failed", "invalid data", "could not find codec", "damaged")):
         category = "audio_damaged"
+    elif any(
+        token in lowered
+        for token in (
+            "asr_result_invalid",
+            "result_invalid",
+            "returned no result",
+            "result format",
+            "must be a mapping",
+            "nonetype",
+        )
+    ):
+        category = "result_invalid"
 
     return {
         "category": category,
@@ -42,6 +55,8 @@ def classify_funasr_error(error: BaseException | str) -> dict[str, Any]:
 
 
 def _user_message(category: str) -> str:
+    if category == "result_invalid":
+        return "转写结果格式无效，本次任务已暂停。音频已安全保存，可重新转写或改用文本输入。"
     return {
         "dns_failure": "FunASR 模型服务或模型缓存不可用，请检查网络/DNS，或预先挂载本地模型缓存后重试。",
         "model_missing": "FunASR 本地模型缺失，请先下载模型并挂载模型缓存后重试。",
@@ -81,12 +96,35 @@ def funasr_cache_status() -> dict[str, Any]:
     }
 
 
+def funasr_error_code(category: str) -> str:
+    return {
+        "dns_failure": "ASR_DNS_FAILURE",
+        "model_missing": "ASR_MODEL_MISSING",
+        "model_timeout": "ASR_TIMEOUT",
+        "audio_damaged": "ASR_AUDIO_INVALID",
+        "dependency_missing": "ASR_DEPENDENCY_MISSING",
+        "model_load_failed": "ASR_MODEL_LOAD_FAILED",
+        "result_invalid": "ASR_RESULT_INVALID",
+    }.get(category, "ASR_SERVICE_UNAVAILABLE")
+
+
 def funasr_failure_payload(error: BaseException | str) -> dict[str, Any]:
     classified = classify_funasr_error(error)
+    code = funasr_error_code(classified["category"])
     return {
         "message": classified["user_message"],
+        "error_code": code,
         "error_category": classified["category"],
+        "stage": "transcription",
         "retryable": classified["retryable"],
+        "audio_preserved": True,
         "technical_detail": classified["message"],
         "fallback_action": "text_input",
+        "error": {
+            "code": code,
+            "message": classified["user_message"],
+            "stage": "transcription",
+            "retryable": classified["retryable"],
+            "audio_preserved": True,
+        },
     }

@@ -56,6 +56,9 @@ const appState = {
   asrChunkStatus: "",
   asrChunkLastError: "",
   asrRetryHint: "",
+  asrFailureCode: "",
+  asrFailureStage: "",
+  asrAudioPreserved: false,
   roleReviewDirty: false,
   roleReviewSaving: false,
   speakerRoleCorrections: {},
@@ -863,7 +866,41 @@ function clearToast() {
   toast.textContent = "";
 }
 
+function containsTechnicalErrorText(message) {
+  return /\b(TypeError|Traceback|NoneType|RuntimeError|ValueError|FileNotFoundError|Exception|stack trace)\b/i.test(message || "")
+    || /must be a mapping/i.test(message || "");
+}
+
+function doctorSafeErrorMessage(error) {
+  const detail = error?.detail || {};
+  const nested = detail?.error || {};
+  const message = detail.message || nested.message || error?.message || String(error || "");
+  const code = detail.error_code || nested.code || appState.asrFailureCode || "";
+  const stage = detail.stage || nested.stage || appState.asrFailureStage || "";
+  const isAsrError = stage === "transcription" || String(code).startsWith("ASR_") || appState.taskStatus === "TRANSCRIBING" || appState.currentAudioId;
+  if (containsTechnicalErrorText(message)) {
+    if (isAsrError) {
+      return "转写服务暂时不可用，本次任务已暂停。音频已安全保存，可重新转写或改用文本输入。";
+    }
+    return "系统暂时无法完成操作，请稍后重试或联系管理员查看技术详情。";
+  }
+  return message || "操作失败";
+}
+
+function applyAsrFailureDetail(detail = {}) {
+  const nested = detail?.error || {};
+  appState.asrFailureCode = detail.error_code || nested.code || appState.asrFailureCode || "ASR_FAILED";
+  appState.asrFailureStage = detail.stage || nested.stage || appState.asrFailureStage || "transcription";
+  appState.asrAudioPreserved = Boolean(detail.audio_preserved ?? nested.audio_preserved ?? appState.currentAudioId);
+  appState.asrLastError = detail.message || nested.message || doctorSafeErrorMessage({ detail });
+  appState.asrRetryHint = detail.retry_hint || detail.message || nested.message || "音频已安全保存，可重新转写或改用文本输入。";
+}
+
 function reportActionError(error) {
+  const safeMessage = doctorSafeErrorMessage(error);
+  setActionError(safeMessage);
+  showToast(safeMessage);
+  return;
   const message = error?.message || String(error || "操作失败");
   setActionError(message);
   showToast(message);
@@ -4658,6 +4695,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
 
   source.addEventListener("chunk_failed", (event) => {
     const data = JSON.parse(event.data);
+    applyAsrFailureDetail(data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.selectedEngine = data.engine || appState.selectedEngine;
     appState.taskStatus = "FAILED";
@@ -4807,6 +4845,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
 
   source.addEventListener("failed", (event) => {
     const data = JSON.parse(event.data);
+    applyAsrFailureDetail(data);
     terminalReceived = true;
     appState.taskStatus = "FAILED";
     appState.asrLastError = data.error || "ASR 实时转写失败";
@@ -5401,8 +5440,11 @@ async function retryTranscriptionFromFailure() {
     });
   } catch (error) {
     appState.taskStatus = "FAILED";
+    applyAsrFailureDetail(error?.detail || {});
+    appState.asrLastError = doctorSafeErrorMessage(error);
     appState.asrLastError = error?.message || "重新转写失败";
     setBusy(false);
+    appState.asrLastError = doctorSafeErrorMessage(error);
     renderAll();
     reportActionError(error);
   }

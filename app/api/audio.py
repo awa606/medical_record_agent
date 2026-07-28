@@ -233,8 +233,28 @@ def transcribe_audio(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         if (resolved_engine or "").strip().lower() == "funasr":
+            _write_audio_record(
+                record.model_copy(
+                    update={
+                        "status": "failed",
+                        "recognition_mode": recognition_mode,
+                    }
+                )
+            )
             raise HTTPException(status_code=503, detail=funasr_failure_payload(exc)) from exc
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        if (resolved_engine or "").strip().lower() == "funasr":
+            _write_audio_record(
+                record.model_copy(
+                    update={
+                        "status": "failed",
+                        "recognition_mode": recognition_mode,
+                    }
+                )
+            )
+            raise HTTPException(status_code=503, detail=funasr_failure_payload(exc)) from exc
+        raise
 
     processing_duration = max(time.perf_counter() - started_at, 0.0)
     audio_duration = result.duration or result.audio_duration_seconds

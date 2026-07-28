@@ -7,6 +7,7 @@ from fastapi import BackgroundTasks, HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.audio import (
+    _read_audio_record,
     _write_transcript,
     evaluate_audio,
     generate_record_from_audio,
@@ -170,6 +171,33 @@ class AudioApiTests(unittest.TestCase):
         self.assertTrue(detail["retryable"])
         self.assertEqual(detail["fallback_action"], "text_input")
         self.assertIn("FunASR", detail["message"])
+
+    def test_funasr_type_error_returns_safe_structured_failure_and_preserves_audio(self):
+        uploaded = self._upload_sample("sample.wav")
+
+        class BrokenFunASR:
+            def transcribe(self, _audio_id, _audio_path):
+                raise TypeError("None argument after ** must be a mapping, not NoneType")
+
+        with patch("app.api.audio.create_asr_engine", return_value=BrokenFunASR()):
+            with self.assertRaises(HTTPException) as context:
+                transcribe_audio(uploaded.audio_id, engine="funasr")
+
+        self.assertEqual(context.exception.status_code, 503)
+        detail = context.exception.detail
+        self.assertEqual(detail["error_code"], "ASR_RESULT_INVALID")
+        self.assertEqual(detail["stage"], "transcription")
+        self.assertTrue(detail["audio_preserved"])
+        self.assertTrue(detail["retryable"])
+        self.assertNotIn("NoneType", detail["message"])
+        self.assertIn("NoneType", detail["technical_detail"])
+        record = _read_audio_record(uploaded.audio_id)
+        self.assertEqual(record.status, "failed")
+        self.assertTrue(os.path.exists(record.path))
+
+        with self.assertRaises(HTTPException) as generate_context:
+            generate_record_from_audio(uploaded.audio_id, BackgroundTasks())
+        self.assertEqual(generate_context.exception.status_code, 404)
 
     def test_public_audio_follow_uses_chunk_pipeline(self):
         uploaded = self._upload_sample("sample.wav")

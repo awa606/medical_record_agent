@@ -102,6 +102,7 @@ class FunASRStreamingEngine:
                 encoder_chunk_look_back=self.config.encoder_chunk_look_back,
                 decoder_chunk_look_back=self.config.decoder_chunk_look_back,
             )
+            self._validate_raw_result(raw_result)
             processed_samples += len(chunk)
             processed_seconds = min(processed_samples / self.config.sample_rate, duration or float("inf"))
             delta = self._extract_text(raw_result)
@@ -173,6 +174,7 @@ class FunASRStreamingEngine:
 
         emit_progress(duration or processed_samples / self.config.sample_rate, phase="streaming_completed")
         text = "".join(segment.text for segment in segments if segment.text.strip())
+        self._validate_recognized_content(text, segments)
         keywords = ASREvaluator().keyword_metrics(self.hotwords, text)
         return ASRResult(
             audio_id=audio_id,
@@ -258,6 +260,22 @@ class FunASRStreamingEngine:
         if not path.exists():
             return []
         return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    def _validate_raw_result(self, raw_result: Any) -> None:
+        if raw_result is None:
+            raise RuntimeError("ASR_RESULT_INVALID: FunASR streaming returned no result payload")
+        if not isinstance(raw_result, (dict, list, str)):
+            raise RuntimeError(
+                "ASR_RESULT_INVALID: FunASR streaming result format is "
+                f"{type(raw_result).__name__}, expected object, list, or text"
+            )
+
+    def _validate_recognized_content(self, text: str, segments: list[ASRSegment]) -> None:
+        if text.strip():
+            return
+        if any(segment.text.strip() for segment in segments):
+            return
+        raise RuntimeError("ASR_RESULT_INVALID: FunASR streaming result did not contain recognized text")
 
     @staticmethod
     def _extract_text(raw_result: Any) -> str:

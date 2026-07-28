@@ -76,6 +76,18 @@ def test_transcript_auto_follow_and_role_warning_are_visible() -> None:
     assert "roleWarning: displaySegment.role_warning" in visible
 
 
+def test_asr_failures_are_sanitized_before_doctor_toast() -> None:
+    script = read_script()
+
+    assert "function doctorSafeErrorMessage(error)" in script
+    assert "function applyAsrFailureDetail(detail = {})" in script
+    assert "containsTechnicalErrorText(message)" in script
+    assert "const safeMessage = doctorSafeErrorMessage(error)" in script
+    assert "applyAsrFailureDetail(data)" in script
+    assert "applyAsrFailureDetail(error?.detail || {})" in script
+    assert "technical_detail" not in script
+
+
 def test_diagnosis_reference_shows_two_candidates_and_hides_rule_ids_normally() -> None:
     script = read_script()
 

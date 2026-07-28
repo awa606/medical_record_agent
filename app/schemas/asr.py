@@ -98,6 +98,11 @@ class ASRResult(BaseModel):
     audio_duration_seconds: float | None = None
     processing_duration_seconds: float | None = None
     rtf: float | None = None
+    backend: str | None = None
+    model: str | None = None
+    request_id: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
 
 
 class AudioRecord(BaseModel):

@@ -19,7 +19,9 @@ from app.db import bind_task_to_encounter, get_encounter, set_task_owner
 from app.schemas import ASREvaluationRequest, ASREvaluationResult, ASRResult, AudioRecord
 from app.services.asr import ASREvaluator, apply_manifest_role_strategy, create_asr_engine
 from app.services.asr.auto_roles import ensure_automatic_speaker_roles
+from app.services.asr.chunking import probe_audio_duration
 from app.services.asr.config import configured_asr_backend, requested_asr_engine_mismatch
+from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 from app.services.asr.funasr_reliability import funasr_failure_payload
 from app.services.asr.role_strategy import find_sample_config
 from app.services.runtime_limits import audio_upload_max_bytes, copy_upload_with_limit
@@ -137,6 +139,16 @@ def _sample_id_from_record(record: AudioRecord) -> str:
     return Path(record.filename).stem or record.audio_id
 
 
+def _probe_audio_duration_seconds(audio_path: Path) -> float | None:
+    ffprobe = find_ffprobe_executable()
+    if ffprobe is None:
+        return None
+    try:
+        return probe_audio_duration(audio_path, ffprobe)
+    except Exception:
+        return None
+
+
 @router.post("/upload")
 def upload_audio(
     file: UploadFile = File(...),
@@ -225,6 +237,8 @@ def transcribe_audio(
             "media_url": f"/api/audio/{audio_id}/media",
         }
 
+    request_id = uuid.uuid4().hex
+    started_at_wall = datetime.now(UTC).isoformat()
     started_at = time.perf_counter()
     try:
         asr_engine = create_asr_engine(resolved_engine)
@@ -259,7 +273,8 @@ def transcribe_audio(
         raise
 
     processing_duration = max(time.perf_counter() - started_at, 0.0)
-    audio_duration = result.duration or result.audio_duration_seconds
+    completed_at_wall = datetime.now(UTC).isoformat()
+    audio_duration = result.duration or result.audio_duration_seconds or _probe_audio_duration_seconds(Path(record.path))
     rtf = round(processing_duration / audio_duration, 4) if audio_duration and audio_duration > 0 else None
     result = result.model_copy(
         update={
@@ -267,6 +282,11 @@ def transcribe_audio(
             "audio_duration_seconds": audio_duration,
             "processing_duration_seconds": round(processing_duration, 4),
             "rtf": rtf,
+            "backend": resolved_engine,
+            "model": result.engine,
+            "request_id": request_id,
+            "started_at": started_at_wall,
+            "completed_at": completed_at_wall,
         }
     )
     _write_transcript(result)
@@ -285,6 +305,11 @@ def transcribe_audio(
         "audio_duration_seconds": audio_duration,
         "processing_duration_seconds": round(processing_duration, 4),
         "rtf": rtf,
+        "backend": resolved_engine,
+        "model": result.engine,
+        "request_id": request_id,
+        "started_at": started_at_wall,
+        "completed_at": completed_at_wall,
         "asr_result": result.model_dump(),
     }
 

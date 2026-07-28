@@ -1789,6 +1789,7 @@ def _run_asr_session_transcription(
     pace_realtime: bool = False,
 ) -> None:
     session = _read_session(session_id)
+    started_at_wall = _now()
     stop_heartbeat, heartbeat_thread, started_at = _start_transcribing_heartbeat(
         session_id,
         session=session,
@@ -1857,6 +1858,7 @@ def _run_asr_session_transcription(
             )
             emit_segments = True
         processing_duration = max(time.perf_counter() - started_at, 0.0)
+        completed_at_wall = _now()
         audio_duration = result.duration or realtime_duration or original_duration
         rtf = round(processing_duration / audio_duration, 4) if audio_duration and audio_duration > 0 else None
         result = result.model_copy(
@@ -1865,6 +1867,11 @@ def _run_asr_session_transcription(
                 "audio_duration_seconds": audio_duration,
                 "processing_duration_seconds": round(processing_duration, 4),
                 "rtf": rtf,
+                "backend": session.engine,
+                "model": result.engine,
+                "request_id": session_id,
+                "started_at": started_at_wall,
+                "completed_at": completed_at_wall,
             }
         )
         _write_transcription_success(

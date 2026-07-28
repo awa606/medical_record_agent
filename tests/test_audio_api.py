@@ -99,13 +99,31 @@ class AudioApiTests(unittest.TestCase):
         asr_result = transcribed["asr_result"]
 
         self.assertEqual(transcribed["status"], "completed")
+        self.assertEqual(transcribed["backend"], "mock")
+        self.assertEqual(transcribed["model"], "mock-asr-v0.2")
+        self.assertEqual(transcribed["recognition_mode"], "fast")
+        self.assertEqual(transcribed["audio_duration_seconds"], 25.0)
+        self.assertGreaterEqual(transcribed["processing_duration_seconds"], 0.0)
+        self.assertIsNotNone(transcribed["rtf"])
+        self.assertTrue(transcribed["request_id"])
+        self.assertTrue(transcribed["started_at"])
+        self.assertTrue(transcribed["completed_at"])
         self.assertEqual(asr_result["engine"], "mock-asr-v0.2")
+        self.assertEqual(asr_result["backend"], "mock")
+        self.assertEqual(asr_result["model"], "mock-asr-v0.2")
+        self.assertEqual(asr_result["request_id"], transcribed["request_id"])
+        self.assertEqual(asr_result["started_at"], transcribed["started_at"])
+        self.assertEqual(asr_result["completed_at"], transcribed["completed_at"])
         self.assertIn("蛇咬伤", asr_result["text"])
         self.assertIn("[医生]", asr_result["conversation_text"])
         self.assertEqual(asr_result["medical_keywords"]["missing"], [])
 
         transcript = read_audio_transcript(uploaded.audio_id)
         self.assertEqual(transcript.audio_id, uploaded.audio_id)
+        self.assertEqual(transcript.backend, "mock")
+        self.assertEqual(transcript.model, "mock-asr-v0.2")
+        self.assertEqual(transcript.request_id, transcribed["request_id"])
+        self.assertEqual(transcript.completed_at, transcribed["completed_at"])
         self.assertIn("[患者]", transcript.conversation_text)
 
     def test_media_endpoint_supports_range_requests(self):

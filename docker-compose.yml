@@ -23,6 +23,8 @@ services:
       FUNASR_STREAMING_MODEL_ID: paraformer-zh-streaming
       FUNASR_STREAMING_SEGMENT_SECONDS: "6"
       FUNASR_DEVICE: cpu
+      MEDICAL_RECORD_AGENT_ASR_ENGINE: funasr
+      MEDICAL_RECORD_AGENT_REQUIRE_FUNASR: "1"
       ASR_PREWARM_ENABLED: "1"
       ASR_SESSION_REALTIME_CHUNK_SECONDS: "3"
       ASR_SESSION_REALTIME_CHUNK_MIN_SECONDS: "0"
@@ -40,6 +42,7 @@ services:
       SPEAKER_ROLE_OLLAMA_MODEL: qwen3:4b-instruct
       HF_HOME: /app/model_cache/hf
       MODELSCOPE_CACHE: /app/model_cache/modelscope
+      MODELSCOPE_HOME: /app/model_cache/modelscope
       TORCH_HOME: /app/model_cache/torch
       XDG_CACHE_HOME: /app/model_cache/xdg
     volumes:

@@ -270,6 +270,16 @@ def upload_browser_recording_chunk(
 class ASRSessionApiTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_env = {
+            key: os.environ.get(key)
+            for key in [
+                "MEDICAL_RECORD_AGENT_ASR_ENGINE",
+                "ASR_ENGINE",
+                "ASR_DEBUG_ENGINE_SELECTOR_ENABLED",
+            ]
+        }
+        for key in self.original_env:
+            os.environ.pop(key, None)
         os.environ["MEDICAL_RECORD_AGENT_UPLOAD_DIR"] = os.path.join(
             self.temp_dir.name,
             "uploads",
@@ -283,6 +293,11 @@ class ASRSessionApiTests(unittest.TestCase):
         os.environ.pop("MEDICAL_RECORD_AGENT_UPLOAD_DIR", None)
         os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
         os.environ.pop("MEDICAL_RECORD_AGENT_MAX_RECORDING_CHUNK_BYTES", None)
+        for key, value in self.original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         self.temp_dir.cleanup()
 
     def test_asr_session_routes_are_registered(self):
@@ -298,6 +313,20 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("/api/asr/sessions/{session_id}/recording", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/events", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/result", route_paths)
+
+    def test_explicit_session_funasr_request_is_rejected_when_configured_engine_is_mock(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "mock"
+        client = TestClient(app)
+        login_as_admin(client)
+
+        response = client.post("/api/asr/sessions?engine=funasr&recognition_mode=fast")
+
+        self.assertEqual(response.status_code, 409, response.text)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["error_code"], "asr_engine_unavailable")
+        self.assertEqual(detail["requested_engine"], "funasr")
+        self.assertEqual(detail["effective_engine"], "mock")
+        self.assertFalse(detail["fallback"])
 
     def test_browser_recording_chunks_are_idempotent_and_complete_to_asr_result(self):
         client = TestClient(app)

@@ -102,7 +102,13 @@ def _check_provider() -> dict[str, Any]:
 
 def _check_asr_models() -> dict[str, Any]:
     status = get_prewarm_status()
+    configured_asr = (
+        os.environ.get("MEDICAL_RECORD_AGENT_ASR_ENGINE")
+        or os.environ.get("ASR_ENGINE")
+        or ""
+    ).strip().lower()
     require_funasr = os.environ.get("MEDICAL_RECORD_AGENT_REQUIRE_FUNASR", "").lower() in {"1", "true", "yes"}
+    require_funasr = require_funasr or configured_asr == "funasr"
     ok = True
     error = None
     if require_funasr and status.get("status") != "ready":

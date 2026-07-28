@@ -30,6 +30,8 @@ class RuntimeHardeningTests(unittest.TestCase):
                 "MEDICAL_RECORD_AGENT_MAX_UPLOAD_BYTES",
                 "MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP",
                 "MEDICAL_RECORD_AGENT_REQUIRE_FUNASR",
+                "MEDICAL_RECORD_AGENT_ASR_ENGINE",
+                "ASR_ENGINE",
                 "RECORD_PROVIDER_MODE",
                 "LLM_PROVIDER",
             ]
@@ -42,6 +44,8 @@ class RuntimeHardeningTests(unittest.TestCase):
         os.environ.pop("RECORD_PROVIDER_MODE", None)
         os.environ.pop("LLM_PROVIDER", None)
         os.environ.pop("MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP", None)
+        os.environ.pop("MEDICAL_RECORD_AGENT_ASR_ENGINE", None)
+        os.environ.pop("ASR_ENGINE", None)
 
     def tearDown(self):
         for key, value in self.original_env.items():
@@ -100,6 +104,27 @@ class RuntimeHardeningTests(unittest.TestCase):
         payload = ready.json()
         self.assertFalse(payload["checks"]["asr_models"]["ok"])
         self.assertEqual(payload["checks"]["asr_models"]["error_category"], "dns_failure")
+
+    def test_ready_requires_funasr_when_asr_engine_is_configured_for_funasr(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "funasr"
+        with patch(
+            "app.api.runtime.get_prewarm_status",
+            return_value={
+                "status": "failed",
+                "last_error": "Permission denied: '/app/.modelscope'",
+                "error_category": "dependency_missing",
+                "retryable": True,
+                "components": [],
+                "model_cache": {"has_cached_files": False},
+            },
+        ):
+            ready = TestClient(app).get("/ready")
+
+        self.assertEqual(ready.status_code, 503)
+        payload = ready.json()
+        self.assertEqual(payload["status"], "not_ready")
+        self.assertFalse(payload["checks"]["asr_models"]["ok"])
+        self.assertEqual(payload["checks"]["asr_models"]["error_category"], "dependency_missing")
 
     def test_audio_upload_exceeding_limit_returns_413(self):
         os.environ["MEDICAL_RECORD_AGENT_MAX_UPLOAD_BYTES"] = "8"

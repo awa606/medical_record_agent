@@ -19,7 +19,7 @@ from app.db import bind_task_to_encounter, get_encounter, set_task_owner
 from app.schemas import ASREvaluationRequest, ASREvaluationResult, ASRResult, AudioRecord
 from app.services.asr import ASREvaluator, apply_manifest_role_strategy, create_asr_engine
 from app.services.asr.auto_roles import ensure_automatic_speaker_roles
-from app.services.asr.config import configured_asr_backend
+from app.services.asr.config import configured_asr_backend, requested_asr_engine_mismatch
 from app.services.asr.funasr_reliability import funasr_failure_payload
 from app.services.asr.role_strategy import find_sample_config
 from app.services.runtime_limits import audio_upload_max_bytes, copy_upload_with_limit
@@ -202,6 +202,9 @@ def transcribe_audio(
     _assert_audio_access(record, request)
     user = current_user_from_request(request)
     resolved_engine = configured_asr_backend(engine, user_role=user.role if user is not None else None)
+    engine_mismatch = requested_asr_engine_mismatch(engine, resolved_engine)
+    if engine_mismatch is not None:
+        raise HTTPException(status_code=409, detail=engine_mismatch)
     if recognition_mode == "follow":
         from app.api.asr_sessions import start_follow_session_for_audio_record
 

@@ -51,7 +51,7 @@ from app.services.asr import (
 )
 from app.services.asr.auto_roles import ensure_automatic_speaker_roles
 from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
-from app.services.asr.config import backend_capabilities, configured_asr_backend
+from app.services.asr.config import backend_capabilities, configured_asr_backend, requested_asr_engine_mismatch
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 from app.services.asr.funasr_reliability import classify_funasr_error
 from app.services.asr.role_quality import attach_speaker_role_quality
@@ -1308,6 +1308,9 @@ def create_asr_session(
     normalized_engine = _normalize_engine_name(
         configured_asr_backend(engine, user_role=user.role if user is not None else None)
     )
+    engine_mismatch = requested_asr_engine_mismatch(engine, normalized_engine)
+    if engine_mismatch is not None:
+        raise HTTPException(status_code=409, detail=engine_mismatch)
     if not isinstance(doctor_profile_id, str):
         doctor_profile_id = None
     normalized_diarization_engine = (

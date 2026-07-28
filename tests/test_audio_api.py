@@ -230,7 +230,7 @@ class AudioApiTests(unittest.TestCase):
         self.assertEqual(context.exception.status_code, 422)
         self.assertEqual(context.exception.detail["error_code"], "follow_not_supported_by_backend")
 
-    def test_doctor_request_cannot_override_configured_asr_backend(self):
+    def test_explicit_funasr_request_is_rejected_when_configured_engine_is_mock(self):
         os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "mock"
         client = TestClient(app)
         login_as_admin(client)
@@ -242,11 +242,16 @@ class AudioApiTests(unittest.TestCase):
         self.assertEqual(uploaded.status_code, 200, uploaded.text)
 
         response = client.post(
-            f"/api/audio/{uploaded.json()['audio_id']}/transcribe?recognition_mode=fast&engine=online",
+            f"/api/audio/{uploaded.json()['audio_id']}/transcribe?recognition_mode=fast&engine=funasr",
         )
 
-        self.assertEqual(response.status_code, 200, response.text)
-        self.assertEqual(response.json()["asr_result"]["engine"], "mock-asr-v0.2")
+        self.assertEqual(response.status_code, 409, response.text)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["error_code"], "asr_engine_unavailable")
+        self.assertEqual(detail["requested_engine"], "funasr")
+        self.assertEqual(detail["effective_engine"], "mock")
+        self.assertFalse(detail["fallback"])
+        self.assertEqual(detail["fallback_reason"], "requested_engine_not_active")
 
     def test_generate_record_from_audio_creates_text_task(self):
         uploaded = self._upload_sample("sample.wav")

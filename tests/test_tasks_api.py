@@ -317,6 +317,12 @@ class TaskApiTests(unittest.TestCase):
         with ZipFile(word_path) as docx:
             document_xml = docx.read("word/document.xml").decode("utf-8")
         self.assertIn(WORD_NOTICE, document_xml)
+        self.assertIn("门诊病历", document_xml)
+        self.assertIn("主诉", document_xml)
+        self.assertIn("现病史", document_xml)
+        self.assertIn("医生修订", document_xml)
+        self.assertNotIn("鍙戠儹", document_xml)
+        self.assertNotIn("涓昏瘔", document_xml)
 
     def test_export_download_route_returns_docx_after_approval(self):
         client = TestClient(app)
@@ -344,6 +350,11 @@ class TaskApiTests(unittest.TestCase):
         with ZipFile(BytesIO(downloaded.content)) as docx:
             document_xml = docx.read("word/document.xml").decode("utf-8")
         self.assertIn(WORD_NOTICE, document_xml)
+        self.assertIn("门诊病历", document_xml)
+        self.assertIn("主诉", document_xml)
+        self.assertIn("现病史", document_xml)
+        self.assertNotIn("鍙戠儹", document_xml)
+        self.assertNotIn("涓昏瘔", document_xml)
 
     def test_export_download_route_enforces_task_owner(self):
         client = TestClient(app)

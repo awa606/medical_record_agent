@@ -79,11 +79,27 @@ def test_doctor_product_shell_styles_support_responsive_workbench() -> None:
     assert "@media (max-width: 1366px)" in css
     assert ".product-main" in ui_css
     assert ".encounter-patient-banner" in ui_css
-    assert '"transcript record"' in ui_css
-    assert '"transcript assist"' in ui_css
+    assert 'grid-template-areas: "transcript record assist"' in ui_css
     assert "@media (min-width: 1680px)" in ui_css
     assert "@media (max-width: 1366px)" in ui_css
     assert "@media (prefers-reduced-motion: reduce)" in ui_css
+
+
+def test_medilisten_productized_shell_copy_and_failure_metadata() -> None:
+    html = read_static("doctor.html")
+    js = read_static("doctor.js")
+    ui_css = read_static("doctor-ui-v2.css")
+
+    assert "<title>MediListen - AI 智能病历助手</title>" in html
+    assert "<h1>MediListen</h1>" in html
+    assert "LISTEN · TRANSCRIBE · GENERATE · REVIEW" in html
+    assert 'id="transcriptionFailureCode"' in html
+    assert 'id="transcriptionFailureStage"' in html
+    assert 'id="transcriptionFailureAudioState"' in html
+    assert "function failureStageLabel(stage)" in js
+    assert "appState.asrFailureCode || \"ASR_FAILED\"" in js
+    assert "音频已安全保存" in js
+    assert ".failure-meta-list" in ui_css
 
 
 def test_product_shell_sets_visible_route_context() -> None:

@@ -213,7 +213,7 @@ textarea:focus {
   color: #145da9;
   font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
 .brand-copy {
@@ -1117,13 +1117,11 @@ body.doctor-mode .workbench,
 body.standard-mode .workbench,
 body.care-mode .workbench {
   min-width: 0;
-  min-height: max(560px, calc(100dvh - 356px));
+  min-height: max(520px, calc(100dvh - 356px));
   display: grid;
-  grid-template-columns: minmax(340px, 0.78fr) minmax(500px, 1.22fr);
-  grid-template-rows: minmax(390px, 1.15fr) minmax(300px, 0.85fr);
-  grid-template-areas:
-    "transcript record"
-    "transcript assist";
+  grid-template-columns: minmax(260px, 0.82fr) minmax(420px, 1.44fr) minmax(280px, 0.98fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "transcript record assist";
   gap: 13px;
   margin: 0;
 }
@@ -1132,7 +1130,7 @@ body.doctor-mode .workbench {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  grid-template-rows: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .column,
@@ -2049,13 +2047,43 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   font-weight: 700;
 }
 
+.failure-meta-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.failure-meta-list div {
+  min-width: 0;
+  border: 1px solid rgba(197, 59, 71, 0.22);
+  border-radius: 8px;
+  padding: 8px 9px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.failure-meta-list dt {
+  margin: 0 0 4px;
+  color: #8a4450;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.failure-meta-list dd {
+  margin: 0;
+  color: #172033;
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
 @media (min-width: 1680px) {
   .workbench,
   body.doctor-mode .workbench,
   body.standard-mode .workbench,
   body.care-mode .workbench {
     min-height: 660px;
-    grid-template-columns: minmax(350px, 0.82fr) minmax(520px, 1.22fr) minmax(380px, 0.96fr);
+    grid-template-columns: minmax(340px, 0.85fr) minmax(560px, 1.35fr) minmax(360px, 0.95fr);
     grid-template-rows: minmax(0, 1fr);
     grid-template-areas: "transcript record assist";
   }
@@ -2117,6 +2145,14 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
     font-size: 12px;
   }
 
+  .workbench,
+  body.doctor-mode .workbench,
+  body.standard-mode .workbench,
+  body.care-mode .workbench {
+    grid-template-columns: minmax(238px, 0.8fr) minmax(360px, 1.36fr) minmax(248px, 0.9fr);
+    gap: 10px;
+  }
+
   .product-dashboard,
   .admin-home,
   .encounter-view {
@@ -2174,7 +2210,9 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   body.standard-mode .workbench,
   body.care-mode .workbench {
     min-height: max(520px, calc(100dvh - 330px));
-    grid-template-columns: minmax(330px, 0.76fr) minmax(460px, 1.24fr);
+    grid-template-columns: minmax(238px, 0.8fr) minmax(360px, 1.36fr) minmax(248px, 0.9fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "transcript record assist";
   }
 
   .field-list,

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>医生端工作台 - AI生成式电子病历辅助系统</title>
+    <title>MediListen - AI 智能病历助手</title>
     <link rel="stylesheet" href="./doctor.css?v=2026071601" />
     <link rel="stylesheet" href="./doctor-ui-v2.css?v=2026072101" />
   </head>
@@ -11,10 +11,10 @@
     <div class="doctor-app">
       <header class="topbar">
         <div class="brand-block">
-          <div class="brand-mark" aria-hidden="true">EMR</div>
+          <div class="brand-mark" aria-hidden="true">ML</div>
           <div class="brand-copy">
-            <h1>智能病历助手</h1>
-            <p>AI生成式电子病历辅助系统 · 受控边缘试点环境</p>
+            <h1>MediListen</h1>
+            <p>LISTEN · TRANSCRIBE · GENERATE · REVIEW</p>
           </div>
         </div>
         <nav class="top-actions" aria-label="全局操作">
@@ -78,7 +78,7 @@
       <nav class="product-nav" aria-label="医院工作区导航">
         <div class="product-nav-heading">
           <span>临床工作区</span>
-          <strong>门诊病历辅助</strong>
+          <strong>MediListen</strong>
         </div>
         <button type="button" class="product-nav-item" data-product-view-target="workbench">
           <span>工作台</span>
@@ -226,6 +226,20 @@
             <span class="status-badge missing">转写异常</span>
             <strong>转写服务暂时不可用，本次任务已暂停。</strong>
             <p id="transcriptionFailureMessage">可以重新转写、改用文本输入，或查看技术详情后交给管理员处理。</p>
+            <dl class="failure-meta-list" aria-label="转写失败详情">
+              <div>
+                <dt>失败阶段</dt>
+                <dd id="transcriptionFailureStage">转写</dd>
+              </div>
+              <div>
+                <dt>错误编号</dt>
+                <dd id="transcriptionFailureCode">ASR_FAILED</dd>
+              </div>
+              <div>
+                <dt>音频状态</dt>
+                <dd id="transcriptionFailureAudioState">已安全保存</dd>
+              </div>
+            </dl>
           </div>
           <div class="failure-actions">
             <button type="button" class="primary-action" id="retryTranscriptionButton">重新转写</button>
@@ -527,10 +541,10 @@
       <div class="login-shell">
         <aside class="login-brand-pane">
           <div class="login-brand-lockup">
-            <div class="brand-mark" aria-hidden="true">EMR</div>
+            <div class="brand-mark" aria-hidden="true">ML</div>
             <div>
-              <strong>智能病历助手</strong>
-              <span>AI生成式电子病历辅助系统</span>
+              <strong>MediListen</strong>
+              <span>LISTEN · TRANSCRIBE · GENERATE · REVIEW</span>
             </div>
           </div>
           <div class="login-product-copy">

@@ -492,7 +492,7 @@ function renderProductShell() {
     admin: "管理后台",
   };
   document.body.dataset.productView = view;
-  document.title = `${viewTitles[view] || "医生端"} - 智能病历助手`;
+  document.title = `${viewTitles[view] || "医生端"} - MediListen`;
   document.querySelectorAll("[data-product-view]").forEach((element) => {
     element.hidden = element.dataset.productView !== view;
   });
@@ -894,6 +894,15 @@ function applyAsrFailureDetail(detail = {}) {
   appState.asrAudioPreserved = Boolean(detail.audio_preserved ?? nested.audio_preserved ?? appState.currentAudioId);
   appState.asrLastError = detail.message || nested.message || doctorSafeErrorMessage({ detail });
   appState.asrRetryHint = detail.retry_hint || detail.message || nested.message || "音频已安全保存，可重新转写或改用文本输入。";
+}
+
+function failureStageLabel(stage) {
+  const labels = {
+    transcription: "智能转写",
+    upload: "音频上传",
+    generation: "病历生成",
+  };
+  return labels[stage] || stage || "智能转写";
 }
 
 function reportActionError(error) {
@@ -1627,9 +1636,21 @@ function renderTranscriptionFailurePanel() {
   if (!failed) return;
   const message = $("transcriptionFailureMessage");
   const retryButton = $("retryTranscriptionButton");
+  const stageNode = $("transcriptionFailureStage");
+  const codeNode = $("transcriptionFailureCode");
+  const audioStateNode = $("transcriptionFailureAudioState");
   const reason = doctorFacingTranscriptionIssue() || "转写服务暂时不可用，本次任务已暂停。";
   if (message) {
     message.textContent = `${reason} 可以重新转写、改用文本输入，或查看技术详情后交给管理员处理。`;
+  }
+  if (stageNode) {
+    stageNode.textContent = failureStageLabel(appState.asrFailureStage);
+  }
+  if (codeNode) {
+    codeNode.textContent = appState.asrFailureCode || "ASR_FAILED";
+  }
+  if (audioStateNode) {
+    audioStateNode.textContent = appState.asrAudioPreserved || appState.currentAudioId ? "音频已安全保存" : "需要重新上传音频";
   }
   if (retryButton) {
     retryButton.textContent = appState.currentAudioId ? "重新转写" : "重新上传并转写";

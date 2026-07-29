@@ -205,6 +205,7 @@ def read_demo_fever_audio(request: Request = None) -> FileResponse:
         audio_path,
         media_type=mimetypes.guess_type(audio_path.name)[0] or "audio/wav",
         filename=audio_path.name,
+        content_disposition_type="inline",
         headers={"Accept-Ranges": "bytes", "Cache-Control": "private, max-age=300"},
     )
 

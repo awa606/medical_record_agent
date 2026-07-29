@@ -104,6 +104,8 @@ class AudioApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.content, b"RIFF\x24\x00\x00\x00WAVEfmt ")
         self.assertIn("audio", response.headers.get("content-type", ""))
+        self.assertIn("inline", response.headers.get("content-disposition", ""))
+        self.assertNotIn("attachment", response.headers.get("content-disposition", ""))
 
     def test_upload_transcribe_and_read_transcript(self):
         uploaded = self._upload_sample("sample.wav")

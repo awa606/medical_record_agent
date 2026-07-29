@@ -1363,15 +1363,15 @@ function renderInputMethodMenu() {
   } else if (["finalizing", "converging"].includes(appState.fixedDemoStatus)) {
     button.textContent = "正在收敛";
   } else {
-    button.textContent = appState.currentTaskId ? "继续审核" : "开始问诊演示";
+    button.textContent = appState.currentTaskId ? "继续审核" : "新建问诊";
   }
   button.disabled = Boolean((appState.busy && !fixedDemoReadyToFinalize) || fixedDemoProcessing);
   button.dataset.busyAllowed = fixedDemoReadyToFinalize ? "true" : "false";
   const labels = {
-    audio: "上传音频",
-    text: "粘贴文本",
+    audio: "音频生成",
+    text: "文本生成",
     record: "录音生成",
-    mock: "Mock 演示",
+    mock: "固定音频演示",
   };
   menu.querySelectorAll("[data-input-method]").forEach((item) => {
     const method = item.dataset.inputMethod;
@@ -1379,7 +1379,7 @@ function renderInputMethodMenu() {
   });
   button.classList.toggle("active", appState.inputMenuOpen);
   button.setAttribute("aria-expanded", appState.inputMenuOpen ? "true" : "false");
-  menu.hidden = appState.viewMode === "doctor" || !appState.inputMenuOpen;
+  menu.hidden = !appState.inputMenuOpen;
 }
 
 function renderDisplaySettingsMenu() {
@@ -6224,10 +6224,7 @@ function handleInputMethod(method) {
   }
   if (method === "mock") {
     closeInputMethodMenu();
-    appState.recognitionMode = "fast";
-    if ($("recognitionModeSelect")) $("recognitionModeSelect").value = appState.recognitionMode;
-    showToast("已切换为尽快识别演示模式，可上传 MP3/WAV 跑通流程");
-    openAudioGenerate();
+    startFixedAudioLiveDemo().catch(reportActionError);
     return;
   }
   if (method === "audio") {
@@ -7685,23 +7682,19 @@ function bindEvents() {
       requireEncounterBeforeInput("record");
       return;
     }
-    if (appState.viewMode === "doctor") {
-      if (appState.fixedDemoStatus === "ready_to_finalize") {
-        finalizeFixedAudioLiveDemo().catch(reportActionError);
-        return;
-      }
-      if (["preparing", "uploading", "streaming", "finalizing", "converging"].includes(appState.fixedDemoStatus)) {
-        closeInputMethodMenu();
-        showToast(appState.fixedDemoMessage || "当前问诊演示正在进行，请等待状态更新。");
-        focusNextActionPanel();
-        return;
-      }
-      if (appState.currentTaskId || appState.currentRecordFields) {
-        closeInputMethodMenu();
-        focusRecordWorkspace();
-        return;
-      }
-      startFixedAudioLiveDemo().catch(reportActionError);
+    if (appState.fixedDemoStatus === "ready_to_finalize") {
+      finalizeFixedAudioLiveDemo().catch(reportActionError);
+      return;
+    }
+    if (["preparing", "uploading", "streaming", "finalizing", "converging"].includes(appState.fixedDemoStatus)) {
+      closeInputMethodMenu();
+      showToast(appState.fixedDemoMessage || "当前问诊演示正在进行，请等待状态更新。");
+      focusNextActionPanel();
+      return;
+    }
+    if (appState.currentTaskId || appState.currentRecordFields) {
+      closeInputMethodMenu();
+      focusRecordWorkspace();
       return;
     }
     toggleInputMethodMenu();

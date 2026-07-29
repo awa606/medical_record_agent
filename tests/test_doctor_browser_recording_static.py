@@ -101,6 +101,23 @@ def test_doctor_recording_requires_visible_encounter_selection() -> None:
     assert "toggleInputMethodMenu()" in input_button_handler
 
 
+def test_doctor_generation_menu_restores_demo_record_audio_and_text_entries() -> None:
+    html = (ROOT / "static" / "doctor.html").read_text(encoding="utf-8")
+    script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+
+    assert 'data-input-method="mock"' in html
+    assert 'data-input-method="record"' in html
+    assert 'data-input-method="audio"' in html
+    assert 'data-input-method="text"' in html
+    assert 'mock: "固定音频演示"' in script
+    assert 'record: "录音生成"' in script
+    assert 'audio: "音频生成"' in script
+    assert 'text: "文本生成"' in script
+    assert "menu.hidden = !appState.inputMenuOpen" in script
+    assert 'button.textContent = appState.currentTaskId ? "继续审核" : "新建问诊"' in script
+    assert "startFixedAudioLiveDemo().catch(reportActionError)" in script
+
+
 def test_doctor_recording_submit_keeps_progress_visible_until_task_created() -> None:
     script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
     submit_body = script[

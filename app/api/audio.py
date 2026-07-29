@@ -38,6 +38,21 @@ def get_upload_dir() -> Path:
     return Path(os.environ.get("MEDICAL_RECORD_AGENT_UPLOAD_DIR", DEFAULT_UPLOAD_DIR))
 
 
+def _demo_fever_audio_path() -> Path:
+    configured = os.environ.get("MEDILISTEN_DEMO_AUDIO_PATH", "").strip()
+    candidates = [
+        Path(configured) if configured else None,
+        PROJECT_ROOT / "video" / "fever_01.wav",
+    ]
+    for candidate in candidates:
+        if candidate is not None and candidate.exists() and candidate.is_file():
+            return candidate
+    raise HTTPException(
+        status_code=404,
+        detail="Demo fever audio is not configured. Set MEDILISTEN_DEMO_AUDIO_PATH to a readable WAV file.",
+    )
+
+
 def _safe_extension(filename: str) -> str:
     extension = Path(filename).suffix.lower()
     if extension not in ALLOWED_AUDIO_EXTENSIONS:
@@ -181,6 +196,17 @@ def upload_audio(
     )
     _write_audio_record(record)
     return record
+
+
+@router.get("/demo/fever-01")
+def read_demo_fever_audio(request: Request = None) -> FileResponse:
+    audio_path = _demo_fever_audio_path()
+    return FileResponse(
+        audio_path,
+        media_type=mimetypes.guess_type(audio_path.name)[0] or "audio/wav",
+        filename=audio_path.name,
+        headers={"Accept-Ranges": "bytes", "Cache-Control": "private, max-age=300"},
+    )
 
 
 @router.get("/{audio_id}")

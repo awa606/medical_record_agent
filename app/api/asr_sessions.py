@@ -23,6 +23,7 @@ from app.api.audio import (
     _sample_id_from_record,
     _write_audio_record,
     _write_transcript,
+    generate_record_from_audio,
     get_upload_dir,
 )
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
@@ -540,6 +541,11 @@ def _write_live_clinical_state(session_id: str, state: dict[str, Any]) -> None:
     state["live_session_id"] = session_id
     state["session_id"] = session_id
     _write_json(_live_clinical_state_path(session_id), state)
+
+
+def _live_formal_record(state: dict[str, Any]) -> dict[str, Any] | None:
+    formal = state.get("formal_record")
+    return formal if isinstance(formal, dict) and formal.get("task_id") else None
 
 
 def _normalize_role(role: str | None) -> str | None:
@@ -3253,6 +3259,75 @@ def read_asr_session_live_draft(session_id: str, request: Request = None) -> dic
     session = _read_session(session_id)
     _assert_session_access(session, request)
     return _read_live_clinical_state(session_id)
+
+
+@router.post("/{session_id}/converge-record")
+def converge_asr_session_record(
+    session_id: str,
+    background_tasks: BackgroundTasks,
+    request: Request = None,
+    encounter_id: int | None = None,
+) -> dict[str, Any]:
+    session = _read_session(session_id)
+    _assert_session_access(session, request)
+    state = _read_live_clinical_state(session_id)
+    formal = _live_formal_record(state)
+    if formal is not None:
+        return {
+            **formal,
+            "session_id": session_id,
+            "audio_id": session.audio_id,
+            "created": False,
+            "formal_record_status": "already_created",
+        }
+
+    if not session.audio_id:
+        raise HTTPException(status_code=409, detail="Live session has no finalized audio")
+    if not _result_path(session_id).exists():
+        raise HTTPException(status_code=409, detail="Live session must be completed before formal record generation")
+    if session.status not in {"stream_ready", "reviewed"}:
+        raise HTTPException(status_code=409, detail=f"Live session is {session.status} and is not ready for formal record generation")
+
+    created = generate_record_from_audio(
+        session.audio_id,
+        background_tasks,
+        request=request,
+        encounter_id=encounter_id,
+    )
+    formal_record = {
+        "task_id": created["task_id"],
+        "status": created["status"],
+        "events_url": created["events_url"],
+        "encounter_id": encounter_id,
+        "created_at": _now(),
+        "source": "live_session_converge",
+    }
+    state["status"] = "formalized"
+    state["formal_record"] = formal_record
+    state["formalized_at"] = formal_record["created_at"]
+    _write_live_clinical_state(session_id, state)
+    _append_session_event(
+        session_id,
+        session=session,
+        event="record.formal_converged",
+        data={
+            "live_session_id": session_id,
+            "session_id": session_id,
+            "audio_id": session.audio_id,
+            "status": "formal_record_created",
+            "task_id": created["task_id"],
+            "encounter_id": encounter_id,
+            "created": True,
+            "recoverable": True,
+        },
+    )
+    return {
+        **formal_record,
+        "session_id": session_id,
+        "audio_id": session.audio_id,
+        "created": True,
+        "formal_record_status": "created",
+    }
 
 
 @router.get("/{session_id}/events")

@@ -16,6 +16,7 @@ services:
       MEDICAL_RECORD_AGENT_MAX_UPLOAD_BYTES: "209715200"
       MEDICAL_RECORD_AGENT_MAX_RECORDING_CHUNK_BYTES: "16777216"
       MEDICAL_RECORD_AGENT_MAX_RECORDING_SECONDS: "1800"
+      MEDILISTEN_DEMO_AUDIO_PATH: /app/demo_audio/fever_01.wav
       MEDICAL_RECORD_AGENT_MIN_FREE_BYTES: "52428800"
       ASR_SESSION_CHUNK_ENABLED: "1"
       ASR_SESSION_DYNAMIC_CHUNKING: "1"
@@ -48,6 +49,7 @@ services:
     volumes:
       - ./data/docker_runtime:/app/runtime
       - ./data/asr_model_cache:/app/model_cache
+      - ${MEDILISTEN_DEMO_AUDIO_HOST_PATH:-../../medical_record_agent/video/fever_01.wav}:/app/demo_audio/fever_01.wav:ro
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/ready"]
       interval: 30s

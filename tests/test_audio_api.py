@@ -56,6 +56,7 @@ class AudioApiTests(unittest.TestCase):
                 "MEDICAL_RECORD_AGENT_ASR_ENGINE",
                 "ASR_ENGINE",
                 "ASR_DEBUG_ENGINE_SELECTOR_ENABLED",
+                "MEDILISTEN_DEMO_AUDIO_PATH",
             ]
         }
         for key in self.original_env:
@@ -83,11 +84,26 @@ class AudioApiTests(unittest.TestCase):
         route_paths = set(app.openapi()["paths"])
 
         self.assertIn("/api/audio/upload", route_paths)
+        self.assertIn("/api/audio/demo/fever-01", route_paths)
         self.assertIn("/api/audio/{audio_id}/transcribe", route_paths)
         self.assertIn("/api/audio/{audio_id}/media", route_paths)
         self.assertIn("/api/audio/{audio_id}/transcript", route_paths)
         self.assertIn("/api/audio/{audio_id}/evaluate", route_paths)
         self.assertIn("/api/audio/{audio_id}/generate-record", route_paths)
+
+    def test_demo_fever_audio_uses_configured_readonly_path(self):
+        demo_audio = os.path.join(self.temp_dir.name, "fever_01.wav")
+        with open(demo_audio, "wb") as handle:
+            handle.write(b"RIFF\x24\x00\x00\x00WAVEfmt ")
+        os.environ["MEDILISTEN_DEMO_AUDIO_PATH"] = demo_audio
+
+        client = TestClient(app)
+        login_as_admin(client)
+        response = client.get("/api/audio/demo/fever-01")
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.content, b"RIFF\x24\x00\x00\x00WAVEfmt ")
+        self.assertIn("audio", response.headers.get("content-type", ""))
 
     def test_upload_transcribe_and_read_transcript(self):
         uploaded = self._upload_sample("sample.wav")

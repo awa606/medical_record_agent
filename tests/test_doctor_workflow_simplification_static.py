@@ -144,7 +144,9 @@ def test_demo_rc_next_action_uses_single_primary_cta_and_processing_stages() -> 
     assert "processing-stage-list" in visible
     assert "singlePrimaryAction" in visible
     assert 'key: "open-worklist", label: "选择今日就诊"' in visible
-    assert 'key: "record-audio", label: "开始问诊"' in visible
+    assert 'key: "start-live-demo", label: "开始问诊演示"' in visible
+    assert "固定音频跟随识别演示" in visible
+    assert "结束问诊并生成正式病历" in visible
     assert 'key: "retry-transcription", label:' in visible
     assert 'id="reviewBoundaryNotice"' in visible
     assert "record-field-updated" in visible

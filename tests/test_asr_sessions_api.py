@@ -20,6 +20,8 @@ from app.api.asr_sessions import (
     _failed_event,
     _read_events,
     _recording_chunk_summary,
+    _read_session,
+    _write_session,
     _read_recording_chunk_state,
     _write_session_result,
     _should_use_realtime_upload_session,
@@ -418,6 +420,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("/api/asr/sessions/{session_id}/events", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/result", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/live-draft", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/converge-record", route_paths)
 
     def test_result_events_emit_finalized_before_completed(self):
         session = ASRSessionRecord(
@@ -668,6 +671,80 @@ class ASRSessionApiTests(unittest.TestCase):
         login_as_user(other_client, username="live-other")
         forbidden = other_client.get(f"/api/asr/sessions/{session_id}/live-draft")
         self.assertEqual(forbidden.status_code, 403)
+
+    def test_live_session_converge_requires_completed_session_and_creates_one_formal_task(self):
+        client = TestClient(app)
+        create_user(client, username="live-converge-doctor")
+        login_as_user(client, username="live-converge-doctor")
+        encounter = client.post(
+            "/api/encounters",
+            json={
+                "patient_deidentified_id": "LIVE-CONVERGE-001",
+                "patient_display_name": "Live Converge Patient",
+            },
+        )
+        self.assertEqual(encounter.status_code, 200, encounter.text)
+        encounter_id = encounter.json()["id"]
+        self.assertEqual(client.post(f"/api/encounters/{encounter_id}/check-in").status_code, 200)
+        self.assertEqual(client.post(f"/api/encounters/{encounter_id}/start").status_code, 200)
+
+        session = client.post("/api/asr/sessions?engine=mock&recognition_mode=follow")
+        self.assertEqual(session.status_code, 200, session.text)
+        session_id = session.json()["session_id"]
+        blocked = client.post(f"/api/asr/sessions/{session_id}/converge-record?encounter_id={encounter_id}")
+        self.assertEqual(blocked.status_code, 409, blocked.text)
+
+        chunk_zero = browser_wav_bytes(frame_count=3200, amplitude=1200)
+        upload = upload_browser_recording_chunk(
+            client,
+            session_id,
+            chunk_index=0,
+            payload=chunk_zero,
+            duration_seconds="0.2",
+        )
+        self.assertEqual(upload.status_code, 200, upload.text)
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 200, finalized.text)
+        audio_id = finalized.json()["audio_id"]
+        result = ASRResult(
+            audio_id=audio_id,
+            engine="mock-asr-v0.2",
+            text="患者发热伴咳嗽两天。",
+            conversation_text="[患者] 患者发热伴咳嗽两天。",
+            segments=[
+                ASRSegment(
+                    segment_id="seg-live-final",
+                    speaker="speaker_0",
+                    role="患者",
+                    text="患者发热伴咳嗽两天。",
+                    start_time=0.0,
+                    end_time=2.0,
+                )
+            ],
+            duration=0.2,
+        )
+        _write_session_result(session_id, result)
+        _write_transcript(result)
+        _write_session(_read_session(session_id).model_copy(update={"status": "stream_ready", "audio_id": audio_id}))
+
+        created = client.post(f"/api/asr/sessions/{session_id}/converge-record?encounter_id={encounter_id}")
+        self.assertEqual(created.status_code, 200, created.text)
+        created_payload = created.json()
+        self.assertTrue(created_payload["created"])
+        self.assertEqual(created_payload["formal_record_status"], "created")
+        task_id = created_payload["task_id"]
+        detail = client.get(f"/api/tasks/{task_id}")
+        self.assertEqual(detail.status_code, 200, detail.text)
+        self.assertEqual(detail.json()["encounter_id"], encounter_id)
+
+        repeated = client.post(f"/api/asr/sessions/{session_id}/converge-record?encounter_id={encounter_id}")
+        self.assertEqual(repeated.status_code, 200, repeated.text)
+        repeated_payload = repeated.json()
+        self.assertFalse(repeated_payload["created"])
+        self.assertEqual(repeated_payload["task_id"], task_id)
+        live_draft = client.get(f"/api/asr/sessions/{session_id}/live-draft")
+        self.assertEqual(live_draft.status_code, 200)
+        self.assertEqual(live_draft.json()["formal_record"]["task_id"], task_id)
 
     def test_browser_recording_complete_rejects_missing_chunk_gap(self):
         client = TestClient(app)

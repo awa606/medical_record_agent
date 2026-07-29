@@ -161,6 +161,7 @@ def test_doctor_live_clinical_reference_handles_versioned_sse_events() -> None:
 
 def test_doctor_live_clinical_reference_summary_is_bounded_and_detailed() -> None:
     script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+    stylesheet = (ROOT / "static" / "doctor-ui-v2.css").read_text(encoding="utf-8")
 
     assert "function renderLiveClinicalReferenceCard" in script
     assert "function renderLiveClinicalDetailContent" in script
@@ -169,3 +170,26 @@ def test_doctor_live_clinical_reference_summary_is_bounded_and_detailed() -> Non
     assert ".slice(0, 3)" in script
     assert "data-evidence-segment-id" in script
     assert "实时草稿为临时内容" in script
+    assert "data-live-clinical-action=\"mark-asked\"" in script
+    assert "data-live-clinical-action=\"add-question\"" in script
+    assert "data-live-clinical-action=\"adopt-candidate\"" in script
+    assert "live-clinical-actions" in stylesheet
+
+
+def test_fixed_audio_demo_uses_live_follow_and_idempotent_convergence() -> None:
+    script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+
+    assert "fixedDemoAudioUrl: \"/api/audio/demo/fever-01\"" in script
+    assert "function startFixedAudioLiveDemo" in script
+    assert "function finalizeFixedAudioLiveDemo" in script
+    assert "function convergeFixedAudioLiveDemo" in script
+    assert "FIXED_DEMO_CHUNK_SECONDS" in script
+    assert "uploadFixedDemoAudioChunk" in script
+    assert "固定音频跟随识别演示" in script
+    assert "开始问诊演示" in script
+    assert "结束问诊并生成正式病历" in script
+    assert "/converge-record" in script
+    assert 'key: "start-live-demo", label: "开始问诊演示"' in script
+    assert 'key: "finalize-live-demo", label: "结束问诊并生成正式病历"' in script
+    assert "appState.viewMode === \"doctor\"" in script
+    assert "startFixedAudioLiveDemo().catch(reportActionError)" in script

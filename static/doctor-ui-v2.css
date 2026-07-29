@@ -2697,6 +2697,19 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   }
 }
 
+.live-clinical-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.live-clinical-actions button {
+  min-width: 108px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
 @media (min-width: 1101px) {
   body.doctor-mode .encounter-view {
     height: calc(100dvh - 68px);

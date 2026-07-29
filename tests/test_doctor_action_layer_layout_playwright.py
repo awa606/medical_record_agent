@@ -203,6 +203,50 @@ def _assert_footer_button_clickable(page, selector: str) -> None:
     assert page.evaluate("window.__MRA_LAYOUT_CLICKED__") is True
 
 
+def _assert_detail_action_clickable(page, selector: str) -> None:
+    page.locator(selector).scroll_into_view_if_needed()
+    page.evaluate(
+        """
+        (selector) => {
+          window.__MRA_DETAIL_ACTION_CLICKED__ = false;
+          const button = document.querySelector(selector);
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            window.__MRA_DETAIL_ACTION_CLICKED__ = true;
+          }, { capture: true, once: true });
+        }
+        """,
+        selector,
+    )
+    metrics = page.evaluate(
+        """
+        (selector) => {
+          const button = document.querySelector(selector);
+          const actionBar = document.querySelector(".encounter-action-bar");
+          const drawer = document.querySelector("#drawer");
+          const buttonBox = button.getBoundingClientRect();
+          const hitX = Math.floor((buttonBox.left + buttonBox.right) / 2);
+          const hitY = Math.floor((buttonBox.top + buttonBox.bottom) / 2);
+          const hit = document.elementFromPoint(hitX, hitY);
+          return {
+            buttonHitTarget: hit === button || button.contains(hit),
+            hitTag: hit?.tagName || "",
+            hitId: hit?.id || "",
+            hitClass: hit?.className || "",
+            drawerZIndex: Number(getComputedStyle(drawer).zIndex),
+            actionBarZIndex: Number(getComputedStyle(actionBar).zIndex),
+          };
+        }
+        """,
+        selector,
+    )
+    assert metrics["buttonHitTarget"] is True, metrics
+    assert metrics["drawerZIndex"] > metrics["actionBarZIndex"]
+    page.locator(selector).click()
+    assert page.evaluate("window.__MRA_DETAIL_ACTION_CLICKED__") is True
+
+
 def test_long_transcript_scrolls_inside_transcript_region_and_action_bar_is_clickable() -> None:
     server = RunningServer()
     try:
@@ -232,6 +276,50 @@ def test_long_transcript_scrolls_inside_transcript_region_and_action_bar_is_clic
                 page.evaluate("document.querySelector('#transcriptList').scrollTop = document.querySelector('#transcriptList').scrollHeight")
                 _assert_footer_button_clickable(page, "#confirmFieldsButton")
                 context.close()
+            browser.close()
+    finally:
+        server.close()
+
+
+def test_detail_drawer_actions_remain_clickable_above_action_bar() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1366, "height": 768})
+            _login(page, server.base_url)
+            _inject_layout_state(page, 10)
+            page.evaluate(
+                """
+                () => {
+                  document.querySelector("#drawerTitle").textContent = "临床参考详情";
+                  document.querySelector("#drawerBackdrop").classList.add("active");
+                  const drawer = document.querySelector("#drawer");
+                  drawer.classList.add("active");
+                  drawer.setAttribute("aria-hidden", "false");
+                  document.querySelectorAll(".drawer-panel").forEach((panel) => panel.classList.remove("active"));
+                  document.querySelector("#detailPanel").classList.add("active");
+                  document.querySelector("#detailDrawerContent").innerHTML = `
+                    <div class="detail-section">
+                      <h3>支持证据</h3>
+                      <p>${"发热咳嗽，建议继续询问危险征象。".repeat(90)}</p>
+                    </div>
+                    <div class="detail-section">
+                      <h3>医生操作</h3>
+                      <div class="live-clinical-actions">
+                        <button type="button" data-live-clinical-action="mark-asked">标记已询问</button>
+                        <button type="button" data-live-clinical-action="add-question">加入待问</button>
+                        <button type="button" data-live-clinical-action="adopt-candidate">采纳为候选</button>
+                        <button type="button" data-live-clinical-action="defer">暂不采纳</button>
+                        <button type="button" data-live-clinical-action="ignore">忽略提示</button>
+                        <button type="button" data-live-clinical-action="close">关闭详情</button>
+                      </div>
+                    </div>
+                  `;
+                }
+                """
+            )
+            _assert_detail_action_clickable(page, '[data-live-clinical-action="ignore"]')
             browser.close()
     finally:
         server.close()

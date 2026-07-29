@@ -191,5 +191,21 @@ def test_fixed_audio_demo_uses_live_follow_and_idempotent_convergence() -> None:
     assert "/converge-record" in script
     assert 'key: "start-live-demo", label: "开始问诊演示"' in script
     assert 'key: "finalize-live-demo", label: "结束问诊并生成正式病历"' in script
+    assert 'appState.fixedDemoStatus === "ready_to_finalize"' in script
+    assert 'button.textContent = "结束问诊并生成正式病历"' in script
+    assert 'button.disabled = Boolean((appState.busy && !fixedDemoReadyToFinalize) || fixedDemoProcessing)' in script
+    assert 'button.dataset.busyAllowed = fixedDemoReadyToFinalize ? "true" : "false"' in script
+    assert 'fixedDemoStatus === "ready_to_finalize" && appState.fixedDemoSessionId && !appState.currentTaskId' in script
+    assert "[data-workflow-action='finalize-live-demo']" in script
+    assert "setBusy(false);" in script
+    assert "finalizeFixedAudioLiveDemo().catch(reportActionError)" in script
     assert "appState.viewMode === \"doctor\"" in script
     assert "startFixedAudioLiveDemo().catch(reportActionError)" in script
+    assert "async function waitForAsrResultReady" in script
+    assert "/api/asr/sessions/${encodeURIComponent(sessionId)}/result" in script
+    assert "const resultTimeoutMs = Math.max(600000, Math.ceil(finalizedAudioSeconds * 2500))" in script
+    assert "await waitForAsrResultReady(appState.currentAsrSessionId, completed.events_url, { timeoutMs: resultTimeoutMs })" in script
+    assert 'fallback: "result_poll"' in script
+    assert "async function waitForFormalRecordReady" in script
+    assert "appState.currentRecordFields && taskRevisionId" in script
+    assert "await waitForFormalRecordReady(created.task_id)" in script

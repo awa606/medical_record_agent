@@ -1352,7 +1352,21 @@ function renderInputMethodMenu() {
   const button = $("inputMethodButton");
   const menu = $("inputMethodMenu");
   if (!button || !menu) return;
-  button.textContent = encounterReadyForInput() ? "开始问诊演示" : "选择今日就诊";
+  const fixedDemoProcessing = ["preparing", "uploading", "streaming", "finalizing", "converging"].includes(appState.fixedDemoStatus);
+  const fixedDemoReadyToFinalize = appState.fixedDemoStatus === "ready_to_finalize";
+  if (!encounterReadyForInput()) {
+    button.textContent = "选择今日就诊";
+  } else if (fixedDemoReadyToFinalize) {
+    button.textContent = "结束问诊并生成正式病历";
+  } else if (["preparing", "uploading", "streaming"].includes(appState.fixedDemoStatus)) {
+    button.textContent = "问诊演示中";
+  } else if (["finalizing", "converging"].includes(appState.fixedDemoStatus)) {
+    button.textContent = "正在收敛";
+  } else {
+    button.textContent = appState.currentTaskId ? "继续审核" : "开始问诊演示";
+  }
+  button.disabled = Boolean((appState.busy && !fixedDemoReadyToFinalize) || fixedDemoProcessing);
+  button.dataset.busyAllowed = fixedDemoReadyToFinalize ? "true" : "false";
   const labels = {
     audio: "上传音频",
     text: "粘贴文本",
@@ -1627,6 +1641,16 @@ function nextActionState() {
   const risk = riskSummary();
   const displayState = doctorDisplayState();
 
+  if (appState.fixedDemoStatus === "ready_to_finalize" && appState.fixedDemoSessionId && !appState.currentTaskId) {
+    return {
+      tone: "ready",
+      title: "实时问诊已结束，可以正式收敛",
+      detail: "固定音频跟随识别已完成。点击后冻结稳定转写，生成唯一正式病历 revision，再进入医生审核。",
+      stages: true,
+      actions: singlePrimaryAction({ key: "finalize-live-demo", label: "结束问诊并生成正式病历" }),
+    };
+  }
+
   if (appState.busy) {
     return {
       tone: "active",
@@ -1669,16 +1693,6 @@ function nextActionState() {
       detail: appState.fixedDemoMessage || `正在按真实时间发送音频块 ${appState.fixedDemoChunksUploaded || 0}/${appState.fixedDemoChunkTotal || "-" }，页面会持续追加转写和临床参考。`,
       stages: true,
       actions: [],
-    };
-  }
-
-  if (appState.fixedDemoStatus === "ready_to_finalize" && appState.fixedDemoSessionId && !appState.currentTaskId) {
-    return {
-      tone: "ready",
-      title: "实时问诊已结束，可以正式收敛",
-      detail: "固定音频跟随识别已完成。点击后冻结稳定转写，生成唯一正式病历 revision，再进入医生审核。",
-      stages: true,
-      actions: singlePrimaryAction({ key: "finalize-live-demo", label: "结束问诊并生成正式病历" }),
     };
   }
 
@@ -5360,6 +5374,80 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
   };
 }
 
+function applyCompletedAsrResult(result = {}) {
+  const mergedSegments = finalTranscriptSegments(result.segments || [], appState.liveTranscriptSegments);
+  appState.currentAudioId = result.audio_id || appState.currentAudioId;
+  appState.selectedEngine = result.backend || result.engine || appState.selectedEngine;
+  appState.currentAsrResult = {
+    ...result,
+    segments: mergedSegments,
+    text: textFromSegments(mergedSegments) || result.text,
+    conversation_text: conversationFromSegments(mergedSegments) || result.conversation_text,
+  };
+  appState.speakerAssignments = appState.currentAsrResult?.speaker_assignments || appState.speakerAssignments;
+  appState.speakerMappingRequired = appState.speakerAssignments.some((item) => item.requires_confirmation);
+  appState.liveTranscriptSegments = mergedSegments;
+  appState.provisionalTranscriptSegments = [];
+  appState.taskStatus = "TRANSCRIBED";
+  appState.asrPhase = "completed";
+  appState.asrProgressKind = "actual";
+  appState.asrStreamProgress = 1;
+  appState.asrProgressEstimated = false;
+  appState.asrElapsedSeconds = 0;
+  appState.asrVisibleAudioSeconds = Math.max(
+    appState.asrVisibleAudioSeconds || 0,
+    Number(result.duration || result.audio_duration_seconds || 0),
+  );
+  appState.asrProcessedAudioSeconds = Number(result.duration || result.audio_duration_seconds || appState.asrProcessedAudioSeconds || 0);
+  appState.asrAudioDurationSeconds = Number(result.duration || result.audio_duration_seconds || appState.asrAudioDurationSeconds || 0);
+  appState.asrStreamTotalSegments = result.segments?.length || appState.asrStreamTotalSegments || appState.liveTranscriptSegments.length;
+  appState.asrStreamCurrentSegment = appState.asrStreamTotalSegments;
+  appState.asrLastError = "";
+  appState.asrConnectionStatus = "completed";
+  appState.asrChunkStatus = appState.asrChunkTotal ? "切片转写完成" : "";
+  appState.asrChunkLastError = "";
+  appState.asrRetryHint = "";
+  appState.currentEvaluation = null;
+  resetRoleReviewState();
+}
+
+async function waitForAsrResultReady(sessionId, eventsUrl, { timeoutMs = 600000, intervalMs = 2500 } = {}) {
+  let eventOutcome = null;
+  const eventPromise = new Promise((resolve, reject) => {
+    listenForAsrEvents(eventsUrl, { resolve, reject });
+  }).then(
+    (value) => {
+      eventOutcome = { ok: true, value };
+      return eventOutcome;
+    },
+    (error) => {
+      eventOutcome = { ok: false, error };
+      return eventOutcome;
+    },
+  );
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const race = await Promise.race([eventPromise, delay(intervalMs).then(() => null)]);
+    if (race?.ok) return race.value;
+    if (race?.ok === false) throw race.error;
+    if (appState.currentAsrResult) {
+      return { audio_id: appState.currentAsrResult.audio_id, asr_result: appState.currentAsrResult };
+    }
+    try {
+      const result = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/result`);
+      applyCompletedAsrResult(result);
+      scheduleRecordPreview({ force: true });
+      closeAsrStream();
+      setBusy(false);
+      renderAll();
+      return { audio_id: result.audio_id, asr_result: result, fallback: "result_poll" };
+    } catch (error) {
+      if (eventOutcome?.ok === false) throw eventOutcome.error;
+    }
+  }
+  throw new Error("等待 ASR 最终结果超时，请刷新任务或重试正式收敛。");
+}
+
 async function createRecordTask(conversationText, { keepAsr = false } = {}) {
   resetTaskState({ keepAsr, keepEncounter: true });
   appState.currentInputText = conversationText;
@@ -5556,7 +5644,7 @@ function focusNextActionPanel() {
   const panel = $("nextActionPanel");
   if (!panel) return;
   panel.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
-  panel.querySelector("[data-workflow-action='generate-record'], [data-workflow-action='save-role-review']")?.focus?.();
+  panel.querySelector("[data-workflow-action='finalize-live-demo'], [data-workflow-action='generate-record'], [data-workflow-action='save-role-review']")?.focus?.();
 }
 
 function speakerRolesForReviewSave() {
@@ -6385,6 +6473,32 @@ function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+async function waitForFormalRecordReady(taskId, { timeoutMs = 180000, intervalMs = 1200 } = {}) {
+  const startedAt = Date.now();
+  let lastReadiness = null;
+  while (Date.now() - startedAt < timeoutMs) {
+    await refreshTask(taskId);
+    lastReadiness = await refreshExportReadiness();
+    const taskRevisionId = appState.currentTask?.current_record_revision_id
+      || appState.currentExportReadiness?.revision_id
+      || null;
+    if (appState.currentRecordFields && taskRevisionId) {
+      return {
+        task: appState.currentTask,
+        readiness: lastReadiness,
+        revision_id: taskRevisionId,
+      };
+    }
+    if (appState.taskStatus === "FAILED") {
+      throw new Error(appState.currentTask?.error_message || "正式病历生成失败，请检查任务日志。");
+    }
+    appState.fixedDemoMessage = "正式病历正在生成，请稍候。";
+    renderAll();
+    await delay(intervalMs);
+  }
+  throw new Error("等待正式病历生成超时，请刷新任务列表后重试。");
+}
+
 async function fetchFixedDemoAudioBuffer() {
   const response = await fetch(appState.fixedDemoAudioUrl, { cache: "no-store" });
   if (!response.ok) {
@@ -6511,11 +6625,13 @@ async function startFixedAudioLiveDemo() {
     }
     appState.fixedDemoStatus = "ready_to_finalize";
     appState.fixedDemoMessage = "固定音频已按跟随识别链路发送完毕，请点击“结束问诊并生成正式病历”。";
+    setBusy(false);
     renderAll();
     focusNextActionPanel();
   } catch (error) {
     appState.fixedDemoStatus = "failed";
     appState.fixedDemoMessage = `固定音频演示失败：${error?.message || String(error)}`;
+    setBusy(false);
     renderAll();
     reportActionError(error);
   }
@@ -6541,9 +6657,9 @@ async function finalizeFixedAudioLiveDemo() {
   const completed = await api(`/api/asr/sessions/${encodeURIComponent(appState.fixedDemoSessionId)}/complete`, { method: "POST" });
   appState.currentAsrSessionId = completed.session_id || appState.fixedDemoSessionId;
   appState.currentAudioId = completed.audio_id || appState.currentAudioId;
-  await new Promise((resolve, reject) => {
-    listenForAsrEvents(completed.events_url, { resolve, reject });
-  });
+  const finalizedAudioSeconds = Number(appState.audioDurationSeconds || appState.asrAudioDurationSeconds || finalized.duration_seconds || 0);
+  const resultTimeoutMs = Math.max(600000, Math.ceil(finalizedAudioSeconds * 2500));
+  await waitForAsrResultReady(appState.currentAsrSessionId, completed.events_url, { timeoutMs: resultTimeoutMs });
   return convergeFixedAudioLiveDemo();
 }
 
@@ -6571,6 +6687,12 @@ async function convergeFixedAudioLiveDemo() {
     : "已复用该会话的正式病历，正在恢复审核流程。";
   renderAll();
   listenForEvents(created.task_id, created.events_url);
+  await waitForFormalRecordReady(created.task_id);
+  appState.fixedDemoMessage = created.created
+    ? "正式病历已创建，请医生修改并审核。"
+    : "已复用该会话的正式病历，请医生继续审核。";
+  renderAll();
+  focusRecordWorkspace();
   return created;
 }
 
@@ -7564,6 +7686,21 @@ function bindEvents() {
       return;
     }
     if (appState.viewMode === "doctor") {
+      if (appState.fixedDemoStatus === "ready_to_finalize") {
+        finalizeFixedAudioLiveDemo().catch(reportActionError);
+        return;
+      }
+      if (["preparing", "uploading", "streaming", "finalizing", "converging"].includes(appState.fixedDemoStatus)) {
+        closeInputMethodMenu();
+        showToast(appState.fixedDemoMessage || "当前问诊演示正在进行，请等待状态更新。");
+        focusNextActionPanel();
+        return;
+      }
+      if (appState.currentTaskId || appState.currentRecordFields) {
+        closeInputMethodMenu();
+        focusRecordWorkspace();
+        return;
+      }
       startFixedAudioLiveDemo().catch(reportActionError);
       return;
     }

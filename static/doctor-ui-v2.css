@@ -31,6 +31,8 @@
   --action-bar-height: 66px;
   --action-bar-safe-space: 104px;
   --layer-action-bar: 42;
+  --layer-drawer-backdrop: 1000;
+  --layer-drawer: 1010;
 }
 
 html,
@@ -1932,6 +1934,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
 .drawer-backdrop {
   background: rgba(10, 28, 46, 0.34);
   backdrop-filter: blur(2px);
+  z-index: var(--layer-drawer-backdrop);
 }
 
 .drawer {
@@ -1940,6 +1943,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   border-left: 1px solid var(--line);
   background: #f7f9fc;
   box-shadow: -18px 0 50px rgba(12, 34, 57, 0.18);
+  z-index: var(--layer-drawer);
 }
 
 .drawer-header {
@@ -1956,6 +1960,12 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
 
 .drawer-panel {
   padding: 16px;
+}
+
+.drawer-panel.active {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-bottom: calc(var(--action-bar-safe-space) + 24px);
 }
 
 .input-method-popover,

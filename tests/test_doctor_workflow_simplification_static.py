@@ -15,13 +15,13 @@ def read_html() -> str:
 def test_workflow_uses_five_steps_without_role_review_step() -> None:
     script = read_script()
 
-    assert "1.开始问诊" in script
-    assert "2.智能转写" in script
-    assert "3.生成病历" in script
-    assert "4.医生审核" in script
-    assert "5.导出" in script
+    assert "选择就诊" in script
+    assert "采集信息" in script
+    assert "AI处理" in script
+    assert "病历审核" in script
+    assert "导出完成" in script
     assert "3.角色校正" not in script
-    assert 'TRANSCRIBED: "GENERATE_RECORD"' in script
+    assert 'TRANSCRIBED: "AI_PROCESS"' in script
 
 
 def test_role_quality_no_longer_blocks_doctor_workflow() -> None:
@@ -118,6 +118,8 @@ def test_doctor_review_terms_are_user_facing() -> None:
         "病历审核已完成",
         "请核对病历内容及鉴别诊断参考",
         "完成医生审核后方可导出",
+        "AI 生成草稿，仅供医生审核",
+        "原审核已失效或尚未完成",
     ]:
         assert phrase in visible
 
@@ -131,3 +133,18 @@ def test_doctor_review_terms_are_user_facing() -> None:
         "确认后才能导出",
     ]:
         assert phrase not in visible
+
+
+def test_demo_rc_next_action_uses_single_primary_cta_and_processing_stages() -> None:
+    visible = read_html() + read_script() + (ROOT / "static" / "doctor-ui-v2.css").read_text(encoding="utf-8")
+
+    assert "const PROCESSING_STAGES" in visible
+    for phrase in ["音频上传", "FunASR 转写", "医患角色推定", "医学字段抽取", "病历草稿生成", "安全检查"]:
+        assert phrase in visible
+    assert "processing-stage-list" in visible
+    assert "singlePrimaryAction" in visible
+    assert 'key: "open-worklist", label: "选择今日就诊"' in visible
+    assert 'key: "record-audio", label: "开始问诊"' in visible
+    assert 'key: "retry-transcription", label:' in visible
+    assert 'id="reviewBoundaryNotice"' in visible
+    assert "record-field-updated" in visible

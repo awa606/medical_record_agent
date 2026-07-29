@@ -143,6 +143,7 @@ const appState = {
   currentKnowledgeEvidence: null,
   knowledgeEvidenceStatus: "idle",
   knowledgeEvidenceError: "",
+  recordHighlightUntil: 0,
 };
 
 window.__MRA_APP_STATE__ = appState;
@@ -194,28 +195,37 @@ const DRAFT_FIELD_DEFS = [
 ];
 
 const WORKFLOW_STEPS = [
-  { key: "INPUT", label: "1.开始问诊" },
-  { key: "TRANSCRIBING", label: "2.智能转写" },
-  { key: "GENERATE_RECORD", label: "3.生成病历" },
-  { key: "DOCTOR_REVIEW", label: "4.医生审核" },
-  { key: "EXPORT", label: "5.导出" },
+  { key: "SELECT_ENCOUNTER", label: "选择就诊" },
+  { key: "CAPTURE_INPUT", label: "采集信息" },
+  { key: "AI_PROCESS", label: "AI处理" },
+  { key: "DOCTOR_REVIEW", label: "病历审核" },
+  { key: "EXPORT", label: "导出完成" },
 ];
 
 const STATUS_TO_STEP = {
-  CREATED: "INPUT",
-  TRANSCRIBING: "TRANSCRIBING",
-  TRANSCRIBED: "GENERATE_RECORD",
-  EXTRACTING_FIELDS: "GENERATE_RECORD",
-  GENERATING_DRAFT: "GENERATE_RECORD",
-  SAFETY_CHECKING: "GENERATE_RECORD",
+  CREATED: "CAPTURE_INPUT",
+  TRANSCRIBING: "AI_PROCESS",
+  TRANSCRIBED: "AI_PROCESS",
+  EXTRACTING_FIELDS: "AI_PROCESS",
+  GENERATING_DRAFT: "AI_PROCESS",
+  SAFETY_CHECKING: "AI_PROCESS",
   WAITING_DOCTOR_REVIEW: "DOCTOR_REVIEW",
   doctor_review: "DOCTOR_REVIEW",
-  FAILED: "GENERATE_RECORD",
+  FAILED: "AI_PROCESS",
   reviewed: "DOCTOR_REVIEW",
   approved: "EXPORT",
   EXPORTED: "EXPORT",
   exported: "EXPORT",
 };
+
+const PROCESSING_STAGES = [
+  { key: "audio", label: "音频上传" },
+  { key: "asr", label: "FunASR 转写" },
+  { key: "role", label: "医患角色推定" },
+  { key: "fields", label: "医学字段抽取" },
+  { key: "draft", label: "病历草稿生成" },
+  { key: "safety", label: "安全检查" },
+];
 
 const STATUS_LABELS = {
   CREATED: "任务已创建",
@@ -1408,25 +1418,116 @@ function renderStepPrompt() {
 
 function workflowStepKey() {
   const displayState = doctorDisplayState().key;
-  if (displayState === "transcription_failed") return "TRANSCRIBING";
-  if (displayState === "draft_generated") return "GENERATE_RECORD";
+  if (!encounterReadyForInput() && !hasActiveSession()) return "SELECT_ENCOUNTER";
+  if (displayState === "transcription_failed") return "AI_PROCESS";
+  if (displayState === "draft_generated") return "DOCTOR_REVIEW";
   if (displayState === "pending_review") return "DOCTOR_REVIEW";
   if (displayState === "approved" || displayState === "exported") return "EXPORT";
   if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") return "EXPORT";
   if (isApprovedForExport()) return "EXPORT";
   if (appState.currentRecordFields || appState.currentDraft) return "DOCTOR_REVIEW";
-  if (appState.currentTaskId) return "GENERATE_RECORD";
+  if (appState.currentTaskId) return "AI_PROCESS";
   if (appState.currentAsrResult) {
-    return "GENERATE_RECORD";
+    return "AI_PROCESS";
   }
   if (appState.taskStatus === "TRANSCRIBING" || appState.currentAsrSessionId || appState.liveTranscriptSegments.length) {
-    return "TRANSCRIBING";
+    return "AI_PROCESS";
   }
-  return STATUS_TO_STEP[appState.taskStatus] || "INPUT";
+  return STATUS_TO_STEP[appState.taskStatus] || "CAPTURE_INPUT";
 }
 
-function workflowAction({ key, label, tone = "secondary", disabled = false }) {
-  return `<button type="button" class="${tone === "primary" ? "primary-action" : "secondary-action"}" data-workflow-action="${escapeHtml(key)}" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>`;
+function workflowAction({ key, label, tone = "secondary", disabled = false, reason = "" }) {
+  const reasonAttrs = reason
+    ? ` title="${escapeHtml(reason)}" aria-describedby="nextActionReason"`
+    : "";
+  return `<button type="button" class="${tone === "primary" ? "primary-action" : "secondary-action"}" data-workflow-action="${escapeHtml(key)}" ${disabled ? "disabled" : ""}${reasonAttrs}>${escapeHtml(label)}</button>`;
+}
+
+function currentInputInProgress() {
+  return appState.busy
+    || ["requesting", "recording", "paused", "finalizing", "uploading"].includes(appState.browserRecordingStatus)
+    || ["TRANSCRIBING", "EXTRACTING_FIELDS", "GENERATING_DRAFT", "SAFETY_CHECKING", "CREATED"].includes(appState.taskStatus);
+}
+
+function processingStageStatuses() {
+  const statuses = Object.fromEntries(PROCESSING_STAGES.map((stage) => [stage.key, "pending"]));
+  const failed = doctorDisplayState().key === "transcription_failed";
+  if (appState.currentAudioId || appState.uploadedFilename || appState.currentAsrSessionId || appState.browserRecordingFinalized?.audio_id) {
+    statuses.audio = "done";
+  }
+  if (["requesting", "recording", "paused", "finalizing"].includes(appState.browserRecordingStatus)) {
+    statuses.audio = "active";
+  }
+  if (appState.browserRecordingStatus === "uploading") {
+    statuses.audio = "done";
+    statuses.asr = "active";
+  }
+  if (appState.taskStatus === "TRANSCRIBING" || appState.currentAsrSessionId) {
+    statuses.audio = "done";
+    statuses.asr = "active";
+  }
+  if (appState.currentAsrResult || appState.liveTranscriptSegments.length || appState.taskStatus === "TRANSCRIBED") {
+    statuses.audio = "done";
+    statuses.asr = "done";
+    statuses.role = "done";
+  }
+  if (appState.currentTaskId || ["EXTRACTING_FIELDS", "GENERATING_DRAFT", "SAFETY_CHECKING"].includes(appState.taskStatus)) {
+    statuses.audio = statuses.audio === "pending" ? "done" : statuses.audio;
+    statuses.asr = statuses.asr === "pending" ? "done" : statuses.asr;
+    statuses.role = statuses.role === "pending" ? "done" : statuses.role;
+    statuses.fields = "active";
+  }
+  if (appState.taskStatus === "GENERATING_DRAFT") {
+    statuses.fields = "done";
+    statuses.draft = "active";
+  }
+  if (appState.taskStatus === "SAFETY_CHECKING") {
+    statuses.fields = "done";
+    statuses.draft = "done";
+    statuses.safety = "active";
+  }
+  if (appState.currentRecordFields) {
+    statuses.audio = statuses.audio === "pending" ? "done" : statuses.audio;
+    statuses.asr = statuses.asr === "pending" ? "done" : statuses.asr;
+    statuses.role = statuses.role === "pending" ? "done" : statuses.role;
+    statuses.fields = "done";
+    statuses.draft = "done";
+    statuses.safety = "done";
+  }
+  if (failed) {
+    statuses.asr = "failed";
+    ["role", "fields", "draft", "safety"].forEach((key) => {
+      if (statuses[key] !== "done") statuses[key] = "pending";
+    });
+  }
+  return statuses;
+}
+
+function renderProcessingStages() {
+  const statuses = processingStageStatuses();
+  const labels = {
+    pending: "等待",
+    active: "进行中",
+    done: "完成",
+    failed: "失败",
+  };
+  return `
+    <ol class="processing-stage-list" aria-label="AI 处理阶段">
+      ${PROCESSING_STAGES.map((stage) => {
+        const status = statuses[stage.key] || "pending";
+        return `
+          <li class="processing-stage ${status}">
+            <span>${escapeHtml(stage.label)}</span>
+            <small>${escapeHtml(labels[status])}</small>
+          </li>
+        `;
+      }).join("")}
+    </ol>
+  `;
+}
+
+function singlePrimaryAction(action) {
+  return action ? [workflowAction({ ...action, tone: "primary" })] : [];
 }
 
 function doctorDisplayState() {
@@ -1516,19 +1617,23 @@ function nextActionState() {
       tone: "active",
       title: STATUS_LABELS[appState.taskStatus] || "处理中",
       detail: appState.asrChunkStatus || "系统正在处理当前任务，请等待页面状态更新。",
+      stages: true,
       actions: [],
     };
   }
 
   if (appState.lastActionError) {
+    const action = appState.currentAudioId
+      ? { key: "retry-transcription", label: "重试转写" }
+      : encounterReadyForInput()
+        ? { key: "record-audio", label: "重新采集" }
+        : { key: "open-worklist", label: "选择今日就诊" };
     return {
       tone: "danger",
       title: "请处理当前提示",
       detail: appState.lastActionError,
-      actions: [
-        workflowAction({ key: "upload-audio", label: "音频生成", tone: "primary" }),
-        workflowAction({ key: "import-text", label: "文本生成" }),
-      ],
+      stages: true,
+      actions: singlePrimaryAction(action),
     };
   }
 
@@ -1536,20 +1641,27 @@ function nextActionState() {
     return {
       tone: "danger",
       title: "流程中断",
-      detail: "智能转写失败，恢复操作请使用下方提示区。",
-      actions: [],
+      detail: "智能转写失败，音频已保存时可直接重新转写；也可以改用文本输入。",
+      stages: true,
+      actions: singlePrimaryAction({ key: "retry-transcription", label: appState.currentAudioId ? "重试转写" : "重新上传" }),
+    };
+  }
+
+  if (!encounterReadyForInput() && !hasActiveSession()) {
+    return {
+      tone: "neutral",
+      title: "选择今日就诊",
+      detail: "先选择已报到或问诊中的患者，再开始录音、上传音频或文本生成。",
+      actions: singlePrimaryAction({ key: "open-worklist", label: "选择今日就诊" }),
     };
   }
 
   if (!hasActiveSession()) {
     return {
       tone: "neutral",
-      title: "开始一次病历生成",
-      detail: "优先上传中文问诊音频；系统会按配置自动选择识别服务，文本导入可直接验证病历生成。",
-      actions: [
-        workflowAction({ key: "upload-audio", label: "音频生成", tone: "primary" }),
-        workflowAction({ key: "import-text", label: "文本生成" }),
-      ],
+      title: "开始问诊",
+      detail: "当前就诊已就绪，答辩主线建议先录音或上传音频，文本输入作为备用路径。",
+      actions: singlePrimaryAction({ key: "record-audio", label: "开始问诊" }),
     };
   }
 
@@ -1559,8 +1671,9 @@ function nextActionState() {
       : "短音频直接转写";
     return {
       tone: "active",
-      title: "实时转写中",
-      detail: `${chunkText}，请等待 SSE 分段文本追加到中间栏。`,
+      title: "AI处理中",
+      detail: `${chunkText}，系统正在完成转写、角色推定、字段抽取和草稿生成。`,
+      stages: true,
       actions: [],
     };
   }
@@ -1593,17 +1706,17 @@ function nextActionState() {
       tone: "ready",
       title: "转写已完成",
       detail: "说话人角色已自动识别，可以用当前对话生成病历草稿。",
-      actions: [
-        workflowAction({ key: "generate-record", label: "生成病历", tone: "primary" }),
-      ],
+      stages: true,
+      actions: singlePrimaryAction({ key: "generate-record", label: "生成病历草稿" }),
     };
   }
 
   if (appState.currentTaskId && !appState.currentRecordFields) {
     return {
       tone: "active",
-      title: "病历草稿生成中",
+      title: "AI处理中",
       detail: "字段抽取、草稿生成和安全校验会依次完成。",
+      stages: true,
       actions: [],
     };
   }
@@ -1612,8 +1725,8 @@ function nextActionState() {
     return {
       tone: "ready",
       title: "导出已完成",
-      detail: "Markdown / Word 文件已生成。需要再次下载时，请使用底部操作栏的导出按钮。",
-      actions: [],
+      detail: "DOCX 文件已生成。需要再次下载时，可继续使用导出按钮。",
+      actions: singlePrimaryAction({ key: "export-record", label: "再次下载" }),
     };
   }
 
@@ -1621,8 +1734,8 @@ function nextActionState() {
     return {
       tone: "ready",
       title: "病历审核已完成，可以导出",
-      detail: "底部操作栏只保留导出已审核病历，导出文件会绑定当前医生和病历版本。",
-      actions: [],
+      detail: "导出文件会绑定当前医生、就诊和最新病历版本。",
+      actions: singlePrimaryAction({ key: "export-record", label: "导出病历" }),
     };
   }
 
@@ -1634,7 +1747,7 @@ function nextActionState() {
         detail: risk.missing.length
           ? `当前仍有 ${risk.missing.length} 项未采集或需医生确认；完成审核即表示医生已确认处理。`
           : "修改已保存，等待医生完成病历审核。",
-        actions: [],
+        actions: singlePrimaryAction({ key: "confirm-fields", label: "审核病历", disabled: risk.hasError, reason: risk.hasError ? "请先处理红色风险或缺失项" : "" }),
       };
     }
     const missingText = risk.missing.length
@@ -1644,34 +1757,62 @@ function nextActionState() {
       tone: risk.hasError ? "danger" : risk.hasRisk ? "warning" : "ready",
       title: "病历草稿已生成，可编辑",
       detail: missingText,
-      actions: [],
+      actions: singlePrimaryAction({ key: "save-draft", label: "保存修改" }),
     };
   }
 
   return {
     tone: "neutral",
-    title: "等待下一步",
-    detail: "可继续上传音频或粘贴文本开始新的病历生成流程。",
-    actions: [
-      workflowAction({ key: "upload-audio", label: "音频生成", tone: "primary" }),
-      workflowAction({ key: "import-text", label: "文本生成" }),
-    ],
+    title: "选择今日就诊",
+    detail: "答辩演示从选择已报到患者开始，避免产生未绑定就诊的录音或病历。",
+    actions: singlePrimaryAction({ key: "open-worklist", label: "选择今日就诊" }),
   };
 }
 
 function renderNextActionPanel() {
   const state = nextActionState();
   $("nextActionPanel").className = `next-action-panel ${state.tone}`.trim();
+  const stages = state.stages ? renderProcessingStages() : "";
   $("nextActionPanel").innerHTML = `
     <div>
       <span class="meta-label">下一步</span>
       <strong>${escapeHtml(state.title)}</strong>
-      <p>${escapeHtml(state.detail)}</p>
+      <p id="nextActionReason">${escapeHtml(state.detail)}</p>
+      ${stages}
     </div>
     <div class="next-action-buttons">
       ${state.actions.join("")}
     </div>
   `;
+}
+
+function renderReviewBoundaryNotice() {
+  const notice = $("reviewBoundaryNotice");
+  if (!notice) return;
+  if (!appState.currentRecordFields) {
+    notice.hidden = true;
+    notice.textContent = "";
+    notice.className = "review-boundary-notice";
+    return;
+  }
+  const displayState = doctorDisplayState();
+  notice.hidden = false;
+  notice.className = `review-boundary-notice ${displayState.key}`.trim();
+  if (["approved", "exported"].includes(displayState.key)) {
+    notice.textContent = "医生审核已完成；导出文件绑定当前就诊和最新病历版本。";
+    return;
+  }
+  if (displayState.key === "pending_review") {
+    notice.textContent = "AI 生成草稿，仅供医生审核；原审核已失效或尚未完成，审核通过后方可导出。";
+    return;
+  }
+  notice.textContent = "AI 生成草稿，仅供医生审核；保存修改并完成审核后方可导出。";
+}
+
+function focusRecordWorkspace() {
+  const recordColumn = document.querySelector(".field-column");
+  if (!recordColumn) return;
+  recordColumn.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
 }
 
 function renderTranscriptionFailurePanel() {
@@ -2452,6 +2593,7 @@ function renderFields() {
   const isPreview = isRecordPreviewActive();
   const displayState = doctorDisplayState();
   const isApprovedDisplay = ["approved", "exported"].includes(displayState.key);
+  const highlightClass = appState.recordHighlightUntil > Date.now() ? "record-field-updated" : "";
   if (!fields) {
     $("fieldCountBadge").textContent = "待生成";
     $("fieldCountBadge").className = "status-badge neutral";
@@ -2494,7 +2636,7 @@ function renderFields() {
     `
       : "";
     return `
-      <article class="field-card ${status.key} ${fieldWeightClass(key)} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${isApprovedDisplay ? "readonly-field" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}">
+      <article class="field-card ${status.key} ${fieldWeightClass(key)} ${highlightClass} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${isApprovedDisplay ? "readonly-field" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}">
         <div class="field-head">
           <span class="field-title">${escapeHtml(title)}</span>
           ${appState.viewMode === "doctor"
@@ -4484,6 +4626,7 @@ function renderAll() {
   renderWorkflow();
   renderNextActionPanel();
   renderTranscriptionFailurePanel();
+  renderReviewBoundaryNotice();
   renderFields();
   renderTranscript();
   renderAssist();
@@ -4625,10 +4768,13 @@ function listenForEvents(taskId, eventsUrl) {
     terminalReceived = true;
     appState.taskStatus = "WAITING_DOCTOR_REVIEW";
     await refreshTask(data.task_id, data.task);
+    appState.recordHighlightUntil = Date.now() + 2800;
     source.close();
     appState.eventSource = null;
     setBusy(false);
-    showToast("病历已生成，等待医生审核");
+    renderAll();
+    focusRecordWorkspace();
+    showToast("病历草稿已生成，请修改并完成审核");
   });
 
   source.addEventListener("FAILED", async (event) => {
@@ -5678,6 +5824,14 @@ async function exportRecord() {
 }
 
 async function handleWorkflowAction(action) {
+  if (action === "open-worklist") {
+    await openEncounterWorklist();
+    return;
+  }
+  if (action === "record-audio") {
+    openReservedRecording();
+    return;
+  }
   if (action === "upload-audio") {
     openAudioGenerate();
     return;
@@ -5688,6 +5842,10 @@ async function handleWorkflowAction(action) {
   }
   if (action === "save-role-review") {
     await saveRoleReview();
+    return;
+  }
+  if (action === "retry-transcription") {
+    await retryTranscriptionFromFailure();
     return;
   }
   if (action === "generate-record") {

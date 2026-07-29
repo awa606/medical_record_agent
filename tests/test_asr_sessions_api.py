@@ -16,6 +16,7 @@ from app.api.asr_sessions import (
     _append_events,
     _asr_session_event_stream,
     _chunk_seconds_for_duration,
+    _append_result_events,
     _failed_event,
     _read_events,
     _recording_chunk_summary,
@@ -416,6 +417,36 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("/api/asr/sessions/{session_id}/recording", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/events", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/result", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/live-draft", route_paths)
+
+    def test_result_events_emit_finalized_before_completed(self):
+        session = ASRSessionRecord(
+            session_id="S-finalized-order",
+            engine="funasr",
+            status="transcribing",
+            audio_id="A-finalized-order",
+            recognition_mode="follow",
+        )
+        result = ASRResult(
+            audio_id="A-finalized-order",
+            engine="funasr",
+            text="final text",
+            conversation_text="[spk] final text",
+            segments=[ASRSegment(segment_id="seg-final", speaker="spk", text="final text")],
+            duration=2.0,
+            backend="funasr",
+            model="funasr-paraformer-zh-streaming",
+            request_id="req-finalized-order",
+        )
+
+        _append_result_events(session.session_id, session=session, result=result, emit_segments=False)
+
+        events = _read_events(session.session_id)
+        event_names = [event.event for event in events]
+        self.assertEqual(event_names[-2:], ["session.finalized", "completed"])
+        finalized = events[-2]
+        self.assertEqual(finalized.data["recognition_mode"], "follow")
+        self.assertEqual(finalized.data["formal_record_status"], "ready_for_generation")
 
     def test_explicit_session_funasr_request_is_rejected_when_configured_engine_is_mock(self):
         os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "mock"
@@ -562,12 +593,24 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("audio.chunk.accepted", event_names)
         self.assertIn("transcript.partial", event_names)
         self.assertIn("transcript.stable", event_names)
+        self.assertIn("clinical_processing.started", event_names)
+        self.assertIn("record.live_patch", event_names)
+        self.assertIn("clinical_processing.completed", event_names)
         self.assertNotIn("completed", event_names)
         stable = next(event for event in events if event.event == "transcript.stable")
         self.assertEqual(stable.data["sequence"], 0)
         self.assertEqual(stable.data["chunk_started_at_ms"], 0)
         self.assertEqual(stable.data["chunk_ended_at_ms"], 2000)
         self.assertEqual(stable.data["segment"]["text"], "stable 0")
+        live_patch = next(event for event in events if event.event == "record.live_patch")
+        self.assertEqual(live_patch.data["version"], 1)
+        self.assertEqual(live_patch.data["based_on_sequence"], 0)
+        self.assertEqual(live_patch.data["status"], "temporary")
+        self.assertEqual(live_patch.data["stable_segment_count"], 1)
+        draft = client.get(f"/api/asr/sessions/{session_id}/live-draft")
+        self.assertEqual(draft.status_code, 200, draft.text)
+        self.assertEqual(draft.json()["version"], 1)
+        self.assertEqual(draft.json()["status"], "temporary")
         status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
         self.assertEqual(status.status_code, 200)
         self.assertEqual(status.json()["status"], "recording")
@@ -605,8 +648,26 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("audio.chunk.accepted", event_names)
         self.assertIn("audio.chunk.waiting_for_gap", event_names)
         self.assertNotIn("transcript.partial", event_names)
+        self.assertNotIn("record.live_patch", event_names)
         gap = next(event for event in events if event.event == "audio.chunk.waiting_for_gap")
         self.assertEqual(gap.data["missing_chunk_indices"], [0])
+
+    def test_live_draft_rejects_non_owner(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "funasr"
+        admin_client = TestClient(app)
+        create_user(admin_client, username="live-owner")
+        create_user(admin_client, username="live-other")
+
+        owner_client = TestClient(app)
+        login_as_user(owner_client, username="live-owner")
+        session = owner_client.post("/api/asr/sessions?engine=funasr&recognition_mode=follow")
+        self.assertEqual(session.status_code, 200, session.text)
+        session_id = session.json()["session_id"]
+
+        other_client = TestClient(app)
+        login_as_user(other_client, username="live-other")
+        forbidden = other_client.get(f"/api/asr/sessions/{session_id}/live-draft")
+        self.assertEqual(forbidden.status_code, 403)
 
     def test_browser_recording_complete_rejects_missing_chunk_gap(self):
         client = TestClient(app)

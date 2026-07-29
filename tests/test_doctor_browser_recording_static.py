@@ -144,3 +144,28 @@ def test_doctor_recording_live_gate_uses_follow_chunks_and_transcript_events() -
     assert 'form.append("chunk_ended_at_ms"' in script
     assert 'source.addEventListener("transcript.partial", handleTranscriptSegment)' in script
     assert 'source.addEventListener("transcript.stable", handleTranscriptSegment)' in script
+
+
+def test_doctor_live_clinical_reference_handles_versioned_sse_events() -> None:
+    script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+
+    assert "liveClinicalDraft" in script
+    assert "function applyLiveClinicalDraft" in script
+    assert "version <= Number(appState.liveClinicalVersion || 0)" in script
+    assert 'source.addEventListener("record.live_patch"' in script
+    assert 'source.addEventListener("clinical_processing.started"' in script
+    assert 'source.addEventListener("clinical_processing.failed"' in script
+    assert 'source.addEventListener("session.finalizing"' in script
+    assert 'source.addEventListener("session.finalized"' in script
+
+
+def test_doctor_live_clinical_reference_summary_is_bounded_and_detailed() -> None:
+    script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+
+    assert "function renderLiveClinicalReferenceCard" in script
+    assert "function renderLiveClinicalDetailContent" in script
+    assert 'detailTarget: "assist:live-clinical"' in script
+    assert 'if (section === "live-clinical")' in script
+    assert ".slice(0, 3)" in script
+    assert "data-evidence-segment-id" in script
+    assert "实时草稿为临时内容" in script

@@ -56,6 +56,13 @@ from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 from app.services.asr.funasr_reliability import classify_funasr_error, funasr_error_code
 from app.services.asr.role_quality import attach_speaker_role_quality
 from app.services.asr.speaker_role_classifier import resolve_speaker_roles
+from app.services.live_clinical import (
+    build_live_clinical_snapshot,
+    merge_live_segment,
+    merge_snapshot_if_newer,
+    normalize_live_segment,
+    should_emit_live_snapshot,
+)
 from app.services.runtime_limits import (
     audio_upload_max_bytes,
     copy_upload_with_limit,
@@ -144,6 +151,10 @@ def _event_log_path(session_id: str) -> Path:
 
 def _result_path(session_id: str) -> Path:
     return _session_dir(session_id) / "result.json"
+
+
+def _live_clinical_state_path(session_id: str) -> Path:
+    return _session_dir(session_id) / "live_draft.json"
 
 
 def _recording_chunks_dir(session_id: str) -> Path:
@@ -503,6 +514,32 @@ def _read_events(session_id: str) -> list[ASRSessionEvent]:
 
 def _write_session_result(session_id: str, result: ASRResult) -> None:
     _write_json(_result_path(session_id), result.model_dump())
+
+
+def _read_live_clinical_state(session_id: str) -> dict[str, Any]:
+    path = _live_clinical_state_path(session_id)
+    if not path.exists():
+        return {
+            "live_session_id": session_id,
+            "session_id": session_id,
+            "version": None,
+            "based_on_sequence": -1,
+            "status": "idle",
+            "stable_segments": [],
+            "record_patch": {},
+            "alerts": [],
+            "missing_items": [],
+            "differentials": [],
+            "care_plan": [],
+            "next_questions": [],
+        }
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_live_clinical_state(session_id: str, state: dict[str, Any]) -> None:
+    state["live_session_id"] = session_id
+    state["session_id"] = session_id
+    _write_json(_live_clinical_state_path(session_id), state)
 
 
 def _normalize_role(role: str | None) -> str | None:
@@ -999,6 +1036,22 @@ def _append_result_events(
             )
 
     append(
+        "session.finalized",
+        {
+            "status": "finalized",
+            "session_id": session_id,
+            "audio_id": result.audio_id,
+            "segments": total,
+            "duration": result.duration,
+            "recognition_mode": session.recognition_mode,
+            "backend": result.backend or result.engine,
+            "model": result.model,
+            "request_id": result.request_id,
+            "updated_at": _now(),
+            "formal_record_status": "ready_for_generation",
+        },
+    )
+    append(
         "completed",
         {
             "status": "completed",
@@ -1339,6 +1392,135 @@ def _append_live_transcript_event(
     _append_session_event(session_id, session=session, event=event_name, data=data)
 
 
+def _live_clinical_event_data(snapshot: dict[str, Any], *, event_id: str) -> dict[str, object]:
+    return {
+        "live_session_id": snapshot["live_session_id"],
+        "session_id": snapshot["session_id"],
+        "event_id": event_id,
+        "version": snapshot["version"],
+        "based_on_sequence": snapshot["based_on_sequence"],
+        "status": snapshot["status"],
+        "updated_at": snapshot["updated_at"],
+        "recoverable": True,
+    }
+
+
+def _append_live_clinical_events(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    snapshot: dict[str, Any],
+) -> None:
+    base_id = f"{session_id}:{snapshot['version']}:{snapshot['based_on_sequence']}"
+    events: list[ASRSessionEvent] = [
+        _session_event(
+            session=session,
+            event="clinical_processing.started",
+            data={
+                **_live_clinical_event_data(snapshot, event_id=f"{base_id}:started"),
+                "phase": "live_clinical_inference",
+            },
+        ),
+        _session_event(
+            session=session,
+            event="record.live_patch",
+            data={
+                **_live_clinical_event_data(snapshot, event_id=f"{base_id}:record"),
+                "record_patch": snapshot.get("record_patch") or {},
+                "alerts": snapshot.get("alerts") or [],
+                "missing_items": snapshot.get("missing_items") or [],
+                "differentials": snapshot.get("differentials") or [],
+                "care_plan": snapshot.get("care_plan") or [],
+                "next_questions": snapshot.get("next_questions") or [],
+                "stable_segment_count": snapshot.get("stable_segment_count") or 0,
+            },
+        ),
+    ]
+    for item in snapshot.get("alerts") or []:
+        events.append(
+            _session_event(
+                session=session,
+                event="clinical_alert.upsert",
+                data={**_live_clinical_event_data(snapshot, event_id=f"{base_id}:alert:{item.get('id')}"), "item": item},
+            )
+        )
+    for item in snapshot.get("missing_items") or []:
+        events.append(
+            _session_event(
+                session=session,
+                event="missing_item.upsert",
+                data={**_live_clinical_event_data(snapshot, event_id=f"{base_id}:missing:{item.get('id')}"), "item": item},
+            )
+        )
+    for item in snapshot.get("differentials") or []:
+        events.append(
+            _session_event(
+                session=session,
+                event="differential.upsert",
+                data={**_live_clinical_event_data(snapshot, event_id=f"{base_id}:diff:{item.get('id')}"), "item": item},
+            )
+        )
+    for item in snapshot.get("care_plan") or []:
+        events.append(
+            _session_event(
+                session=session,
+                event="care_plan.upsert",
+                data={**_live_clinical_event_data(snapshot, event_id=f"{base_id}:care:{item.get('id')}"), "item": item},
+            )
+        )
+    for item in snapshot.get("next_questions") or []:
+        events.append(
+            _session_event(
+                session=session,
+                event="next_question.upsert",
+                data={**_live_clinical_event_data(snapshot, event_id=f"{base_id}:next:{item.get('id')}"), "item": item},
+            )
+        )
+    events.append(
+        _session_event(
+            session=session,
+            event="clinical_processing.completed",
+            data={
+                **_live_clinical_event_data(snapshot, event_id=f"{base_id}:completed"),
+                "phase": "live_clinical_inference",
+            },
+        )
+    )
+    _append_events(session_id, events)
+
+
+def _update_live_clinical_state_from_segment(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    segment: ASRSegment,
+    sequence: int,
+) -> None:
+    if segment.provisional:
+        return
+    state = _read_live_clinical_state(session_id)
+    normalized = normalize_live_segment(segment.model_dump(), sequence=sequence)
+    changed = merge_live_segment(state, normalized)
+    if not changed:
+        _write_live_clinical_state(session_id, state)
+        return
+    if not should_emit_live_snapshot(state, based_on_sequence=sequence):
+        _write_live_clinical_state(session_id, state)
+        return
+    version = int(state.get("version") or 0) + 1
+    snapshot = build_live_clinical_snapshot(
+        session_id=session_id,
+        stable_segments=state.get("stable_segments") or [],
+        version=version,
+        based_on_sequence=sequence,
+        updated_at=_now(),
+    )
+    next_state = merge_snapshot_if_newer(state, {**state, **snapshot})
+    _write_live_clinical_state(session_id, next_state)
+    if next_state is not state or int(next_state.get("version") or 0) == version:
+        _append_live_clinical_events(session_id, session=session, snapshot=next_state)
+
+
 def _process_live_recording_chunks(session_id: str, *, session: ASRSessionRecord) -> None:
     if not _supports_live_chunk_transcription(session):
         return
@@ -1395,6 +1577,13 @@ def _process_live_recording_chunks(session_id: str, *, session: ASRSessionRecord
                 segment=segment,
                 metadata=event_metadata,
             )
+            if event_name == "transcript.stable":
+                _update_live_clinical_state_from_segment(
+                    session_id,
+                    session=session,
+                    segment=segment,
+                    sequence=int(event_metadata.get("sequence") or next_index),
+                )
         processed_chunks.add(next_index)
         live["processed_chunks"] = sorted(processed_chunks)
         live["next_chunk_index"] = next_index + 1
@@ -1956,6 +2145,22 @@ def complete_recording_chunks(
         state["completed_at"] = _now()
         _write_recording_chunk_state(session_id, state)
         if _live_chunk_state(state).get("processed_chunks"):
+            _append_session_event(
+                session_id,
+                session=transcribing_session,
+                event="session.finalizing",
+                data={
+                    "session_id": session_id,
+                    "audio_id": str(audio_id),
+                    "engine": transcribing_session.engine,
+                    "recognition_mode": transcribing_session.recognition_mode,
+                    "status": "finalizing",
+                    "mode": "browser_live_chunk_finalization",
+                    "chunk_count": len(chunks),
+                    "updated_at": _now(),
+                    "recoverable": True,
+                },
+            )
             _append_session_event(
                 session_id,
                 session=transcribing_session,
@@ -3041,6 +3246,13 @@ def merge_asr_session_speakers(
         asr_result=merged_result,
         updated_at=updated_at,
     )
+
+
+@router.get("/{session_id}/live-draft")
+def read_asr_session_live_draft(session_id: str, request: Request = None) -> dict[str, Any]:
+    session = _read_session(session_id)
+    _assert_session_access(session, request)
+    return _read_live_clinical_state(session_id)
 
 
 @router.get("/{session_id}/events")

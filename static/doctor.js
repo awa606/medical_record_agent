@@ -114,6 +114,11 @@ const appState = {
   recordPreviewInFlight: false,
   recordPreviewRequestId: 0,
   recordPreviewAbortController: null,
+  liveClinicalDraft: null,
+  liveClinicalVersion: 0,
+  liveClinicalStatus: "idle",
+  liveClinicalUpdatedAt: "",
+  liveClinicalError: "",
   audioObjectUrl: "",
   audioMediaUrl: "",
   audioDurationSeconds: 0,
@@ -3933,6 +3938,137 @@ function diagnosisRiskLine(diagnosis = {}) {
     || "需结合查体、检查和病情变化继续判断。";
 }
 
+function applyLiveClinicalDraft(data = {}) {
+  const version = Number(data.version || 0);
+  if (!version || version <= Number(appState.liveClinicalVersion || 0)) return false;
+  appState.liveClinicalVersion = version;
+  appState.liveClinicalDraft = {
+    live_session_id: data.live_session_id || data.session_id || appState.currentAsrSessionId || "",
+    session_id: data.session_id || data.live_session_id || appState.currentAsrSessionId || "",
+    version,
+    based_on_sequence: Number(data.based_on_sequence ?? -1),
+    status: data.status || "temporary",
+    updated_at: data.updated_at || new Date().toISOString(),
+    record_patch: data.record_patch || {},
+    alerts: (data.alerts || []).slice(0, 3),
+    missing_items: (data.missing_items || []).slice(0, 3),
+    differentials: (data.differentials || []).slice(0, 3),
+    care_plan: (data.care_plan || []).slice(0, 3),
+    next_questions: (data.next_questions || []).slice(0, 3),
+    stable_segment_count: Number(data.stable_segment_count || 0),
+  };
+  appState.liveClinicalStatus = "completed";
+  appState.liveClinicalUpdatedAt = appState.liveClinicalDraft.updated_at;
+  appState.liveClinicalError = "";
+  return true;
+}
+
+function liveClinicalDraft() {
+  return appState.liveClinicalDraft || null;
+}
+
+function liveClinicalFieldRows(recordPatch = {}) {
+  const labels = {
+    chief_complaint: "主诉",
+    present_illness: "现病史",
+    past_history: "既往史",
+    allergy_history: "过敏史",
+    associated_symptoms: "伴随症状",
+  };
+  return Object.entries(recordPatch)
+    .map(([key, value]) => ({
+      key,
+      label: labels[key] || key,
+      value: value?.value || "",
+      evidence: value?.evidence_segment_ids || [],
+    }))
+    .filter((item) => item.value);
+}
+
+function renderLiveClinicalReferenceCard() {
+  const draft = liveClinicalDraft();
+  if (!draft) {
+    return assistCard({
+      title: "实时临床参考",
+      badgeClass: appState.liveClinicalStatus === "failed" ? "missing" : "neutral",
+      badgeText: appState.liveClinicalStatus === "processing" ? "生成中" : "待转写",
+      body: appState.liveClinicalError
+        ? `<div class="empty-state">${escapeHtml(appState.liveClinicalError)}</div>`
+        : `<div class="empty-state">实时问诊开始后，稳定转写片段会生成临时病历和参考摘要。</div>`,
+    });
+  }
+  const alerts = draft.alerts || [];
+  const missing = draft.missing_items || [];
+  const differentials = draft.differentials || [];
+  const carePlan = draft.care_plan || [];
+  const fields = liveClinicalFieldRows(draft.record_patch);
+  return assistCard({
+    title: "实时临床参考",
+    badgeClass: "candidate",
+    badgeText: `临时 v${draft.version}`,
+    detailTarget: "assist:live-clinical",
+    detailLabel: "查看详情",
+    body: `
+      <div class="assist-plan-block">
+        <span>实时草稿</span>
+        <strong>${escapeHtml(fields[0]?.value || "稳定转写累积后更新")}</strong>
+      </div>
+      ${alerts.length ? `<div class="assist-check-row warning"><span></span><strong>${escapeHtml(alerts[0].summary || alerts[0].title || "存在风险提示")}</strong></div>` : ""}
+      <div class="assist-mini-grid">
+        <div><span>待补充</span><strong>${escapeHtml(missing.map((item) => item.summary).slice(0, 3).join("；") || "暂无")}</strong></div>
+        <div><span>鉴别参考</span><strong>${escapeHtml(differentials.map((item) => item.name).slice(0, 3).join("；") || "暂无")}</strong></div>
+        <div><span>诊疗参考</span><strong>${escapeHtml(carePlan.map((item) => item.title).slice(0, 3).join("；") || "暂无")}</strong></div>
+        <div><span>依据片段</span><strong>${escapeHtml(String(draft.stable_segment_count || 0))} 段</strong></div>
+      </div>
+      <div class="summary-note">实时草稿为临时内容，停止问诊并完成收敛后方可进入医生审核。</div>
+    `,
+  });
+}
+
+function renderLiveClinicalDetailContent() {
+  const draft = liveClinicalDraft();
+  if (!draft) return `<div class="empty-state">暂无实时临床参考。</div>`;
+  const fields = liveClinicalFieldRows(draft.record_patch);
+  const evidenceButton = (segmentId) => segmentId
+    ? `<button type="button" class="assist-evidence-quote linked" data-evidence-segment-id="${escapeHtml(segmentId)}">${escapeHtml(segmentId)}<span>定位证据</span></button>`
+    : "";
+  const listRows = (items, label, renderer) => detailSection(label, items.length
+    ? `<div class="detail-evidence-list">${items.map(renderer).join("")}</div>`
+    : `<div class="empty-state">暂无${escapeHtml(label)}。</div>`);
+  return `
+    ${detailSection("实时状态", `
+      <div class="detail-kv"><span>版本</span><strong>${escapeHtml(String(draft.version))}</strong></div>
+      <div class="detail-kv"><span>基于片段序号</span><strong>${escapeHtml(String(draft.based_on_sequence))}</strong></div>
+      <div class="detail-kv"><span>状态</span><strong>临时结果，待医生确认</strong></div>
+      <div class="detail-kv"><span>更新时间</span><strong>${escapeHtml(draft.updated_at || "-")}</strong></div>
+    `)}
+    ${listRows(fields, "实时病历字段", (item) => `
+      <div class="assist-evidence-quote">
+        <strong>${escapeHtml(item.label)}</strong><br>${escapeHtml(item.value)}
+        ${(item.evidence || []).map(evidenceButton).join("")}
+      </div>
+    `)}
+    ${listRows(draft.alerts || [], "危险征象", (item) => `<div class="assist-evidence-quote">${escapeHtml(item.title || "")}<br>${escapeHtml(item.summary || "")}</div>`)}
+    ${listRows(draft.missing_items || [], "待补充项", (item) => `<div class="assist-evidence-quote">${escapeHtml(item.summary || "")}</div>`)}
+    ${listRows(draft.differentials || [], "鉴别诊断参考", (item) => `
+      <div class="assist-evidence-quote">
+        <strong>${escapeHtml(item.name || "")}</strong><br>${escapeHtml(item.summary || "")}
+        <div>缺失证据：${escapeHtml((item.missing_evidence || []).join("；") || "需医生继续判断")}</div>
+        <div>建议追问：${escapeHtml((item.recommended_questions || []).join("；") || "暂无")}</div>
+        <div>推荐检查：${escapeHtml((item.recommended_tests || []).join("；") || "暂无")}</div>
+      </div>
+    `)}
+    ${listRows(draft.care_plan || [], "诊疗方案参考", (item) => `
+      <div class="assist-evidence-quote">
+        <strong>${escapeHtml(item.title || "")}</strong><br>${escapeHtml(item.summary || "")}
+        <div>${escapeHtml(item.reason || "需医生确认")}</div>
+        ${(item.evidence_segment_ids || []).map(evidenceButton).join("")}
+      </div>
+    `)}
+    ${listRows(draft.next_questions || [], "建议继续询问", (item) => `<div class="assist-evidence-quote">${escapeHtml(item.question || "")}</div>`)}
+  `;
+}
+
 function renderCandidateDiagnosisCard(diagnoses) {
   if (!diagnoses.length) {
     return assistCard({
@@ -4206,6 +4342,10 @@ function renderAssistDetailContent(section) {
   }
   const errors = risk.errors;
 
+  if (section === "live-clinical") {
+    return renderLiveClinicalDetailContent();
+  }
+
   if (section === "quality") {
     const quality = activeQualityReport();
     if (!quality) return `<div class="empty-state">暂无病历质量报告。</div>`;
@@ -4349,6 +4489,7 @@ function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
     ${previewNotice}
     ${previewError}
     <div class="doctor-assist-overview">
+      ${renderLiveClinicalReferenceCard()}
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}
       ${renderEvidenceCard(evidence, diagnoses)}
@@ -4840,6 +4981,11 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrChunkLastError = "";
     appState.asrRetryHint = "";
     appState.provisionalTranscriptSegments = [];
+    appState.liveClinicalDraft = null;
+    appState.liveClinicalVersion = 0;
+    appState.liveClinicalStatus = "idle";
+    appState.liveClinicalUpdatedAt = "";
+    appState.liveClinicalError = "";
     renderAll();
   });
 
@@ -4984,6 +5130,53 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
   source.addEventListener("segment_update", handleTranscriptSegment);
   source.addEventListener("transcript.partial", handleTranscriptSegment);
   source.addEventListener("transcript.stable", handleTranscriptSegment);
+
+  source.addEventListener("clinical_processing.started", (event) => {
+    const data = JSON.parse(event.data);
+    if (data.version && Number(data.version) <= Number(appState.liveClinicalVersion || 0)) return;
+    appState.liveClinicalStatus = "processing";
+    appState.liveClinicalError = "";
+    renderAssist();
+  });
+
+  source.addEventListener("record.live_patch", (event) => {
+    const data = JSON.parse(event.data);
+    if (applyLiveClinicalDraft(data)) renderAssist();
+  });
+
+  source.addEventListener("clinical_processing.completed", (event) => {
+    const data = JSON.parse(event.data);
+    if (data.version && Number(data.version) < Number(appState.liveClinicalVersion || 0)) return;
+    appState.liveClinicalStatus = "completed";
+    appState.liveClinicalUpdatedAt = data.updated_at || appState.liveClinicalUpdatedAt;
+    appState.liveClinicalError = "";
+    renderAssist();
+  });
+
+  source.addEventListener("clinical_processing.failed", (event) => {
+    const data = JSON.parse(event.data);
+    appState.liveClinicalStatus = "failed";
+    appState.liveClinicalError = data.message || data.error || "临床参考暂时不可用，实时转写会继续。";
+    renderAssist();
+  });
+
+  source.addEventListener("session.finalizing", (event) => {
+    const data = JSON.parse(event.data);
+    appState.asrPhase = "finalizing";
+    appState.asrChunkStatus = data.mode === "browser_live_chunk_finalization"
+      ? "正在收敛完整录音和最终转写"
+      : appState.asrChunkStatus;
+    renderAll();
+  });
+
+  source.addEventListener("session.finalized", (event) => {
+    const data = JSON.parse(event.data);
+    appState.asrPhase = "finalized";
+    appState.asrChunkStatus = data.formal_record_status === "ready_for_generation"
+      ? "完整转写已收敛，正在生成正式草稿"
+      : "完整转写已收敛";
+    renderAll();
+  });
 
   source.addEventListener("diarization_progress", (event) => {
     const data = JSON.parse(event.data);

@@ -178,6 +178,72 @@ class FakeNativeStreamingEngine:
         )
 
 
+class FakeLiveChunkSession:
+    def __init__(self):
+        self.calls: list[dict[str, object]] = []
+
+    def transcribe_chunk(
+        self,
+        chunk_path,
+        *,
+        sequence,
+        chunk_started_at_ms=None,
+        chunk_ended_at_ms=None,
+        checksum=None,
+    ):
+        self.calls.append(
+            {
+                "chunk_path": str(chunk_path),
+                "sequence": sequence,
+                "chunk_started_at_ms": chunk_started_at_ms,
+                "chunk_ended_at_ms": chunk_ended_at_ms,
+                "checksum": checksum,
+            }
+        )
+        partial = ASRSegment(
+            segment_id=f"live-{sequence:04d}",
+            revision=1,
+            provisional=True,
+            speaker="streaming",
+            speaker_id="streaming",
+            text=f"partial {sequence}",
+            start_time=(chunk_started_at_ms or 0) / 1000,
+            end_time=(chunk_ended_at_ms or 0) / 1000,
+            needs_review=True,
+        )
+        stable = partial.model_copy(
+            update={
+                "revision": 2,
+                "provisional": False,
+                "text": f"stable {sequence}",
+            }
+        )
+        return [
+            (
+                "transcript.partial",
+                partial,
+                {
+                    "sequence": sequence,
+                    "chunk_started_at_ms": chunk_started_at_ms,
+                    "chunk_ended_at_ms": chunk_ended_at_ms,
+                    "checksum": checksum,
+                    "processed_audio_seconds": (chunk_ended_at_ms or 0) / 1000,
+                },
+            ),
+            (
+                "transcript.stable",
+                stable,
+                {
+                    "sequence": sequence,
+                    "chunk_started_at_ms": chunk_started_at_ms,
+                    "chunk_ended_at_ms": chunk_ended_at_ms,
+                    "checksum": checksum,
+                    "processed_audio_seconds": (chunk_ended_at_ms or 0) / 1000,
+                },
+            ),
+        ]
+
+
 class FakeReconciliationEngine:
     def transcribe(self, audio_id, audio_path):
         segments = [
@@ -462,6 +528,85 @@ class ASRSessionApiTests(unittest.TestCase):
         result = client.get(f"/api/asr/sessions/{session_id}/result")
         self.assertEqual(result.status_code, 200, result.text)
         self.assertIn("蛇咬伤", result.json()["text"])
+
+    def test_funasr_browser_recording_chunk_emits_live_transcript_before_finalize(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "funasr"
+        client = TestClient(app)
+        login_as_admin(client)
+        session = client.post("/api/asr/sessions?engine=funasr&recognition_mode=follow")
+        self.assertEqual(session.status_code, 200, session.text)
+        session_id = session.json()["session_id"]
+        chunk_zero = browser_wav_bytes(frame_count=32000, amplitude=1200)
+        live_session = FakeLiveChunkSession()
+
+        with patch(
+            "app.api.asr_sessions._create_funasr_live_chunk_session",
+            return_value=live_session,
+        ):
+            upload = client.post(
+                f"/api/asr/sessions/{session_id}/chunks",
+                data={
+                    "chunk_index": "0",
+                    "sha256": sha256_bytes(chunk_zero),
+                    "duration_seconds": "2.0",
+                    "chunk_started_at_ms": "0",
+                    "chunk_ended_at_ms": "2000",
+                },
+                files={"file": ("chunk-0.wav", chunk_zero, "audio/wav")},
+            )
+
+        self.assertEqual(upload.status_code, 200, upload.text)
+        self.assertEqual(live_session.calls[0]["sequence"], 0)
+        events = _read_events(session_id)
+        event_names = [event.event for event in events]
+        self.assertIn("audio.chunk.accepted", event_names)
+        self.assertIn("transcript.partial", event_names)
+        self.assertIn("transcript.stable", event_names)
+        self.assertNotIn("completed", event_names)
+        stable = next(event for event in events if event.event == "transcript.stable")
+        self.assertEqual(stable.data["sequence"], 0)
+        self.assertEqual(stable.data["chunk_started_at_ms"], 0)
+        self.assertEqual(stable.data["chunk_ended_at_ms"], 2000)
+        self.assertEqual(stable.data["segment"]["text"], "stable 0")
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "recording")
+
+    def test_funasr_live_chunk_waits_for_missing_gap_without_fake_transcript(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "funasr"
+        client = TestClient(app)
+        login_as_admin(client)
+        session = client.post("/api/asr/sessions?engine=funasr&recognition_mode=follow")
+        self.assertEqual(session.status_code, 200, session.text)
+        session_id = session.json()["session_id"]
+        chunk_one = browser_wav_bytes(frame_count=32000, amplitude=1200)
+        live_session = FakeLiveChunkSession()
+
+        with patch(
+            "app.api.asr_sessions._create_funasr_live_chunk_session",
+            return_value=live_session,
+        ):
+            upload = client.post(
+                f"/api/asr/sessions/{session_id}/chunks",
+                data={
+                    "chunk_index": "1",
+                    "sha256": sha256_bytes(chunk_one),
+                    "duration_seconds": "2.0",
+                    "chunk_started_at_ms": "2000",
+                    "chunk_ended_at_ms": "4000",
+                },
+                files={"file": ("chunk-1.wav", chunk_one, "audio/wav")},
+            )
+
+        self.assertEqual(upload.status_code, 200, upload.text)
+        self.assertEqual(live_session.calls, [])
+        events = _read_events(session_id)
+        event_names = [event.event for event in events]
+        self.assertIn("audio.chunk.accepted", event_names)
+        self.assertIn("audio.chunk.waiting_for_gap", event_names)
+        self.assertNotIn("transcript.partial", event_names)
+        gap = next(event for event in events if event.event == "audio.chunk.waiting_for_gap")
+        self.assertEqual(gap.data["missing_chunk_indices"], [0])
 
     def test_browser_recording_complete_rejects_missing_chunk_gap(self):
         client = TestClient(app)

@@ -132,3 +132,15 @@ def test_doctor_recording_panel_has_default_next_step_feedback() -> None:
     assert "function browserRecordingDefaultMessage" in script
     assert "点击“开始录音”后允许麦克风权限；停止后可试听并上传生成病历。" in script
     assert "录音已停止，可先试听；确认后点击“上传并生成病历”。" in script
+def test_doctor_recording_live_gate_uses_follow_chunks_and_transcript_events() -> None:
+    script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+
+    assert "function shouldUseLiveBrowserRecordingFollow" in script
+    assert "const useLiveFollow = shouldUseLiveBrowserRecordingFollow();" in script
+    assert 'appState.recognitionMode = "follow"' in script
+    assert "if (useLiveFollow)" in script
+    assert 'listenForAsrEvents(`/api/asr/sessions/${encodeURIComponent(liveSessionId)}/events`)' in script
+    assert 'form.append("chunk_started_at_ms"' in script
+    assert 'form.append("chunk_ended_at_ms"' in script
+    assert 'source.addEventListener("transcript.partial", handleTranscriptSegment)' in script
+    assert 'source.addEventListener("transcript.stable", handleTranscriptSegment)' in script

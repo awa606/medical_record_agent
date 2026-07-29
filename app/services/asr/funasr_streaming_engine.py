@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
@@ -192,6 +192,9 @@ class FunASRStreamingEngine:
             warnings=["Streaming text is provisional until speaker and punctuation reconciliation completes."],
         )
 
+    def create_live_chunk_session(self, audio_id: str) -> FunASRLiveChunkSession:
+        return FunASRLiveChunkSession(engine=self, audio_id=audio_id)
+
     def _load_model(self) -> Any:
         try:
             from funasr import AutoModel
@@ -324,3 +327,128 @@ def _env_float(name: str, default: float) -> float:
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+@dataclass
+class FunASRLiveChunkSession:
+    """Stateful browser-recording stream backed by one FunASR cache.
+
+    This is intentionally limited to provisional transcript events. The
+    existing finalize/complete path still creates the official full-audio ASR
+    result and downstream medical-record draft.
+    """
+
+    engine: FunASRStreamingEngine
+    audio_id: str
+    cache: dict[str, Any] = field(default_factory=dict)
+    processed_samples: int = 0
+    segment_count: int = 0
+    current_segment_id: str | None = None
+    current_text: str = ""
+    current_start_seconds: float = 0.0
+    current_revision: int = 0
+
+    def transcribe_chunk(
+        self,
+        chunk_path: Path,
+        *,
+        sequence: int,
+        chunk_started_at_ms: int | None = None,
+        chunk_ended_at_ms: int | None = None,
+        checksum: str | None = None,
+    ) -> list[tuple[str, ASRSegment, dict[str, object]]]:
+        events: list[tuple[str, ASRSegment, dict[str, object]]] = []
+        chunk_start_seconds = (
+            max(float(chunk_started_at_ms) / 1000.0, 0.0)
+            if chunk_started_at_ms is not None
+            else self.processed_samples / self.engine.config.sample_rate
+        )
+        chunk_end_seconds = (
+            max(float(chunk_ended_at_ms) / 1000.0, chunk_start_seconds)
+            if chunk_ended_at_ms is not None
+            else None
+        )
+
+        for pcm_chunk in self.engine._iter_pcm_chunks(chunk_path):
+            raw_result = self.engine.model.generate(
+                input=pcm_chunk,
+                cache=self.cache,
+                is_final=False,
+                chunk_size=list(self.engine.config.chunk_size),
+                encoder_chunk_look_back=self.engine.config.encoder_chunk_look_back,
+                decoder_chunk_look_back=self.engine.config.decoder_chunk_look_back,
+            )
+            self.engine._validate_raw_result(raw_result)
+            self.processed_samples += len(pcm_chunk)
+            processed_seconds = self.processed_samples / self.engine.config.sample_rate
+            delta = self.engine._extract_text(raw_result)
+            if not delta:
+                continue
+            if self.current_segment_id is None:
+                self.segment_count += 1
+                self.current_segment_id = f"{self.audio_id}-live-{self.segment_count:04d}"
+                self.current_start_seconds = chunk_start_seconds
+                self.current_revision = 0
+            self.current_text = _append_streaming_text(self.current_text, delta)
+            self.current_revision += 1
+            partial = ASRSegment(
+                segment_id=self.current_segment_id,
+                revision=max(self.current_revision, 1),
+                provisional=True,
+                speaker="streaming",
+                speaker_id="streaming",
+                role=None,
+                role_source="system_auto_inference",
+                role_warning="系统自动推定",
+                text=self.current_text.strip(),
+                start_time=round(self.current_start_seconds, 3),
+                end_time=round(min(chunk_end_seconds or processed_seconds, processed_seconds), 3),
+                needs_review=True,
+            )
+            events.append(
+                (
+                    "transcript.partial",
+                    partial,
+                    {
+                        "sequence": sequence,
+                        "chunk_started_at_ms": chunk_started_at_ms,
+                        "chunk_ended_at_ms": chunk_ended_at_ms,
+                        "checksum": checksum,
+                        "processed_audio_seconds": round(processed_seconds, 3),
+                    },
+                )
+            )
+
+        if self.current_segment_id and self.current_text.strip():
+            stable_end = chunk_end_seconds or self.processed_samples / self.engine.config.sample_rate
+            stable = ASRSegment(
+                segment_id=self.current_segment_id,
+                revision=max(self.current_revision + 1, 1),
+                provisional=False,
+                speaker="streaming",
+                speaker_id="streaming",
+                role=None,
+                role_source="system_auto_inference",
+                role_warning="系统自动推定",
+                text=self.current_text.strip(),
+                start_time=round(self.current_start_seconds, 3),
+                end_time=round(stable_end, 3),
+                needs_review=True,
+            )
+            events.append(
+                (
+                    "transcript.stable",
+                    stable,
+                    {
+                        "sequence": sequence,
+                        "chunk_started_at_ms": chunk_started_at_ms,
+                        "chunk_ended_at_ms": chunk_ended_at_ms,
+                        "checksum": checksum,
+                        "processed_audio_seconds": round(stable_end, 3),
+                    },
+                )
+            )
+            self.current_segment_id = None
+            self.current_text = ""
+            self.current_revision = 0
+        return events

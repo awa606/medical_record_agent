@@ -4982,6 +4982,8 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
 
   source.addEventListener("segment", handleTranscriptSegment);
   source.addEventListener("segment_update", handleTranscriptSegment);
+  source.addEventListener("transcript.partial", handleTranscriptSegment);
+  source.addEventListener("transcript.stable", handleTranscriptSegment);
 
   source.addEventListener("diarization_progress", (event) => {
     const data = JSON.parse(event.data);
@@ -6319,6 +6321,15 @@ async function ensureBrowserRecordingSession() {
   return session.session_id;
 }
 
+function shouldUseLiveBrowserRecordingFollow() {
+  const engine = String(appState.selectedEngine || "").toLowerCase();
+  if (engine.includes("funasr")) return true;
+  const asrModels = appState.adminRuntimeStatus?.checks?.asr_models;
+  const status = asrModels?.status && typeof asrModels.status === "object" ? asrModels.status : asrModels;
+  const components = Array.isArray(status?.components) ? status.components : [];
+  return Boolean(asrModels?.ok && components.some((component) => String(component).toLowerCase().includes("paraformer")));
+}
+
 function updateBrowserRecordingChunkStatusText() {
   const parts = [
     `已录制 ${appState.browserRecordingRecordedChunks || 0} 块`,
@@ -6343,12 +6354,19 @@ async function queueBrowserRecordingChunk({ force = false } = {}) {
   const sampleRate = appState.browserRecordingSampleRate || 44100;
   const blob = encodeWavFromFloat32(chunks, sampleRate);
   const chunkIndex = appState.browserRecordingChunkIndex;
+  const chunkStartedAtMs = Math.max(
+    0,
+    Math.round(((appState.browserRecordingRecordedSamples || sampleCount) - sampleCount) / sampleRate * 1000),
+  );
+  const chunkEndedAtMs = chunkStartedAtMs + Math.round(sampleCount / sampleRate * 1000);
   const checksum = await sha256Blob(blob);
   await putBrowserRecordingQueueEntry({
     key: recordingQueueKey(appState.browserRecordingSessionId, chunkIndex),
     session_id: appState.browserRecordingSessionId,
     chunk_index: chunkIndex,
     sha256: checksum,
+    chunk_started_at_ms: chunkStartedAtMs,
+    chunk_ended_at_ms: chunkEndedAtMs,
     duration_seconds: sampleCount / sampleRate,
     blob,
     status: "pending",
@@ -6372,6 +6390,8 @@ async function uploadQueuedBrowserRecordingChunk(entry) {
   form.append("chunk_index", String(entry.chunk_index));
   form.append("sha256", entry.sha256);
   form.append("duration_seconds", String(entry.duration_seconds || 0));
+  if (entry.chunk_started_at_ms != null) form.append("chunk_started_at_ms", String(entry.chunk_started_at_ms));
+  if (entry.chunk_ended_at_ms != null) form.append("chunk_ended_at_ms", String(entry.chunk_ended_at_ms));
   form.append("file", entry.blob, `browser-recording-chunk-${String(entry.chunk_index).padStart(6, "0")}.wav`);
   return api(`/api/asr/sessions/${encodeURIComponent(entry.session_id)}/chunks`, {
     method: "POST",
@@ -6745,6 +6765,11 @@ async function completeBrowserRecordingUpload() {
 async function startBrowserRecording() {
   clearActionError();
   if (!requireEncounterBeforeInput("record")) return;
+  const useLiveFollow = shouldUseLiveBrowserRecordingFollow();
+  if (useLiveFollow) {
+    appState.recognitionMode = "follow";
+    if ($("recognitionModeSelect")) $("recognitionModeSelect").value = appState.recognitionMode;
+  }
   releaseBrowserRecordingPreview();
   appState.browserRecordingChunkBuffer = [];
   appState.browserRecordingChunkIndex = 0;
@@ -6805,7 +6830,10 @@ async function startBrowserRecording() {
     if (!stream.getAudioTracks().length) {
       throw new DOMException("No audio input track", "NotFoundError");
     }
-    await ensureBrowserRecordingSession();
+    const liveSessionId = await ensureBrowserRecordingSession();
+    if (useLiveFollow) {
+      listenForAsrEvents(`/api/asr/sessions/${encodeURIComponent(liveSessionId)}/events`);
+    }
     if (!browserRecordingRequestActive(requestId)) {
       stream.getTracks().forEach((track) => track.stop());
       return;

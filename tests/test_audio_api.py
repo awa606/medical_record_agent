@@ -319,6 +319,47 @@ class AudioApiTests(unittest.TestCase):
         self.assertFalse(detail["fallback"])
         self.assertEqual(detail["fallback_reason"], "requested_engine_not_active")
 
+    def test_omitted_transcribe_engine_uses_configured_backend(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "funasr"
+
+        class FakeConfiguredFunASR:
+            name = "fake-funasr"
+
+            def transcribe(self, audio_id, audio_path):
+                return ASRResult(
+                    audio_id=audio_id,
+                    engine=self.name,
+                    text="demo fever transcript",
+                    conversation_text="[patient] demo fever transcript",
+                    segments=[
+                        ASRSegment(
+                            speaker="spk1",
+                            text="demo fever transcript",
+                            start_time=0.0,
+                            end_time=1.0,
+                        )
+                    ],
+                    duration=1.0,
+                )
+
+        client = TestClient(app)
+        login_as_admin(client)
+        uploaded = client.post(
+            "/api/audio/upload?recognition_mode=fast",
+            files={"file": ("sample.wav", b"RIFF....WAVEfmt ", "audio/wav")},
+        )
+        self.assertEqual(uploaded.status_code, 200, uploaded.text)
+
+        with patch("app.api.audio.create_asr_engine", return_value=FakeConfiguredFunASR()):
+            response = client.post(
+                f"/api/audio/{uploaded.json()['audio_id']}/transcribe?recognition_mode=fast",
+            )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertEqual(payload["backend"], "funasr")
+        self.assertEqual(payload["model"], "fake-funasr")
+
     def test_generate_record_from_audio_creates_text_task(self):
         uploaded = self._upload_sample("sample.wav")
         transcribe_audio(uploaded.audio_id, engine="mock")

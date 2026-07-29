@@ -1313,7 +1313,7 @@ async def _asr_session_event_stream(
 
 @router.post("")
 def create_asr_session(
-    engine: str = Query(default="mock"),
+    engine: str | None = Query(default=None),
     doctor_profile_id: str | None = Query(default=None),
     diarization_engine: str = Query(default="auto"),
     recognition_mode: Literal["fast", "follow"] = Query(default="fast"),

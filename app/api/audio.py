@@ -208,7 +208,7 @@ def transcribe_audio(
     audio_id: str,
     background_tasks: BackgroundTasks = None,
     request: Request = None,
-    engine: str = Query(default="mock"),
+    engine: str | None = Query(default=None),
     recognition_mode: Literal["fast", "follow"] = "fast",
 ) -> dict[str, Any]:
     record = _read_audio_record(audio_id)

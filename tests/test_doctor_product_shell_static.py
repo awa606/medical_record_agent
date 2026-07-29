@@ -80,6 +80,8 @@ def test_doctor_product_shell_styles_support_responsive_workbench() -> None:
     assert ".product-main" in ui_css
     assert ".encounter-patient-banner" in ui_css
     assert 'grid-template-areas: "transcript record assist"' in ui_css
+    assert "minmax(340px, 30fr) minmax(430px, 42fr) minmax(290px, 28fr)" in ui_css
+    assert "minmax(340px, 30fr) minmax(390px, 42fr) minmax(270px, 28fr)" in ui_css
     assert "@media (min-width: 1680px)" in ui_css
     assert "@media (max-width: 1366px)" in ui_css
     assert "@media (prefers-reduced-motion: reduce)" in ui_css

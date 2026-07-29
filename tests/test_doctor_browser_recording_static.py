@@ -79,3 +79,56 @@ def test_doctor_recording_replaces_reserved_placeholder() -> None:
     assert 'openDrawer("recordingPanel", "浏览器录音生成病历")' in script
     assert "completeBrowserRecordingUpload" in script
     assert "continueGeneratingFromTranscription(transcribed)" in script
+
+
+def test_doctor_recording_requires_visible_encounter_selection() -> None:
+    script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+    stylesheet = (ROOT / "static" / "doctor-ui-v2.css").read_text(encoding="utf-8")
+
+    assert "pendingInputMethodAfterEncounterSelection" in script
+    assert "请先选择已报到或问诊中的患者，再开始录音生成" in script
+    assert "encounter-selection-notice" in script
+    assert ".encounter-selection-notice" in stylesheet
+    assert "开始问诊并录音" in script
+    assert "选择并开始录音" in script
+    assert 'data-after-restore-input="record"' in script
+    input_button_handler = script[
+        script.index('$("inputMethodButton").addEventListener("click"') :
+        script.index('$("displaySettingsButton").addEventListener("click"')
+    ]
+    assert "if (!encounterReadyForInput())" in input_button_handler
+    assert 'requireEncounterBeforeInput("record")' in input_button_handler
+    assert "toggleInputMethodMenu()" in input_button_handler
+
+
+def test_doctor_recording_submit_keeps_progress_visible_until_task_created() -> None:
+    script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+    submit_body = script[
+        script.index("async function submitBrowserRecording()") :
+        script.index("function openReservedRecording()")
+    ]
+    before_upload = submit_body[: submit_body.index("const transcribed = await completeBrowserRecordingUpload()")]
+
+    assert "closeDrawer()" not in before_upload
+    assert "正在转写录音并生成病历草稿，请保持页面打开。" in submit_body
+    assert "录音转写完成，正在生成结构化病历草稿..." in submit_body
+    assert "病历草稿已生成，可在工作区继续修改、审核和导出。" in submit_body
+    assert "const generated = await continueGeneratingFromTranscription(transcribed)" in submit_body
+    assert 'showToast("病历草稿已生成，请继续修改和审核")' in submit_body
+
+
+def test_doctor_recording_drawer_close_does_not_silently_cancel_active_recording() -> None:
+    script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+
+    assert "cancelBrowserRecording({ silent: true })" not in script
+    assert "录音正在进行。请先点击“停止”完成试听，或点击“取消”放弃本次录音。" in script
+    assert "录音进行中，请先停止或取消录音" in script
+    assert "return false;" in script
+
+
+def test_doctor_recording_panel_has_default_next_step_feedback() -> None:
+    script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+
+    assert "function browserRecordingDefaultMessage" in script
+    assert "点击“开始录音”后允许麦克风权限；停止后可试听并上传生成病历。" in script
+    assert "录音已停止，可先试听；确认后点击“上传并生成病历”。" in script

@@ -365,6 +365,16 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertEqual(detail["effective_engine"], "mock")
         self.assertFalse(detail["fallback"])
 
+    def test_omitted_session_engine_uses_configured_backend(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "funasr"
+        client = TestClient(app)
+        login_as_admin(client)
+
+        response = client.post("/api/asr/sessions?recognition_mode=fast")
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["engine"], "funasr")
+
     def test_browser_recording_chunks_are_idempotent_and_complete_to_asr_result(self):
         client = TestClient(app)
         login_as_admin(client)

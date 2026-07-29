@@ -17,5 +17,5 @@ def test_doctor_action_bar_and_transcript_scroll_are_viewport_bound() -> None:
     assert "body.doctor-mode .transcript-list" in css
     assert "overscroll-behavior: contain" in css
     assert "overflow-wrap: anywhere" in css
-    assert "word-break: break-word" in css
+    assert "word-break: normal" in css
     assert "z-index: var(--layer-action-bar)" in css

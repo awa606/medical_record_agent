@@ -72,8 +72,12 @@ def test_transcript_auto_follow_and_role_warning_are_visible() -> None:
 
     assert "data-transcript-auto-follow" in visible
     assert "appState.transcriptAutoFollow = false" in visible
+    assert "transcript-role-cell" in visible
     assert "transcript-role-warning" in visible
     assert "roleWarning: displaySegment.role_warning" in visible
+    assert "patientDisplayName" in visible
+    assert "word-break: normal" in visible
+    assert "overflow-wrap: normal" in visible
 
 
 def test_asr_failures_are_sanitized_before_doctor_toast() -> None:

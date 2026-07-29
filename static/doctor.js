@@ -98,6 +98,8 @@ const appState = {
   browserRecordingMessage: "",
   browserRecordingChunkStatus: "",
   browserRecordingRequestId: 0,
+  pendingInputMethodAfterEncounterSelection: "",
+  encounterSelectionNotice: "",
   lastActionError: "",
   inputMenuOpen: false,
   settingsOpen: false,
@@ -274,6 +276,12 @@ function compactText(value, maxLength = 92) {
   if (!normalized) return "暂无内容";
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, maxLength)}...`;
+}
+
+function patientDisplayName(value, fallback = "脱敏患者") {
+  const normalized = String(value ?? "").trim();
+  if (!normalized || /^\?{3,}$/.test(normalized) || /^�+$/.test(normalized)) return fallback;
+  return normalized;
 }
 
 function detailButton(target, label = "查看详情") {
@@ -517,6 +525,7 @@ function encounterCheckInStatusLabel(status) {
 function encounterActionButtons(item = {}, active = false) {
   const encounterId = escapeHtml(item.id);
   const checkInStatus = item.check_in_status || "checked_in";
+  const selectingForRecording = appState.pendingInputMethodAfterEncounterSelection === "record";
   if (checkInStatus === "registered") {
     return `
       <button type="button" class="primary-action" data-encounter-action="check-in" data-encounter-id="${encounterId}">报到</button>
@@ -524,6 +533,12 @@ function encounterActionButtons(item = {}, active = false) {
     `;
   }
   if (checkInStatus === "checked_in") {
+    if (selectingForRecording) {
+      return `
+        <button type="button" class="primary-action recording-action" data-encounter-action="start-recording" data-encounter-id="${encounterId}">开始问诊并录音</button>
+        <button type="button" data-encounter-action="cancel" data-encounter-id="${encounterId}">取消</button>
+      `;
+    }
     return `
       <button type="button" class="primary-action" data-encounter-action="start" data-encounter-id="${encounterId}">开始问诊</button>
       <button type="button" data-encounter-action="cancel" data-encounter-id="${encounterId}">取消</button>
@@ -535,7 +550,20 @@ function encounterActionButtons(item = {}, active = false) {
   if (checkInStatus === "cancelled") {
     return `<button type="button" data-restore-encounter="${encounterId}">只读查看</button>`;
   }
+  if (selectingForRecording && checkInStatus === "in_progress") {
+    return `<button type="button" class="primary-action recording-action" data-restore-encounter="${encounterId}" data-after-restore-input="record">选择并开始录音</button>`;
+  }
   return `<button type="button" data-restore-encounter="${encounterId}">${active ? "返回工作区" : "继续处理"}</button>`;
+}
+
+function encounterSelectionNoticeMarkup(includeRevisions = true) {
+  if (!includeRevisions || !appState.encounterSelectionNotice) return "";
+  return `
+    <div class="encounter-selection-notice" role="status">
+      <strong>先选择就诊</strong>
+      <span>${escapeHtml(appState.encounterSelectionNotice)}</span>
+    </div>
+  `;
 }
 
 function encounterWorklistMarkup({ includeRevisions = true } = {}) {
@@ -548,6 +576,7 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
   const items = appState.encounterWorklist || [];
   if (!items.length) {
     return `
+      ${encounterSelectionNoticeMarkup(includeRevisions)}
       <div class="empty-state dashboard-empty-state">
         <strong>今日暂无就诊任务</strong>
         <span>可以从下方入口开始一次新的问诊工作。</span>
@@ -561,7 +590,7 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
   }
   const rows = items.map((item) => {
     const active = appState.currentEncounter?.id === item.id;
-    const patient = item.patient_display_name || item.patient_deidentified_id || `Encounter ${item.id}`;
+    const patient = patientDisplayName(item.patient_display_name, item.patient_deidentified_id || `Encounter ${item.id}`);
     const encounterNo = item.patient_deidentified_id || `E-${item.id}`;
     const phase = encounterPhaseLabel(item);
     const status = encounterStatusLabel(item.status || item.task_current_stage);
@@ -598,7 +627,7 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
       `).join("")}
     </section>
   ` : "";
-  return rows + revisionHistory;
+  return encounterSelectionNoticeMarkup(includeRevisions) + rows + revisionHistory;
 }
 
 function encounterInputMethodLabel(item = {}) {
@@ -693,14 +722,18 @@ function encounterReadyForInput() {
   return Boolean(selectedEncounterId() && ["checked_in", "in_progress"].includes(status));
 }
 
-function requireEncounterBeforeInput() {
+function requireEncounterBeforeInput(method = "") {
   if (encounterReadyForInput()) return true;
-  showToast("请先从今日已报到患者列表选择患者，再开始录音或导入音频。");
+  appState.pendingInputMethodAfterEncounterSelection = method;
+  appState.encounterSelectionNotice = method === "record"
+    ? "请先选择已报到或问诊中的患者，再开始录音生成。可用就诊会显示“选择并开始录音”。"
+    : "请先选择已报到或问诊中的患者，再开始录音、上传音频或粘贴文本。";
+  showToast(appState.encounterSelectionNotice);
   openEncounterWorklist().catch(reportActionError);
   return false;
 }
 
-async function restoreEncounter(encounterId) {
+async function restoreEncounter(encounterId, { nextInputMethod = "" } = {}) {
   if (!encounterId) return;
   setBusy(true, "正在恢复就诊草稿...");
   try {
@@ -713,7 +746,16 @@ async function restoreEncounter(encounterId) {
     await refreshEncounterWorklist();
     closeDrawer();
     setProductView("encounter");
+    appState.pendingInputMethodAfterEncounterSelection = "";
+    appState.encounterSelectionNotice = "";
     showToast("已恢复就诊草稿");
+    if (nextInputMethod === "record") {
+      openReservedRecording();
+    } else if (nextInputMethod === "audio") {
+      openAudioGenerate();
+    } else if (nextInputMethod === "text") {
+      openTextImport();
+    }
   } catch (error) {
     reportActionError(error);
   } finally {
@@ -732,6 +774,10 @@ async function performEncounterAction(encounterId, action) {
     if (appState.currentEncounter?.id === detail.id || action === "start") {
       applyEncounterDetail(detail);
       setProductView("encounter");
+    }
+    if (action !== "check-in") {
+      appState.pendingInputMethodAfterEncounterSelection = "";
+      appState.encounterSelectionNotice = "";
     }
     await refreshEncounterWorklist();
     showToast("就诊状态已更新");
@@ -1673,11 +1719,15 @@ function openDrawer(panelId, title) {
 
 function closeDrawer() {
   if (appState.browserRecordingStatus === "recording" || appState.browserRecordingStatus === "requesting") {
-    cancelBrowserRecording({ silent: true });
+    appState.browserRecordingMessage = "录音正在进行。请先点击“停止”完成试听，或点击“取消”放弃本次录音。";
+    renderBrowserRecordingPanel();
+    showToast("录音进行中，请先停止或取消录音");
+    return false;
   }
   $("drawerBackdrop").classList.remove("active");
   $("drawer").classList.remove("active");
   $("drawer").setAttribute("aria-hidden", "true");
+  return true;
 }
 
 function openDetailDrawer(title, html) {
@@ -1690,7 +1740,10 @@ function openDetailDrawer(title, html) {
 function renderPatientBar() {
   const llm = llmDisplayState();
   const displayState = doctorDisplayState();
-  $("patientName").textContent = appState.currentEncounter?.patient_display_name || "模拟患者";
+  $("patientName").textContent = patientDisplayName(
+    appState.currentEncounter?.patient_display_name,
+    appState.currentEncounter?.patient_deidentified_id || "模拟患者",
+  );
   $("patientProfile").textContent = "女 / 32岁";
   $("sessionId").textContent = appState.currentTaskId
     ? `T-${appState.currentTaskId}`
@@ -1750,8 +1803,21 @@ function renderBrowserRecordingPanel() {
   retryButton.disabled = appState.browserRecordingUploadInFlight || !appState.browserRecordingSessionId || !hasFailedChunks;
   preview.style.display = appState.browserRecordingObjectUrl ? "block" : "none";
   chunkStatus.textContent = appState.browserRecordingChunkStatus || "";
-  message.textContent = appState.browserRecordingMessage || "";
+  message.textContent = appState.browserRecordingMessage || browserRecordingDefaultMessage();
   message.classList.toggle("error", appState.browserRecordingStatus === "error");
+}
+
+function browserRecordingDefaultMessage() {
+  if (!encounterReadyForInput()) {
+    return "请先选择已报到或问诊中的患者，再开始录音生成。";
+  }
+  if (appState.browserRecordingStatus === "recorded") {
+    return "录音已停止，可先试听；确认后点击“上传并生成病历”。";
+  }
+  if (appState.browserRecordingStatus === "uploading") {
+    return "正在转写并生成病历，请保持页面打开。";
+  }
+  return "点击“开始录音”后允许麦克风权限；停止后可试听并上传生成病历。";
 }
 
 function renderAsrPrewarmStatus() {
@@ -3385,8 +3451,10 @@ function renderTranscript() {
           tabindex="0"
         >
           <span class="transcript-row-time">${escapeHtml(item.time)}</span>
-          <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount, speakerAliases))}】</span>
-          ${item.roleWarning ? `<span class="transcript-role-warning">系统自动推定</span>` : ""}
+          <span class="transcript-role-cell">
+            <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount, speakerAliases))}】</span>
+            ${item.roleWarning ? `<span class="transcript-role-warning">系统自动推定</span>` : ""}
+          </span>
           <span class="transcript-row-text">${escapeHtml(item.text || "（无文本）")}</span>
           <button type="button" class="transcript-row-link" data-open-detail="transcript:${item.index}" data-busy-allowed="true">详情</button>
         </div>
@@ -5640,7 +5708,7 @@ async function handleWorkflowAction(action) {
 }
 
 function handleInputMethod(method) {
-  if (!requireEncounterBeforeInput()) return;
+  if (!requireEncounterBeforeInput(method)) return;
   if (method === "record") {
     openReservedRecording();
     return;
@@ -5663,13 +5731,13 @@ function handleInputMethod(method) {
 }
 
 function openTextImport() {
-  if (!requireEncounterBeforeInput()) return;
+  if (!requireEncounterBeforeInput("text")) return;
   clearActionError();
   openDrawer("textImportPanel", "文本导入生成病历");
 }
 
 function openAudioTranscribe() {
-  if (!requireEncounterBeforeInput()) return;
+  if (!requireEncounterBeforeInput("audio")) return;
   clearActionError();
   appState.audioMode = "transcribe";
   appState.recognitionMode = "follow";
@@ -5681,7 +5749,7 @@ function openAudioTranscribe() {
 }
 
 function openAudioGenerate() {
-  if (!requireEncounterBeforeInput()) return;
+  if (!requireEncounterBeforeInput("audio")) return;
   clearActionError();
   appState.audioMode = "generate";
   appState.recognitionMode = "follow";
@@ -6518,7 +6586,7 @@ async function completeBrowserRecordingUpload() {
 
 async function startBrowserRecording() {
   clearActionError();
-  if (!requireEncounterBeforeInput()) return;
+  if (!requireEncounterBeforeInput("record")) return;
   releaseBrowserRecordingPreview();
   appState.browserRecordingChunkBuffer = [];
   appState.browserRecordingChunkIndex = 0;
@@ -6774,20 +6842,26 @@ async function cancelBrowserRecording({ silent = false } = {}) {
 
 async function submitBrowserRecording() {
   try {
-    if (!requireEncounterBeforeInput()) return;
+    if (!requireEncounterBeforeInput("record")) return;
     if (!appState.browserRecordingFinalized?.audio_id) {
       throw new Error("请先完成录音并试听确认。");
     }
     appState.browserRecordingStatus = "uploading";
-    appState.browserRecordingMessage = "正在启动转写并生成病历...";
+    appState.browserRecordingMessage = "正在转写录音并生成病历草稿，请保持页面打开。";
     renderAll();
-    closeDrawer();
     appState.audioMode = "generate";
     const transcribed = await completeBrowserRecordingUpload();
-    await continueGeneratingFromTranscription(transcribed);
-    appState.browserRecordingStatus = "recorded";
-    appState.browserRecordingMessage = "录音已合并上传，正在等待生成流程。";
+    appState.browserRecordingMessage = "录音转写完成，正在生成结构化病历草稿...";
     renderBrowserRecordingPanel();
+    const generated = await continueGeneratingFromTranscription(transcribed);
+    appState.browserRecordingStatus = "recorded";
+    appState.browserRecordingMessage = "病历草稿已生成，可在工作区继续修改、审核和导出。";
+    renderBrowserRecordingPanel();
+    if (generated?.task_id || appState.currentTaskId) {
+      closeDrawer();
+      setProductView("encounter");
+      showToast("病历草稿已生成，请继续修改和审核");
+    }
   } catch (error) {
     appState.browserRecordingStatus = appState.browserRecordingFile ? "recorded" : "error";
     appState.browserRecordingMessage = `上传失败：${error?.message || String(error)}`;
@@ -6798,10 +6872,11 @@ async function submitBrowserRecording() {
 }
 
 function openReservedRecording() {
-  if (!requireEncounterBeforeInput()) return;
+  if (!requireEncounterBeforeInput("record")) return;
   closeInputMethodMenu();
   clearActionError();
   appState.audioMode = "generate";
+  appState.browserRecordingMessage = browserRecordingDefaultMessage();
   openDrawer("recordingPanel", "浏览器录音生成病历");
 }
 
@@ -6846,6 +6921,12 @@ function bindEvents() {
   $("careModeButton").addEventListener("click", () => setDisplayScale("care"));
   $("inputMethodButton").addEventListener("click", (event) => {
     event.stopPropagation();
+    if (!encounterReadyForInput()) {
+      closeInputMethodMenu();
+      closeDisplaySettingsMenu();
+      requireEncounterBeforeInput("record");
+      return;
+    }
     toggleInputMethodMenu();
   });
   $("displaySettingsButton").addEventListener("click", (event) => {
@@ -6904,22 +6985,32 @@ function bindEvents() {
   $("encounterWorklist").addEventListener("click", async (event) => {
     const actionButton = event.target.closest("[data-encounter-action]");
     if (actionButton) {
+      if (actionButton.dataset.encounterAction === "start-recording") {
+        await performEncounterAction(actionButton.dataset.encounterId, "start");
+        openReservedRecording();
+        return;
+      }
       await performEncounterAction(actionButton.dataset.encounterId, actionButton.dataset.encounterAction);
       return;
     }
     const button = event.target.closest("[data-restore-encounter]");
     if (!button) return;
-    await restoreEncounter(button.dataset.restoreEncounter);
+    await restoreEncounter(button.dataset.restoreEncounter, { nextInputMethod: button.dataset.afterRestoreInput || "" });
   });
   $("dashboardEncounterList")?.addEventListener("click", async (event) => {
     const actionButton = event.target.closest("[data-encounter-action]");
     if (actionButton) {
+      if (actionButton.dataset.encounterAction === "start-recording") {
+        await performEncounterAction(actionButton.dataset.encounterId, "start");
+        openReservedRecording();
+        return;
+      }
       await performEncounterAction(actionButton.dataset.encounterId, actionButton.dataset.encounterAction);
       return;
     }
     const restoreButton = event.target.closest("[data-restore-encounter]");
     if (restoreButton) {
-      await restoreEncounter(restoreButton.dataset.restoreEncounter);
+      await restoreEncounter(restoreButton.dataset.restoreEncounter, { nextInputMethod: restoreButton.dataset.afterRestoreInput || "" });
       return;
     }
     const routeButton = event.target.closest("[data-product-view-target]");

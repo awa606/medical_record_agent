@@ -620,6 +620,27 @@ textarea:focus {
   gap: 9px;
 }
 
+.encounter-selection-notice {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #b7d8ff;
+  border-radius: 10px;
+  padding: 11px 13px;
+  background: #eef7ff;
+  color: #24425f;
+}
+
+.encounter-selection-notice strong {
+  color: #155d9f;
+  font-size: 13px;
+}
+
+.encounter-selection-notice span {
+  color: #526b84;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .encounter-worklist-item {
   min-width: 0;
   min-height: 72px;
@@ -718,6 +739,66 @@ textarea:focus {
   gap: 9px;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+.encounter-worklist-actions .recording-action {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.drawer .encounter-worklist {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+.drawer .encounter-worklist-item {
+  width: 100%;
+  max-width: 100%;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  min-height: 0;
+}
+
+.drawer .encounter-worklist-primary,
+.drawer .encounter-worklist-meta,
+.drawer .encounter-worklist-actions {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.drawer .encounter-worklist-primary strong,
+.drawer .encounter-worklist-primary span,
+.drawer .encounter-worklist-primary small {
+  overflow-wrap: anywhere;
+}
+
+.drawer .encounter-worklist-meta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.drawer .encounter-worklist-actions {
+  position: relative;
+  z-index: 1;
+  justify-content: flex-start;
+}
+
+.drawer .encounter-worklist-actions button {
+  flex: 1 1 132px;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.drawer .encounter-worklist-actions .status-badge {
+  flex: 0 0 auto;
 }
 
 .status-badge {
@@ -1119,7 +1200,7 @@ body.care-mode .workbench {
   min-width: 0;
   min-height: max(520px, calc(100dvh - 356px));
   display: grid;
-  grid-template-columns: minmax(260px, 0.82fr) minmax(420px, 1.44fr) minmax(280px, 0.98fr);
+  grid-template-columns: minmax(340px, 30fr) minmax(430px, 42fr) minmax(290px, 28fr);
   grid-template-rows: minmax(0, 1fr);
   grid-template-areas: "transcript record assist";
   gap: 13px;
@@ -1417,16 +1498,63 @@ body.doctor-mode .transcript-table-row {
   min-width: 0;
 }
 
+.transcript-table,
+body.doctor-mode .transcript-table {
+  width: 100%;
+  display: grid;
+  grid-auto-rows: auto;
+}
+
 .transcript-table-row,
 body.doctor-mode .transcript-table-row {
+  width: 100%;
+  box-sizing: border-box;
+  display: grid;
   min-height: 46px;
-  grid-template-columns: 52px 82px minmax(0, 1fr) 38px;
-  gap: 8px;
+  grid-template-columns: 44px minmax(66px, 76px) minmax(0, 1fr) 32px;
+  gap: 6px;
+  align-items: start;
   border: 0;
   border-bottom: 1px solid #edf1f5;
   border-radius: 0;
-  padding: 9px 7px;
+  padding: 9px 6px;
   background: #fff;
+}
+
+.transcript-role-cell,
+body.doctor-mode .transcript-role-cell {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 4px;
+}
+
+.transcript-role-tag,
+body.doctor-mode .transcript-role-tag {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.transcript-role-warning,
+body.doctor-mode .transcript-role-warning {
+  max-width: 100%;
+  min-height: 18px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .transcript-table-row:hover {
@@ -1439,8 +1567,9 @@ body.doctor-mode .transcript-row-text {
   color: #263b50;
   font-size: 12px;
   line-height: 1.55;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .transcript-row-link,
@@ -2083,7 +2212,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   body.standard-mode .workbench,
   body.care-mode .workbench {
     min-height: 660px;
-    grid-template-columns: minmax(340px, 0.85fr) minmax(560px, 1.35fr) minmax(360px, 0.95fr);
+    grid-template-columns: minmax(440px, 30fr) minmax(580px, 42fr) minmax(390px, 28fr);
     grid-template-rows: minmax(0, 1fr);
     grid-template-areas: "transcript record assist";
   }
@@ -2149,7 +2278,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   body.doctor-mode .workbench,
   body.standard-mode .workbench,
   body.care-mode .workbench {
-    grid-template-columns: minmax(238px, 0.8fr) minmax(360px, 1.36fr) minmax(248px, 0.9fr);
+    grid-template-columns: minmax(340px, 30fr) minmax(390px, 42fr) minmax(270px, 28fr);
     gap: 10px;
   }
 
@@ -2210,7 +2339,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   body.standard-mode .workbench,
   body.care-mode .workbench {
     min-height: max(520px, calc(100dvh - 330px));
-    grid-template-columns: minmax(238px, 0.8fr) minmax(360px, 1.36fr) minmax(248px, 0.9fr);
+    grid-template-columns: minmax(340px, 30fr) minmax(390px, 42fr) minmax(270px, 28fr);
     grid-template-rows: minmax(0, 1fr);
     grid-template-areas: "transcript record assist";
   }

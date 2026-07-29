@@ -47,3 +47,15 @@ def test_doctor_worklist_styles_are_scoped_to_drawer() -> None:
     assert ".encounter-worklist-item" in css
     assert ".encounter-worklist-actions" in css
     assert ".encounter-revision-history" in css
+
+
+def test_doctor_worklist_drawer_prevents_horizontal_action_overflow() -> None:
+    css = (ROOT / "static" / "doctor-ui-v2.css").read_text(encoding="utf-8")
+
+    assert ".drawer .encounter-worklist {" in css
+    assert ".drawer .encounter-worklist-item {" in css
+    assert "flex: 0 0 auto;" in css
+    assert "flex-direction: column;" in css
+    assert "z-index: 1;" in css
+    assert ".drawer .encounter-worklist-actions button" in css
+    assert "overflow-wrap: anywhere;" in css

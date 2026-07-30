@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -191,6 +192,26 @@ def test_doctor_live_clinical_reference_summary_is_bounded_and_detailed() -> Non
     assert "data-live-clinical-action=\"add-question\"" in script
     assert "data-live-clinical-action=\"adopt-candidate\"" in script
     assert "live-clinical-actions" in stylesheet
+
+
+def test_doctor_clinical_hint_cards_stack_in_assist_column() -> None:
+    stylesheet = (ROOT / "static" / "doctor-ui-v2.css").read_text(encoding="utf-8")
+    overview_blocks = re.findall(
+        r"(?:^|\n)\s*(?:body\.doctor-mode\s+)?\.doctor-assist-overview,\s*"
+        r"\n\s*body\.doctor-mode\s+\.doctor-assist-overview\s*\{[^}]+\}",
+        stylesheet,
+    )
+
+    assert overview_blocks
+    assert all(
+        "grid-template-columns: minmax(0, 1fr);" in block
+        or "grid-template-columns: 1fr;" in block
+        for block in overview_blocks
+    )
+    assert all("repeat(3" not in block for block in overview_blocks)
+    assert "body.doctor-mode .assist-column .assist-mini-grid {\n  grid-template-columns: minmax(0, 1fr);" in stylesheet
+    assert "body.doctor-mode .assist-column .knowledge-reference-item" in stylesheet
+    assert "word-break: keep-all;" in stylesheet
 
 
 def test_fixed_audio_demo_uses_live_follow_and_idempotent_convergence() -> None:

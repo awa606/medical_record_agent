@@ -1713,7 +1713,7 @@ body.doctor-mode .doctor-assist-overview {
   min-height: 0;
   height: auto;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto;
   align-content: start;
   gap: 9px;
@@ -1732,6 +1732,10 @@ body.doctor-mode .doctor-assist-card {
 .doctor-assist-card-head,
 body.doctor-mode .doctor-assist-card-head {
   min-height: 36px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
   border-bottom: 1px solid var(--line);
   padding: 8px 10px;
   background: #f8fafc;
@@ -1739,16 +1743,43 @@ body.doctor-mode .doctor-assist-card-head {
 
 .doctor-assist-card-head h3,
 body.doctor-mode .doctor-assist-card-head h3 {
+  min-width: 0;
   color: #294159;
   font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .doctor-assist-card-body,
 body.doctor-mode .doctor-assist-card-body {
   max-height: 150px;
+  min-width: 0;
   padding: 9px 10px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+body.doctor-mode .assist-column .doctor-assist-card-actions {
+  flex: 0 0 auto;
+}
+
+body.doctor-mode .assist-column .assist-mini-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body.doctor-mode .assist-column .assist-plan-block,
+body.doctor-mode .assist-column .assist-mini-grid > div,
+body.doctor-mode .assist-column .knowledge-reference-item,
+body.doctor-mode .assist-column .empty-state,
+body.doctor-mode .assist-column .summary-note {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .encounter-action-bar,
@@ -2474,7 +2505,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
 
   .doctor-assist-overview,
   body.doctor-mode .doctor-assist-overview {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .encounter-action-bar,

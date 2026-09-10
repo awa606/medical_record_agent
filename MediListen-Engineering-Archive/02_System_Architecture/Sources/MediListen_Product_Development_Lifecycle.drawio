@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mxfile host="Electron" modified="2026-09-07T12:30:00.000Z" agent="Codex + drawio@drawio native XML fallback" version="29.0.3" type="device" compressed="false">
+  <diagram id="medilisten-lifecycle" name="产品开发全生命周期流程图">
+    <mxGraphModel dx="1587" dy="1123" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1587" pageHeight="1123" math="0" shadow="0" background="#FFFFFF" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" value="Background" parent="0" />
+        <mxCell id="2" value="Stages" parent="0" />
+        <mxCell id="3" value="Gates" parent="0" />
+        <mxCell id="4" value="Primary Flow" parent="0" />
+        <mxCell id="page_bg" value="" style="shape=rect;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;connectable=0;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1587" height="1123" as="geometry" />
+        </mxCell>
+        <mxCell id="stage_concept" value="" style="group;container=1;collapsible=0;" vertex="1" connectable="0" parent="2">
+          <mxGeometry x="37" y="185" width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="concept_border" value="" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6E8292;strokeWidth=1.4;connectable=0;" vertex="1" parent="stage_concept">
+          <mxGeometry width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="concept_header" value="&lt;div style=&quot;line-height:1.13;text-align:left;&quot;&gt;&lt;span style=&quot;font-size:18px;font-weight:700;&quot;&gt;01 CONCEPT&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;font-weight:700;&quot;&gt;概念定义&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:10.5px;color:#DDE7EE;&quot;&gt;核心问题｜值不值得做？&lt;/span&gt;&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#233F56;strokeColor=#233F56;fontColor=#FFFFFF;fontFamily=Microsoft YaHei;fontSize=10.5;align=left;verticalAlign=middle;spacingTop=4;spacingLeft=10;spacingRight=8;" vertex="1" parent="stage_concept">
+          <mxGeometry width="202" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="concept_input" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;INPUT 前置输入&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.42;&quot;&gt;临床病历记录痛点&lt;br&gt;医生真实工作流程&lt;br&gt;医疗数据与隐私安全边界&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#F4F6F8;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_concept">
+          <mxGeometry y="84" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="concept_activity" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;ACTIVITY 核心活动&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.35;text-align:center;&quot;&gt;用户与场景调研&lt;br&gt;&lt;span style=&quot;color:#7891A5;&quot;&gt;↓&lt;/span&gt;&lt;br&gt;痛点与需求分析&lt;br&gt;&lt;span style=&quot;color:#7891A5;&quot;&gt;↓&lt;/span&gt;&lt;br&gt;核心使用场景定义&lt;br&gt;&lt;span style=&quot;color:#7891A5;&quot;&gt;↓&lt;/span&gt;&lt;br&gt;价值主张&lt;br&gt;&lt;span style=&quot;color:#7891A5;&quot;&gt;↓&lt;/span&gt;&lt;br&gt;产品需求定义&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF3F7;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_concept">
+          <mxGeometry y="190" width="202" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="concept_review" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#8A5B27;&quot;&gt;REVIEW 关键评审&lt;/div&gt;&lt;div style=&quot;margin-top:8px;line-height:1.55;&quot;&gt;需求是否真实？&lt;br&gt;是否存在明确用户价值？&lt;br&gt;是否值得投入开发？&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#FFF4E7;strokeColor=#D9BC96;fontColor=#40372F;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_concept">
+          <mxGeometry y="450" width="202" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="concept_output" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#3F6A4B;&quot;&gt;OUTPUT 最终交付&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.4;&quot;&gt;产品概念&lt;br&gt;核心需求清单&lt;br&gt;PRD V0&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF6EF;strokeColor=#AFCAB7;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=9;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_concept">
+          <mxGeometry y="634" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="stage_poc" value="" style="group;container=1;collapsible=0;" vertex="1" connectable="0" parent="2">
+          <mxGeometry x="331" y="185" width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="poc_border" value="" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6E8292;strokeWidth=1.4;connectable=0;" vertex="1" parent="stage_poc">
+          <mxGeometry width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="poc_header" value="&lt;div style=&quot;line-height:1.13;text-align:left;&quot;&gt;&lt;span style=&quot;font-size:18px;font-weight:700;&quot;&gt;02 POC&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;font-weight:700;&quot;&gt;可行性验证&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:10.5px;color:#DDE7EE;&quot;&gt;核心问题｜能不能做？&lt;/span&gt;&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#233F56;strokeColor=#233F56;fontColor=#FFFFFF;fontFamily=Microsoft YaHei;fontSize=10.5;align=left;verticalAlign=middle;spacingTop=4;spacingLeft=10;spacingRight=8;" vertex="1" parent="stage_poc">
+          <mxGeometry width="202" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="poc_input" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;INPUT 前置输入&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.42;&quot;&gt;PRD V0&lt;br&gt;核心AI技术假设&lt;br&gt;测试语音 / 场景数据&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#F4F6F8;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_poc">
+          <mxGeometry y="84" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="poc_activity" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;ACTIVITY 核心活动&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.24;text-align:center;&quot;&gt;门诊语音采集&lt;br&gt;&lt;span style=&quot;color:#7891A5;&quot;&gt;↓&lt;/span&gt;&lt;br&gt;ASR语音转写&lt;br&gt;&lt;span style=&quot;color:#7891A5;&quot;&gt;↓&lt;/span&gt;&lt;br&gt;医患角色识别&lt;br&gt;&lt;span style=&quot;color:#7891A5;&quot;&gt;↓&lt;/span&gt;&lt;br&gt;医学字段抽取&lt;br&gt;&lt;span style=&quot;color:#7891A5;&quot;&gt;↓&lt;/span&gt;&lt;br&gt;LLM病历草稿生成&lt;br&gt;&lt;span style=&quot;color:#7891A5;&quot;&gt;↓&lt;/span&gt;&lt;br&gt;医生审核与确认&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF3F7;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_poc">
+          <mxGeometry y="190" width="202" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="poc_review" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#8A5B27;&quot;&gt;REVIEW 关键评审&lt;/div&gt;&lt;div style=&quot;margin-top:6px;line-height:1.25;&quot;&gt;&lt;b&gt;核心AI链路是否跑通？&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;color:#8A5B27;&quot;&gt;项目POC门槛&lt;/span&gt;&lt;br&gt;字段准确率 ≥ 80%&lt;br&gt;结构完整度 ≥ 90%&lt;br&gt;生成延迟 ≤ 20 s&lt;br&gt;严重安全错误 = 0&lt;br&gt;稳定演示 ≥ 30 min&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#FFF4E7;strokeColor=#D9BC96;fontColor=#40372F;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_poc">
+          <mxGeometry y="450" width="202" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="poc_output" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#3F6A4B;&quot;&gt;OUTPUT 最终交付&lt;/div&gt;&lt;div style=&quot;margin-top:5px;line-height:1.28;&quot;&gt;POC Demo&lt;br&gt;POC评估报告&lt;br&gt;验证数据&lt;br&gt;风险清单&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF6EF;strokeColor=#AFCAB7;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=8;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_poc">
+          <mxGeometry y="634" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="stage_evt" value="" style="group;container=1;collapsible=0;" vertex="1" connectable="0" parent="2">
+          <mxGeometry x="625" y="185" width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="evt_border" value="" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6E8292;strokeWidth=1.4;connectable=0;" vertex="1" parent="stage_evt">
+          <mxGeometry width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="evt_header" value="&lt;div style=&quot;line-height:1.13;text-align:left;&quot;&gt;&lt;span style=&quot;font-size:18px;font-weight:700;&quot;&gt;03 EVT&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;font-weight:700;&quot;&gt;工程验证&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:10.5px;color:#DDE7EE;&quot;&gt;核心问题｜能不能工程化？&lt;/span&gt;&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#233F56;strokeColor=#233F56;fontColor=#FFFFFF;fontFamily=Microsoft YaHei;fontSize=10.5;align=left;verticalAlign=middle;spacingTop=4;spacingLeft=10;spacingRight=8;" vertex="1" parent="stage_evt">
+          <mxGeometry width="202" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="evt_input" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;INPUT 前置输入&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.45;&quot;&gt;POC冻结基线&lt;br&gt;已验证AI能力&lt;br&gt;POC风险与问题清单&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#F4F6F8;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_evt">
+          <mxGeometry y="84" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="evt_activity" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;ACTIVITY 核心活动&lt;/div&gt;&lt;div style=&quot;margin-top:5px;line-height:1.2;&quot;&gt;&lt;b&gt;软件系统工程化&lt;/b&gt;&lt;br&gt;Web / API / 数据持久化&lt;br&gt;&lt;b&gt;AI Pipeline工程化&lt;/b&gt;&lt;br&gt;ASR → 角色识别 → 字段抽取&lt;br&gt;→ LLM草稿 → 安全规则&lt;br&gt;→ Orchestrator&lt;br&gt;&lt;b&gt;边缘部署&lt;/b&gt;&lt;br&gt;本地模型 / 缓存 / 部署&lt;br&gt;&lt;b&gt;可靠性&lt;/b&gt;&lt;br&gt;异常恢复 / 连续运行 / 日志可观测&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF3F7;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_evt">
+          <mxGeometry y="190" width="202" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="evt_review" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#8A5B27;&quot;&gt;REVIEW 关键评审&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.35;&quot;&gt;&lt;b&gt;POC能力能否转化成稳定工程系统？&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;color:#8A5B27;&quot;&gt;重点检查&lt;/span&gt;&lt;br&gt;运行稳定性 · 部署可重复性&lt;br&gt;异常恢复 · 数据完整性&lt;br&gt;接口一致性 · 多病例运行能力&lt;br&gt;系统可维护性&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#FFF4E7;strokeColor=#D9BC96;fontColor=#40372F;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_evt">
+          <mxGeometry y="450" width="202" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="evt_output" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#3F6A4B;&quot;&gt;OUTPUT 最终交付&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.4;&quot;&gt;EVT工程样机&lt;br&gt;系统架构基线&lt;br&gt;工程测试报告&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF6EF;strokeColor=#AFCAB7;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=9;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_evt">
+          <mxGeometry y="634" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="stage_dvt" value="" style="group;container=1;collapsible=0;" vertex="1" connectable="0" parent="2">
+          <mxGeometry x="839" y="185" width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="dvt_border" value="" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6E8292;strokeWidth=1.4;connectable=0;" vertex="1" parent="stage_dvt">
+          <mxGeometry width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="dvt_header" value="&lt;div style=&quot;line-height:1.13;text-align:left;&quot;&gt;&lt;span style=&quot;font-size:18px;font-weight:700;&quot;&gt;04 DVT&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;font-weight:700;&quot;&gt;设计验证&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:10.5px;color:#DDE7EE;&quot;&gt;核心问题｜设计对不对？&lt;/span&gt;&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#233F56;strokeColor=#233F56;fontColor=#FFFFFF;fontFamily=Microsoft YaHei;fontSize=10.5;align=left;verticalAlign=middle;spacingTop=4;spacingLeft=10;spacingRight=8;" vertex="1" parent="stage_dvt">
+          <mxGeometry width="202" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="dvt_input" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;INPUT 前置输入&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.45;&quot;&gt;EVT工程样机&lt;br&gt;工程测试结果&lt;br&gt;问题与风险清单&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#F4F6F8;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_dvt">
+          <mxGeometry y="84" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="dvt_activity" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;ACTIVITY 核心活动&lt;/div&gt;&lt;div style=&quot;margin-top:6px;line-height:1.42;&quot;&gt;完整功能验证&lt;br&gt;医生工作流验证&lt;br&gt;性能验证 · 可靠性验证&lt;br&gt;隐私与数据安全验证&lt;br&gt;医生最终审核权与边界验证&lt;br&gt;软硬件设计收敛&lt;br&gt;接口与产品设计冻结&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF3F7;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_dvt">
+          <mxGeometry y="190" width="202" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="dvt_review" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#8A5B27;&quot;&gt;REVIEW 关键评审&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.4;&quot;&gt;&lt;b&gt;最终设计是否满足PRD？&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;color:#8A5B27;&quot;&gt;重点&lt;/span&gt;&lt;br&gt;核心需求是否全部覆盖&lt;br&gt;关键风险是否关闭&lt;br&gt;医生审核链路是否可靠&lt;br&gt;系统是否达到设计冻结条件&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#FFF4E7;strokeColor=#D9BC96;fontColor=#40372F;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_dvt">
+          <mxGeometry y="450" width="202" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="dvt_output" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#3F6A4B;&quot;&gt;OUTPUT 最终交付&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.4;&quot;&gt;设计冻结版本&lt;br&gt;Release Candidate&lt;br&gt;DVT验证报告&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF6EF;strokeColor=#AFCAB7;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=9;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_dvt">
+          <mxGeometry y="634" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="stage_pvt" value="" style="group;container=1;collapsible=0;" vertex="1" connectable="0" parent="2">
+          <mxGeometry x="1133" y="185" width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="pvt_border" value="" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6E8292;strokeWidth=1.4;connectable=0;" vertex="1" parent="stage_pvt">
+          <mxGeometry width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="pvt_header" value="&lt;div style=&quot;line-height:1.13;text-align:left;&quot;&gt;&lt;span style=&quot;font-size:18px;font-weight:700;&quot;&gt;05 PVT&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;font-weight:700;&quot;&gt;生产验证&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:10.5px;color:#DDE7EE;&quot;&gt;核心问题｜能不能稳定复制和部署？&lt;/span&gt;&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#233F56;strokeColor=#233F56;fontColor=#FFFFFF;fontFamily=Microsoft YaHei;fontSize=10.5;align=left;verticalAlign=middle;spacingTop=4;spacingLeft=10;spacingRight=8;" vertex="1" parent="stage_pvt">
+          <mxGeometry width="202" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="pvt_input" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;INPUT 前置输入&lt;/div&gt;&lt;div style=&quot;margin-top:5px;line-height:1.32;&quot;&gt;冻结设计&lt;br&gt;软件发布基线&lt;br&gt;硬件 / 边缘盒方案&lt;br&gt;部署与安装方案&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#F4F6F8;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=9;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_pvt">
+          <mxGeometry y="84" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="pvt_activity" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;ACTIVITY 核心活动&lt;/div&gt;&lt;div style=&quot;margin-top:5px;line-height:1.34;&quot;&gt;&lt;span style=&quot;color:#5D7180;&quot;&gt;医疗AI软件 + 边缘计算设备 + 部署交付体系&lt;/span&gt;&lt;br&gt;小批量边缘设备构建&lt;br&gt;软件 / 模型镜像部署&lt;br&gt;部署SOP验证&lt;br&gt;安装与初始化验证&lt;br&gt;批次一致性检查&lt;br&gt;验收流程验证&lt;br&gt;成本与供应保障验证&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF3F7;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=9;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_pvt">
+          <mxGeometry y="190" width="202" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="pvt_review" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#8A5B27;&quot;&gt;REVIEW 关键评审&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.4;&quot;&gt;&lt;b&gt;产品能否被重复、一致地&lt;br&gt;构建与部署？&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;color:#8A5B27;&quot;&gt;检查&lt;/span&gt;&lt;br&gt;批次一致性 · 部署成功率&lt;br&gt;安装流程 · 质量控制&lt;br&gt;交付可复制性&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#FFF4E7;strokeColor=#D9BC96;fontColor=#40372F;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_pvt">
+          <mxGeometry y="450" width="202" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="pvt_output" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#3F6A4B;&quot;&gt;OUTPUT 最终交付&lt;/div&gt;&lt;div style=&quot;margin-top:5px;line-height:1.28;&quot;&gt;小批量试产版本&lt;br&gt;部署SOP&lt;br&gt;验收流程&lt;br&gt;PVT验证报告&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF6EF;strokeColor=#AFCAB7;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=8;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_pvt">
+          <mxGeometry y="634" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="stage_mp" value="" style="group;container=1;collapsible=0;" vertex="1" connectable="0" parent="2">
+          <mxGeometry x="1347" y="185" width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="mp_border" value="" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6E8292;strokeWidth=1.4;connectable=0;" vertex="1" parent="stage_mp">
+          <mxGeometry width="202" height="740" as="geometry" />
+        </mxCell>
+        <mxCell id="mp_header" value="&lt;div style=&quot;line-height:1.13;text-align:left;&quot;&gt;&lt;span style=&quot;font-size:18px;font-weight:700;&quot;&gt;06 MP&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;font-weight:700;&quot;&gt;量产与正式交付&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;font-size:10.5px;color:#DDE7EE;&quot;&gt;核心问题｜能不能持续稳定交付？&lt;/span&gt;&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#233F56;strokeColor=#233F56;fontColor=#FFFFFF;fontFamily=Microsoft YaHei;fontSize=10.5;align=left;verticalAlign=middle;spacingTop=4;spacingLeft=10;spacingRight=8;" vertex="1" parent="stage_mp">
+          <mxGeometry width="202" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="mp_input" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;INPUT 前置输入&lt;/div&gt;&lt;div style=&quot;margin-top:5px;line-height:1.32;&quot;&gt;PVT验证通过&lt;br&gt;正式软件版本&lt;br&gt;正式部署SOP&lt;br&gt;质量标准&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#F4F6F8;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=9;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_mp">
+          <mxGeometry y="84" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="mp_activity" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#314A5E;&quot;&gt;ACTIVITY 核心活动&lt;/div&gt;&lt;div style=&quot;margin-top:6px;line-height:1.43;&quot;&gt;规模化设备部署&lt;br&gt;正式软件发布&lt;br&gt;质量管理&lt;br&gt;医院现场交付&lt;br&gt;运维与故障处理&lt;br&gt;版本管理&lt;br&gt;变更控制&lt;br&gt;用户反馈收集&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF3F7;strokeColor=#B7C4CE;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_mp">
+          <mxGeometry y="190" width="202" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="mp_review" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#8A5B27;&quot;&gt;REVIEW 关键评审&lt;/div&gt;&lt;div style=&quot;margin-top:7px;line-height:1.45;&quot;&gt;&lt;b&gt;能否持续稳定交付？&lt;/b&gt;&lt;br&gt;能否持续保证：&lt;br&gt;质量 · 可用性&lt;br&gt;安全边界 · 服务能力&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#FFF4E7;strokeColor=#D9BC96;fontColor=#40372F;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=10;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_mp">
+          <mxGeometry y="450" width="202" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="mp_output" value="&lt;div style=&quot;font-size:12px;font-weight:700;color:#3F6A4B;&quot;&gt;OUTPUT 最终交付&lt;/div&gt;&lt;div style=&quot;margin-top:5px;line-height:1.28;&quot;&gt;正式产品版本&lt;br&gt;交付包&lt;br&gt;质量管理体系&lt;br&gt;运维与版本维护机制&lt;/div&gt;" style="shape=rect;rounded=0;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#EDF6EF;strokeColor=#AFCAB7;fontColor=#283844;fontFamily=Microsoft YaHei;fontSize=11;align=left;verticalAlign=top;spacingTop=8;spacingLeft=11;spacingRight=9;" vertex="1" parent="stage_mp">
+          <mxGeometry y="634" width="202" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="gate_g1" value="&lt;div style=&quot;line-height:1.18;&quot;&gt;&lt;b&gt;产品价值&lt;/b&gt;&lt;br&gt;成立？&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#F9E8D2;strokeColor=#C8914F;strokeWidth=1.7;fontColor=#5C4328;fontFamily=Microsoft YaHei;fontSize=10.5;align=center;verticalAlign=middle;spacing=3;" vertex="1" parent="3">
+          <mxGeometry x="249" y="191" width="72" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="gate_g2" value="&lt;div style=&quot;line-height:1.12;&quot;&gt;&lt;b&gt;POC核心指标&lt;/b&gt;&lt;br&gt;达标？&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#F9E8D2;strokeColor=#C8914F;strokeWidth=1.7;fontColor=#5C4328;fontFamily=Microsoft YaHei;fontSize=10.5;align=center;verticalAlign=middle;spacing=2;" vertex="1" parent="3">
+          <mxGeometry x="543" y="191" width="72" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="gate_g3" value="&lt;div style=&quot;line-height:1.12;&quot;&gt;&lt;b&gt;设计是否可以&lt;/b&gt;&lt;br&gt;冻结？&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#F9E8D2;strokeColor=#C8914F;strokeWidth=1.7;fontColor=#5C4328;fontFamily=Microsoft YaHei;fontSize=10.5;align=center;verticalAlign=middle;spacing=2;" vertex="1" parent="3">
+          <mxGeometry x="1051" y="191" width="72" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="terminated" value="&lt;div style=&quot;line-height:1.2;&quot;&gt;&lt;b&gt;KILL&lt;/b&gt;&lt;br&gt;项目终止&lt;/div&gt;" style="shape=rect;rounded=1;arcSize=16;whiteSpace=wrap;html=1;fillColor=#FBF7F7;strokeColor=#B89A9A;fontColor=#765C5C;fontFamily=Microsoft YaHei;fontSize=10.5;align=center;verticalAlign=middle;spacing=2;" vertex="1" parent="3">
+          <mxGeometry x="251" y="288" width="68" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="feedback_data" value="&lt;div style=&quot;line-height:1.3;&quot;&gt;&lt;b&gt;临床与用户反馈闭环&lt;/b&gt;&lt;br&gt;现场运行数据 · 医生反馈 · 新需求 · 缺陷与问题&lt;/div&gt;" style="shape=rect;rounded=1;arcSize=12;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#F1F7F2;strokeColor=#8EB098;strokeWidth=1.2;fontColor=#36553F;fontFamily=Microsoft YaHei;fontSize=11;align=center;verticalAlign=middle;spacing=6;" vertex="1" parent="5">
+          <mxGeometry x="1212" y="948" width="310" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_concept_g1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#304B60;strokeWidth=2.4;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="4" source="concept_header" target="gate_g1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g1_poc" value="GO" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#304B60;strokeWidth=2.4;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;fontColor=#3F6A4B;labelBackgroundColor=#FFFFFF;spacing=3;" edge="1" parent="4" source="gate_g1" target="poc_header">
+          <mxGeometry x="0" y="-19" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_poc_g2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#304B60;strokeWidth=2.4;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="4" source="poc_header" target="gate_g2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g2_evt" value="GO" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#304B60;strokeWidth=2.4;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;fontColor=#3F6A4B;labelBackgroundColor=#FFFFFF;spacing=3;" edge="1" parent="4" source="gate_g2" target="evt_header">
+          <mxGeometry x="0" y="-19" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_evt_dvt" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=8;html=1;strokeColor=#304B60;strokeWidth=2.4;endArrow=block;endFill=1;endSize=3;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="4" source="evt_header" target="dvt_header">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="833" y="227" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_dvt_g3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#304B60;strokeWidth=2.4;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="4" source="dvt_header" target="gate_g3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g3_pvt" value="GO" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#304B60;strokeWidth=2.4;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;fontColor=#3F6A4B;labelBackgroundColor=#FFFFFF;spacing=3;" edge="1" parent="4" source="gate_g3" target="pvt_header">
+          <mxGeometry x="0" y="-19" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_pvt_mp" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=8;html=1;strokeColor=#304B60;strokeWidth=2.4;endArrow=block;endFill=1;endSize=3;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="4" source="pvt_header" target="mp_header">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1341" y="227" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_g1_rework_concept" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#B47A38;strokeWidth=1.5;dashed=1;dashPattern=6 4;endArrow=block;endFill=1;exitX=0.5;exitY=0;entryX=0.5;entryY=0;" edge="1" parent="5" source="gate_g1" target="concept_header">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="285" y="137" />
+              <mxPoint x="138" y="137" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_g2_rework_poc" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#B47A38;strokeWidth=1.5;dashed=1;dashPattern=6 4;endArrow=block;endFill=1;exitX=0.5;exitY=0;entryX=0.5;entryY=0;" edge="1" parent="5" source="gate_g2" target="poc_header">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="579" y="137" />
+              <mxPoint x="432" y="137" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_g3_rework_dvt" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#B47A38;strokeWidth=1.5;dashed=1;dashPattern=6 4;endArrow=block;endFill=1;exitX=0.5;exitY=0;entryX=0.5;entryY=0;" edge="1" parent="5" source="gate_g3" target="dvt_header">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1087" y="137" />
+              <mxPoint x="940" y="137" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_g1_kill" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9B7A7A;strokeWidth=1.2;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="5" source="gate_g1" target="terminated">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_mp_feedback_data" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#547560;strokeWidth=1.7;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="5" source="mp_output" target="feedback_data">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_feedback_concept" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#547560;strokeWidth=1.7;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="5" source="feedback_data" target="concept_header">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1367" y="1065" />
+              <mxPoint x="22" y="1065" />
+              <mxPoint x="22" y="227" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="title_cn_1" value="AI生成式电子病历辅助系统" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=29;fontStyle=1;fontColor=#203849;spacing=0;" vertex="1" parent="6">
+          <mxGeometry x="37" y="20" width="820" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="title_cn_2" value="产品开发全生命周期流程图" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=24;fontStyle=1;fontColor=#314A5E;spacing=0;" vertex="1" parent="6">
+          <mxGeometry x="37" y="59" width="700" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle_en" value="Product Development Lifecycle · Stage-Gate" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=12.5;fontColor=#71808C;spacing=0;" vertex="1" parent="6">
+          <mxGeometry x="38" y="96" width="520" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="meta_note" value="医疗AI软件 · 边缘计算设备 · 医生审核工作流 · 部署交付体系" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=11;fontColor=#71808C;spacing=0;" vertex="1" parent="6">
+          <mxGeometry x="1050" y="44" width="499" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="gate_g1_title" value="GATE 1｜产品立项评审" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;fontColor=#76532D;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="220" y="164" width="130" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="gate_g2_title" value="GATE 2｜技术可行性评审" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;fontColor=#76532D;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="514" y="164" width="130" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="gate_g3_title" value="GATE 3｜设计冻结评审" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;fontColor=#76532D;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="1022" y="164" width="130" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="label_rework_g1" value="REWORK" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;fontColor=#A3692E;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="174" y="119" width="74" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="label_rework_g2" value="&lt;b&gt;REWORK&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:10.5px;&quot;&gt;模型 / Pipeline / 规则&lt;/span&gt;" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=10.5;fontColor=#A3692E;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="446" y="104" width="118" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="label_rework_g3" value="REWORK" style="text;html=1;strokeColor=none;fillColor=#FFFFFF;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;fontColor=#A3692E;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="976" y="119" width="74" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="project_status" value="&lt;b&gt;PROJECT STATUS｜项目现状&lt;/b&gt;　POC基线冻结 → EVT工程化准备" style="shape=rect;rounded=1;arcSize=20;whiteSpace=wrap;html=1;fillColor=#F5F7F9;strokeColor=#A8B5BF;fontColor=#405564;fontFamily=Microsoft YaHei;fontSize=10.5;align=center;verticalAlign=middle;spacing=4;" vertex="1" parent="6">
+          <mxGeometry x="425" y="944" width="330" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="feedback_label" value="临床 / 用户反馈 → 下一版本产品定义" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;fontFamily=Microsoft YaHei;fontSize=11;fontStyle=1;fontColor=#466850;spacing=2;" vertex="1" parent="6">
+          <mxGeometry x="555" y="1028" width="420" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="Rework &amp; Feedback" parent="0" />
+        <mxCell id="6" value="Labels / Status" parent="0" />
+        <mxCell id="status_concept" value="已通过" style="shape=rect;rounded=1;arcSize=18;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#E8F3EC;strokeColor=#88A993;fontColor=#365C42;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;align=center;verticalAlign=middle;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="176" y="195" width="55" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="status_poc" value="已验证" style="shape=rect;rounded=1;arcSize=18;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#E8F3EC;strokeColor=#88A993;fontColor=#365C42;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;align=center;verticalAlign=middle;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="470" y="195" width="55" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="status_evt" value="当前" style="shape=rect;rounded=1;arcSize=18;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#FFEBCB;strokeColor=#D29A43;strokeWidth=1.5;fontColor=#6F4922;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;align=center;verticalAlign=middle;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="764" y="195" width="55" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="status_dvt" value="后续规划" style="shape=rect;rounded=1;arcSize=18;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#E8EEF3;strokeColor=#9AAAB7;fontColor=#586874;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;align=center;verticalAlign=middle;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="978" y="195" width="55" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="status_pvt" value="后续规划" style="shape=rect;rounded=1;arcSize=18;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#E8EEF3;strokeColor=#9AAAB7;fontColor=#586874;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;align=center;verticalAlign=middle;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="1272" y="195" width="55" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="status_mp" value="后续规划" style="shape=rect;rounded=1;arcSize=18;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#E8EEF3;strokeColor=#9AAAB7;fontColor=#586874;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;align=center;verticalAlign=middle;spacing=1;" vertex="1" parent="6">
+          <mxGeometry x="1486" y="195" width="55" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

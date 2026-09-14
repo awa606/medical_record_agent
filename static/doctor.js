@@ -1944,7 +1944,7 @@ function renderPatientBar() {
     appState.currentEncounter?.patient_display_name,
     appState.currentEncounter?.patient_deidentified_id || "模拟患者",
   );
-  $("patientProfile").textContent = "女 / 32岁";
+  $("patientProfile").textContent = "年龄、性别未登记";
   $("sessionId").textContent = appState.currentTaskId
     ? `T-${appState.currentTaskId}`
     : appState.currentAsrSessionId
@@ -2120,7 +2120,7 @@ function fieldStatus(field, key) {
   if (field.status === "conflicting") return { key: "conflicting", label: "证据冲突" };
   if (field.confirmed_by_doctor) return { key: "confirmed", label: "已确认" };
   if (typeof field.confidence === "number" && field.confidence < 0.7) return { key: "low", label: "低置信度" };
-  return { key: "confirmed", label: "已确认" };
+  return { key: "neutral", label: "待医生审核" };
 }
 
 function fieldValue(fields, key) {

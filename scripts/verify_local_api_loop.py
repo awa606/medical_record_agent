@@ -74,7 +74,8 @@ def main():
                 if code!=200:raise RuntimeError(f'ASR HTTP {code}: {str(transcribed)[:300]}')
                 row['asr_seconds']=transcribed.get('processing_duration_seconds')
                 row['asr_engine']=transcribed.get('model')
-                row['role_quality']=transcribed.get('asr_result',{}).get('speaker_role_quality')
+                row['role_quality']=transcribed.get('asr_result',{}).get('role_quality')
+                (args.output/f'asr-{number+1:02d}.json').write_text(json.dumps(transcribed,ensure_ascii=False,indent=2),encoding='utf-8')
                 code,created=call('POST',f'/api/audio/{audio_id}/generate-record')
             row['generation_http']=code
             if code!=200:raise RuntimeError(f'generation HTTP {code}: {str(created)[:300]}')

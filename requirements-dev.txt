@@ -1,3 +1,4 @@
 pytest
 httpx
 playwright
+soundfile>=0.12.0

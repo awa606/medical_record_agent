@@ -1,4 +1,4 @@
-from scripts.run_semantic_lora_smoke import score_output
+from scripts.semantic_scoring import score_output
 
 
 def test_semantic_lora_scoring_detects_supported_and_unsupported_facts() -> None:

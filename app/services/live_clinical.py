@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import Any
+import re
+from app.services.privacy import anonymize_text
 
 
 LIVE_DRAFT_STATUS = "temporary"
@@ -68,12 +70,20 @@ def build_live_clinical_snapshot(
     updated_at: str,
 ) -> dict[str, Any]:
     usable_segments = [segment for segment in stable_segments if str(segment.get("text") or "").strip()]
-    combined = " ".join(str(segment.get("text") or "") for segment in usable_segments)
-    evidence_ids = [str(segment.get("segment_id")) for segment in usable_segments if segment.get("segment_id")]
+    fact_segments = []
+    for segment in usable_segments:
+        text = str(segment.get("text") or "")
+        if segment.get("role") in {"医生", "doctor"} and re.search(r"吗|么|有没有|是否|[?？]", text):
+            continue
+        if segment.get("role") in {"待确认", "unknown"}:
+            continue
+        fact_segments.append(segment)
+    combined = anonymize_text(" ".join(str(segment.get("text") or "") for segment in fact_segments))
+    evidence_ids = [str(segment.get("segment_id")) for segment in fact_segments if segment.get("segment_id")]
     record_patch = _build_record_patch(combined, evidence_ids)
     alerts = _build_alerts(combined, evidence_ids)
     missing_items = _build_missing_items(combined)
-    differentials = _build_differentials(combined, evidence_ids)
+    differentials = _build_differentials(combined, evidence_ids) if not re.search(r"(?:无|没有|否认).{0,4}(?:发热|咳嗽)", combined) else []
     care_plan = _build_care_plan(combined, evidence_ids)
     next_questions = _build_next_questions(combined)
 
@@ -99,11 +109,12 @@ def _build_record_patch(text: str, evidence_ids: list[str]) -> dict[str, Any]:
     patch: dict[str, Any] = {}
     if _contains_any(text, ["发热", "发烧", "体温"]) or _contains_any(text, ["咳嗽", "咳痰"]):
         complaint = []
-        if _contains_any(text, ["发热", "发烧", "体温"]):
+        if _contains_any(text, ["发热", "发烧", "体温"]) and not re.search(r"(?:无|没有|否认|不).{0,4}(?:发热|发烧)", text):
             complaint.append("发热")
-        if _contains_any(text, ["咳嗽", "咳痰"]):
+        if _contains_any(text, ["咳嗽", "咳痰"]) and not re.search(r"(?:无|没有|否认|不).{0,4}(?:咳嗽|咳痰)", text):
             complaint.append("咳嗽")
-        patch["chief_complaint"] = _field("伴".join(complaint) or "发热呼吸道症状", evidence_ids)
+        if complaint:
+            patch["chief_complaint"] = _field("伴".join(complaint), evidence_ids)
     if text:
         patch["present_illness"] = _field(_compact_text(text, 120), evidence_ids)
     if _contains_any(text, ["过敏"]):
@@ -111,7 +122,8 @@ def _build_record_patch(text: str, evidence_ids: list[str]) -> dict[str, Any]:
     if _contains_any(text, ["既往", "高血压", "糖尿病"]):
         patch["past_history"] = _field(_extract_sentence(text, "既往") or "提及既往史，需医生确认", evidence_ids)
     if _contains_any(text, ["胸痛", "呼吸困难", "气短", "喘"]):
-        patch["associated_symptoms"] = _field("存在胸痛、呼吸困难或气短相关表述，需重点复核", evidence_ids)
+        quote = next((_extract_sentence(text, k) for k in ["胸痛", "呼吸困难", "气短", "喘"] if k in text), "")
+        patch["associated_symptoms"] = _field(quote, evidence_ids)
     return patch
 
 
@@ -266,7 +278,9 @@ def _build_next_questions(text: str) -> list[dict[str, Any]]:
 
 
 def _contains_any(text: str, keywords: list[str]) -> bool:
-    return any(keyword in text for keyword in keywords)
+    clauses = re.split(r"[，,。；;!?！？\n]", text)
+    return any(keyword in clause and not re.search(r"(?:无|没有|否认|不|未).{0,5}" + re.escape(keyword), clause)
+               for clause in clauses for keyword in keywords)
 
 
 def _compact_text(text: str, limit: int) -> str:

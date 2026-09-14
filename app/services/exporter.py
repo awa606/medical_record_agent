@@ -7,6 +7,7 @@ from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from app.schemas import MedicalRecordFields, SafetyCheckResult
+from app.services.privacy import anonymize_text
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -60,7 +61,7 @@ def render_markdown(fields: MedicalRecordFields, safety_check: SafetyCheckResult
             f"- 阻断：{safety_check.blocked}",
         ]
     )
-    return "\n".join(lines).strip() + "\n"
+    return anonymize_text("\n".join(lines).strip() + "\n")
 
 
 def _document_xml(markdown_text: str) -> str:

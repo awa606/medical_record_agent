@@ -1,6 +1,13 @@
 .git/
 .github/
 .pytest_cache/
+.artifacts/
+.env
+.env.*
+*.sqlite3*
+config/*.env
+config/*.local
+config/*.secret
 .venv/
 .venv-asr/
 .venv-qwen-asr/

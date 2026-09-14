@@ -19,6 +19,7 @@ from app.db import (
     update_encounter_check_in_status,
 )
 from app.schemas.auth import AuthenticatedUser
+from app.services.privacy import register_identity
 
 
 router = APIRouter(prefix="/encounters", tags=["encounters"], dependencies=[Depends(require_current_user)])
@@ -102,6 +103,7 @@ def create_encounter_route(
     payload: CreateEncounterRequest,
     user: AuthenticatedUser = Depends(require_current_user),
 ) -> dict[str, Any]:
+    register_identity(payload.patient_display_name or "")
     deidentified_id = payload.patient_deidentified_id or f"SIM-MANUAL-{uuid.uuid4().hex[:8]}"
     row = create_encounter(
         doctor_user_id=user.id,

@@ -417,8 +417,8 @@ def _approval_completion_errors(fields: MedicalRecordFields) -> list[str]:
         else:
             if field.doctor_review_status not in {"not_asked_confirmed", "missing_accepted"}:
                 unresolved_missing.append(label)
-        if field.status == "conflicting" and not field.high_risk_confirmed_by_doctor:
-            errors.append(f"{label}存在证据冲突，必须逐项单独确认。")
+        if field.status == "conflicting":
+            errors.append(f"{label}存在证据冲突，必须先修正内容和证据。")
     if unconfirmed_fields:
         errors.append(f"存在未显式确认的普通字段：{'、'.join(unconfirmed_fields)}。")
     if unresolved_missing:
@@ -519,6 +519,11 @@ def review_task(
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
 
     fields = _reset_review_state(review_payload.fields)
+    if os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}:
+        from app.services.field_grounding import ground_fields
+        from app.services.privacy import anonymize_text
+        fields = ground_fields(fields, anonymize_text(task.get("input_text") or result.get("conversation_text") or ""),
+                               (result.get("asr_source") or {}).get("segments"))
     generator = _record_generator_or_503()
     draft = generator.generate_draft(fields)
     safety_check = generator.safety_check(draft, fields)
@@ -526,7 +531,11 @@ def review_task(
     result["fields"] = fields.model_dump()
     result["draft"] = draft
     result["safety_check"] = safety_check.model_dump()
-    result["llm_trace"] = generator.get_trace()
+    prior_trace = result.get("llm_trace") or {}
+    review_trace = generator.get_trace()
+    result["llm_trace"] = {**prior_trace, "review_components": review_trace}
+    if not prior_trace:
+        result["llm_trace"].update(review_trace)
     result["reviewed"] = True
     result["approved"] = False
 

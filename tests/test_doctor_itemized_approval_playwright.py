@@ -229,6 +229,26 @@ def test_itemized_approval_invalidates_after_edit_and_downloads_docx() -> None:
             assert empty_status in {400, 422}
 
             _select_all_review_items(page)
+            expect(page.locator('[data-approval-item="field:physical_exam"]')).to_contain_text("需修正内容和证据")
+            blocked = page.evaluate("""async () => {
+              // Deliberately tamper with UI state: the server must still reject.
+              window.__MRA_APP_STATE__.approvalHighRiskConfirmations['field:physical_exam'] = true;
+              const payload = await buildTaskApprovalPayload();
+              payload.high_risk_conflicts.push({key: 'field:physical_exam', confirmed: true});
+              payload.fields.push({key: 'physical_exam', action: 'confirm_content'});
+              return (await fetch(`/api/tasks/${window.__MRA_APP_STATE__.currentTaskId}/approve`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+              })).status;
+            }""")
+            assert blocked == 409
+            page.evaluate("""async () => {
+              // Patient symptoms are not a clinician's physical examination.
+              const field = window.__MRA_APP_STATE__.currentRecordFields.physical_exam;
+              field.value = null; field.missing = true; field.status = 'missing';
+              field.source_spans = []; field.fact_ids = []; field.hint = '查体未采集';
+              await saveDraftReview(); await refreshExportReadiness();
+            }""")
+            _select_all_review_items(page)
             stale_payload = page.evaluate("buildTaskApprovalPayload()")
             page.evaluate("confirmFields()")
             page.wait_for_function("window.__MRA_APP_STATE__?.currentTask?.current_stage === 'approved'", timeout=15000)

@@ -17,6 +17,7 @@ from app.services.demo_knowledge import (
     retrieve_sources,
     task_query_payload,
 )
+from app.services.privacy import anonymize_text
 from app.services.knowledge_store import (
     DEFAULT_DISCLAIMER,
     get_knowledge_source,
@@ -110,13 +111,13 @@ def retrieve_knowledge(payload: KnowledgeRetrieveRequest, request: Request) -> d
             if field not in related_fields:
                 related_fields.append(field)
     if knowledge_index_available():
-        indexed = retrieve_indexed_knowledge("\n".join([query, *related_fields]).strip())
+        indexed = retrieve_indexed_knowledge(anonymize_text("\n".join([query, *related_fields]).strip()))
         results = indexed["results"]
         retrieval_mode = indexed["retrieval_mode"]
         disclaimer = DEFAULT_DISCLAIMER
     else:
         try:
-            results = retrieve_sources(query=query, related_fields=related_fields)
+            results = retrieve_sources(query=anonymize_text(query), related_fields=related_fields)
         except ValueError as exc:
             raise _knowledge_unavailable(exc) from exc
         retrieval_mode = "deterministic_demo"
@@ -136,13 +137,13 @@ def read_task_evidence(task_id: int, request: Request) -> dict[str, Any]:
     task, result = _task_result_for_evidence(task_id, request)
     query, related_fields = task_query_payload(result)
     if knowledge_index_available():
-        indexed = retrieve_indexed_knowledge("\n".join([query, *related_fields]).strip())
+        indexed = retrieve_indexed_knowledge(anonymize_text("\n".join([query, *related_fields]).strip()))
         results = indexed["results"]
         retrieval_mode = indexed["retrieval_mode"]
         disclaimer = DEFAULT_DISCLAIMER
     else:
         try:
-            results = retrieve_sources(query=query, related_fields=related_fields)
+            results = retrieve_sources(query=anonymize_text(query), related_fields=related_fields)
         except ValueError as exc:
             raise _knowledge_unavailable(exc) from exc
         retrieval_mode = "deterministic_demo"

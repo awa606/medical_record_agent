@@ -12,6 +12,7 @@ venv/
 
 # Runtime data generated locally
 data/medical_record_agent.sqlite3
+*.identity-map.sqlite3*
 data/uploads/*
 !data/uploads/
 !data/uploads/.gitkeep

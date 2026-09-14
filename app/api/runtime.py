@@ -15,6 +15,7 @@ from app.db import get_connection, get_db_path, init_db
 from app.services.exporter import DEFAULT_OUTPUT_DIR
 from app.services.asr.prewarm import get_prewarm_status
 from app.services.llm.factory import get_llm_status
+from app.services.llm.readiness import check as check_local_model
 from app.services.runtime_limits import directory_free_bytes
 
 
@@ -97,6 +98,20 @@ def _check_provider() -> dict[str, Any]:
         if status.get("provider") == "mock" or status.get("fallback") or not status.get("configured"):
             ok = False
             error = status.get("fallback_reason") or "Live/Edge mode requires a configured non-mock provider"
+    if mode == "edge" and status.get("provider") != "ollama":
+        ok, error = False, "Edge mode requires a local Ollama provider"
+    if ok and mode in {"live", "edge"} and status.get("provider") == "ollama":
+        from app.services.llm.factory import create_llm_provider
+        try:
+            provider = create_llm_provider(mode=mode)
+        except RuntimeError:
+            return {"ok": False, "status": status, "error": "Local provider configuration is invalid"}
+        probe = check_local_model(provider.base_url, provider.model)
+        status["runtime_probe"] = probe
+        ok, error = probe["ok"], probe.get("error")
+        status.update(checked=True, reachable=ok, fallback=False, fallback_reason=error)
+        if mode == "edge":
+            status["fallback_provider"] = None
     return {"ok": ok, "status": status, "error": error}
 
 

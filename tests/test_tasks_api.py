@@ -473,12 +473,12 @@ class TaskApiTests(unittest.TestCase):
         self.assertEqual(blocked.exception.status_code, 409)
         payload = self._minimal_payload(task_id, include_high_risk=True)
         payload["fields"].append({"key": "chief_complaint", "action": "confirm_content"})
-        approved = approve_task(task_id, TaskApprovalRequest.model_validate(payload))
-        self.assertTrue(
-            approved["result_json"]["fields"]["chief_complaint"][
-                "high_risk_confirmed_by_doctor"
-            ]
-        )
+        with self.assertRaises(HTTPException) as blocked:
+            approve_task(task_id, TaskApprovalRequest.model_validate(payload))
+        self.assertEqual(blocked.exception.status_code, 409)
+        review_task(task_id, self._review_request(task_id, self._custom_fields()))
+        approved = approve_task(task_id, TaskApprovalRequest.model_validate(self._minimal_payload(task_id)))
+        self.assertTrue(approved["result_json"]["fields"]["chief_complaint"]["confirmed_by_doctor"])
 
     def test_approval_is_bound_to_current_revision_and_content_hash(self):
         task_id = self._create_reviewed_task()
@@ -541,6 +541,9 @@ class TaskApiTests(unittest.TestCase):
         task_id = self._create_reviewed_task(
             self._custom_fields(candidate_high_risk=True, field_conflict=True)
         )
+        with self.assertRaises(HTTPException):
+            approve_task(task_id, TaskApprovalRequest.model_validate(self._minimal_payload(task_id, include_high_risk=True)))
+        review_task(task_id, self._review_request(task_id, self._custom_fields(candidate_high_risk=True)))
         payload = self._minimal_payload(task_id, include_high_risk=True)
         payload["fields"].append({"key": "chief_complaint", "action": "confirm_content"})
         approve_task(task_id, TaskApprovalRequest.model_validate(payload))

@@ -2457,7 +2457,8 @@ function highRiskReviewItems(fields) {
       items.push({
         key: `field:${key}`,
         label: `${title}证据冲突`,
-        confirmed: Boolean(field.high_risk_confirmed_by_doctor),
+        confirmed: false,
+        requiresCorrection: true,
       });
     }
   });
@@ -2490,7 +2491,7 @@ function pendingApprovalCount(fields) {
     if (!diagnosisReviewComplete(diagnosis) && !appState.approvalDiagnosisDecisions[index]) pending += 1;
   });
   highRiskReviewItems(fields).forEach((item) => {
-    if (!item.confirmed && !appState.approvalHighRiskConfirmations[item.key]) pending += 1;
+    if (item.requiresCorrection || (!item.confirmed && !appState.approvalHighRiskConfirmations[item.key])) pending += 1;
   });
   return pending;
 }
@@ -2547,16 +2548,16 @@ function renderApprovalChecklist(fields) {
     `;
   }).join("");
   const riskRows = risks.map((item) => {
-    const selected = item.confirmed || appState.approvalHighRiskConfirmations[item.key];
+    const selected = !item.requiresCorrection && (item.confirmed || appState.approvalHighRiskConfirmations[item.key]);
     return `
       <div class="approval-item high-risk" data-approval-item="${escapeHtml(item.key)}">
         <div>
           <strong>${escapeHtml(item.label)}</strong>
-          <span>高风险或证据冲突项必须逐项单独确认。</span>
+          <span>${item.requiresCorrection ? "请核对原文，修正字段后保存修改；勾选确认不能消除证据冲突。" : "高风险提示必须逐项单独确认。"}</span>
         </div>
         ${approvalStatusPill(Boolean(selected))}
         <div class="approval-item-actions">
-          <button type="button" class="${selected ? "active" : ""}" data-approval-risk-key="${escapeHtml(item.key)}">已单独确认</button>
+          ${item.requiresCorrection ? '<span>需修正内容和证据</span>' : `<button type="button" class="${selected ? "active" : ""}" data-approval-risk-key="${escapeHtml(item.key)}">已单独确认</button>`}
         </div>
       </div>
     `;

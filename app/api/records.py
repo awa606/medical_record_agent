@@ -122,8 +122,8 @@ PLACEHOLDER_FIELD_VALUES = {
 }
 
 
-def run_record_generation_task(task_id: int, conversation_text: str) -> None:
-    MedicalRecordOrchestrator().run_existing_text_task(task_id, conversation_text)
+def run_record_generation_task(task_id: int, conversation_text: str, asr_source: dict | None = None) -> None:
+    MedicalRecordOrchestrator().run_existing_text_task(task_id, conversation_text, asr_source)
 
 
 def _missing_items(fields: MedicalRecordFields) -> list[str]:

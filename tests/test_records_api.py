@@ -314,7 +314,7 @@ class RecordsApiTests(unittest.TestCase):
         draft_result = build_draft(BuildDraftRequest(fields=extracted.fields))
 
         self.assertIn("generation_info", draft_result.model_dump())
-        self.assertEqual(draft_result.generation_info["actual_provider"], "mock")
+        self.assertEqual(draft_result.generation_info["actual_provider"], "deterministic_renderer_v1")
         self.assertEqual(draft_result.generation_info["mode"], "demo")
 
     def test_extract_fields_rejects_unmapped_stable_speaker(self):

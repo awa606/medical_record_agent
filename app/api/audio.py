@@ -438,6 +438,7 @@ def generate_record_from_audio(
         run_record_generation_task,
         task_id,
         conversation_text,
+        result.model_dump(),
     )
 
     return {

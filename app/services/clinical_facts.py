@@ -198,7 +198,7 @@ def validate_field_evidence(
         if not field_value.source_spans:
             setattr(fields, key, _conflicting_field(field_value, "字段缺少原文证据"))
             continue
-        if strict_text_match and not any(_span_text_supported(span.text, text) for span in field_value.source_spans):
+        if strict_text_match and not all(_span_text_supported(span.text, text) for span in field_value.source_spans):
             setattr(fields, key, _conflicting_field(field_value, "字段证据不在原文中"))
     return fields
 
@@ -447,7 +447,7 @@ def _conflicting_field(field_value: MedicalField, reason: str) -> MedicalField:
 def _span_text_supported(span_text: str, source_text: str) -> bool:
     span = re.sub(r"\s+", "", span_text or "")
     source = re.sub(r"\s+", "", source_text or "")
-    return bool(span and (span in source or source in span))
+    return bool(span and span in source)
 
 
 def _merge_spans(spans: list[SourceSpan]) -> list[SourceSpan]:

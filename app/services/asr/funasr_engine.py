@@ -6,6 +6,7 @@ from typing import Any
 from app.schemas.asr import ASRResult, ASRSegment
 from app.services.asr.evaluator import ASREvaluator
 from app.services.asr.speaker_diarization import SPEAKER_UNASSIGNED
+from app.services.asr.local_models import resolve_model, offline
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -37,6 +38,11 @@ class FunASREngine:
         if model_instance is not None:
             self.model = model_instance
             return
+        for key in ('model', 'vad_model', 'punc_model', 'spk_model'):
+            if key in model_kwargs:
+                model_kwargs[key] = resolve_model(model_kwargs[key])
+        if offline():
+            model_kwargs['disable_update'] = True
         try:
             from funasr import AutoModel
         except ImportError as exc:

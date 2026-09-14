@@ -267,8 +267,14 @@ def main() -> int:
     model.config.use_cache = True
     lora_metrics = _evaluate(model, tokenizer, frozen_rows, device, args.max_new_tokens)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    model.save_pretrained(args.output_dir / "adapter", safe_serialization=True)
-    tokenizer.save_pretrained(args.output_dir / "adapter")
+    adapter_dir = args.output_dir / "adapter"
+    model.save_pretrained(adapter_dir, safe_serialization=True)
+    tokenizer.save_pretrained(adapter_dir)
+    adapter_artifacts = {
+        path.name: {"size_bytes": path.stat().st_size, "sha256": _sha256(path)}
+        for path in sorted(adapter_dir.iterdir())
+        if path.is_file()
+    }
 
     improved = (
         lora_metrics["schema_complete_rate"] > baseline_metrics["schema_complete_rate"]
@@ -300,6 +306,7 @@ def main() -> int:
             "peak_cuda_memory_mb": round(torch.cuda.max_memory_allocated() / 1024 / 1024, 2),
         },
         "frozen_test": {"base": baseline_metrics, "lora": lora_metrics},
+        "adapter_artifacts": adapter_artifacts,
         "promotion_gate": "PASS" if improved else "NEEDS_VALIDATION",
         "production_model_changed": False,
     }

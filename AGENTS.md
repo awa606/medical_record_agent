@@ -1,14 +1,19 @@
 <!-- project-engineering-design-review:start -->
-## Project Management / Engineering Design Routing
+## Project Management / Research / Engineering Design Routing
 
-项目管理与工程设计按意图分流，不按单个“WBS/计划”关键词同时强制触发。以下路径为当前用户级Skill；适用时必须实际读取，不能只输出激活标记。
+项目管理、方案研究与工程设计按意图和门禁顺序分流。以下路径为当前用户级Skill；适用时必须实际读取，不能只输出激活标记。
 
 - **PROJECT MANAGEMENT**：项目状态、今天做什么、既有任务/WBS维护、延期、甘特、看板、依赖、关键路径、里程碑、风险、Verification、Evidence、周报、复盘和阶段Exit判断，优先使用 `C:\Users\AWA007\.agents\skills\obsidian-project-manager\SKILL.md`。第一条状态包含 **老公｜Obsidian Project Manager Skill 已启用**，先读取项目首页、WBS、Tasks、Gate、风险、验证和对应Git状态，执行SYNC → ASSESS → UPDATE → PRIORITIZE → REPORT。
-- **ENGINEERING DESIGN**：新项目、复杂Feature、系统设计、架构、新模块、模块拆分、接口设计、重大重构、重要技术选型和新工程工作的WBS设计，优先使用 `C:\Users\AWA007\.agents\skills\project-engineering-design-review\SKILL.md`。第一条状态包含 **老公｜Engineering Design Review Skill 已启用**，15步与固定五问完整，Gate PASS后才继续用户已授权的实现；NEEDS VALIDATION先做最小验证，BLOCKED说明前提。
-- **MIXED**：从请求开始就明确包含项目管理和实质工程设计时，第一条状态同时包含上述两个原文标记，读取两份Skill，先PM同步再Engineering Review。中途才发现需切换时，在切换状态消息输出新标记并真实加载，不追溯声称此前已启用；发现待办不自动授权实现。
+- **RESEARCH FIRST**：非平凡工作涉及模型、Library、Framework、硬件、基础设施、算法、存储或集成方案取舍时，使用 `C:\Users\AWA007\.agents\skills\research-first-engineering\SKILL.md`。第一条状态包含 **老公｜Research First Engineering Skill 已启用**，先查内部资产，再查官方与成熟方案，比较候选并为决策关键Unknown设计最小Spike。必要Spike未执行时Gate为NEEDS MORE EVIDENCE，不能填写REUSE/ADAPT/BUILD。
+- **ENGINEERING DESIGN**：新项目、复杂Feature、系统设计、架构、新模块、模块拆分、接口设计、重大重构和新工程工作的WBS设计，优先使用 `C:\Users\AWA007\.agents\skills\project-engineering-design-review\SKILL.md`。存在方案取舍时必须先有Research PASS，并将Research Decision Record作为设计输入；第一条适用状态包含 **老公｜Engineering Design Review Skill 已启用**。
+- **MIXED**：按PM → Research → Design Review顺序推进。请求一开始同时包含状态检查和方案研究时，首条包含PM与Research标记；Design标记只在Research PASS后出现。已Research PASS或明确无需Research的状态加设计请求可在首条包含PM与Design标记。中途切换时输出新标记并真实加载，不追溯声称此前已启用。
 - **SMALL CHANGE**：文字、简单配置、明确局部Bug无需完整15步，仍执行Hypothesis → Minimal Test → Fix → Verification。纯日常管理不因跨多个笔记升级为工程设计。
 
 普通状态查询允许在授权内同步有事实依据的管理变更；无新事实不写文件。只读、Plan和dry-run不修改Vault、Skill、规则或业务文件，不能借Obsidian IPC/API写入绕过模式。设计/方案请求即使Gate PASS也停在业务编码前。代码完成先VERIFY，只有交付物、全部验收、真实Evidence及核验人/时间齐备才能DONE；任务完成不替代阶段Gate。
+
+Project OS继续使用六态`backlog / ready / in_progress / blocked / verify / done`。Research与Design使用独立门禁字段；当前策略任务只有Research与Design均PASS或明确不适用后才能进入READY/IN PROGRESS。`pre_policy`保留既有执行状态并显示研究债务，不得借此扩展任务范围。
+
+执行环境已位于Git工作树时，该命令工作目录是本轮当前代码事实来源；其他同名仓库或历史checkout仅作比较，除非用户明确指定切换。不得检查多个仓库后静默用另一个路径的分支、HEAD或工作树状态作为“当前”。
 
 PM的正式任务删除、Phase迁移、Gate标准修改、大规模WBS调整、同一请求累计超过5个不同任务日期调整、阶段范围/Roadmap变化、Evidence删除，须先给具体前后变更摘要并等待确认；不拆批规避，已批准具体摘要不重复询问。日常增量维护必须保留现有人工更新；写入门禁和阈值细则读取PM Skill及操作参考。
 

@@ -14,7 +14,7 @@
 | Interfaces | 现有业务API保持；/ready绑定真实模型；trace补充实际组件与证据冲突 |
 | WBS | 1.2/1.3环境；2.2/2.3音频和角色；3.2/3.3生成审核；4.2/5.x证据回归 |
 | Dependencies | CI→main合并→本地模型Smoke→实现→实际回归 |
-| Critical Path | 本次实现依赖如上；正式工程CPM待Obsidian共享API连接核验，不另算 |
+| Critical Path | 本次实现依赖如上；已通过Obsidian工程插件共享API读取Alpha快照，15项/87h、1项有效DONE、1.2进行中；正式日级CPM含半日交接限制，保持原日期及算法，不用本轮实验另算或改期 |
 | Risks | 技术：模型兼容；集成：Schema/Revision；性能：冷启动；数据：标注不足；安全：隐私/幻觉；工期/范围/人员：单人串行、无自动改期 |
 | Validation | 干净环境455 tests+8 subtests；Linux verify通过；FunASR三录音；Qwen3-4B真实发热转写输出Schema合法 |
 | Milestones / Acceptance | 代码回归、20例匿名测试、20例字段评测、5次离线流程；产品未通过项如实保留 |

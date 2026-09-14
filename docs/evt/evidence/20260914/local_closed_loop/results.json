@@ -1,0 +1,4239 @@
+{
+  "schema_version": "local_closed_loop_v1",
+  "exported_at": "2026-09-14T07:56:04.531732+00:00",
+  "merge": {
+    "pr": 99,
+    "sha": "16d35e1a5ef8574c39a51c88af56bedb4cf9e3e3",
+    "verify_before": 34812448652,
+    "verify_main": 34812947848
+  },
+  "improvement": {
+    "pr": 100,
+    "source_commit": "823a440a4ba934427efd59c562e76f4518afb647",
+    "verify_run": 34819570718,
+    "python_tests": 504,
+    "subtests": 8,
+    "warnings": 2,
+    "status": "Draft"
+  },
+  "runtime": {
+    "python": "3.11.15 (main, Jul 14 2026, 02:10:36) [GCC 12.2.0]",
+    "versions": {
+      "torch": "2.11.0+cpu",
+      "torchaudio": "2.11.0+cpu",
+      "funasr": "1.3.29",
+      "modelscope": "1.38.1",
+      "transformers": "5.14.1",
+      "fastapi": "0.141.1",
+      "pydantic": "2.13.5"
+    },
+    "app_source_sha256": "0a87f464446cc894e5e35f36a2848adfa3997fa8a48316917d766da6a5b8c42f",
+    "image_id": "sha256:63fe83a12893bbce214b72a87a11cf18664b809e7be60de373f6750681de2077",
+    "source_commit": "3af6add3ace03f7cf6e3d43dec72e6d73edd6f6f",
+    "device": "Development PC / RTX 5070 Laptop GPU 8GB / FunASR CPU; not Jetson",
+    "weight_files": [
+      {
+        "relative_path": "punc_ct-transformer_cn-en-common-vocab471067-large/model.pt",
+        "bytes": 1125507622,
+        "sha256": "7176cae922a872e130e6b88aef9a1153581711baf79c9124c7c95be383cd6f81"
+      },
+      {
+        "relative_path": "speech_campplus_sv_zh-cn_16k-common/campplus_cn_common.bin",
+        "bytes": 28036335,
+        "sha256": "3388cf5fd3493c9ac9c69851d8e7a8badcfb4f3dc631020c4961371646d5ada8"
+      },
+      {
+        "relative_path": "speech_fsmn_vad_zh-cn-16k-common-pytorch/model.pt",
+        "bytes": 1721366,
+        "sha256": "b3be75be477f0780277f3bae0fe489f48718f585f3a6e45d7dd1fbb1a4255fc5"
+      },
+      {
+        "relative_path": "speech_seaco_paraformer_large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/model.pt",
+        "bytes": 989763045,
+        "sha256": "3d491689244ec5dfbf9170ef3827c358aa10f1f20e42a7c59e15e688647946d1"
+      }
+    ]
+  },
+  "development_before": {
+    "started_at": "2026-09-14T06:39:19.893555+00:00",
+    "git_sha": "16d35e1a5ef8574c39a51c88af56bedb4cf9e3e3",
+    "app_source_sha256": "06e25e38c36031236a95e1ebacea725952ca0f52519e132938f5ae1168105c88",
+    "split": [
+      1,
+      40
+    ],
+    "environment": "development PC, real local Ollama, synthetic typed transcripts",
+    "method": "Seven schema fields plus nonempty/grounding/automatic fact-recall counters; missing fields are not assumed normal.",
+    "summary": {
+      "cases": 40,
+      "schema_valid": 40,
+      "nonempty_fields": 41,
+      "grounded_fields": 37,
+      "conflicting_fields": 4,
+      "expected_facts": 93,
+      "recovered_facts": 52,
+      "p95_seconds": 6.459,
+      "max_seconds": 11.228,
+      "mock_fallback_count": 0
+    },
+    "completed_at": "2026-09-14T06:42:27.624510+00:00",
+    "cases": [
+      {
+        "case_id": "ce2e_v1_001_short_fever_temp",
+        "source_sha256": "1694cbecd97a10623a45c2d11c7d8fc874e2e692dbff6e2240d84ce0440d0027",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 11.228
+      },
+      {
+        "case_id": "ce2e_v1_002_short_fever_headache",
+        "source_sha256": "6cc43afc4478221c0dcf9edc8167d3353d19ac5c4be374b3c50465ef157f6997",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 3,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 7.091
+      },
+      {
+        "case_id": "ce2e_v1_003_fever_duration",
+        "source_sha256": "bce01097d8697a676fd6a125d41a5974ab8ecb7594e2568abe4f366119ca1f8c",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 6.459
+      },
+      {
+        "case_id": "ce2e_v1_004_cough_duration_only",
+        "source_sha256": "e8f5b24157f849e42e8db499811173e190ce2a544617fbecf0110f2e8ee85cde",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 5.041
+      },
+      {
+        "case_id": "ce2e_v1_005_absent_fever_headache",
+        "source_sha256": "d6f8140c8f615a7f269f5c591bc9c57282a9bccd15600fa7b91dda61ac44bbfd",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.51
+      },
+      {
+        "case_id": "ce2e_v1_006_question_answer_absent_fever",
+        "source_sha256": "3da220bea8fdd5d16737fba1110729bc00ab0ef95c8eafd3b2b30bd77a48cab1",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 0,
+        "grounded_fields": 0,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.782
+      },
+      {
+        "case_id": "ce2e_v1_007_resolved_fever",
+        "source_sha256": "72a8bdcbad0e77fa76f710156c875a2402340d2d8a3f964805ce10144fc73c0b",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.448
+      },
+      {
+        "case_id": "ce2e_v1_008_ibuprofen_defervescence",
+        "source_sha256": "f171b877c5b0b5e1c8533f1c3fb3bbcfbb656ab8ea8359796574d02c3b556bf8",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.266
+      },
+      {
+        "case_id": "ce2e_v1_009_fever_cough",
+        "source_sha256": "cf035955d7ab99e7d092b23feda2f45bd9120eb9b1092e746757c805aace61ba",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.807
+      },
+      {
+        "case_id": "ce2e_v1_010_fever_headache_duration",
+        "source_sha256": "079955a2927477c343a48cb7d88d5339a25ab421f2fcd238e69b944f5ff884c2",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "38.5",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.698
+      },
+      {
+        "case_id": "ce2e_v1_011_three_party_child_fever",
+        "source_sha256": "06d2928eea0c7685cdde0342531dc35343a354ac64dab664b760b8c83e6c1a71",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 3,
+        "grounded_fields": 2,
+        "conflicting_fields": 1,
+        "expected_facts": 3,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 0.3333333333333333,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.957
+      },
+      {
+        "case_id": "ce2e_v1_012_family_medication_effect",
+        "source_sha256": "55276df8fe05d0833665fd859c0205262371e70f6be7ef7050c539e0da7f0ebf",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 0,
+        "conflicting_fields": 2,
+        "expected_facts": 3,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.364
+      },
+      {
+        "case_id": "ce2e_v1_013_insufficient_hot",
+        "source_sha256": "7a5ce934d74ebc4ef2cb7b7f04ba7e83bae1a82591eed7451d2e0d49d4e4f7ff",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.669
+      },
+      {
+        "case_id": "ce2e_v1_014_out_of_scope_abdominal",
+        "source_sha256": "f5b854f93c2face2baf1a012091f220550aa76d4d1b28f740682f357092e1736",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.676
+      },
+      {
+        "case_id": "ce2e_v1_015_asr_typo_fever",
+        "source_sha256": "b3c984598124b40bfdea56ab9fa9947f46d5e8ec362c98dc1377b38648dc6736",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.542
+      },
+      {
+        "case_id": "ce2e_v1_016_asr_cough_temp",
+        "source_sha256": "56501a5e003078fbb407d3bcd43ef9f174c0136aed5ff960065f1e00dd237368",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.795
+      },
+      {
+        "case_id": "ce2e_v1_017_fever_duration_temp_cough",
+        "source_sha256": "917cfbab41acf70d6472917299a7303d5c846eff7c3a39bccda53cbea2963568",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.614
+      },
+      {
+        "case_id": "ce2e_v1_018_negative_cough_context",
+        "source_sha256": "b2cac044c30171aa6d7a855c35a5722a9ccb5b31adf00b0be9adc560becf37f6",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.626
+      },
+      {
+        "case_id": "ce2e_v1_019_resolved_after_antipyretic",
+        "source_sha256": "db64b975dd1092f38c740a55cfb3445c6ad5c54ecee97b4c4e6fa4878a4580e8",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 1,
+        "conflicting_fields": 1,
+        "expected_facts": 2,
+        "recovered_facts": 0,
+        "extra_fact_keys": [
+          [
+            "symptom",
+            "发热",
+            "present",
+            null,
+            null
+          ]
+        ],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.731
+      },
+      {
+        "case_id": "ce2e_v1_020_fever_chest_tightness",
+        "source_sha256": "2c8128eca42d1f727be9a2c024d316dda13636ae83186318de3d9eccd21783cf",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.662
+      },
+      {
+        "case_id": "ce2e_v1_021_flu_like",
+        "source_sha256": "89be3714eb7cd30bcbfe9f39ac2cb74b77ba35b266761a5dbeeb831916edb161",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.612
+      },
+      {
+        "case_id": "ce2e_v1_022_pulmonary_reference",
+        "source_sha256": "73aa58c429ade20f03f9ca2b889ad7afe1a4ba32f1fdb2b7de609517929d65ec",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.607
+      },
+      {
+        "case_id": "ce2e_v1_023_insufficient_general",
+        "source_sha256": "54f7d9b0911e7a143cfbf7856be187a30fec54ca51857c4d35a018eb7df89e16",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 0,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": null,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.741
+      },
+      {
+        "case_id": "ce2e_v1_024_unspecified_treatment",
+        "source_sha256": "415c8fd61c9a2e3db4eeefa6f3b000a841d7598da0651adeeac6fc397e40e8fd",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [
+          [
+            "treatment",
+            "既往处理",
+            "present",
+            "已自行处理，具体药物待补充",
+            null
+          ]
+        ],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.628
+      },
+      {
+        "case_id": "ce2e_v1_025_temperature_only",
+        "source_sha256": "575029ac1b4709b4b75d012dcde6cacd0ef53160f02c3ce953fde644036a83cf",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 0,
+        "grounded_fields": 0,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.918
+      },
+      {
+        "case_id": "ce2e_v1_026_absent_fever_cough",
+        "source_sha256": "aa6fbfcf470c04f02b909120f9f9b099370bf3a730a598e2558fce964da7eb99",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.968
+      },
+      {
+        "case_id": "ce2e_v1_027_self_correction_absent",
+        "source_sha256": "7f55ca4b1444f558ebd54a310352aadf6f7bb2f3a20f39bc7291b2e6a2e3a384",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 0,
+        "grounded_fields": 0,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.61
+      },
+      {
+        "case_id": "ce2e_v1_028_numeric_duration",
+        "source_sha256": "4a54e2c6c35fa8e762f318d2ad270dc5297b74fbd8d47f444f0b7e391e3ea9bf",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "38",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.65
+      },
+      {
+        "case_id": "ce2e_v1_029_high_fever",
+        "source_sha256": "20f19cac9313ea852e628e2600b8412cd1571b3a1349cfb5c74ce4db1adc38cd",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "40",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.65
+      },
+      {
+        "case_id": "ce2e_v1_030_fever_headache_cough",
+        "source_sha256": "3f8d1170a999eb4d02adc542bd09df8e4fdfe36d9b8ab0428d2d01e88b579560",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.711
+      },
+      {
+        "case_id": "ce2e_v1_031_family_describes_elder",
+        "source_sha256": "01e02b6aa17546aa0f01b098fbe4ee267f71dec097d072f5860d8d592f087727",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 0,
+        "grounded_fields": 0,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.665
+      },
+      {
+        "case_id": "ce2e_v1_032_two_party_structured",
+        "source_sha256": "9ce419d60ef5890f072a6521dbc838568e4d50c4085beeac419214cf0f7bc47d",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.664
+      },
+      {
+        "case_id": "ce2e_v1_033_out_of_scope_hypertension",
+        "source_sha256": "5454af581af0a863cdfc9a387a24d3a9e555454dbd831af55920668d1c00ed09",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.678
+      },
+      {
+        "case_id": "ce2e_v1_034_out_of_scope_bite",
+        "source_sha256": "0ab12a93a31df6cb866043ef2571595ae5a8be79d92b7da47e2780ff7f216dec",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.341
+      },
+      {
+        "case_id": "ce2e_v1_035_allergy_fact",
+        "source_sha256": "510fd3771f5928e01a7e3986d529de32e1a1615fe3334b836b73c88544bed7c7",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.649
+      },
+      {
+        "case_id": "ce2e_v1_036_absent_fever_synonym_headache",
+        "source_sha256": "dc900c2c4f06c673ff9565dd970b7fce846f24e18befa1439a5d07fd70a08da4",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.35
+      },
+      {
+        "case_id": "ce2e_v1_037_resolved_fever_current_cough",
+        "source_sha256": "d72cca23342278f4a6e3e009716f63391342876a13b4221ae0cae39818ec22d5",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.343
+      },
+      {
+        "case_id": "ce2e_v1_038_low_grade_temp_cough",
+        "source_sha256": "bb4d5b0ed2f55dd7c7f9725131523fee0bf765ff950d0809e68eaf914a53dc08",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 0,
+        "grounded_fields": 0,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.375
+      },
+      {
+        "case_id": "ce2e_v1_039_fever_no_temperature",
+        "source_sha256": "ad9a63ed4a181506e32257264ea497186bc8280b8181525b4cede4a06fbe913f",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.01
+      },
+      {
+        "case_id": "ce2e_v1_040_question_style_absent",
+        "source_sha256": "522732ab160aa1f2760a2a8b54ea9dc7ac1832e1df7149bb343a6e90cfaecf42",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 0,
+        "grounded_fields": 0,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.39
+      }
+    ]
+  },
+  "development_after": {
+    "started_at": "2026-09-14T06:43:49.015385+00:00",
+    "git_sha": "16d35e1a5ef8574c39a51c88af56bedb4cf9e3e3",
+    "app_source_sha256": "dad79e562db7439c95aaf390206646d40d3250bac9afdeac08b1ad972c4cc75d",
+    "split": [
+      1,
+      40
+    ],
+    "environment": "development PC, real local Ollama, synthetic typed transcripts",
+    "method": "Seven schema fields plus nonempty/grounding/automatic fact-recall counters; missing fields are not assumed normal.",
+    "summary": {
+      "cases": 40,
+      "schema_valid": 40,
+      "nonempty_fields": 79,
+      "grounded_fields": 69,
+      "conflicting_fields": 10,
+      "expected_facts": 93,
+      "recovered_facts": 59,
+      "p95_seconds": 5.737,
+      "max_seconds": 6.315,
+      "mock_fallback_count": 0
+    },
+    "completed_at": "2026-09-14T06:46:58.980152+00:00",
+    "cases": [
+      {
+        "case_id": "ce2e_v1_001_short_fever_temp",
+        "source_sha256": "1694cbecd97a10623a45c2d11c7d8fc874e2e692dbff6e2240d84ce0440d0027",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 5.374
+      },
+      {
+        "case_id": "ce2e_v1_002_short_fever_headache",
+        "source_sha256": "6cc43afc4478221c0dcf9edc8167d3353d19ac5c4be374b3c50465ef157f6997",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 1,
+        "conflicting_fields": 1,
+        "expected_facts": 3,
+        "recovered_facts": 3,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 6.146
+      },
+      {
+        "case_id": "ce2e_v1_003_fever_duration",
+        "source_sha256": "bce01097d8697a676fd6a125d41a5974ab8ecb7594e2568abe4f366119ca1f8c",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 6.315
+      },
+      {
+        "case_id": "ce2e_v1_004_cough_duration_only",
+        "source_sha256": "e8f5b24157f849e42e8db499811173e190ce2a544617fbecf0110f2e8ee85cde",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 5.737
+      },
+      {
+        "case_id": "ce2e_v1_005_absent_fever_headache",
+        "source_sha256": "d6f8140c8f615a7f269f5c591bc9c57282a9bccd15600fa7b91dda61ac44bbfd",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.59
+      },
+      {
+        "case_id": "ce2e_v1_006_question_answer_absent_fever",
+        "source_sha256": "3da220bea8fdd5d16737fba1110729bc00ab0ef95c8eafd3b2b30bd77a48cab1",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 0,
+        "grounded_fields": 0,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.69
+      },
+      {
+        "case_id": "ce2e_v1_007_resolved_fever",
+        "source_sha256": "72a8bdcbad0e77fa76f710156c875a2402340d2d8a3f964805ce10144fc73c0b",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.732
+      },
+      {
+        "case_id": "ce2e_v1_008_ibuprofen_defervescence",
+        "source_sha256": "f171b877c5b0b5e1c8533f1c3fb3bbcfbb656ab8ea8359796574d02c3b556bf8",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 1,
+        "conflicting_fields": 1,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.756
+      },
+      {
+        "case_id": "ce2e_v1_009_fever_cough",
+        "source_sha256": "cf035955d7ab99e7d092b23feda2f45bd9120eb9b1092e746757c805aace61ba",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.915
+      },
+      {
+        "case_id": "ce2e_v1_010_fever_headache_duration",
+        "source_sha256": "079955a2927477c343a48cb7d88d5339a25ab421f2fcd238e69b944f5ff884c2",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "38.5",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.831
+      },
+      {
+        "case_id": "ce2e_v1_011_three_party_child_fever",
+        "source_sha256": "06d2928eea0c7685cdde0342531dc35343a354ac64dab664b760b8c83e6c1a71",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 3,
+        "grounded_fields": 2,
+        "conflicting_fields": 1,
+        "expected_facts": 3,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 0.3333333333333333,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.731
+      },
+      {
+        "case_id": "ce2e_v1_012_family_medication_effect",
+        "source_sha256": "55276df8fe05d0833665fd859c0205262371e70f6be7ef7050c539e0da7f0ebf",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 3,
+        "grounded_fields": 0,
+        "conflicting_fields": 3,
+        "expected_facts": 3,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 5.138
+      },
+      {
+        "case_id": "ce2e_v1_013_insufficient_hot",
+        "source_sha256": "7a5ce934d74ebc4ef2cb7b7f04ba7e83bae1a82591eed7451d2e0d49d4e4f7ff",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.692
+      },
+      {
+        "case_id": "ce2e_v1_014_out_of_scope_abdominal",
+        "source_sha256": "f5b854f93c2face2baf1a012091f220550aa76d4d1b28f740682f357092e1736",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.676
+      },
+      {
+        "case_id": "ce2e_v1_015_asr_typo_fever",
+        "source_sha256": "b3c984598124b40bfdea56ab9fa9947f46d5e8ec362c98dc1377b38648dc6736",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.65
+      },
+      {
+        "case_id": "ce2e_v1_016_asr_cough_temp",
+        "source_sha256": "56501a5e003078fbb407d3bcd43ef9f174c0136aed5ff960065f1e00dd237368",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.715
+      },
+      {
+        "case_id": "ce2e_v1_017_fever_duration_temp_cough",
+        "source_sha256": "917cfbab41acf70d6472917299a7303d5c846eff7c3a39bccda53cbea2963568",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.817
+      },
+      {
+        "case_id": "ce2e_v1_018_negative_cough_context",
+        "source_sha256": "b2cac044c30171aa6d7a855c35a5722a9ccb5b31adf00b0be9adc560becf37f6",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.686
+      },
+      {
+        "case_id": "ce2e_v1_019_resolved_after_antipyretic",
+        "source_sha256": "db64b975dd1092f38c740a55cfb3445c6ad5c54ecee97b4c4e6fa4878a4580e8",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 3,
+        "grounded_fields": 3,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "symptom",
+            "发热",
+            "present",
+            null,
+            null
+          ]
+        ],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.852
+      },
+      {
+        "case_id": "ce2e_v1_020_fever_chest_tightness",
+        "source_sha256": "2c8128eca42d1f727be9a2c024d316dda13636ae83186318de3d9eccd21783cf",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.586
+      },
+      {
+        "case_id": "ce2e_v1_021_flu_like",
+        "source_sha256": "89be3714eb7cd30bcbfe9f39ac2cb74b77ba35b266761a5dbeeb831916edb161",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.567
+      },
+      {
+        "case_id": "ce2e_v1_022_pulmonary_reference",
+        "source_sha256": "73aa58c429ade20f03f9ca2b889ad7afe1a4ba32f1fdb2b7de609517929d65ec",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.53
+      },
+      {
+        "case_id": "ce2e_v1_023_insufficient_general",
+        "source_sha256": "54f7d9b0911e7a143cfbf7856be187a30fec54ca51857c4d35a018eb7df89e16",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 0,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": null,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.687
+      },
+      {
+        "case_id": "ce2e_v1_024_unspecified_treatment",
+        "source_sha256": "415c8fd61c9a2e3db4eeefa6f3b000a841d7598da0651adeeac6fc397e40e8fd",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [
+          [
+            "treatment",
+            "既往处理",
+            "present",
+            "已自行处理，具体药物待补充",
+            null
+          ]
+        ],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.759
+      },
+      {
+        "case_id": "ce2e_v1_025_temperature_only",
+        "source_sha256": "575029ac1b4709b4b75d012dcde6cacd0ef53160f02c3ce953fde644036a83cf",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.585
+      },
+      {
+        "case_id": "ce2e_v1_026_absent_fever_cough",
+        "source_sha256": "aa6fbfcf470c04f02b909120f9f9b099370bf3a730a598e2558fce964da7eb99",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.537
+      },
+      {
+        "case_id": "ce2e_v1_027_self_correction_absent",
+        "source_sha256": "7f55ca4b1444f558ebd54a310352aadf6f7bb2f3a20f39bc7291b2e6a2e3a384",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.529
+      },
+      {
+        "case_id": "ce2e_v1_028_numeric_duration",
+        "source_sha256": "4a54e2c6c35fa8e762f318d2ad270dc5297b74fbd8d47f444f0b7e391e3ea9bf",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "38",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.71
+      },
+      {
+        "case_id": "ce2e_v1_029_high_fever",
+        "source_sha256": "20f19cac9313ea852e628e2600b8412cd1571b3a1349cfb5c74ce4db1adc38cd",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "40",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.491
+      },
+      {
+        "case_id": "ce2e_v1_030_fever_headache_cough",
+        "source_sha256": "3f8d1170a999eb4d02adc542bd09df8e4fdfe36d9b8ab0428d2d01e88b579560",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.8
+      },
+      {
+        "case_id": "ce2e_v1_031_family_describes_elder",
+        "source_sha256": "01e02b6aa17546aa0f01b098fbe4ee267f71dec097d072f5860d8d592f087727",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 0,
+        "conflicting_fields": 2,
+        "expected_facts": 2,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.659
+      },
+      {
+        "case_id": "ce2e_v1_032_two_party_structured",
+        "source_sha256": "9ce419d60ef5890f072a6521dbc838568e4d50c4085beeac419214cf0f7bc47d",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.352
+      },
+      {
+        "case_id": "ce2e_v1_033_out_of_scope_hypertension",
+        "source_sha256": "5454af581af0a863cdfc9a387a24d3a9e555454dbd831af55920668d1c00ed09",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 1,
+        "conflicting_fields": 1,
+        "expected_facts": 2,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.595
+      },
+      {
+        "case_id": "ce2e_v1_034_out_of_scope_bite",
+        "source_sha256": "0ab12a93a31df6cb866043ef2571595ae5a8be79d92b7da47e2780ff7f216dec",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.648
+      },
+      {
+        "case_id": "ce2e_v1_035_allergy_fact",
+        "source_sha256": "510fd3771f5928e01a7e3986d529de32e1a1615fe3334b836b73c88544bed7c7",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.517
+      },
+      {
+        "case_id": "ce2e_v1_036_absent_fever_synonym_headache",
+        "source_sha256": "dc900c2c4f06c673ff9565dd970b7fce846f24e18befa1439a5d07fd70a08da4",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.538
+      },
+      {
+        "case_id": "ce2e_v1_037_resolved_fever_current_cough",
+        "source_sha256": "d72cca23342278f4a6e3e009716f63391342876a13b4221ae0cae39818ec22d5",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.642
+      },
+      {
+        "case_id": "ce2e_v1_038_low_grade_temp_cough",
+        "source_sha256": "bb4d5b0ed2f55dd7c7f9725131523fee0bf765ff950d0809e68eaf914a53dc08",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 1,
+        "conflicting_fields": 1,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "37.8",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.958
+      },
+      {
+        "case_id": "ce2e_v1_039_fever_no_temperature",
+        "source_sha256": "ad9a63ed4a181506e32257264ea497186bc8280b8181525b4cede4a06fbe913f",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.436
+      },
+      {
+        "case_id": "ce2e_v1_040_question_style_absent",
+        "source_sha256": "522732ab160aa1f2760a2a8b54ea9dc7ac1832e1df7149bb343a6e90cfaecf42",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 0,
+        "grounded_fields": 0,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.564
+      }
+    ]
+  },
+  "frozen": {
+    "started_at": "2026-09-14T06:48:26.296986+00:00",
+    "git_sha": "16d35e1a5ef8574c39a51c88af56bedb4cf9e3e3",
+    "app_source_sha256": "0d4497b62d174cc334764bae649401ce7f361d64d2f1369744c1dca3a1ded097",
+    "split": [
+      41,
+      60
+    ],
+    "environment": "development PC, real local Ollama, synthetic typed transcripts",
+    "method": "Seven schema fields plus nonempty/grounding/automatic fact-recall counters; missing fields are not assumed normal.",
+    "summary": {
+      "cases": 20,
+      "schema_valid": 20,
+      "nonempty_fields": 39,
+      "grounded_fields": 33,
+      "conflicting_fields": 6,
+      "expected_facts": 43,
+      "recovered_facts": 29,
+      "p95_seconds": 5.973,
+      "max_seconds": 6.031,
+      "mock_fallback_count": 0
+    },
+    "completed_at": "2026-09-14T06:49:55.758146+00:00",
+    "cases": [
+      {
+        "case_id": "ce2e_v1_041_final_short_fever",
+        "source_sha256": "ea51d47de9ff356f14e96a2e1a3e1d212c7ab53455b6ae37d2c6473d98dd5575",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "38.5",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 5.973
+      },
+      {
+        "case_id": "ce2e_v1_042_final_headache_temp",
+        "source_sha256": "50fa3f04013f36dc9a48c9f28e616a249e7ec1fe78444bc9aaa3e4fb6e86e7e4",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 6.031
+      },
+      {
+        "case_id": "ce2e_v1_043_final_fever_two_days",
+        "source_sha256": "2eae87fd36e13115d19c5d3cdbffcff49459b96793ae9afa4bdbf50fbde00b5f",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 5.6
+      },
+      {
+        "case_id": "ce2e_v1_044_final_negative_fever",
+        "source_sha256": "1404d333b06efe58b93d86c64301eee077028a4ac1194e8692621a80b63078d1",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 5.326
+      },
+      {
+        "case_id": "ce2e_v1_045_final_resolved",
+        "source_sha256": "03e54e7fb8de1933a5638a506349bfcc17f3ac41870e18e8f9c498143e33b758",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 1,
+        "conflicting_fields": 1,
+        "expected_facts": 1,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.602
+      },
+      {
+        "case_id": "ce2e_v1_046_final_cough_fever",
+        "source_sha256": "926cb7c08783df34f3e61810f693e1223b645b20e5e8668aba72b61682d092cb",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 4,
+        "recovered_facts": 3,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.75,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.363
+      },
+      {
+        "case_id": "ce2e_v1_047_final_three_party",
+        "source_sha256": "db0b45305de26104b98ae3fe994d0ed108c5972d47857dd84c836400bc47208f",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 1,
+        "conflicting_fields": 1,
+        "expected_facts": 3,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 0.3333333333333333,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 3.959
+      },
+      {
+        "case_id": "ce2e_v1_048_final_ibuprofen",
+        "source_sha256": "a527c1086c877293c8fc17041f54fad1917e892945fd0bac6516e04f0eb2a504",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 3,
+        "grounded_fields": 2,
+        "conflicting_fields": 1,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.58
+      },
+      {
+        "case_id": "ce2e_v1_049_final_high_fever",
+        "source_sha256": "79de532a701ec1dc345358eb4ac4386d3c163d5ff25a3e83f3da291e495a8204",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "40",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.456
+      },
+      {
+        "case_id": "ce2e_v1_050_final_info_insufficient",
+        "source_sha256": "c88fc399067e757cb224376ba91f596de70e7ac0c1476807493382e59597fa93",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 0,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": null,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.081
+      },
+      {
+        "case_id": "ce2e_v1_051_final_out_scope_allergy",
+        "source_sha256": "234f762767002909a3c500892758e49817d37f2eafb3c98bc0ef7f35a0f55118",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 1,
+        "grounded_fields": 1,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.5
+      },
+      {
+        "case_id": "ce2e_v1_052_final_out_scope_abdominal",
+        "source_sha256": "c0a77a401c1255171021748ea443c48fe313f1a5c77405ae25a9bbc8a59b7db2",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.161
+      },
+      {
+        "case_id": "ce2e_v1_053_final_asr_typo_temp",
+        "source_sha256": "2800820adaec40d9bdb7f5bb7b9cd716b0cc61c85f1fb4c6a86350aabffd0f13",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 1,
+        "conflicting_fields": 1,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.114
+      },
+      {
+        "case_id": "ce2e_v1_054_final_no_fever_cough",
+        "source_sha256": "a2265aad78db6fbb227ac69fa1fb77b60ad447f66a50dc5a55da128f3e1d8c48",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [
+          [
+            "symptom",
+            "咳嗽",
+            "absent",
+            null,
+            null
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.154
+      },
+      {
+        "case_id": "ce2e_v1_055_final_fever_no_course",
+        "source_sha256": "088edee7a3cd0278d5f2de810d642d89199156ad21735d3109fc966b9785b4fa",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 1,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "38",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.5,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.257
+      },
+      {
+        "case_id": "ce2e_v1_056_final_fever_cough_no_temp",
+        "source_sha256": "8001e1679ad66ad810b42c82783ec5ec1dd787bdc41218594a80d7808329ce39",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.169
+      },
+      {
+        "case_id": "ce2e_v1_057_final_doctor_no_answer",
+        "source_sha256": "2200f15506a24915e9dcdd53cce08bb85df6ef40eca83752b3d0fe9141267035",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 0,
+        "grounded_fields": 0,
+        "conflicting_fields": 0,
+        "expected_facts": 1,
+        "recovered_facts": 0,
+        "extra_fact_keys": [],
+        "fact_recall": 0.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 3.211
+      },
+      {
+        "case_id": "ce2e_v1_058_final_fever_after_medicine",
+        "source_sha256": "e5353986fc6e12380f23f2543020b1f5ae474cd89469c832961b7e6b2e5a2cd3",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 3,
+        "grounded_fields": 2,
+        "conflicting_fields": 1,
+        "expected_facts": 2,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "symptom",
+            "发热",
+            "present",
+            null,
+            null
+          ]
+        ],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.479
+      },
+      {
+        "case_id": "ce2e_v1_059_final_fever_with_breath",
+        "source_sha256": "dafbf6086150b40a879532b6f3ab9b2df89e1c97ba1d9cfdbd461fbee0266697",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 1,
+        "conflicting_fields": 1,
+        "expected_facts": 3,
+        "recovered_facts": 2,
+        "extra_fact_keys": [
+          [
+            "measurement",
+            "体温",
+            "present",
+            "39",
+            "℃"
+          ]
+        ],
+        "fact_recall": 0.6666666666666666,
+        "success": true,
+        "safety_blocked": true,
+        "seconds": 4.206
+      },
+      {
+        "case_id": "ce2e_v1_060_final_out_scope_chest_pain",
+        "source_sha256": "01ceedfbde468fff9fc84380bb73d569ef1b3f4333b450eea6699e1389ddaf7a",
+        "schema_field_presence": 1.0,
+        "nonempty_fields": 2,
+        "grounded_fields": 2,
+        "conflicting_fields": 0,
+        "expected_facts": 3,
+        "recovered_facts": 3,
+        "extra_fact_keys": [],
+        "fact_recall": 1.0,
+        "success": true,
+        "safety_blocked": false,
+        "seconds": 4.129
+      }
+    ]
+  },
+  "asr": {
+    "scope": "Three course recordings, development benchmark; not independent frozen T09 acceptance",
+    "engine": "funasr-seaco-paraformer",
+    "device": "cpu",
+    "model_load_seconds": 41.99104240000088,
+    "normalization": "ASREvaluator existing speaker-label/punctuation normalization; no new alias relaxation",
+    "cases": [
+      {
+        "audio_id": "chest_pain_01",
+        "engine": "funasr-seaco-paraformer",
+        "cer": 0.23076923076923078,
+        "reference_length": 1872,
+        "edit_distance": 432,
+        "keyword_recall": 0.5,
+        "medical_keywords": {
+          "expected": [
+            "胸痛",
+            "胸闷",
+            "心慌",
+            "心电图",
+            "高血压",
+            "冠心病"
+          ],
+          "recognized": [
+            "胸痛",
+            "高血压",
+            "冠心病"
+          ],
+          "missing": [
+            "胸闷",
+            "心慌",
+            "心电图"
+          ]
+        },
+        "id": "chest_pain_01",
+        "source_sha256": "d638f3ed4b22683ba3fd2ee501332f6d5870d9df9427abbb12956eb7ffc8b55a",
+        "normalized_sha256": "e2ef6b44045ba4ef6aa2924aa1fcb13b0969d5b7ae82f3dccdcee691cfca767a",
+        "source_sample_rate": 44100,
+        "sample_rate": 16000,
+        "channels": 1,
+        "duration_seconds": 496.303,
+        "transcript_sha256": "a44a3bc8bee42e2253c0e603ecce57105f8a48578ff1edf73c0efece25175fae",
+        "ground_truth_sha256": "08dfe695881ddebdb01b2006033987055f92086b11fcbb55615d22a26dc23428",
+        "asr_seconds": 59.93,
+        "rtf": 0.12075284654737126
+      },
+      {
+        "audio_id": "fever_01",
+        "engine": "funasr-seaco-paraformer",
+        "cer": 0.18408880666049954,
+        "reference_length": 1081,
+        "edit_distance": 199,
+        "keyword_recall": 1.0,
+        "medical_keywords": {
+          "expected": [
+            "发烧",
+            "三天",
+            "淋雨",
+            "40度",
+            "咳嗽",
+            "铁锈色痰",
+            "布洛芬",
+            "反复发热",
+            "食欲不佳"
+          ],
+          "recognized": [
+            "发烧",
+            "三天",
+            "淋雨",
+            "40度",
+            "咳嗽",
+            "铁锈色痰",
+            "布洛芬",
+            "反复发热",
+            "食欲不佳"
+          ],
+          "missing": []
+        },
+        "id": "fever_01",
+        "source_sha256": "93291c6894de5bcb7945af4f456e1ab3402fb8a78f60b5c00bfbc7185c8c414d",
+        "normalized_sha256": "8f0229b8385c56a1c90307286a47844d1acbc1d28e8d448c0e02fa6778e44ab2",
+        "source_sample_rate": 44100,
+        "sample_rate": 16000,
+        "channels": 1,
+        "duration_seconds": 309.94,
+        "transcript_sha256": "9bc06d539ecc458c3c167440e0374bc590658cc4dc4e2ec7da1a8d651f60fa70",
+        "ground_truth_sha256": "61d57bc58b29f03a10ffc03391a1c9306102eea57364db8c22bf1bdd2218a90f",
+        "asr_seconds": 35.955,
+        "rtf": 0.11600632380460733
+      },
+      {
+        "audio_id": "snakebite_01",
+        "engine": "funasr-seaco-paraformer",
+        "cer": 0.2109375,
+        "reference_length": 256,
+        "edit_distance": 54,
+        "keyword_recall": 0.8,
+        "medical_keywords": {
+          "expected": [
+            "蛇咬伤",
+            "左手",
+            "肿痛",
+            "两个小时",
+            "季德胜蛇药片",
+            "寒战",
+            "头晕",
+            "胸闷",
+            "心慌",
+            "牙龈出血"
+          ],
+          "recognized": [
+            "左手",
+            "肿痛",
+            "两个小时",
+            "季德胜蛇药片",
+            "寒战",
+            "头晕",
+            "胸闷",
+            "心慌"
+          ],
+          "missing": [
+            "蛇咬伤",
+            "牙龈出血"
+          ]
+        },
+        "id": "snakebite_01",
+        "source_sha256": "65da87600395d68acb53a13fa0d2f1d27cb1f34510a8334fe3c384de797ef764",
+        "normalized_sha256": "2ca8afab08e2b1335c9c80978980034d2898b41eea80be046449a08837e6afd1",
+        "source_sample_rate": 16000,
+        "sample_rate": 16000,
+        "channels": 1,
+        "duration_seconds": 111.924,
+        "transcript_sha256": "e304654a12bd29a310870b209a663a6d427312ecbab66b83c81ac290bf0e586e",
+        "ground_truth_sha256": "bd012d41a71214f49a589ce0c21a2b55f5785c64c51974890312f163b043eb48",
+        "asr_seconds": 14.158,
+        "rtf": 0.12649655123119258
+      }
+    ],
+    "macro_cer": 0.2085985124765768,
+    "macro_keyword_recall": 0.7666666666666666,
+    "max_rtf": 0.12649655123119258
+  },
+  "privacy_protocol": {
+    "mode": "privacy",
+    "review_actor": "authenticated local test admin; automated protocol test, not a physician sign-off",
+    "input_method": "synthetic identity text",
+    "physical_microphone_verified": false,
+    "summary": {
+      "passed": 20,
+      "total": 20,
+      "mock_fallbacks": 0,
+      "note": "Protocol test evidence only. No formal task, physician confirmation, or Alpha gate is changed.",
+      "p95_generation_seconds": 18.603,
+      "cold_first_generation_seconds": 142.792,
+      "identity_leaks": 0
+    },
+    "cases": [
+      {
+        "run": 1,
+        "success": true,
+        "input_sha256": "f52c3d6be42fdcaa7025097b1e35408e5bcea2743eab3a20ea8d0c6a376bca80",
+        "generation_http": 200,
+        "generation_seconds": 142.792,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 163.414,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 12307,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 2,
+        "success": true,
+        "input_sha256": "1318a63d9b067b65a23f53646068daa31b631c56971e0ac4d540174d50af8a3d",
+        "generation_http": 200,
+        "generation_seconds": 14.926,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 35.367,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 9036,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 3,
+        "success": true,
+        "input_sha256": "c24f579518948a2276973907395292600ced415a4f7d4b25484d2c61ad59467c",
+        "generation_http": 200,
+        "generation_seconds": 17.934,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 38.76,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10998,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 4,
+        "success": true,
+        "input_sha256": "242d8d451a2dac01f4421fdf5fb3b2fe3db77a94bf14633b900ce35248d0b51e",
+        "generation_http": 200,
+        "generation_seconds": 17.594,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 39.057,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10707,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 5,
+        "success": true,
+        "input_sha256": "4402704c9ea86a467c20a85fcfb6113d5e293677a2c581f7df68a8c833aeb8e5",
+        "generation_http": 200,
+        "generation_seconds": 18.185,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 38.651,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 11095,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 6,
+        "success": true,
+        "input_sha256": "d8d7cce3cc0aea7e438c83245751df42ffd45b18f9f9529720843888db4765ed",
+        "generation_http": 200,
+        "generation_seconds": 15.251,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 35.062,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 9410,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 7,
+        "success": true,
+        "input_sha256": "d5602cedd0432bbe9079c1de472f1e7e16e7754d7176858c9ce5d6aab7255099",
+        "generation_http": 200,
+        "generation_seconds": 16.284,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 35.776,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10538,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 8,
+        "success": true,
+        "input_sha256": "96fdf07db73acd61c47cf1c33954a36859243d83dc9469930a9d015f2f4e6b94",
+        "generation_http": 200,
+        "generation_seconds": 16.482,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 35.936,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10645,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 9,
+        "success": true,
+        "input_sha256": "09069f35e893de691b5f077a306ef55f4ac7f64c88b5f3ee6b5908e3a49e00d4",
+        "generation_http": 200,
+        "generation_seconds": 16.723,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 35.625,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10507,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 10,
+        "success": true,
+        "input_sha256": "53bff80e7e35b1db7f7c8b4c6c801ea1cfe6e29b581ceb19de4a1aa0396bc4e5",
+        "generation_http": 200,
+        "generation_seconds": 16.218,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 35.288,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10283,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 11,
+        "success": true,
+        "input_sha256": "100180b32336b16d336d2c929c77167737be983462c62dc7c97bba5d1076bb4e",
+        "generation_http": 200,
+        "generation_seconds": 16.471,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 35.337,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10353,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 12,
+        "success": true,
+        "input_sha256": "6526d2fde6ef02effaf2bd86fbc2d94a378b9432750c6149f7dc9b54c799eba7",
+        "generation_http": 200,
+        "generation_seconds": 16.933,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 36.231,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10607,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 13,
+        "success": true,
+        "input_sha256": "4e94bc9e5c6f94203e6f2b3185ddce941a67dcba7a8e0a9fa4587ffc1e1d84cc",
+        "generation_http": 200,
+        "generation_seconds": 16.285,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 36.515,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10181,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 14,
+        "success": true,
+        "input_sha256": "42b799115426e20f26fc143f7f0874d46e20e970b46b0a66223598cad0d70639",
+        "generation_http": 200,
+        "generation_seconds": 16.094,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 35.14,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10137,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 15,
+        "success": true,
+        "input_sha256": "d9888b7a29f55ecf3fb582a1caefdd09d410cf640e1f921a3ba4612ffcf60873",
+        "generation_http": 200,
+        "generation_seconds": 16.429,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 36.459,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10140,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 16,
+        "success": true,
+        "input_sha256": "44a9dc5907159aa9106e7536131c005a4f3005fb5f982ce856478ef3ad5bca8d",
+        "generation_http": 200,
+        "generation_seconds": 16.798,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 36.669,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10639,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 17,
+        "success": true,
+        "input_sha256": "d6c84d0831c44061356d3bc7090b85057c038088e2bea45fd48c08b349278b73",
+        "generation_http": 200,
+        "generation_seconds": 14.491,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 34.892,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 8877,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 18,
+        "success": true,
+        "input_sha256": "101943efcb21d37f8a4abb17dbd51319a2302a3c9c45a6261bd3627d52bad75b",
+        "generation_http": 200,
+        "generation_seconds": 18.603,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 40.641,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10976,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 19,
+        "success": true,
+        "input_sha256": "9a594074be107faf76ade13bb86a157ee9da091b63ac22cee5291de714464d50",
+        "generation_http": 200,
+        "generation_seconds": 17.357,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 38.303,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10912,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      },
+      {
+        "run": 20,
+        "success": true,
+        "input_sha256": "598ae6293d2294095ae584ebbc2adaf09dbcb7d90d00539b649390ff918dd1ba",
+        "generation_http": 200,
+        "generation_seconds": 16.715,
+        "nonempty_fields": 2,
+        "conflicting_fields": [],
+        "unapproved_export_http": 400,
+        "stale_approval_http": 409,
+        "approval_http": 200,
+        "duplicate_approval_http": 409,
+        "export_http": 200,
+        "identity_leaks": 0,
+        "export_sha256": "0ec47ba598b7ae992631db80151b56b6a673383af5b5ed8df698ceb96c486549",
+        "export_after_edit_http": 400,
+        "total_seconds": 38.532,
+        "trace": {
+          "llm_provider": "ollama",
+          "model": "qwen3:4b",
+          "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+          "actual_provider": "ollama",
+          "fallback": false,
+          "mode": "edge",
+          "fallback_allowed": false,
+          "operations": {
+            "field_extraction": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 10680,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "ollama",
+              "operation": "field_extraction",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "draft_generation": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_renderer_v1",
+              "operation": "draft_generation",
+              "mode": "edge",
+              "fallback_allowed": false
+            },
+            "safety_check": {
+              "llm_provider": "ollama",
+              "model": "qwen3:4b",
+              "latency_ms": 0,
+              "fallback": false,
+              "fallback_reason": null,
+              "actual_provider": "deterministic_safety_v1",
+              "operation": "safety_check",
+              "mode": "edge",
+              "fallback_allowed": false
+            }
+          }
+        }
+      }
+    ]
+  },
+  "audio_replay": {
+    "mode": "audio",
+    "review_actor": "authenticated local test admin; automated protocol test, not a physician sign-off",
+    "input_method": "uploaded prerecorded course audio",
+    "physical_microphone_verified": false,
+    "readiness_before": {
+      "status": "ready",
+      "checks": {
+        "sqlite": {
+          "ok": true,
+          "path": "/app/runtime/record.sqlite3",
+          "journal_mode": "wal",
+          "quick_check": "ok",
+          "error": null
+        },
+        "uploads": {
+          "ok": true,
+          "path": "/app/runtime/uploads",
+          "free_bytes": 108148076544,
+          "error": null
+        },
+        "outputs": {
+          "ok": true,
+          "path": "/app/runtime/outputs",
+          "free_bytes": 108148076544,
+          "error": null
+        },
+        "speaker_profiles": {
+          "ok": true,
+          "path": "/app/runtime/speaker_profiles",
+          "free_bytes": 108148076544,
+          "error": null
+        },
+        "provider": {
+          "ok": true,
+          "status": {
+            "provider": "ollama",
+            "model": "qwen3:4b",
+            "mode": "edge",
+            "fallback_allowed": false,
+            "configured": true,
+            "reachable": true,
+            "checked": true,
+            "fallback_provider": null,
+            "fallback": false,
+            "fallback_reason": null,
+            "runtime_probe": {
+              "ok": true,
+              "error": null,
+              "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+              "inference_age_seconds": 83.219
+            }
+          },
+          "error": null
+        },
+        "asr_models": {
+          "ok": true,
+          "status": "ready",
+          "profile": "upload",
+          "error_category": null,
+          "retryable": false,
+          "components": [
+            "paraformer-zh",
+            "fsmn-vad",
+            "ct-punc",
+            "cam++"
+          ],
+          "model_cache": {
+            "ok": true,
+            "has_cached_files": true,
+            "caches": {
+              "modelscope": {
+                "path": "/app/model_cache/modelscope",
+                "exists": true,
+                "file_count": 98
+              },
+              "hf": {
+                "path": "/app/model_cache/hf",
+                "exists": true,
+                "file_count": 82
+              },
+              "torch": {
+                "path": "/app/model_cache/torch",
+                "exists": false,
+                "file_count": 0
+              }
+            }
+          },
+          "error": null
+        }
+      }
+    },
+    "summary": {
+      "passed": 0,
+      "total": 5,
+      "mock_fallbacks": 0,
+      "note": "Protocol test evidence only. No formal task, physician confirmation, or Alpha gate is changed."
+    },
+    "cases": [
+      {
+        "run": 1,
+        "success": false,
+        "audio_sha256": "8f0229b8385c56a1c90307286a47844d1acbc1d28e8d448c0e02fa6778e44ab2",
+        "repeated_sample": false,
+        "asr_http": 200,
+        "asr_seconds": 59.2588,
+        "asr_engine": "funasr-paraformer-zh",
+        "generation_http": 409,
+        "total_seconds": 82.844,
+        "role_quality_summary": {
+          "status": "needs_review",
+          "policy_version": "speaker-role-policy-v1",
+          "pending_count": 3,
+          "reason_codes": [
+            "rules_multi_speaker_fallback",
+            "rules_speaker_context_rules"
+          ]
+        },
+        "transcript_sha256": "8074c49e75795cb2f8eabac4289ca73d657f1cd6d4c4150afde03119026b6e99",
+        "error_code": "ROLE_QUALITY_GATE_NOT_PASSED"
+      },
+      {
+        "run": 2,
+        "success": false,
+        "audio_sha256": "8f0229b8385c56a1c90307286a47844d1acbc1d28e8d448c0e02fa6778e44ab2",
+        "repeated_sample": true,
+        "asr_http": 200,
+        "asr_seconds": 57.3921,
+        "asr_engine": "funasr-paraformer-zh",
+        "generation_http": 409,
+        "total_seconds": 85.34,
+        "role_quality_summary": {
+          "status": "needs_review",
+          "policy_version": "speaker-role-policy-v1",
+          "pending_count": 3,
+          "reason_codes": [
+            "rules_multi_speaker_fallback",
+            "rules_speaker_context_rules"
+          ]
+        },
+        "transcript_sha256": "24315d9c43dd0df1513abfc54413424829732626596f1ba82d9d3670c4bd6f63",
+        "error_code": "ROLE_QUALITY_GATE_NOT_PASSED"
+      },
+      {
+        "run": 3,
+        "success": false,
+        "audio_sha256": "8f0229b8385c56a1c90307286a47844d1acbc1d28e8d448c0e02fa6778e44ab2",
+        "repeated_sample": true,
+        "asr_http": 200,
+        "asr_seconds": 57.2835,
+        "asr_engine": "funasr-paraformer-zh",
+        "generation_http": 409,
+        "total_seconds": 84.234,
+        "role_quality_summary": {
+          "status": "needs_review",
+          "policy_version": "speaker-role-policy-v1",
+          "pending_count": 3,
+          "reason_codes": [
+            "rules_multi_speaker_fallback",
+            "rules_speaker_context_rules"
+          ]
+        },
+        "transcript_sha256": "d4ed219811eff94dabe8022bd3bc76a31e045b078eb4419f8c0e389813c67aee",
+        "error_code": "ROLE_QUALITY_GATE_NOT_PASSED"
+      },
+      {
+        "run": 4,
+        "success": false,
+        "audio_sha256": "8f0229b8385c56a1c90307286a47844d1acbc1d28e8d448c0e02fa6778e44ab2",
+        "repeated_sample": true,
+        "asr_http": 200,
+        "asr_seconds": 51.9625,
+        "asr_engine": "funasr-paraformer-zh",
+        "generation_http": 409,
+        "total_seconds": 82.996,
+        "role_quality_summary": {
+          "status": "needs_review",
+          "policy_version": "speaker-role-policy-v1",
+          "pending_count": 3,
+          "reason_codes": [
+            "rules_multi_speaker_fallback",
+            "rules_speaker_context_rules"
+          ]
+        },
+        "transcript_sha256": "f2858cfe3f389e80c17d8e0819087ec92183f1c97a06577798e38c2ea16d9670",
+        "error_code": "ROLE_QUALITY_GATE_NOT_PASSED"
+      },
+      {
+        "run": 5,
+        "success": false,
+        "audio_sha256": "8f0229b8385c56a1c90307286a47844d1acbc1d28e8d448c0e02fa6778e44ab2",
+        "repeated_sample": true,
+        "asr_http": 200,
+        "asr_seconds": 50.8149,
+        "asr_engine": "funasr-paraformer-zh",
+        "generation_http": 409,
+        "total_seconds": 73.233,
+        "role_quality_summary": {
+          "status": "needs_review",
+          "policy_version": "speaker-role-policy-v1",
+          "pending_count": 3,
+          "reason_codes": [
+            "rules_multi_speaker_fallback",
+            "rules_speaker_context_rules"
+          ]
+        },
+        "transcript_sha256": "9df9fc001f886aa7418822b1e4d906e246cb02d0a7e7ab81b8dab2b010714891",
+        "error_code": "ROLE_QUALITY_GATE_NOT_PASSED"
+      }
+    ]
+  },
+  "browser": {
+    "surface": "actual doctor UI and JS state",
+    "cases": [
+      {
+        "run": 1,
+        "task_id": 1,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 2,
+        "task_id": 2,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 3,
+        "task_id": 3,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 4,
+        "task_id": 4,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 5,
+        "task_id": 5,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 6,
+        "task_id": 6,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 7,
+        "task_id": 7,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 8,
+        "task_id": 8,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 9,
+        "task_id": 9,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 10,
+        "task_id": 10,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 11,
+        "task_id": 11,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 12,
+        "task_id": 12,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 13,
+        "task_id": 13,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 14,
+        "task_id": 14,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 15,
+        "task_id": 15,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 16,
+        "task_id": 16,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 17,
+        "task_id": 17,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 18,
+        "task_id": 18,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 19,
+        "task_id": 19,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 20,
+        "task_id": 20,
+        "identity_leaks": 0,
+        "rendered": true
+      }
+    ],
+    "passed": true
+  },
+  "corrected_ui": {
+    "surface": "actual doctor UI and JS state",
+    "cases": [
+      {
+        "run": 1,
+        "task_id": 1,
+        "identity_leaks": 0,
+        "rendered": true
+      },
+      {
+        "run": 20,
+        "task_id": 20,
+        "identity_leaks": 0,
+        "rendered": true
+      }
+    ],
+    "passed": true
+  },
+  "runtime_log_scan": {
+    "cases": [
+      {
+        "case": 1,
+        "leaks": 0
+      },
+      {
+        "case": 2,
+        "leaks": 0
+      },
+      {
+        "case": 3,
+        "leaks": 0
+      },
+      {
+        "case": 4,
+        "leaks": 0
+      },
+      {
+        "case": 5,
+        "leaks": 0
+      },
+      {
+        "case": 6,
+        "leaks": 0
+      },
+      {
+        "case": 7,
+        "leaks": 0
+      },
+      {
+        "case": 8,
+        "leaks": 0
+      },
+      {
+        "case": 9,
+        "leaks": 0
+      },
+      {
+        "case": 10,
+        "leaks": 0
+      },
+      {
+        "case": 11,
+        "leaks": 0
+      },
+      {
+        "case": 12,
+        "leaks": 0
+      },
+      {
+        "case": 13,
+        "leaks": 0
+      },
+      {
+        "case": 14,
+        "leaks": 0
+      },
+      {
+        "case": 15,
+        "leaks": 0
+      },
+      {
+        "case": 16,
+        "leaks": 0
+      },
+      {
+        "case": 17,
+        "leaks": 0
+      },
+      {
+        "case": 18,
+        "leaks": 0
+      },
+      {
+        "case": 19,
+        "leaks": 0
+      },
+      {
+        "case": 20,
+        "leaks": 0
+      }
+    ],
+    "sha256": "b5fe1fcd5928ef3ad7b09904b4f34536cdff7037b9e605e01d19d666636ad26d",
+    "bytes": 306141,
+    "test_password_leaked": false
+  },
+  "network": {
+    "time": "2026-09-14T07:47:35.579598+00:00",
+    "network_internal": true,
+    "checks": [
+      {
+        "service": "app",
+        "host": "ollama",
+        "port": 11434,
+        "expected_reachable": true,
+        "reachable": true,
+        "exit_code": 0,
+        "pass": true
+      },
+      {
+        "service": "app",
+        "host": "1.1.1.1",
+        "port": 443,
+        "expected_reachable": false,
+        "reachable": false,
+        "exit_code": 1,
+        "pass": true
+      },
+      {
+        "service": "app",
+        "host": "example.com",
+        "port": 443,
+        "expected_reachable": false,
+        "reachable": false,
+        "exit_code": 1,
+        "pass": true
+      },
+      {
+        "service": "ollama",
+        "host": "ollama",
+        "port": 11434,
+        "expected_reachable": true,
+        "reachable": true,
+        "exit_code": 0,
+        "pass": true
+      },
+      {
+        "service": "ollama",
+        "host": "1.1.1.1",
+        "port": 443,
+        "expected_reachable": false,
+        "reachable": false,
+        "exit_code": 1,
+        "pass": true
+      },
+      {
+        "service": "ollama",
+        "host": "example.com",
+        "port": 443,
+        "expected_reachable": false,
+        "reachable": false,
+        "exit_code": 1,
+        "pass": true
+      }
+    ],
+    "passed": true
+  },
+  "readiness": {
+    "status": "ready",
+    "checks": {
+      "sqlite": {
+        "ok": true,
+        "path": "/app/runtime/record.sqlite3",
+        "journal_mode": "wal",
+        "quick_check": "ok",
+        "error": null
+      },
+      "uploads": {
+        "ok": true,
+        "path": "/app/runtime/uploads",
+        "free_bytes": 108148080640,
+        "error": null
+      },
+      "outputs": {
+        "ok": true,
+        "path": "/app/runtime/outputs",
+        "free_bytes": 108148080640,
+        "error": null
+      },
+      "speaker_profiles": {
+        "ok": true,
+        "path": "/app/runtime/speaker_profiles",
+        "free_bytes": 108148080640,
+        "error": null
+      },
+      "provider": {
+        "ok": true,
+        "status": {
+          "provider": "ollama",
+          "model": "qwen3:4b",
+          "mode": "edge",
+          "fallback_allowed": false,
+          "configured": true,
+          "reachable": true,
+          "checked": true,
+          "fallback_provider": null,
+          "fallback": false,
+          "fallback_reason": null,
+          "runtime_probe": {
+            "ok": true,
+            "error": null,
+            "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+            "inference_age_seconds": 78.534
+          }
+        },
+        "error": null
+      },
+      "asr_models": {
+        "ok": true,
+        "status": "ready",
+        "profile": "upload",
+        "error_category": null,
+        "retryable": false,
+        "components": [
+          "paraformer-zh",
+          "fsmn-vad",
+          "ct-punc",
+          "cam++"
+        ],
+        "model_cache": {
+          "ok": true,
+          "has_cached_files": true,
+          "caches": {
+            "modelscope": {
+              "path": "/app/model_cache/modelscope",
+              "exists": true,
+              "file_count": 98
+            },
+            "hf": {
+              "path": "/app/model_cache/hf",
+              "exists": true,
+              "file_count": 82
+            },
+            "torch": {
+              "path": "/app/model_cache/torch",
+              "exists": false,
+              "file_count": 0
+            }
+          }
+        },
+        "error": null
+      }
+    }
+  },
+  "disconnect_recovery": {
+    "scope": "owned test Ollama service only",
+    "started_at": 1789372120.6461177,
+    "disconnected_http": 503,
+    "disconnected": {
+      "status": "not_ready",
+      "checks": {
+        "sqlite": {
+          "ok": true,
+          "path": "/app/runtime/record.sqlite3",
+          "journal_mode": "wal",
+          "quick_check": "ok",
+          "error": null
+        },
+        "uploads": {
+          "ok": true,
+          "path": "/app/runtime/uploads",
+          "free_bytes": 107868737536,
+          "error": null
+        },
+        "outputs": {
+          "ok": true,
+          "path": "/app/runtime/outputs",
+          "free_bytes": 107868737536,
+          "error": null
+        },
+        "speaker_profiles": {
+          "ok": true,
+          "path": "/app/runtime/speaker_profiles",
+          "free_bytes": 107868737536,
+          "error": null
+        },
+        "provider": {
+          "ok": false,
+          "status": {
+            "provider": "ollama",
+            "model": "qwen3:4b",
+            "mode": "edge",
+            "fallback_allowed": false,
+            "configured": true,
+            "reachable": false,
+            "checked": true,
+            "fallback_provider": null,
+            "fallback": false,
+            "fallback_reason": "local model service unreachable or model unavailable",
+            "runtime_probe": {
+              "ok": false,
+              "error": "local model service unreachable or model unavailable"
+            }
+          },
+          "error": "local model service unreachable or model unavailable"
+        },
+        "asr_models": {
+          "ok": true,
+          "status": "ready",
+          "profile": "upload",
+          "error_category": null,
+          "retryable": false,
+          "components": [
+            "paraformer-zh",
+            "fsmn-vad",
+            "ct-punc",
+            "cam++"
+          ],
+          "model_cache": {
+            "ok": true,
+            "has_cached_files": true,
+            "caches": {
+              "modelscope": {
+                "path": "/app/model_cache/modelscope",
+                "exists": true,
+                "file_count": 98
+              },
+              "hf": {
+                "path": "/app/model_cache/hf",
+                "exists": true,
+                "file_count": 82
+              },
+              "torch": {
+                "path": "/app/model_cache/torch",
+                "exists": false,
+                "file_count": 0
+              }
+            }
+          },
+          "error": null
+        }
+      }
+    },
+    "recovered_http": 200,
+    "recovered": {
+      "status": "ready",
+      "checks": {
+        "sqlite": {
+          "ok": true,
+          "path": "/app/runtime/record.sqlite3",
+          "journal_mode": "wal",
+          "quick_check": "ok",
+          "error": null
+        },
+        "uploads": {
+          "ok": true,
+          "path": "/app/runtime/uploads",
+          "free_bytes": 107827003392,
+          "error": null
+        },
+        "outputs": {
+          "ok": true,
+          "path": "/app/runtime/outputs",
+          "free_bytes": 107827003392,
+          "error": null
+        },
+        "speaker_profiles": {
+          "ok": true,
+          "path": "/app/runtime/speaker_profiles",
+          "free_bytes": 107827003392,
+          "error": null
+        },
+        "provider": {
+          "ok": true,
+          "status": {
+            "provider": "ollama",
+            "model": "qwen3:4b",
+            "mode": "edge",
+            "fallback_allowed": false,
+            "configured": true,
+            "reachable": true,
+            "checked": true,
+            "fallback_provider": null,
+            "fallback": false,
+            "fallback_reason": null,
+            "runtime_probe": {
+              "ok": true,
+              "error": null,
+              "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+              "inference_age_seconds": 212.481
+            }
+          },
+          "error": null
+        },
+        "asr_models": {
+          "ok": true,
+          "status": "ready",
+          "profile": "upload",
+          "error_category": null,
+          "retryable": false,
+          "components": [
+            "paraformer-zh",
+            "fsmn-vad",
+            "ct-punc",
+            "cam++"
+          ],
+          "model_cache": {
+            "ok": true,
+            "has_cached_files": true,
+            "caches": {
+              "modelscope": {
+                "path": "/app/model_cache/modelscope",
+                "exists": true,
+                "file_count": 98
+              },
+              "hf": {
+                "path": "/app/model_cache/hf",
+                "exists": true,
+                "file_count": 82
+              },
+              "torch": {
+                "path": "/app/model_cache/torch",
+                "exists": false,
+                "file_count": 0
+              }
+            }
+          },
+          "error": null
+        }
+      }
+    },
+    "recovery_observed_at": 1789372409.1638606,
+    "passed": true
+  },
+  "limitations": [
+    "Development PC only; Jetson HARDWARE BLOCKED",
+    "Audio replay is not physical microphone acceptance",
+    "Same fever audio repeated five times; not five independent samples",
+    "Automated admin review verifies protocol, not clinical sign-off",
+    "Frozen 41-60 scored once before later operational/role hardening; source hash retained",
+    "Clinical source-grounding conflicts are review flags, not a clinician hallucination adjudication",
+    "Streaming five-component prewarm OOM recorded; upload profile has four components and does not prove streaming readiness"
+  ],
+  "course_matrix": [
+    {
+      "id": "T01",
+      "requirement": "病历生成完整性",
+      "acceptance": "20例必需字段存在率100%",
+      "status": "FAIL",
+      "actual": "Schema 20/20，但仅恢复29/43项预期事实；不能用空字段替代临床完整性",
+      "alpha_mapping": "V08"
+    },
+    {
+      "id": "T02",
+      "requirement": "AI幻觉检测",
+      "acceptance": "虚构事实0、输入矛盾0；一票否决",
+      "status": "NOT TESTED",
+      "actual": "6个字段冲突被标记；无临床逐例裁定，不能宣称零幻觉。恶意引用/否定/跨角色门禁测试通过",
+      "alpha_mapping": "V02,V03,V08"
+    },
+    {
+      "id": "T03",
+      "requirement": "医学术语规范",
+      "acceptance": "固定20样本错误0",
+      "status": "NOT TESTED",
+      "actual": "本次没有新增经人工复核的20项医学术语验收结果",
+      "alpha_mapping": "V01,V08"
+    },
+    {
+      "id": "T04",
+      "requirement": "编辑与人工确认",
+      "acceptance": "10种场景可编辑；未确认提交/归档成功0",
+      "status": "PARTIAL",
+      "actual": "20次真实模型协议循环：未批准导出、旧版本批准、重复批准、修改后导出均拒绝；不替代完整10场景临床验收",
+      "alpha_mapping": "V03,V04"
+    },
+    {
+      "id": "T05",
+      "requirement": "脱敏与合规",
+      "acceptance": "姓名、ID、联系方式脱敏100%，非授权外发0；一票否决",
+      "status": "PARTIAL",
+      "actual": "20例合成身份API/导出/真实页面无标注身份泄漏；另测模型请求构造及运行日志。原20次生成的完整日志未保留，尚无真实临床合规验收",
+      "alpha_mapping": "V05,V08"
+    },
+    {
+      "id": "T06",
+      "requirement": "操作留痕",
+      "acceptance": "生成、修改、审核、导出10种操作可追溯100%",
+      "status": "PARTIAL",
+      "actual": "20次循环保存步骤、Revision与测试账号批准；完整10类操作审计仍需逐项签核",
+      "alpha_mapping": "V03,V08"
+    },
+    {
+      "id": "T07",
+      "requirement": "生成时延",
+      "acceptance": "最终转写完成至病历就绪P95≤15秒",
+      "status": "FAIL",
+      "actual": "容器20次文本生成P95=18.603s；首次冷启动及重试=142.792s；含重试、未排除慢样本",
+      "alpha_mapping": "V08"
+    },
+    {
+      "id": "T08",
+      "requirement": "双环境一致性",
+      "acceptance": "20例结构化字段一致率100%",
+      "status": "HARDWARE BLOCKED",
+      "actual": "Jetson未到货；开发机结果不能替代边缘端",
+      "alpha_mapping": "V01,V05"
+    },
+    {
+      "id": "T09",
+      "requirement": "ASR质量",
+      "acceptance": "CER≤15%，医学关键词召回≥90%，RTF≤1",
+      "status": "FAIL",
+      "actual": "三段开发录音CER=20.86%，关键词召回=76.67%，最大RTF=0.126；不是独立冻结集",
+      "alpha_mapping": "V01"
+    },
+    {
+      "id": "T10",
+      "requirement": "角色判断",
+      "acceptance": "可判定样本准确率≥95%；高置信度跨角色写入0；低置信度阻断",
+      "status": "BLOCKED",
+      "actual": "真实音频5/5转写后因角色待复核返回409；没有伪造确认或绕过门禁。准确率仍缺人工真值",
+      "alpha_mapping": "V02"
+    },
+    {
+      "id": "T11",
+      "requirement": "知识检索",
+      "acceptance": "Recall@5≥90%，引用完整100%，无来源引用0",
+      "status": "NOT TESTED",
+      "actual": "保留既有知识索引，本次不扩大知识包或重新做检索验收；历史报告继续单列",
+      "alpha_mapping": "V08"
+    },
+    {
+      "id": "T12",
+      "requirement": "离线E2E",
+      "acceptance": "断网后连续5次录音→生成→审核→导出全PASS，Mock0",
+      "status": "BLOCKED",
+      "actual": "内部网络已验证；重复发热录音5次ASR均成功，5次都被角色门禁拦截，因此音频闭环0/5；文本协议20/20不得替代",
+      "alpha_mapping": "V05,V06"
+    },
+    {
+      "id": "T13",
+      "requirement": "异常恢复",
+      "acceptance": "10种恢复10/10，数据丢失与重复病历0",
+      "status": "PARTIAL",
+      "actual": "真实容器重建后恢复并查看20份既有草稿；模型服务断开503、恢复后就绪。五组件内存失败保留，完整10类故障场景未完成",
+      "alpha_mapping": "V05,V06,V08"
+    }
+  ]
+}

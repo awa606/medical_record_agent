@@ -1,0 +1,61 @@
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_doctor_worklist_drawer_is_present() -> None:
+    html = (ROOT / "static" / "doctor.html").read_text(encoding="utf-8")
+
+    assert 'id="openWorklistButton"' in html
+    assert 'id="encounterWorklistPanel"' in html
+    assert 'id="encounterSearchInput"' in html
+    assert 'id="encounterStatusFilter"' in html
+    assert 'id="refreshWorklistButton"' in html
+    assert 'id="encounterWorklist"' in html
+    assert 'id="localEncounterForm"' in html
+    assert 'id="localPatientDeidentifiedId"' in html
+    assert 'id="localPatientDisplayName"' in html
+    assert 'id="createLocalEncounterButton"' in html
+
+
+def test_doctor_worklist_uses_encounter_api_and_restore_path() -> None:
+    script = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+
+    assert "/api/encounters" in script
+    assert "function renderEncounterWorklistPanel" in script
+    assert "async function refreshEncounterWorklist" in script
+    assert "async function restoreEncounter" in script
+    assert "data-restore-encounter" in script
+    assert "appState.currentEncounter" in script
+    assert "encounterStatusFilter" in script
+    assert "encounter-revision-history" in script
+    assert "function createLocalEncounterFromForm" in script
+    assert "function performEncounterAction" in script
+    assert "data-encounter-action" in script
+    assert "check_in_status" in script
+    assert "function selectedEncounterId" in script
+    assert "encounter_id: selectedEncounterId() || undefined" in script
+    assert "generate-record${suffix}" in script
+
+
+def test_doctor_worklist_styles_are_scoped_to_drawer() -> None:
+    css = (ROOT / "static" / "doctor.css").read_text(encoding="utf-8")
+
+    assert ".worklist-toolbar" in css
+    assert ".encounter-worklist" in css
+    assert ".encounter-worklist-item" in css
+    assert ".encounter-worklist-actions" in css
+    assert ".encounter-revision-history" in css
+
+
+def test_doctor_worklist_drawer_prevents_horizontal_action_overflow() -> None:
+    css = (ROOT / "static" / "doctor-ui-v2.css").read_text(encoding="utf-8")
+
+    assert ".drawer .encounter-worklist {" in css
+    assert ".drawer .encounter-worklist-item {" in css
+    assert "flex: 0 0 auto;" in css
+    assert "flex-direction: column;" in css
+    assert "z-index: 1;" in css
+    assert ".drawer .encounter-worklist-actions button" in css
+    assert "overflow-wrap: anywhere;" in css

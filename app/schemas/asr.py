@@ -11,6 +11,9 @@ class ASRSegment(BaseModel):
     provisional: bool = False
     speaker: str | None = None
     speaker_id: str | None = None
+    speaker_raw: str | None = None
+    speaker_normalized: str | None = None
+    diarization_source: str | None = None
     speaker_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     role: str | None = None
     text: str = ""
@@ -20,6 +23,7 @@ class ASRSegment(BaseModel):
     role_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     role_source: str | None = None
     role_note: str | None = None
+    role_warning: str | None = None
     speaker_turn: int | None = None
     needs_review: bool = False
     reviewed_by_doctor: bool = False
@@ -109,6 +113,15 @@ class ASRResult(BaseModel):
     diarization_turns: list[DiarizationTurn] = Field(default_factory=list)
     speaker_assignments: list[SpeakerRoleAssignment] = Field(default_factory=list)
     role_quality: SpeakerRoleQualityResult | None = None
+    recognition_mode: Literal["fast", "follow"] | None = None
+    audio_duration_seconds: float | None = None
+    processing_duration_seconds: float | None = None
+    rtf: float | None = None
+    backend: str | None = None
+    model: str | None = None
+    request_id: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
 
 
 class AudioRecord(BaseModel):
@@ -119,6 +132,8 @@ class AudioRecord(BaseModel):
     content_type: str | None = None
     size_bytes: int | None = None
     created_at: str | None = None
+    owner_user_id: int | None = None
+    recognition_mode: Literal["fast", "follow"] | None = None
 
 
 class ASREvaluationRequest(BaseModel):
@@ -149,6 +164,8 @@ class ASRSessionRecord(BaseModel):
     diarization_engine: str = "auto"
     created_at: str | None = None
     updated_at: str | None = None
+    owner_user_id: int | None = None
+    recognition_mode: Literal["fast", "follow"] | None = None
 
 
 class ASRSessionEvent(BaseModel):
@@ -168,6 +185,7 @@ class ASRSessionUploadResponse(BaseModel):
     result_url: str
     media_url: str | None = None
     duration_seconds: float | None = None
+    recognition_mode: Literal["fast", "follow"] | None = None
 
 
 class ASRSegmentCorrection(BaseModel):
@@ -194,5 +212,24 @@ class ASRSessionCorrectionResponse(BaseModel):
     session_id: str
     audio_id: str
     status: str
+    asr_result: ASRResult
+    updated_at: str
+
+
+class ASRSpeakerMergeRequest(BaseModel):
+    source_speaker: str = Field(min_length=1)
+    target_speaker: str = Field(min_length=1)
+    reviewer: str | None = None
+    note: str | None = None
+
+
+class ASRSpeakerMergeResponse(BaseModel):
+    session_id: str
+    audio_id: str
+    status: str = "speakers_merged"
+    speaker_count_before: int
+    speaker_count_after: int
+    affected_segment_ids: list[str] = Field(default_factory=list)
+    role_quality: SpeakerRoleQualityResult
     asr_result: ASRResult
     updated_at: str

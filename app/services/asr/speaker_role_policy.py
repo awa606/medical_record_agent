@@ -8,8 +8,9 @@ from app.schemas.asr import SpeakerRoleDecision
 
 ROLE_DOCTOR = "\u533b\u751f"
 ROLE_PATIENT = "\u60a3\u8005"
+ROLE_COMPANION = "\u966a\u540c\u4eba\u5458"
 ROLE_OTHER = "\u5176\u4ed6"
-CLINICAL_ROLES = {ROLE_DOCTOR, ROLE_PATIENT, ROLE_OTHER}
+CLINICAL_ROLES = {ROLE_DOCTOR, ROLE_PATIENT, ROLE_COMPANION, ROLE_OTHER}
 
 ACTION_AUTO_ACCEPT = "auto_accept"
 ACTION_NEEDS_REVIEW = "needs_review"
@@ -24,6 +25,7 @@ SOURCE_PROVIDER_MAP = {
     "single_speaker": "rules",
     "multi_speaker_fallback": "rules",
     "mock_deterministic": "rules",
+    "auto_role_from_speaker_label": "rules",
     "doctor_voice_profile": "voiceprint",
     "doctor_profile_two_party_constraint": "voiceprint",
     "ollama_qwen3_speaker_context": "llm",
@@ -33,14 +35,17 @@ MANUAL_SOURCE_PREFIXES = ("manual",)
 ROLE_ALIASES = {
     ROLE_DOCTOR: ROLE_DOCTOR,
     ROLE_PATIENT: ROLE_PATIENT,
+    ROLE_COMPANION: ROLE_COMPANION,
     ROLE_OTHER: ROLE_OTHER,
     "doctor": ROLE_DOCTOR,
     "physician": ROLE_DOCTOR,
     "patient": ROLE_PATIENT,
     "other": ROLE_OTHER,
-    "family": ROLE_OTHER,
-    "relative": ROLE_OTHER,
-    "\u5bb6\u5c5e": ROLE_OTHER,
+    "companion": ROLE_COMPANION,
+    "family": ROLE_COMPANION,
+    "relative": ROLE_COMPANION,
+    "\u966a\u540c": ROLE_COMPANION,
+    "\u5bb6\u5c5e": ROLE_COMPANION,
 }
 
 

@@ -1,0 +1,58 @@
+{
+  "case_id": "ce2e_v1_033_out_of_scope_hypertension",
+  "split": "development",
+  "scenario_type": "out_of_scope",
+  "title": "高血压头晕不属发热包",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "note": "Synthetic classroom evaluation case; no real patient data."
+  },
+  "segments": [
+    {
+      "segment_id": "seg-1",
+      "speaker_id": "spk-patient",
+      "role": "患者",
+      "text": "我血压高，头晕。"
+    }
+  ],
+  "expected": {
+    "facts": [
+      {
+        "type": "symptom",
+        "name": "头晕",
+        "assertion": "present"
+      },
+      {
+        "type": "condition",
+        "name": "高血压",
+        "assertion": "present"
+      }
+    ],
+    "field_status": {
+      "chief_complaint": "missing",
+      "present_illness": "missing"
+    },
+    "required_content": [],
+    "forbidden_content": [
+      "3天前淋雨受凉",
+      "铁锈色痰",
+      "当地卫生院",
+      "食欲不佳",
+      "既往体健",
+      "肺结核",
+      "布洛芬",
+      "淋雨",
+      "咳嗽、咳痰"
+    ],
+    "candidate_diagnoses": [],
+    "forbidden_candidate_diagnoses": [
+      "发热待查",
+      "流感样症状参考",
+      "肺部感染待排"
+    ],
+    "follow_up_questions_any": [],
+    "risk_signals": [],
+    "applicable_packs": []
+  }
+}

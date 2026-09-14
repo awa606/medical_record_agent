@@ -1,0 +1,60 @@
+{
+  "case_id": "ce2e_v1_006_question_answer_absent_fever",
+  "split": "development",
+  "scenario_type": "doctor_question_negation",
+  "title": "医生询问后患者否认发热",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "note": "Synthetic classroom evaluation case; no real patient data."
+  },
+  "segments": [
+    {
+      "segment_id": "seg-1",
+      "speaker_id": "spk-patient",
+      "role": "患者",
+      "text": "医生：有没有发热？患者：没有。"
+    }
+  ],
+  "expected": {
+    "facts": [
+      {
+        "type": "symptom",
+        "name": "发热",
+        "assertion": "absent"
+      }
+    ],
+    "field_status": {
+      "chief_complaint": "missing",
+      "present_illness": "complete"
+    },
+    "required_content": [
+      {
+        "target": "present_illness",
+        "contains": [
+          "否认发热"
+        ]
+      }
+    ],
+    "forbidden_content": [
+      "3天前淋雨受凉",
+      "铁锈色痰",
+      "当地卫生院",
+      "食欲不佳",
+      "既往体健",
+      "肺结核",
+      "布洛芬",
+      "淋雨",
+      "咳嗽、咳痰"
+    ],
+    "candidate_diagnoses": [],
+    "forbidden_candidate_diagnoses": [
+      "发热待查",
+      "流感样症状参考",
+      "肺部感染待排"
+    ],
+    "follow_up_questions_any": [],
+    "risk_signals": [],
+    "applicable_packs": []
+  }
+}

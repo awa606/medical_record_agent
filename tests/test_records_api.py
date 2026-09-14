@@ -24,6 +24,20 @@ from app.api.tasks import read_task
 class RecordsApiTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_env = {
+            key: os.environ.get(key)
+            for key in [
+                "LLM_PROVIDER",
+                "RECORD_PROVIDER_MODE",
+                "ONLINE_LLM_API_BASE",
+                "ONLINE_LLM_API_KEY",
+                "ONLINE_LLM_MODEL",
+                "OLLAMA_BASE_URL",
+                "OLLAMA_MODEL",
+            ]
+        }
+        for key in self.original_env:
+            os.environ.pop(key, None)
         os.environ["MEDICAL_RECORD_AGENT_DB"] = os.path.join(
             self.temp_dir.name,
             "records.sqlite3",
@@ -31,6 +45,11 @@ class RecordsApiTests(unittest.TestCase):
 
     def tearDown(self):
         os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
+        for key, value in self.original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         self.temp_dir.cleanup()
 
     def test_generate_record_creates_task_for_background_execution(self):
@@ -85,6 +104,8 @@ class RecordsApiTests(unittest.TestCase):
         self.assertFalse(extracted.creates_task)
         self.assertIn("chief_complaint", extracted.fields)
         self.assertIn("quality_report", extracted.model_dump())
+        self.assertIn("extraction_info", extracted.model_dump())
+        self.assertEqual(extracted.extraction_info["actual_provider"], "mock")
         self.assertIn("candidate_diagnoses", extracted.model_dump())
         self.assertNotIn("task_id", extracted.model_dump())
 
@@ -129,6 +150,13 @@ class RecordsApiTests(unittest.TestCase):
                     "start_time": 1.2,
                     "end_time": 4.8,
                 },
+                {
+                    "segment_id": "seg-patient-2",
+                    "role": "患者",
+                    "text": "在卫生院吃过布洛芬，退热后又反复发热。",
+                    "start_time": 4.8,
+                    "end_time": 7.6,
+                },
             ],
         )
 
@@ -137,13 +165,15 @@ class RecordsApiTests(unittest.TestCase):
 
         self.assertEqual(response.status, "preview_ready")
         self.assertEqual(response.source, "asr_partial")
-        self.assertEqual(response.segment_count, 2)
+        self.assertEqual(response.segment_count, 3)
         self.assertIn("fields_preview", response_data)
         self.assertIn("candidate_diagnoses", response_data)
         self.assertIn("treatment_plan", response_data)
         self.assertIn("structured_updates", response_data)
         self.assertIn("evidence_links", response_data)
         self.assertIn("quality_preview", response_data)
+        self.assertIn("extraction_info", response_data)
+        self.assertEqual(response.extraction_info["extraction_mode"], "clinical_fact_rules_v1")
         self.assertIn(response.preview_stage, {"collecting", "structured_preview", "diagnosis_preview"})
         self.assertIsInstance(response.ready_for_formal_generation, bool)
         self.assertTrue(any(item["status"] == "preview" for item in response.structured_updates))
@@ -168,16 +198,21 @@ class RecordsApiTests(unittest.TestCase):
     def test_preview_record_marks_partial_missing_items_without_export_task(self):
         response = preview_record(
             PreviewRecordRequest(
-                conversation_text="[患者] 我有点发热。",
+                conversation_text="[患者] 我发烧39°C。",
                 source="asr_partial",
             )
         )
 
         self.assertEqual(response.status, "preview_ready")
         self.assertGreater(len(response.missing_items), 0)
+        self.assertEqual(response.fields_preview["chief_complaint"]["status"], "partial")
+        self.assertEqual(response.fields_preview["present_illness"]["status"], "partial")
+        self.assertIn("体温约39℃", response.fields_preview["present_illness"]["value"])
+        self.assertIn("主诉", response.quality_preview["partial_fields"])
         self.assertIn("实时预览", response.preview_notice)
         self.assertTrue(response.structured_updates)
         self.assertEqual(response.quality_preview["status"], "needs_review")
+        self.assertEqual(response.extraction_info["actual_provider"], "mock")
         self.assertNotIn("task_id", response.model_dump())
 
     def test_preview_ignores_provisional_windows_and_uses_stable_mapped_turns(self):
@@ -252,6 +287,35 @@ class RecordsApiTests(unittest.TestCase):
             "rules_global_two_party_constraint",
         )
         self.assertEqual(len(raised.exception.detail["pending_confirmation"]), 1)
+
+    def test_live_mode_preview_returns_503_when_provider_is_mock(self):
+        os.environ["RECORD_PROVIDER_MODE"] = "live"
+
+        with self.assertRaises(HTTPException) as raised:
+            preview_record(
+                PreviewRecordRequest(
+                    conversation_text="[患者] 我发烧39°C",
+                    source="text_preview",
+                )
+            )
+
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertFalse(raised.exception.detail["fallback"])
+        self.assertEqual(raised.exception.detail["mode"], "live")
+
+    def test_build_draft_returns_generation_info(self):
+        extracted = extract_fields(
+            ExtractFieldsRequest(
+                conversation_text="[患者] 我发烧39°C",
+                source="external_api",
+            )
+        )
+
+        draft_result = build_draft(BuildDraftRequest(fields=extracted.fields))
+
+        self.assertIn("generation_info", draft_result.model_dump())
+        self.assertEqual(draft_result.generation_info["actual_provider"], "mock")
+        self.assertEqual(draft_result.generation_info["mode"], "demo")
 
     def test_extract_fields_rejects_unmapped_stable_speaker(self):
         with self.assertRaises(HTTPException) as raised:

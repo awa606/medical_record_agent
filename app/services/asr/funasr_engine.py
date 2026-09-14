@@ -5,6 +5,7 @@ from typing import Any
 
 from app.schemas.asr import ASRResult, ASRSegment
 from app.services.asr.evaluator import ASREvaluator
+from app.services.asr.speaker_diarization import SPEAKER_UNASSIGNED
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -59,8 +60,10 @@ class FunASREngine:
             generate_kwargs["hotword"] = " ".join(self.hotwords)
 
         raw_result = self.model.generate(**generate_kwargs)
+        self._validate_raw_result(raw_result)
         text = self._extract_text(raw_result)
         segments = self._extract_segments(audio_id, raw_result, text)
+        self._validate_recognized_content(text, segments)
         conversation_text = self._build_conversation_text(segments, text)
         keywords = ASREvaluator().keyword_metrics(self.hotwords, text)
 
@@ -87,6 +90,24 @@ class FunASREngine:
         if not path.exists():
             return []
         return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    def _validate_raw_result(self, raw_result: Any) -> None:
+        if raw_result is None:
+            raise RuntimeError("ASR_RESULT_INVALID: FunASR returned no result payload")
+        if isinstance(raw_result, list) and not raw_result:
+            raise RuntimeError("ASR_RESULT_INVALID: FunASR returned an empty result list")
+        if not isinstance(raw_result, (dict, list, str)):
+            raise RuntimeError(
+                "ASR_RESULT_INVALID: FunASR result format is "
+                f"{type(raw_result).__name__}, expected object, list, or text"
+            )
+
+    def _validate_recognized_content(self, text: str, segments: list[ASRSegment]) -> None:
+        if text.strip():
+            return
+        if any(segment.text.strip() for segment in segments):
+            return
+        raise RuntimeError("ASR_RESULT_INVALID: FunASR result did not contain recognized text")
 
     def _extract_text(self, raw_result: Any) -> str:
         items = raw_result if isinstance(raw_result, list) else [raw_result]
@@ -121,13 +142,21 @@ class FunASREngine:
                 raw_speaker = sentence.get("spk")
                 if raw_speaker is None:
                     raw_speaker = sentence.get("speaker")
-                speaker = self._normalize_speaker(raw_speaker, index)
+                speaker = self._normalize_speaker(raw_speaker)
+                diarization_source = "missing_label" if speaker == SPEAKER_UNASSIGNED else "funasr_sentence_info"
                 segments.append(
                     ASRSegment(
                         segment_id=f"{audio_id}-cal-{len(segments) + 1:04d}",
                         provisional=False,
                         speaker=speaker,
-                        speaker_id=speaker if self.speaker_diarization_enabled else None,
+                        speaker_id=(
+                            speaker
+                            if self.speaker_diarization_enabled or speaker == SPEAKER_UNASSIGNED
+                            else None
+                        ),
+                        speaker_raw=None if raw_speaker is None else str(raw_speaker),
+                        speaker_normalized=speaker,
+                        diarization_source=diarization_source,
                         role=None,
                         text=text,
                         start_time=self._timestamp_to_seconds(sentence.get("start")),
@@ -140,8 +169,11 @@ class FunASREngine:
         return [
             ASRSegment(
                 segment_id=f"{audio_id}-cal-0001",
-                speaker="spk0",
-                speaker_id="spk0" if self.speaker_diarization_enabled else None,
+                speaker=SPEAKER_UNASSIGNED,
+                speaker_id=SPEAKER_UNASSIGNED,
+                speaker_raw=None,
+                speaker_normalized=SPEAKER_UNASSIGNED,
+                diarization_source="missing_label",
                 role=None,
                 text=fallback_text,
                 start_time=None,
@@ -150,9 +182,9 @@ class FunASREngine:
         ]
 
     @staticmethod
-    def _normalize_speaker(value: Any, fallback_index: int) -> str:
+    def _normalize_speaker(value: Any) -> str:
         if value is None or str(value).strip() == "":
-            return f"spk{fallback_index}"
+            return SPEAKER_UNASSIGNED
         normalized = str(value).strip()
         if normalized.isdigit():
             return f"spk{normalized}"

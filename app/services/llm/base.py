@@ -23,3 +23,7 @@ class LLMProvider(Protocol):
         timeout_seconds: float,
     ) -> LLMProviderResponse:
         """Return raw JSON text for field extraction."""
+
+
+class LLMProviderUnavailableError(RuntimeError):
+    """Raised when live/edge mode cannot use the requested provider."""

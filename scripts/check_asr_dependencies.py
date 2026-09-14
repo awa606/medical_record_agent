@@ -131,6 +131,8 @@ def _module_info(module_name: str) -> dict[str, Any]:
     info: dict[str, Any] = {"available": spec is not None, "version": None}
     if spec is None:
         return info
+    if module_name == "torchaudio":
+        return _isolated_module_info(module_name)
     try:
         module = __import__(module_name)
         info["version"] = getattr(module, "__version__", None)
@@ -138,6 +140,38 @@ def _module_info(module_name: str) -> dict[str, Any]:
         info["available"] = False
         info["error"] = _sanitize_local_paths(str(exc))[:200]
     return info
+
+
+def _isolated_module_info(module_name: str) -> dict[str, Any]:
+    """Probe native-heavy modules without risking the reporting process."""
+    probe = (
+        "import importlib, json; "
+        f"module = importlib.import_module({module_name!r}); "
+        "print(json.dumps({'version': getattr(module, '__version__', None)}))"
+    )
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", probe],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except Exception as exc:  # noqa: BLE001 - report probe failure as dependency data.
+        return {"available": False, "version": None, "error": _sanitize_local_paths(str(exc))[:200]}
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout or f"process exit {completed.returncode}").strip()
+        return {
+            "available": False,
+            "version": None,
+            "error": _sanitize_local_paths(detail)[:200],
+            "probe_exit_code": completed.returncode,
+        }
+    try:
+        payload = json.loads(completed.stdout.strip().splitlines()[-1])
+    except (IndexError, json.JSONDecodeError) as exc:
+        return {"available": False, "version": None, "error": f"invalid probe output: {exc}"}
+    return {"available": True, "version": payload.get("version")}
 
 
 def _ffmpeg_info() -> dict[str, Any]:

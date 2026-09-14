@@ -13,6 +13,7 @@ ENV_KEYS = [
     "ONLINE_LLM_MODEL",
     "OLLAMA_BASE_URL",
     "OLLAMA_MODEL",
+    "RECORD_PROVIDER_MODE",
 ]
 
 
@@ -39,6 +40,8 @@ class LLMStatusApiTests(unittest.TestCase):
         status = read_llm_status()
 
         self.assertEqual(status["provider"], "mock")
+        self.assertEqual(status["mode"], "demo")
+        self.assertTrue(status["fallback_allowed"])
         self.assertEqual(status["model"], "mock-deterministic-extractor")
         self.assertTrue(status["configured"])
         self.assertTrue(status["reachable"])
@@ -94,6 +97,18 @@ class LLMStatusApiTests(unittest.TestCase):
         self.assertFalse(status["reachable"])
         self.assertEqual(status["fallback_provider"], "mock")
         self.assertIn("Unsupported LLM_PROVIDER", status["fallback_reason"])
+
+    def test_live_mode_mock_status_is_not_configured_for_product_use(self):
+        os.environ["RECORD_PROVIDER_MODE"] = "live"
+
+        status = read_llm_status()
+
+        self.assertEqual(status["provider"], "mock")
+        self.assertEqual(status["mode"], "live")
+        self.assertFalse(status["fallback_allowed"])
+        self.assertFalse(status["configured"])
+        self.assertFalse(status["fallback"])
+        self.assertIn("live/edge requires online or ollama", status["fallback_reason"])
 
 
 if __name__ == "__main__":

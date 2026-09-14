@@ -14,8 +14,10 @@ from app.schemas.asr import (
 
 ROLE_DOCTOR = "医生"
 ROLE_PATIENT = "患者"
+ROLE_COMPANION = "陪同人员"
 ROLE_OTHER = "其他"
-FINAL_ROLES = {ROLE_DOCTOR, ROLE_PATIENT, ROLE_OTHER}
+SPEAKER_UNASSIGNED = "speaker_unassigned"
+FINAL_ROLES = {ROLE_DOCTOR, ROLE_PATIENT, ROLE_COMPANION, ROLE_OTHER}
 
 DOCTOR_ANCHORS = (
     "我是医生",
@@ -315,10 +317,19 @@ def _normalize_speaker_ids(segments: list[ASRSegment]) -> list[ASRSegment]:
     for segment in segments:
         raw = _normalized_speaker(segment.speaker_id or segment.speaker)
         if not raw:
-            raw = "speaker_0"
+            raw = SPEAKER_UNASSIGNED
         aliases.setdefault(raw, raw)
         normalized.append(
-            segment.model_copy(update={"speaker": aliases[raw], "speaker_id": aliases[raw]})
+            segment.model_copy(
+                update={
+                    "speaker": aliases[raw],
+                    "speaker_id": aliases[raw],
+                    "speaker_normalized": aliases[raw],
+                    "diarization_source": segment.diarization_source or (
+                        "missing_label" if aliases[raw] == SPEAKER_UNASSIGNED else None
+                    ),
+                }
+            )
         )
     return normalized
 
@@ -334,14 +345,7 @@ def _merge_short_speaker_clusters(segments: list[ASRSegment]) -> list[ASRSegment
     short_speakers = {
         speaker
         for speaker, item in stats.items()
-        if (
-            item.duration < 3.0
-            or item.max_turn_duration < 1.0 and item.duration < 5.0
-            or (
-                1 <= item.text_length <= 40
-                and item.meaningful_length / max(item.text_length, 1) <= 0.35
-            )
-        )
+        if _is_mergeable_low_information_cluster(item)
     }
     substantial = set(groups) - short_speakers
     if not substantial:
@@ -368,6 +372,17 @@ def _merge_short_speaker_clusters(segments: list[ASRSegment]) -> list[ASRSegment
             )
         )
     return merged
+
+
+def _is_mergeable_low_information_cluster(item: _SpeakerStats) -> bool:
+    if item.text_length <= 0:
+        return True
+    meaningful_ratio = item.meaningful_length / max(item.text_length, 1)
+    return (
+        1 <= item.text_length <= 40
+        and meaningful_ratio <= 0.35
+        and (item.duration < 3.0 or item.max_turn_duration < 1.0 and item.duration < 5.0)
+    )
 
 
 def _merge_stable_utterances(segments: list[ASRSegment]) -> list[ASRSegment]:

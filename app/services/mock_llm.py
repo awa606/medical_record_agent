@@ -9,6 +9,10 @@ from app.schemas import (
     SafetyCheckResult,
     SourceSpan,
 )
+from app.services.clinical_facts import (
+    build_fields_from_clinical_facts,
+    validate_field_evidence,
+)
 from app.services.knowledge_rules import infer_common_cold_candidates
 
 
@@ -108,6 +112,10 @@ _PHYSICAL_EXAM_REJECT_KEYWORDS = [
 
 _SUBJECTIVE_TEMPERATURE_KEYWORDS = ["最高体温", "体温多", "发热", "退热", "反复发热"]
 _OBJECTIVE_EXAM_ANCHORS = ["查体", "体格检查", "生命体征", "T ", "P ", "R ", "BP"]
+_CLINICAL_FACT_PRIORITY_TEMP_RE = re.compile(
+    r"(?:3[5-9](?:\.\d)?|4[0-2](?:\.\d)?)\s*(?:°\s*)?(?:C|c|℃|度)"
+)
+_CLINICAL_FACT_DANGER_KEYWORDS = ["胸闷", "胸痛", "气促", "呼吸困难"]
 
 
 def _looks_like_physical_exam(text: str) -> bool:
@@ -127,6 +135,20 @@ def _looks_like_physical_exam(text: str) -> bool:
     return any(keyword in normalized for keyword in _PHYSICAL_EXAM_FINDING_KEYWORDS)
 
 
+def _should_prioritize_clinical_fact_fields(
+    conversation: str,
+    fields: MedicalRecordFields,
+) -> bool:
+    if not fields.candidate_diagnoses:
+        return False
+    if _looks_like_physical_exam(conversation) and any(anchor in conversation for anchor in _OBJECTIVE_EXAM_ANCHORS):
+        return False
+    has_temperature_value = bool(_CLINICAL_FACT_PRIORITY_TEMP_RE.search(conversation))
+    has_fever_context = _contains(conversation, ["发热", "发烧", "体温"])
+    has_danger_signal = _contains(conversation, _CLINICAL_FACT_DANGER_KEYWORDS)
+    return has_temperature_value or (has_fever_context and has_danger_signal)
+
+
 def _extract_physical_exam_field(segments: list[str]) -> MedicalField:
     spans = [
         SourceSpan(index=index, text=segment)
@@ -140,7 +162,22 @@ def _extract_physical_exam_field(segments: list[str]) -> MedicalField:
 
 
 def _is_fever_case(conversation: str) -> bool:
-    return _contains(conversation, ["体温", "铁锈色痰", "布洛芬", "反复发热", "淋雨受凉"])
+    if not _contains(conversation, ["发热", "发烧", "体温"]):
+        return False
+    full_case_markers = [
+        "淋雨受凉",
+        "最高体温",
+        "体温多",
+        "咳嗽",
+        "咳痰",
+        "铁锈色痰",
+        "卫生院",
+        "布洛芬",
+        "反复发热",
+        "食欲不佳",
+        "既往体健",
+    ]
+    return sum(1 for marker in full_case_markers if marker in conversation) >= 4
 
 
 def _extract_fever_fields(conversation: str, segments: list[str]) -> MedicalRecordFields:
@@ -278,11 +315,22 @@ def _extract_common_cold_fields(
 def mock_extract_fields(conversation: str) -> MedicalRecordFields:
     segments = _split_segments(conversation)
     if _is_fever_case(conversation):
-        return _extract_fever_fields(conversation, segments)
+        return validate_field_evidence(_extract_fever_fields(conversation, segments), conversation)
+
+    clinical_fact_fields = build_fields_from_clinical_facts(conversation)
+    if clinical_fact_fields is not None and _should_prioritize_clinical_fact_fields(conversation, clinical_fact_fields):
+        return validate_field_evidence(clinical_fact_fields, conversation)
 
     knowledge_candidates = infer_common_cold_candidates(conversation, segments)
     if knowledge_candidates:
-        return _extract_common_cold_fields(conversation, segments, knowledge_candidates)
+        return validate_field_evidence(
+            _extract_common_cold_fields(conversation, segments, knowledge_candidates),
+            conversation,
+        )
+
+    physical_exam = _extract_physical_exam_field(segments)
+    if not physical_exam.missing:
+        return MedicalRecordFields(physical_exam=physical_exam)
 
     treatments = _extract_treatments(conversation)
     symptoms = _extract_symptoms(conversation)
@@ -364,6 +412,16 @@ def mock_extract_fields(conversation: str) -> MedicalRecordFields:
             )
         )
 
+    if (
+        clinical_fact_fields is not None
+        and not has_bite
+        and chief_complaint.missing
+        and previous_treatment.missing
+        and accompanying_symptoms.missing
+        and not candidate_diagnoses
+    ):
+        return validate_field_evidence(clinical_fact_fields, conversation)
+
     return MedicalRecordFields(
         chief_complaint=chief_complaint,
         present_illness=present_illness,
@@ -381,6 +439,11 @@ def _field_text(field: MedicalField, *, physical_exam: bool = False) -> str:
         if physical_exam:
             return "待医生查体补充"
         return "未提及，待补充"
+    if field.status == "partial" and field.value:
+        missing = "、".join(field.missing_elements or ["待补充信息"])
+        return f"{field.value}（部分完成，仍需补充：{missing}）"
+    if field.status == "conflicting" and field.value:
+        return f"{field.value}（证据冲突，需医生复核）"
     return field.value or "未提及，待补充"
 
 

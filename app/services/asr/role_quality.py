@@ -18,6 +18,7 @@ from app.services.asr.speaker_role_policy import (
     CLINICAL_ROLES,
     CURRENT_SPEAKER_ROLE_POLICY_VERSION,
     DEFAULT_PROVIDER_POLICIES,
+    ROLE_COMPANION,
     ROLE_DOCTOR,
     ROLE_OTHER,
     ROLE_PATIENT,
@@ -25,8 +26,6 @@ from app.services.asr.speaker_role_policy import (
     normalize_role,
     speaker_role_decision,
 )
-
-
 MANUAL_SOURCE_PREFIXES = ("manual",)
 
 

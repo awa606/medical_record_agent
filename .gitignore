@@ -6,6 +6,7 @@ __pycache__/
 .venv-diarization/
 venv/
 .pytest_cache/
+.artifacts/
 .DS_Store
 ~$*
 
@@ -49,6 +50,12 @@ data/speaker_profiles/*
 !data/speaker_profiles/.gitkeep
 .env
 .env.local
+config/*.env
+config/*.env.local
+config/*.local
+config/*.secret
+config/*.secrets
+!config/*.example
 tools/ffmpeg/*
 !tools/ffmpeg/.gitkeep
 

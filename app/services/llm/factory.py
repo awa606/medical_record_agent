@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from app.services.llm.base import LLMProvider
+from app.services.llm.base import LLMProvider, LLMProviderUnavailableError
 from app.services.llm.json_repair import parse_json_object
 from app.services.llm.llm_record_generator import LLMRecordGenerator
 from app.services.llm.mock_provider import MockLLMProvider
@@ -13,6 +13,21 @@ from app.services.llm.online_provider import OnlineLLMProvider
 
 SUPPORTED_LLM_PROVIDERS = {"mock", "online", "ollama"}
 FALLBACK_PROVIDER = "mock"
+SUPPORTED_RECORD_PROVIDER_MODES = {"demo", "live", "edge"}
+STRICT_RECORD_PROVIDER_MODES = {"live", "edge"}
+
+
+def _record_provider_mode(mode: str | None = None) -> str:
+    selected = (mode or os.environ.get("RECORD_PROVIDER_MODE") or "demo").strip().lower()
+    if selected not in SUPPORTED_RECORD_PROVIDER_MODES:
+        raise ValueError(
+            f"Unsupported RECORD_PROVIDER_MODE '{selected}'. Supported modes: demo, live, edge"
+        )
+    return selected
+
+
+def _fallback_allowed(mode: str) -> bool:
+    return mode not in STRICT_RECORD_PROVIDER_MODES
 
 
 def _provider_name(provider_name: str | None = None) -> str:
@@ -42,32 +57,53 @@ def create_llm_provider(provider_name: str | None = None) -> LLMProvider:
     raise AssertionError(f"Unhandled LLM provider: {provider}")
 
 
-def create_llm_record_generator(provider_name: str | None = None) -> LLMRecordGenerator:
+def create_llm_record_generator(
+    provider_name: str | None = None,
+    *,
+    mode: str | None = None,
+) -> LLMRecordGenerator:
+    try:
+        selected_mode = _record_provider_mode(mode)
+    except ValueError as exc:
+        raise LLMProviderUnavailableError(str(exc)) from exc
+    allow_mock_fallback = _fallback_allowed(selected_mode)
     try:
         requested_provider = _provider_name(provider_name)
     except Exception as exc:  # noqa: BLE001 - invalid runtime config must not break demos.
         requested_provider = (provider_name or os.environ.get("LLM_PROVIDER") or "unknown").strip() or "unknown"
+        if not allow_mock_fallback:
+            raise LLMProviderUnavailableError(str(exc)) from exc
         return LLMRecordGenerator(
             provider=MockLLMProvider(),
             requested_provider=requested_provider,
             requested_model="not_configured",
             init_fallback_reason=str(exc),
+            mode=selected_mode,
+            allow_mock_fallback=allow_mock_fallback,
         )
 
     requested_model = _requested_model_for(requested_provider)
+    if not allow_mock_fallback and requested_provider == "mock":
+        raise LLMProviderUnavailableError("RECORD_PROVIDER_MODE live/edge requires online or ollama provider")
     try:
         provider = create_llm_provider(requested_provider)
     except Exception as exc:  # noqa: BLE001 - provider config failures must fallback.
+        if not allow_mock_fallback:
+            raise LLMProviderUnavailableError(str(exc)) from exc
         return LLMRecordGenerator(
             provider=MockLLMProvider(),
             requested_provider=requested_provider,
             requested_model=requested_model or "not_configured",
             init_fallback_reason=str(exc),
+            mode=selected_mode,
+            allow_mock_fallback=allow_mock_fallback,
         )
     return LLMRecordGenerator(
         provider=provider,
         requested_provider=requested_provider,
         requested_model=requested_model or provider.model,
+        mode=selected_mode,
+        allow_mock_fallback=allow_mock_fallback,
     )
 
 
@@ -81,14 +117,21 @@ def _requested_model_for(provider: str) -> str | None:
 
 def get_llm_status(*, check_reachable: bool = False) -> dict[str, Any]:
     raw_provider = (os.environ.get("LLM_PROVIDER") or "mock").strip().lower() or "mock"
+    try:
+        mode = _record_provider_mode()
+    except ValueError:
+        mode = "demo"
+    fallback_allowed = _fallback_allowed(mode)
     status: dict[str, Any] = {
         "provider": raw_provider,
         "model": _requested_model_for(raw_provider) or "not_configured",
+        "mode": mode,
+        "fallback_allowed": fallback_allowed,
         "configured": False,
         "reachable": False,
         "checked": check_reachable,
         "fallback_provider": FALLBACK_PROVIDER,
-        "fallback": True,
+        "fallback": fallback_allowed,
         "fallback_reason": None,
     }
 
@@ -96,6 +139,11 @@ def get_llm_status(*, check_reachable: bool = False) -> dict[str, Any]:
         status["fallback_reason"] = (
             f"Unsupported LLM_PROVIDER '{raw_provider}'. Supported providers: mock, online, ollama"
         )
+        return status
+
+    if raw_provider == "mock" and not fallback_allowed:
+        status["fallback"] = False
+        status["fallback_reason"] = "RECORD_PROVIDER_MODE live/edge requires online or ollama provider"
         return status
 
     missing = _missing_config(raw_provider)

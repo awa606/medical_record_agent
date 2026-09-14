@@ -1,0 +1,381 @@
+{
+  "dataset_version": "field_disease_pack_v1",
+  "schema_version": "clinical_e2e_case_v1",
+  "evaluation_mode": "text_to_record_disease_pack",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "note": "All cases are synthetic or classroom-style examples. No real patient data is included."
+  },
+  "split_policy": {
+    "development": "May be inspected while fixing production behavior.",
+    "final_check": "Frozen check split; do not tune rules by reading failures after freeze."
+  },
+  "case_count": 60,
+  "split_counts": {
+    "development": 40,
+    "final_check": 20
+  },
+  "cases": [
+    {
+      "case_id": "ce2e_v1_001_short_fever_temp",
+      "split": "development",
+      "scenario_type": "short_fever_temp",
+      "case_path": "cases/ce2e_v1_001_short_fever_temp.json"
+    },
+    {
+      "case_id": "ce2e_v1_002_short_fever_headache",
+      "split": "development",
+      "scenario_type": "short_fever_headache",
+      "case_path": "cases/ce2e_v1_002_short_fever_headache.json"
+    },
+    {
+      "case_id": "ce2e_v1_003_fever_duration",
+      "split": "development",
+      "scenario_type": "duration",
+      "case_path": "cases/ce2e_v1_003_fever_duration.json"
+    },
+    {
+      "case_id": "ce2e_v1_004_cough_duration_only",
+      "split": "development",
+      "scenario_type": "respiratory_no_fever",
+      "case_path": "cases/ce2e_v1_004_cough_duration_only.json"
+    },
+    {
+      "case_id": "ce2e_v1_005_absent_fever_headache",
+      "split": "development",
+      "scenario_type": "negation",
+      "case_path": "cases/ce2e_v1_005_absent_fever_headache.json"
+    },
+    {
+      "case_id": "ce2e_v1_006_question_answer_absent_fever",
+      "split": "development",
+      "scenario_type": "doctor_question_negation",
+      "case_path": "cases/ce2e_v1_006_question_answer_absent_fever.json"
+    },
+    {
+      "case_id": "ce2e_v1_007_resolved_fever",
+      "split": "development",
+      "scenario_type": "resolved",
+      "case_path": "cases/ce2e_v1_007_resolved_fever.json"
+    },
+    {
+      "case_id": "ce2e_v1_008_ibuprofen_defervescence",
+      "split": "development",
+      "scenario_type": "treatment_effect",
+      "case_path": "cases/ce2e_v1_008_ibuprofen_defervescence.json"
+    },
+    {
+      "case_id": "ce2e_v1_009_fever_cough",
+      "split": "development",
+      "scenario_type": "fever_cough",
+      "case_path": "cases/ce2e_v1_009_fever_cough.json"
+    },
+    {
+      "case_id": "ce2e_v1_010_fever_headache_duration",
+      "split": "development",
+      "scenario_type": "fever_headache",
+      "case_path": "cases/ce2e_v1_010_fever_headache_duration.json"
+    },
+    {
+      "case_id": "ce2e_v1_011_three_party_child_fever",
+      "split": "development",
+      "scenario_type": "three_party",
+      "case_path": "cases/ce2e_v1_011_three_party_child_fever.json"
+    },
+    {
+      "case_id": "ce2e_v1_012_family_medication_effect",
+      "split": "development",
+      "scenario_type": "three_party_treatment",
+      "case_path": "cases/ce2e_v1_012_family_medication_effect.json"
+    },
+    {
+      "case_id": "ce2e_v1_015_asr_typo_fever",
+      "split": "development",
+      "scenario_type": "asr_typo",
+      "case_path": "cases/ce2e_v1_015_asr_typo_fever.json"
+    },
+    {
+      "case_id": "ce2e_v1_016_asr_cough_temp",
+      "split": "development",
+      "scenario_type": "asr_typo",
+      "case_path": "cases/ce2e_v1_016_asr_cough_temp.json"
+    },
+    {
+      "case_id": "ce2e_v1_017_fever_duration_temp_cough",
+      "split": "development",
+      "scenario_type": "complete_dialogue_fragment",
+      "case_path": "cases/ce2e_v1_017_fever_duration_temp_cough.json"
+    },
+    {
+      "case_id": "ce2e_v1_018_negative_cough_context",
+      "split": "development",
+      "scenario_type": "negation",
+      "case_path": "cases/ce2e_v1_018_negative_cough_context.json"
+    },
+    {
+      "case_id": "ce2e_v1_019_resolved_after_antipyretic",
+      "split": "development",
+      "scenario_type": "resolved_treatment",
+      "case_path": "cases/ce2e_v1_019_resolved_after_antipyretic.json"
+    },
+    {
+      "case_id": "ce2e_v1_020_fever_chest_tightness",
+      "split": "development",
+      "scenario_type": "danger_signal",
+      "case_path": "cases/ce2e_v1_020_fever_chest_tightness.json"
+    },
+    {
+      "case_id": "ce2e_v1_021_flu_like",
+      "split": "development",
+      "scenario_type": "flu_like",
+      "case_path": "cases/ce2e_v1_021_flu_like.json"
+    },
+    {
+      "case_id": "ce2e_v1_022_pulmonary_reference",
+      "split": "development",
+      "scenario_type": "pulmonary_reference",
+      "case_path": "cases/ce2e_v1_022_pulmonary_reference.json"
+    },
+    {
+      "case_id": "ce2e_v1_025_temperature_only",
+      "split": "development",
+      "scenario_type": "temperature_only",
+      "case_path": "cases/ce2e_v1_025_temperature_only.json"
+    },
+    {
+      "case_id": "ce2e_v1_028_numeric_duration",
+      "split": "development",
+      "scenario_type": "duration",
+      "case_path": "cases/ce2e_v1_028_numeric_duration.json"
+    },
+    {
+      "case_id": "ce2e_v1_029_high_fever",
+      "split": "development",
+      "scenario_type": "danger_signal",
+      "case_path": "cases/ce2e_v1_029_high_fever.json"
+    },
+    {
+      "case_id": "ce2e_v1_030_fever_headache_cough",
+      "split": "development",
+      "scenario_type": "fever_cough_headache",
+      "case_path": "cases/ce2e_v1_030_fever_headache_cough.json"
+    },
+    {
+      "case_id": "ce2e_v1_031_family_describes_elder",
+      "split": "development",
+      "scenario_type": "three_party",
+      "case_path": "cases/ce2e_v1_031_family_describes_elder.json"
+    },
+    {
+      "case_id": "ce2e_v1_032_two_party_structured",
+      "split": "development",
+      "scenario_type": "two_party_dialogue",
+      "case_path": "cases/ce2e_v1_032_two_party_structured.json"
+    },
+    {
+      "case_id": "ce2e_v1_037_resolved_fever_current_cough",
+      "split": "development",
+      "scenario_type": "resolved_current_symptom",
+      "case_path": "cases/ce2e_v1_037_resolved_fever_current_cough.json"
+    },
+    {
+      "case_id": "ce2e_v1_038_low_grade_temp_cough",
+      "split": "development",
+      "scenario_type": "low_grade_fever_cough",
+      "case_path": "cases/ce2e_v1_038_low_grade_temp_cough.json"
+    },
+    {
+      "case_id": "ce2e_v1_039_fever_no_temperature",
+      "split": "development",
+      "scenario_type": "missing_measurement",
+      "case_path": "cases/ce2e_v1_039_fever_no_temperature.json"
+    },
+    {
+      "case_id": "ce2e_v1_013_insufficient_hot",
+      "split": "development",
+      "scenario_type": "insufficient",
+      "case_path": "cases/ce2e_v1_013_insufficient_hot.json"
+    },
+    {
+      "case_id": "ce2e_v1_014_out_of_scope_abdominal",
+      "split": "development",
+      "scenario_type": "out_of_scope",
+      "case_path": "cases/ce2e_v1_014_out_of_scope_abdominal.json"
+    },
+    {
+      "case_id": "ce2e_v1_023_insufficient_general",
+      "split": "development",
+      "scenario_type": "insufficient",
+      "case_path": "cases/ce2e_v1_023_insufficient_general.json"
+    },
+    {
+      "case_id": "ce2e_v1_024_unspecified_treatment",
+      "split": "development",
+      "scenario_type": "treatment_without_symptom",
+      "case_path": "cases/ce2e_v1_024_unspecified_treatment.json"
+    },
+    {
+      "case_id": "ce2e_v1_026_absent_fever_cough",
+      "split": "development",
+      "scenario_type": "negation",
+      "case_path": "cases/ce2e_v1_026_absent_fever_cough.json"
+    },
+    {
+      "case_id": "ce2e_v1_027_self_correction_absent",
+      "split": "development",
+      "scenario_type": "self_correction",
+      "case_path": "cases/ce2e_v1_027_self_correction_absent.json"
+    },
+    {
+      "case_id": "ce2e_v1_033_out_of_scope_hypertension",
+      "split": "development",
+      "scenario_type": "out_of_scope",
+      "case_path": "cases/ce2e_v1_033_out_of_scope_hypertension.json"
+    },
+    {
+      "case_id": "ce2e_v1_034_out_of_scope_bite",
+      "split": "development",
+      "scenario_type": "out_of_scope",
+      "case_path": "cases/ce2e_v1_034_out_of_scope_bite.json"
+    },
+    {
+      "case_id": "ce2e_v1_035_allergy_fact",
+      "split": "development",
+      "scenario_type": "out_of_scope",
+      "case_path": "cases/ce2e_v1_035_allergy_fact.json"
+    },
+    {
+      "case_id": "ce2e_v1_036_absent_fever_synonym_headache",
+      "split": "development",
+      "scenario_type": "negation_synonym",
+      "case_path": "cases/ce2e_v1_036_absent_fever_synonym_headache.json"
+    },
+    {
+      "case_id": "ce2e_v1_040_question_style_absent",
+      "split": "development",
+      "scenario_type": "doctor_question_negation",
+      "case_path": "cases/ce2e_v1_040_question_style_absent.json"
+    },
+    {
+      "case_id": "ce2e_v1_041_final_short_fever",
+      "split": "final_check",
+      "scenario_type": "short_fever_temp",
+      "case_path": "cases/ce2e_v1_041_final_short_fever.json"
+    },
+    {
+      "case_id": "ce2e_v1_042_final_headache_temp",
+      "split": "final_check",
+      "scenario_type": "short_fever_headache",
+      "case_path": "cases/ce2e_v1_042_final_headache_temp.json"
+    },
+    {
+      "case_id": "ce2e_v1_043_final_fever_two_days",
+      "split": "final_check",
+      "scenario_type": "duration",
+      "case_path": "cases/ce2e_v1_043_final_fever_two_days.json"
+    },
+    {
+      "case_id": "ce2e_v1_044_final_negative_fever",
+      "split": "final_check",
+      "scenario_type": "negation",
+      "case_path": "cases/ce2e_v1_044_final_negative_fever.json"
+    },
+    {
+      "case_id": "ce2e_v1_045_final_resolved",
+      "split": "final_check",
+      "scenario_type": "resolved",
+      "case_path": "cases/ce2e_v1_045_final_resolved.json"
+    },
+    {
+      "case_id": "ce2e_v1_046_final_cough_fever",
+      "split": "final_check",
+      "scenario_type": "fever_cough",
+      "case_path": "cases/ce2e_v1_046_final_cough_fever.json"
+    },
+    {
+      "case_id": "ce2e_v1_047_final_three_party",
+      "split": "final_check",
+      "scenario_type": "three_party",
+      "case_path": "cases/ce2e_v1_047_final_three_party.json"
+    },
+    {
+      "case_id": "ce2e_v1_048_final_ibuprofen",
+      "split": "final_check",
+      "scenario_type": "treatment_effect",
+      "case_path": "cases/ce2e_v1_048_final_ibuprofen.json"
+    },
+    {
+      "case_id": "ce2e_v1_049_final_high_fever",
+      "split": "final_check",
+      "scenario_type": "danger_signal",
+      "case_path": "cases/ce2e_v1_049_final_high_fever.json"
+    },
+    {
+      "case_id": "ce2e_v1_050_final_info_insufficient",
+      "split": "final_check",
+      "scenario_type": "insufficient",
+      "case_path": "cases/ce2e_v1_050_final_info_insufficient.json"
+    },
+    {
+      "case_id": "ce2e_v1_051_final_out_scope_allergy",
+      "split": "final_check",
+      "scenario_type": "out_of_scope",
+      "case_path": "cases/ce2e_v1_051_final_out_scope_allergy.json"
+    },
+    {
+      "case_id": "ce2e_v1_052_final_out_scope_abdominal",
+      "split": "final_check",
+      "scenario_type": "out_of_scope",
+      "case_path": "cases/ce2e_v1_052_final_out_scope_abdominal.json"
+    },
+    {
+      "case_id": "ce2e_v1_053_final_asr_typo_temp",
+      "split": "final_check",
+      "scenario_type": "asr_typo",
+      "case_path": "cases/ce2e_v1_053_final_asr_typo_temp.json"
+    },
+    {
+      "case_id": "ce2e_v1_054_final_no_fever_cough",
+      "split": "final_check",
+      "scenario_type": "negation",
+      "case_path": "cases/ce2e_v1_054_final_no_fever_cough.json"
+    },
+    {
+      "case_id": "ce2e_v1_055_final_fever_no_course",
+      "split": "final_check",
+      "scenario_type": "missing_duration",
+      "case_path": "cases/ce2e_v1_055_final_fever_no_course.json"
+    },
+    {
+      "case_id": "ce2e_v1_056_final_fever_cough_no_temp",
+      "split": "final_check",
+      "scenario_type": "fever_cough",
+      "case_path": "cases/ce2e_v1_056_final_fever_cough_no_temp.json"
+    },
+    {
+      "case_id": "ce2e_v1_057_final_doctor_no_answer",
+      "split": "final_check",
+      "scenario_type": "doctor_question_negation",
+      "case_path": "cases/ce2e_v1_057_final_doctor_no_answer.json"
+    },
+    {
+      "case_id": "ce2e_v1_058_final_fever_after_medicine",
+      "split": "final_check",
+      "scenario_type": "resolved_treatment",
+      "case_path": "cases/ce2e_v1_058_final_fever_after_medicine.json"
+    },
+    {
+      "case_id": "ce2e_v1_059_final_fever_with_breath",
+      "split": "final_check",
+      "scenario_type": "danger_signal",
+      "case_path": "cases/ce2e_v1_059_final_fever_with_breath.json"
+    },
+    {
+      "case_id": "ce2e_v1_060_final_out_scope_chest_pain",
+      "split": "final_check",
+      "scenario_type": "out_of_scope",
+      "case_path": "cases/ce2e_v1_060_final_out_scope_chest_pain.json"
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "case_id": "ce2e_v1_012_family_medication_effect",
+  "split": "development",
+  "scenario_type": "three_party_treatment",
+  "title": "家属描述用药和体温",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "note": "Synthetic classroom evaluation case; no real patient data."
+  },
+  "segments": [
+    {
+      "segment_id": "seg-1",
+      "speaker_id": "spk-family",
+      "role": "家属",
+      "text": "刚吃了布洛芬，体温降到37.8度。"
+    }
+  ],
+  "expected": {
+    "facts": [
+      {
+        "type": "treatment",
+        "name": "既往处理",
+        "assertion": "present",
+        "value": "服用布洛芬后体温下降"
+      },
+      {
+        "type": "measurement",
+        "name": "体温",
+        "assertion": "present",
+        "value": "37.8℃"
+      },
+      {
+        "type": "symptom",
+        "name": "发热",
+        "assertion": "present"
+      }
+    ],
+    "field_status": {
+      "chief_complaint": "partial",
+      "present_illness": "partial",
+      "previous_treatment": "partial"
+    },
+    "required_content": [
+      {
+        "target": "previous_treatment",
+        "contains": [
+          "布洛芬"
+        ]
+      },
+      {
+        "target": "present_illness",
+        "contains": [
+          "37.8℃"
+        ]
+      }
+    ],
+    "forbidden_content": [
+      "3天前淋雨受凉",
+      "铁锈色痰",
+      "当地卫生院",
+      "食欲不佳",
+      "既往体健",
+      "肺结核",
+      "淋雨",
+      "咳嗽、咳痰"
+    ],
+    "candidate_diagnoses": [
+      {
+        "name": "发热待查",
+        "requires_evidence": true,
+        "rule_id": "FEVER_RESP_V1_FEVER_WORKUP"
+      }
+    ],
+    "forbidden_candidate_diagnoses": [],
+    "follow_up_questions_any": [],
+    "risk_signals": [],
+    "applicable_packs": [
+      "fever_respiratory_v1"
+    ]
+  }
+}

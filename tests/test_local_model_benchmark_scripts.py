@@ -3,9 +3,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.collect_hardware_profile import collect_hardware_profile
-from scripts.check_asr_dependencies import collect_asr_dependency_status, render_markdown
+from scripts.check_asr_dependencies import _isolated_module_info, collect_asr_dependency_status, render_markdown
 from scripts.check_qwen_asr_env import render_markdown as render_qwen_markdown
 from scripts.prepare_public_asr_smoke_samples import render_markdown as render_public_samples_markdown
 from scripts.run_local_asr_benchmark import CSV_FIELDS
@@ -13,6 +14,19 @@ from scripts.summarize_asr_benchmark import summarize_benchmark
 
 
 class LocalModelBenchmarkScriptTests(unittest.TestCase):
+    def test_native_dependency_probe_contains_process_crash(self):
+        completed = type(
+            "Completed",
+            (),
+            {"returncode": -1073741511, "stdout": "", "stderr": "native loader failed"},
+        )()
+        with patch("scripts.check_asr_dependencies.subprocess.run", return_value=completed):
+            result = _isolated_module_info("torchaudio")
+
+        self.assertFalse(result["available"])
+        self.assertEqual(result["probe_exit_code"], -1073741511)
+        self.assertIn("native loader failed", result["error"])
+
     def test_collect_hardware_profile_has_required_sections(self):
         profile = collect_hardware_profile()
 

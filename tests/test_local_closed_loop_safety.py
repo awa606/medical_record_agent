@@ -69,6 +69,17 @@ def test_twenty_synthetic_identities_across_model_json_sse_and_export(tmp_path,m
         bodies=[client.get('/json').text,client.get('/events').text,anonymize_text(text)]
     f=MedicalRecordFields(chief_complaint=MedicalField(value=text,source_spans=[SourceSpan(text=text)]))
     bodies.append(render_markdown(f,SafetyCheckResult(passed=True)))
+    # Inspect the actual transport payload, not only the helper's return value.
+    from io import BytesIO
+    from app.services.llm import ollama_provider
+    monkeypatch.setattr(readiness,'model_digest',lambda *args:'test-digest')
+    captured=[]
+    def transport(req,**kwargs):
+        captured.append(req.data.decode('utf-8'))
+        return BytesIO(json.dumps({'message':{'content':MedicalRecordFields().model_dump_json()},'done_reason':'stop'}).encode())
+    monkeypatch.setattr(ollama_provider.request,'urlopen',transport)
+    ollama_provider.OllamaLLMProvider(base_url='http://localhost:11434',model='qwen3:4b').generate_fields_json(text,timeout_seconds=1)
+    bodies.extend(captured)
     for body in bodies:
         assert name not in body and phone not in body and identity not in body
         assert alias in body
@@ -217,3 +228,62 @@ def test_access_log_keeps_formatter_contract_without_identity(tmp_path,monkeypat
     record=logging.getLogRecordFactory()('uvicorn.access',logging.INFO,__file__,1,'%s - "%s %s HTTP/%s" %d',('127.0.0.1','GET','/?phone=13800138000','1.1',200),None)
     rendered=AccessFormatter('%(client_addr)s %(request_line)s %(status_code)s').format(record)
     assert '13800138000' not in rendered and '200' in rendered
+
+
+def test_strict_audio_never_invents_roles_from_turn_order(monkeypatch):
+    from app.services.asr import auto_roles
+    from app.schemas.asr import ASRResult, ASRSegment, SpeakerRoleAssignment
+    monkeypatch.setenv('RECORD_PROVIDER_MODE','edge')
+    monkeypatch.setattr(auto_roles,'enhance_speaker_diarization',lambda result:result)
+    result=ASRResult(audio_id='test',engine='funasr',language='zh',text='不明确的话语',conversation_text='不明确的话语',
+        segments=[ASRSegment(segment_id='s1',speaker='spk0',speaker_id='spk0',text='不明确的话语')],
+        speaker_assignments=[SpeakerRoleAssignment(speaker_id='spk0',role=None,confidence=0,requires_confirmation=True)])
+    actual=auto_roles.ensure_automatic_speaker_roles(result)
+    assert actual.needs_review and actual.role_quality.status!='passed'
+    assert actual.segments[0].role is None
+
+
+def test_upload_reuses_prewarmer_instance(monkeypatch):
+    from app.api import asr_sessions
+    from app.services.asr.factory import create_asr_engine
+    from app.services.asr import funasr_engine
+    monkeypatch.setenv('RECORD_PROVIDER_MODE','edge')
+    monkeypatch.setattr(asr_sessions,'_FUNASR_RECONCILIATION_ENGINE',None)
+    calls=[]
+    def constructor(**kwargs):
+        calls.append(kwargs)
+        return object()
+    monkeypatch.setattr(funasr_engine,'FunASREngine',constructor)
+    warmed=asr_sessions._create_funasr_reconciliation_engine()
+    assert create_asr_engine('funasr') is warmed
+    assert create_asr_engine('funasr') is warmed
+    assert len(calls)==1
+
+
+def test_upload_prewarm_and_profile_change_are_explicit(monkeypatch):
+    from app.services.asr import prewarm
+    from app.api import asr_sessions, runtime
+    monkeypatch.setattr(prewarm,'_STATE',prewarm.PrewarmState(profile='upload'))
+    calls=[]
+    monkeypatch.setattr(asr_sessions,'_create_funasr_streaming_engine',lambda:calls.append('stream'))
+    monkeypatch.setattr(asr_sessions,'_create_funasr_reconciliation_engine',lambda:calls.append('batch'))
+    prewarm._run_prewarm()
+    assert calls==['batch'] and prewarm._STATE.status=='ready'
+    assert prewarm._STATE.components==['paraformer-zh','fsmn-vad','ct-punc','cam++']
+    monkeypatch.setenv('MEDICAL_RECORD_AGENT_REQUIRE_FUNASR','1')
+    monkeypatch.setenv('ASR_PREWARM_PROFILE','streaming')
+    assert not runtime._check_asr_models()['ok']
+
+
+def test_shared_asr_serializes_native_inference(tmp_path):
+    from app.services.asr.funasr_engine import FunASREngine
+    from concurrent.futures import ThreadPoolExecutor
+    import time
+    engine=FunASREngine(model_instance=object())
+    active=0;peak=0
+    def native(*args):
+        nonlocal active,peak
+        active+=1;peak=max(peak,active);time.sleep(.02);active-=1
+    engine._transcribe=native
+    with ThreadPoolExecutor(3) as pool:list(pool.map(lambda i:engine.transcribe(str(i),tmp_path/'unused'),range(3)))
+    assert peak==1

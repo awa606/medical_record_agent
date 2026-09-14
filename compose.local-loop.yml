@@ -18,6 +18,7 @@ services:
       MEDICAL_RECORD_AGENT_ASR_ENGINE: funasr
       MEDICAL_RECORD_AGENT_REQUIRE_FUNASR: "1"
       ASR_PREWARM_ENABLED: "1"
+      ASR_PREWARM_PROFILE: upload
       FUNASR_DEVICE: cpu
       FUNASR_STREAMING_MODEL_ID: paraformer-zh-streaming
       SPEAKER_ROLE_PROVIDER: rules

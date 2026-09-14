@@ -430,7 +430,7 @@ def _create_funasr_reconciliation_engine() -> Any:
 
     with _FUNASR_MODEL_CACHE_LOCK:
         if _FUNASR_RECONCILIATION_ENGINE is None:
-            _FUNASR_RECONCILIATION_ENGINE = FunASREngine(enable_speaker_diarization=True)
+            _FUNASR_RECONCILIATION_ENGINE = FunASREngine(enable_speaker_diarization=True, device=os.getenv('FUNASR_DEVICE', 'cpu'))
         return _FUNASR_RECONCILIATION_ENGINE
 
 

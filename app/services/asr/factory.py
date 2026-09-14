@@ -12,6 +12,10 @@ def create_asr_engine(engine_name: str = "mock") -> ASREngine:
     if normalized_name == "mock":
         return MockASREngine()
     if normalized_name == "funasr":
+        if os.getenv('RECORD_PROVIDER_MODE') in {'edge', 'live'}:
+            # Use the same instance loaded by session reconciliation/prewarm.
+            from app.api.asr_sessions import _create_funasr_reconciliation_engine
+            return _create_funasr_reconciliation_engine()
         from app.services.asr.funasr_engine import FunASREngine
 
         return FunASREngine(enable_speaker_diarization=os.getenv('RECORD_PROVIDER_MODE') == 'edge',

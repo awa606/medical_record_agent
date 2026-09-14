@@ -129,9 +129,12 @@ def _check_asr_models() -> dict[str, Any]:
     if require_funasr and status.get("status") != "ready":
         ok = False
         error = status.get("last_error") or "FunASR model prewarm has not completed"
+    if require_funasr and status.get('profile', 'streaming') != os.getenv('ASR_PREWARM_PROFILE', 'streaming'):
+        ok, error = False, 'ASR profile changed; restart and warm the selected models'
     return {
         "ok": ok,
         "status": status.get("status"),
+        "profile": status.get('profile', 'streaming'),
         "error_category": status.get("error_category"),
         "retryable": status.get("retryable"),
         "components": status.get("components", []),

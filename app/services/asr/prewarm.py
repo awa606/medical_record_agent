@@ -13,6 +13,7 @@ from app.services.asr.funasr_reliability import classify_funasr_error, funasr_ca
 @dataclass
 class PrewarmState:
     status: str = "idle"
+    profile: str = "streaming"
     started_at: str | None = None
     completed_at: str | None = None
     last_error: str | None = None
@@ -24,6 +25,7 @@ class PrewarmState:
     def to_dict(self) -> dict[str, Any]:
         return {
             "status": self.status,
+            "profile": self.profile,
             "started_at": self.started_at,
             "completed_at": self.completed_at,
             "last_error": self.last_error,
@@ -80,6 +82,7 @@ def start_funasr_prewarm(*, force: bool = False) -> dict[str, Any]:
         if not force and _STATE.status in {"warming", "ready"}:
             return _STATE.to_dict()
         _STATE.status = "warming"
+        _STATE.profile = os.getenv('ASR_PREWARM_PROFILE', 'streaming')
         _STATE.started_at = _now()
         _STATE.completed_at = None
         _STATE.last_error = None
@@ -101,8 +104,11 @@ def _run_prewarm() -> None:
             _create_funasr_streaming_engine,
         )
 
-        _create_funasr_streaming_engine()
-        components.append("paraformer-zh-streaming")
+        if _STATE.profile not in {'streaming', 'upload'}:
+            raise RuntimeError('Invalid ASR_PREWARM_PROFILE; expected streaming or upload')
+        if _STATE.profile == 'streaming':
+            _create_funasr_streaming_engine()
+            components.append("paraformer-zh-streaming")
         _create_funasr_reconciliation_engine()
         components.extend(["paraformer-zh", "fsmn-vad", "ct-punc", "cam++"])
         with _LOCK:

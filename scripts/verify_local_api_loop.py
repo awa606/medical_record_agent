@@ -42,6 +42,12 @@ def main():
             'physical_microphone_verified':False,'cases':[]}
     def save():
         (args.output/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+    if args.mode=='audio':
+        code,ready=call('GET','/ready')
+        report['readiness_before']=ready
+        if code!=200:
+            report['blocked']='Selected local models are not ready; retry into a new output directory after warmup.'
+            save();raise SystemExit(report['blocked'])
     for number in range(args.count):
         start=time.perf_counter()
         row={'run':number+1,'success':False}

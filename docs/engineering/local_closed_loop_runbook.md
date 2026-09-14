@@ -22,6 +22,8 @@ curl.exe http://127.0.0.1:2780/ready
 
 模型缓存目录包含 `modelscope/iic/<模型名>` 或 `modelscope/models/iic--<模型名>/snapshots/master`。必须有配置和对应权重；CAM++使用 `campplus_cn_common.bin`，其余模型使用 `model.pt`。离线缓存不完整时明确失败，不访问模型中心补下载。冷启动完成前 `/ready` 应为503。
 
+本回放配置显式选择 `ASR_PREWARM_PROFILE=upload`，只预热批量ASR、VAD、标点和CAM++四个组件，上传接口复用同一模型实例，避免重复占用内存。默认应用配置仍为 `streaming` 五组件。upload 的就绪结果不能证明实时麦克风流式模型已就绪；这次不以跳过流式模型来宣布麦克风验收通过。开发机 Docker 还运行其他服务，五组件并驻曾触发OOM，失败记录需保留。
+
 浏览器打开 `http://127.0.0.1:2780/static/doctor.html`，使用本次测试的 admin 账号。端口仅绑定本机回环地址。app 和 Ollama 只接入 `internal: true` 网络；入口代理连接入口网络和内部网络，只向固定 app 转发，不提供任意代理接口。应分别验证 app、Ollama 的外部连接确实失败，不能只凭配置宣称离线。
 
 ## 执行与结果

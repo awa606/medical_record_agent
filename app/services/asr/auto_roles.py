@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+import os
 
 from app.schemas.asr import ASRResult, ASRSegment, SpeakerRoleAssignment
 from app.services.asr.role_quality import build_speaker_role_quality
@@ -27,6 +28,15 @@ def ensure_automatic_speaker_roles(result: ASRResult) -> ASRResult:
     """Assign stable provisional clinical roles without requiring manual speaker mapping."""
     original_strategy = result.role_strategy
     updated = enhance_speaker_diarization(result)
+    if os.getenv('RECORD_PROVIDER_MODE') in {'edge', 'live'}:
+        # In strict runs a turn-order guess is not a clinical role assignment.
+        quality = build_speaker_role_quality(updated)
+        pending = {item.speaker_id for item in quality.pending_confirmation}
+        return updated.model_copy(update={
+            'role_quality': quality,
+            'needs_review': quality.status != 'passed',
+            'segments': [segment.model_copy(update={'needs_review': (segment.speaker_id or segment.speaker) in pending}) for segment in updated.segments],
+        })
     segments = updated.segments or [ASRSegment(speaker="speaker_0", speaker_id="speaker_0", text=updated.text)]
     speaker_ids = _ordered_speaker_ids(segments)
     existing = {item.speaker_id: item for item in updated.speaker_assignments}

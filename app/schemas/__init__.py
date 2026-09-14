@@ -14,6 +14,7 @@ from app.schemas.asr import (
     ASRSessionUploadResponse,
     AudioRecord,
     DiarizationTurn,
+    SpeakerRoleDecision,
     SpeakerRoleQualityMetrics,
     SpeakerRoleQualityResult,
     SpeakerRoleAssignment,
@@ -28,6 +29,7 @@ from app.schemas.auth import (
 )
 from app.schemas.medical_record import (
     CandidateDiagnosis,
+    ClinicalReference,
     MedicalField,
     MedicalRecordFields,
     SafetyCheckResult,
@@ -60,10 +62,12 @@ __all__ = [
     "AudioRecord",
     "AuthenticatedUser",
     "DiarizationTurn",
+    "SpeakerRoleDecision",
     "CreateUserRequest",
     "SpeakerRoleQualityMetrics",
     "SpeakerRoleQualityResult",
     "CandidateDiagnosis",
+    "ClinicalReference",
     "DoctorSpeakerProfile",
     "MedicalField",
     "MedicalRecordFields",

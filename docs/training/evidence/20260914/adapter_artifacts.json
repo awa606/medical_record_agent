@@ -1,0 +1,32 @@
+{
+  "schema_version": "local_adapter_artifact_manifest_v1",
+  "git_sha": "5c790a93bffd66ffe96cee6bee6886710662992a",
+  "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+  "storage": "local_artifact_only_not_committed",
+  "files": {
+    "adapter_config.json": {
+      "size_bytes": 1101,
+      "sha256": "e8279f8adeb1d22aa575b0b75b3e1703080f41dc2b84ebf76d167b72ac0fe49d"
+    },
+    "adapter_model.safetensors": {
+      "size_bytes": 17640136,
+      "sha256": "5fa62aeab060f697eeebcb21153b6f225276c2725399f487280e75f9c301bcbc"
+    },
+    "chat_template.jinja": {
+      "size_bytes": 2561,
+      "sha256": "8aa40ce145adb73cb3a75194dc0224702a95850ec5275cabb728496bbd749fc6"
+    },
+    "README.md": {
+      "size_bytes": 5206,
+      "sha256": "6b95375f507809c480d15e683ecaf6c69fe91a26adef775e1ce4032df12c7d56"
+    },
+    "tokenizer.json": {
+      "size_bytes": 11421892,
+      "sha256": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8"
+    },
+    "tokenizer_config.json": {
+      "size_bytes": 723,
+      "sha256": "bd667337917f3d3de225e9407258aa66fea87985bbed9cfb84d00adea253034a"
+    }
+  }
+}

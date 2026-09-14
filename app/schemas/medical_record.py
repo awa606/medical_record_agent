@@ -27,6 +27,14 @@ class MedicalField(BaseModel):
     missing_elements: list[str] = Field(default_factory=list)
     fact_ids: list[str] = Field(default_factory=list)
     confirmed_by_doctor: bool = False
+    doctor_review_status: Literal[
+        "pending",
+        "content_confirmed",
+        "not_asked_confirmed",
+        "missing_accepted",
+    ] = "pending"
+    high_risk_confirmed_by_doctor: bool = False
+    doctor_review_note: str | None = None
 
     @classmethod
     def missing_field(cls, hint: str = "建议补问") -> "MedicalField":
@@ -60,6 +68,28 @@ class MedicalField(BaseModel):
         return self
 
 
+class ClinicalReference(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reference_id: str
+    title: str
+    organization: str
+    source_type: Literal[
+        "national_guideline",
+        "clinical_guideline",
+        "official_clinical_resource",
+    ]
+    version: str
+    published_at: str
+    url: str
+    evidence_scope: str
+    verification_status: Literal["source_verified"] = "source_verified"
+    clinical_review_status: Literal["needs_medical_review", "reviewed"] = (
+        "needs_medical_review"
+    )
+    retrieved_at: str
+
+
 class CandidateDiagnosis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -73,7 +103,16 @@ class CandidateDiagnosis(BaseModel):
     medication_notes: list[str] = Field(default_factory=list)
     risk_warnings: list[str] = Field(default_factory=list)
     follow_up_questions: list[str] = Field(default_factory=list)
+    references: list[ClinicalReference] = Field(default_factory=list)
     confirmed_by_doctor: bool = False
+    doctor_review_status: Literal[
+        "pending",
+        "candidate_confirmed",
+        "ai_candidate_deleted",
+    ] = "pending"
+    deleted_by_doctor: bool = False
+    high_risk_confirmed_by_doctor: bool = False
+    doctor_review_note: str | None = None
 
 
 class MedicalRecordFields(BaseModel):

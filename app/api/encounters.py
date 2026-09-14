@@ -9,11 +9,14 @@ from pydantic import BaseModel, Field
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.db import (
+    CHECK_IN_STATUSES,
+    create_audit_log,
     create_encounter,
     get_encounter,
     get_record_revision,
     list_encounters,
     list_record_revisions_for_encounter,
+    update_encounter_check_in_status,
 )
 from app.schemas.auth import AuthenticatedUser
 
@@ -24,6 +27,7 @@ router = APIRouter(prefix="/encounters", tags=["encounters"], dependencies=[Depe
 class CreateEncounterRequest(BaseModel):
     patient_deidentified_id: str | None = Field(default=None, max_length=80)
     patient_display_name: str | None = Field(default="模拟患者", max_length=80)
+    doctor_id: int | None = None
 
 
 def _parse_json(value: str | None) -> Any:
@@ -46,6 +50,7 @@ def _summary(encounter: dict[str, Any]) -> dict[str, Any]:
         "doctor_user_id": encounter.get("doctor_user_id"),
         "task_id": encounter.get("task_id"),
         "status": encounter.get("status"),
+        "check_in_status": encounter.get("check_in_status") or "checked_in",
         "current_revision_id": encounter.get("current_revision_id"),
         "task_status": encounter.get("task_status"),
         "task_current_stage": encounter.get("task_current_stage"),
@@ -102,6 +107,7 @@ def create_encounter_route(
         doctor_user_id=user.id,
         deidentified_id=deidentified_id,
         display_name=payload.patient_display_name or deidentified_id,
+        check_in_status="registered",
     )
     return _detail(row)
 
@@ -113,3 +119,95 @@ def read_encounter(encounter_id: int, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Encounter not found")
     _assert_encounter_access(row, request)
     return _detail(row)
+
+
+def _transition_check_in_status(
+    encounter_id: int,
+    request: Request,
+    *,
+    action: str,
+    target: str,
+    allowed_from: set[str],
+) -> dict[str, Any]:
+    row = get_encounter(encounter_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Encounter not found")
+    _assert_encounter_access(row, request)
+
+    current = row.get("check_in_status") or "checked_in"
+    if current not in CHECK_IN_STATUSES:
+        raise HTTPException(status_code=409, detail="Encounter has an invalid check-in status")
+    if current == target:
+        return _detail(row)
+    if current not in allowed_from:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Encounter check-in status transition is not allowed",
+                "action": action,
+                "current_status": current,
+                "target_status": target,
+            },
+        )
+
+    updated = update_encounter_check_in_status(encounter_id, target)
+    actor = current_user_from_request(request)
+    task_id = updated.get("task_id")
+    if task_id is not None:
+        create_audit_log(
+            int(task_id),
+            "encounter_check_in_status_changed",
+            {
+                "encounter_id": encounter_id,
+                "action": action,
+                "old_status": current,
+                "new_status": target,
+                "actor_user_id": actor.id if actor else None,
+                "actor_role": actor.role if actor else None,
+            },
+        )
+    return _detail(updated)
+
+
+@router.post("/{encounter_id}/check-in")
+def check_in_encounter(encounter_id: int, request: Request) -> dict[str, Any]:
+    return _transition_check_in_status(
+        encounter_id,
+        request,
+        action="check_in",
+        target="checked_in",
+        allowed_from={"registered"},
+    )
+
+
+@router.post("/{encounter_id}/start")
+def start_encounter(encounter_id: int, request: Request) -> dict[str, Any]:
+    return _transition_check_in_status(
+        encounter_id,
+        request,
+        action="start",
+        target="in_progress",
+        allowed_from={"checked_in"},
+    )
+
+
+@router.post("/{encounter_id}/complete")
+def complete_encounter(encounter_id: int, request: Request) -> dict[str, Any]:
+    return _transition_check_in_status(
+        encounter_id,
+        request,
+        action="complete",
+        target="completed",
+        allowed_from={"in_progress"},
+    )
+
+
+@router.post("/{encounter_id}/cancel")
+def cancel_encounter(encounter_id: int, request: Request) -> dict[str, Any]:
+    return _transition_check_in_status(
+        encounter_id,
+        request,
+        action="cancel",
+        target="cancelled",
+        allowed_from={"registered", "checked_in"},
+    )

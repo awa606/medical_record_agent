@@ -1,0 +1,65 @@
+{
+  "schema_version": "v0.5.3",
+  "generated_at": "2026-09-14T13:26:17+08:00",
+  "python": {
+    "version": "3.11.6",
+    "implementation": "CPython",
+    "executable_name": "python.exe"
+  },
+  "cuda": {
+    "available": true,
+    "device_count": 1,
+    "devices": [
+      "NVIDIA GeForce RTX 5070 Laptop GPU"
+    ]
+  },
+  "modules": {
+    "torch": {
+      "available": true,
+      "version": "2.7.0+cu128"
+    },
+    "torchaudio": {
+      "available": true,
+      "version": "2.7.0+cu128"
+    },
+    "funasr": {
+      "available": false,
+      "version": null
+    },
+    "qwen_asr": {
+      "available": false,
+      "version": null
+    },
+    "whisper": {
+      "available": false,
+      "version": null
+    },
+    "soundfile": {
+      "available": true,
+      "version": "0.13.1"
+    },
+    "ffmpeg": {
+      "available": false,
+      "version": null,
+      "path_detected": false,
+      "source": null
+    },
+    "sensevoice": {
+      "available": false,
+      "version": null,
+      "note": "SenseVoice uses funasr.AutoModel with FunAudioLLM/SenseVoiceSmall."
+    }
+  },
+  "environment": {
+    "SENSEVOICE_MODEL_ID": "FunAudioLLM/SenseVoiceSmall",
+    "SENSEVOICE_DEVICE": "cpu",
+    "SENSEVOICE_LANGUAGE": "zh",
+    "WHISPER_MODEL": "base",
+    "WHISPER_DEVICE": "cpu",
+    "WHISPER_LANGUAGE": "zh",
+    "QWEN3_ASR_MODEL_ID": "Qwen/Qwen3-ASR-0.6B",
+    "QWEN3_ASR_DEVICE": "cpu",
+    "HF_HOME_configured": false,
+    "MODELSCOPE_CACHE_configured": false
+  }
+}

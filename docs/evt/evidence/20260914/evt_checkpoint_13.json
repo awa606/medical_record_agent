@@ -1,0 +1,307 @@
+{
+  "schema_version": "evt_checkpoint_v1",
+  "generated_at": "2026-09-14T12:21:24+08:00",
+  "git": {
+    "branch": "codex/evt-ai-quality-integration",
+    "sha": "7c9805f6a0c67e8754a0418613a0dac01d40f26c"
+  },
+  "environment": {
+    "python": "3.11.6",
+    "platform": "Windows-10-10.0.26200-SP0"
+  },
+  "inputs": {
+    "clinical_report": {
+      "path": ".artifacts\\evt\\20260914\\clinical_e2e_60.json",
+      "sha256": "5cd18dea53eb77eb98977ec1b9e1c2b3b8913bb702a9fb2dece0fe13a06714c6"
+    },
+    "dependency_report": {
+      "path": ".artifacts\\evt\\20260914\\asr_dependencies.json",
+      "sha256": "e04e8d09c91fd019e27fb2021e7711fe334d12085a0ff01c40b9d970f6a50daa"
+    }
+  },
+  "engineering_checks": {
+    "workflow_gate": {
+      "name": "workflow_gate",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 39.445,
+      "command": [
+        "C:\\Program Files\\Python311\\python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_encounter_workflow.py",
+        "tests/test_tasks_api.py",
+        "tests/test_review_revision_transaction.py",
+        "tests/test_local_patient_encounter_doctor_isolation.py"
+      ],
+      "stdout_tail": "........................................                                 [100%]\n40 passed in 36.32s\n",
+      "stderr_tail": ""
+    },
+    "role_gate": {
+      "name": "role_gate",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 7.167,
+      "command": [
+        "C:\\Program Files\\Python311\\python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_speaker_role_provider_policy.py",
+        "tests/test_speaker_role_quality_policy.py",
+        "tests/test_audio_api.py"
+      ],
+      "stdout_tail": "..................................                                       [100%]\n34 passed in 4.21s\n",
+      "stderr_tail": ""
+    },
+    "recovery": {
+      "name": "recovery",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 8.928,
+      "command": [
+        "C:\\Program Files\\Python311\\python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_task_persistence_after_restart.py",
+        "tests/test_runtime_hardening.py",
+        "tests/test_funasr_reliability.py"
+      ],
+      "stdout_tail": "...........                                                              [100%]\n11 passed in 5.87s\n",
+      "stderr_tail": ""
+    },
+    "knowledge_demo": {
+      "name": "knowledge_demo",
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 8.603,
+      "command": [
+        "C:\\Program Files\\Python311\\python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_demo_knowledge_api.py",
+        "tests/test_fever_respiratory_pack.py"
+      ],
+      "stdout_tail": "..................                                                       [100%]\n18 passed in 5.69s\n",
+      "stderr_tail": ""
+    }
+  },
+  "tests": [
+    {
+      "id": "T01",
+      "category": "功能",
+      "name": "病历生成完整性",
+      "standard": "20例必需结构字段存在率100%",
+      "veto": false,
+      "status": "PARTIAL",
+      "measured": {
+        "sample_count": 20,
+        "required_field_schema_complete": 20,
+        "required_field_schema_rate": 1.0,
+        "missing_fields": {},
+        "unsupported_content_count": 0,
+        "forbidden_candidate_count": 0,
+        "confirmed_diagnosis_phrase_count": 0,
+        "provider_mode": "demo_mock_default",
+        "audio_pipeline_evaluated": false
+      },
+      "remaining_gap": "结构Schema已验证；仍需真实ASR与真实本地LLM生成20例。"
+    },
+    {
+      "id": "T02",
+      "category": "AI质量",
+      "name": "AI幻觉检测",
+      "standard": "虚构事实0、输入矛盾0",
+      "veto": true,
+      "status": "PARTIAL",
+      "measured": {
+        "unsupported_content_count": 0,
+        "forbidden_candidate_count": 0,
+        "confirmed_diagnosis_phrase_count": 0,
+        "provider_mode": "demo_mock_default"
+      },
+      "remaining_gap": "当前是确定性Mock文本基线，不能替代真实本地模型验收。"
+    },
+    {
+      "id": "T03",
+      "category": "功能",
+      "name": "医学术语规范",
+      "standard": "20个固定样本错误数0",
+      "veto": false,
+      "status": "NOT TESTED",
+      "measured": {},
+      "remaining_gap": "尚未冻结20个术语样本和人工真值。"
+    },
+    {
+      "id": "T04",
+      "category": "功能",
+      "name": "编辑与人工确认",
+      "standard": "10种场景全部可编辑，未确认提交/归档成功数0",
+      "veto": false,
+      "status": "PARTIAL",
+      "measured": {
+        "workflow_gate": "PASS"
+      },
+      "remaining_gap": "自动化接口/事务门禁已通过；仍需10种浏览器场景逐项留证。"
+    },
+    {
+      "id": "T05",
+      "category": "安全",
+      "name": "脱敏与合规",
+      "standard": "姓名、ID、联系方式脱敏率100%，非授权外发0",
+      "veto": true,
+      "status": "NOT TESTED",
+      "measured": {},
+      "remaining_gap": "尚未建立带人工真值的脱敏样本和外发检查。"
+    },
+    {
+      "id": "T06",
+      "category": "安全",
+      "name": "操作留痕",
+      "standard": "生成、修改、审核、导出10种操作可追溯率100%",
+      "veto": false,
+      "status": "PARTIAL",
+      "measured": {
+        "workflow_gate": "PASS"
+      },
+      "remaining_gap": "审计链路测试通过；尚未形成10种操作的课程证据清单。"
+    },
+    {
+      "id": "T07",
+      "category": "性能",
+      "name": "生成时延",
+      "standard": "最终转写完成到结构化病历就绪P95≤15秒",
+      "veto": false,
+      "status": "BLOCKED",
+      "measured": {
+        "real_asr_runtime_available": false
+      },
+      "remaining_gap": "真实ASR/LLM运行时未冻结，无法测P95。"
+    },
+    {
+      "id": "T08",
+      "category": "一致性",
+      "name": "双环境一致性",
+      "standard": "20例结构化字段一致率100%",
+      "veto": false,
+      "status": "HARDWARE BLOCKED",
+      "measured": {
+        "development_device": {
+          "available": true,
+          "device_count": 1,
+          "devices": [
+            "NVIDIA GeForce RTX 5070 Laptop GPU"
+          ]
+        },
+        "jetson_available": false
+      },
+      "remaining_gap": "Jetson未到货，当前只有开发机证据。"
+    },
+    {
+      "id": "T09",
+      "category": "AI质量",
+      "name": "ASR质量",
+      "standard": "CER≤15%，医学关键词召回≥90%，RTF≤1",
+      "veto": false,
+      "status": "BLOCKED",
+      "measured": {
+        "real_asr_runtime_available": false,
+        "modules": {
+          "torch": {
+            "available": true,
+            "version": "2.7.0+cu128"
+          },
+          "torchaudio": {
+            "available": false,
+            "version": null
+          },
+          "funasr": {
+            "available": false,
+            "version": null
+          },
+          "sensevoice": {
+            "available": false,
+            "version": null
+          },
+          "qwen_asr": {
+            "available": false,
+            "version": null
+          },
+          "whisper": {
+            "available": false,
+            "version": null
+          },
+          "soundfile": {
+            "available": true,
+            "version": "0.13.1"
+          },
+          "ffmpeg": {
+            "available": false,
+            "version": null
+          }
+        }
+      },
+      "remaining_gap": "真实ASR依赖未就绪，课程音频尚未完成冻结人工标注。"
+    },
+    {
+      "id": "T10",
+      "category": "AI质量",
+      "name": "角色判断",
+      "standard": "准确率≥95%，高置信度跨角色写入0，低置信度必须阻断",
+      "veto": false,
+      "status": "PARTIAL",
+      "measured": {
+        "role_gate": "PASS"
+      },
+      "remaining_gap": "策略与低置信度门禁测试通过；仍需真实音频人工标注集计算准确率。"
+    },
+    {
+      "id": "T11",
+      "category": "AI质量",
+      "name": "知识检索",
+      "standard": "Recall@5≥90%，引用完整率100%，无来源引用0",
+      "veto": false,
+      "status": "NOT TESTED",
+      "measured": {
+        "demo_knowledge_checks": "PASS"
+      },
+      "remaining_gap": "当前仅有演示知识源；官方文档索引和40条冻结查询尚未完成。"
+    },
+    {
+      "id": "T12",
+      "category": "功能",
+      "name": "离线E2E",
+      "standard": "断网后连续5次全流程PASS，Mock回退0",
+      "veto": false,
+      "status": "BLOCKED",
+      "measured": {
+        "real_asr_runtime_available": false
+      },
+      "remaining_gap": "真实ASR和真实本地LLM未就绪。"
+    },
+    {
+      "id": "T13",
+      "category": "可靠性",
+      "name": "异常恢复",
+      "standard": "10个刷新、重启、失败重试场景恢复10/10，数据丢失和重复病历0",
+      "veto": false,
+      "status": "PARTIAL",
+      "measured": {
+        "recovery": "PASS"
+      },
+      "remaining_gap": "自动化恢复测试通过；仍需按课程10场景进行真实运行和留证。"
+    }
+  ],
+  "summary": {
+    "PASS": 0,
+    "PARTIAL": 6,
+    "NOT TESTED": 3,
+    "BLOCKED": 3,
+    "HARDWARE BLOCKED": 1,
+    "FAIL": 0
+  },
+  "gate": "NEEDS VALIDATION"
+}

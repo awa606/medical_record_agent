@@ -1,0 +1,28 @@
+{
+  "schema_version": "knowledge_query_eval_v1",
+  "dataset_id": "fever-respiratory-query-mvp-v1",
+  "split": "development_mvp",
+  "label_scope": "source-level relevance; chunk-level labels remain to be reviewed",
+  "queries": [
+    {"query_id": "KQ01", "query": "流行性感冒常见的临床表现有哪些？", "relevant_source_ids": ["nhc-influenza-2020"]},
+    {"query_id": "KQ02", "query": "哪些人属于流感重症高危人群？", "relevant_source_ids": ["nhc-influenza-2020"]},
+    {"query_id": "KQ03", "query": "流感诊断需要哪些病原学检查？", "relevant_source_ids": ["nhc-influenza-2020"]},
+    {"query_id": "KQ04", "query": "流感患者出现哪些情况需要警惕重症？", "relevant_source_ids": ["nhc-influenza-2020"]},
+    {"query_id": "KQ05", "query": "流感发热咳嗽头痛肌肉酸痛的表现", "relevant_source_ids": ["nhc-influenza-2020"]},
+    {"query_id": "KQ06", "query": "流感与普通感冒的鉴别要点", "relevant_source_ids": ["nhc-influenza-2020"]},
+    {"query_id": "KQ07", "query": "流感抗病毒治疗的适用人群", "relevant_source_ids": ["nhc-influenza-2020"]},
+    {"query_id": "KQ08", "query": "新型冠状病毒感染常见临床表现", "relevant_source_ids": ["nhc-covid19-trial-v10"]},
+    {"query_id": "KQ09", "query": "新冠感染重症高风险因素有哪些？", "relevant_source_ids": ["nhc-covid19-trial-v10"]},
+    {"query_id": "KQ10", "query": "新冠核酸检测和抗原检测的意义", "relevant_source_ids": ["nhc-covid19-trial-v10"]},
+    {"query_id": "KQ11", "query": "新冠重型和危重型诊断标准", "relevant_source_ids": ["nhc-covid19-trial-v10"]},
+    {"query_id": "KQ12", "query": "儿童感染新冠可能有哪些症状？", "relevant_source_ids": ["nhc-covid19-trial-v10"]},
+    {"query_id": "KQ13", "query": "新冠患者呼吸困难和低氧血症风险", "relevant_source_ids": ["nhc-covid19-trial-v10"]},
+    {"query_id": "KQ14", "query": "新型冠状病毒感染的诊断依据", "relevant_source_ids": ["nhc-covid19-trial-v10"]},
+    {"query_id": "KQ15", "query": "儿童肺炎支原体肺炎有哪些临床表现？", "relevant_source_ids": ["nhc-child-mpp-2025"]},
+    {"query_id": "KQ16", "query": "大环内酯类药物无反应性肺炎支原体肺炎如何定义？", "relevant_source_ids": ["nhc-child-mpp-2025"]},
+    {"query_id": "KQ17", "query": "重症肺炎支原体肺炎的早期识别指标", "relevant_source_ids": ["nhc-child-mpp-2025"]},
+    {"query_id": "KQ18", "query": "支原体肺炎咳嗽有什么特征？", "relevant_source_ids": ["nhc-child-mpp-2025"]},
+    {"query_id": "KQ19", "query": "儿童肺炎支原体肺炎的诊断标准", "relevant_source_ids": ["nhc-child-mpp-2025"]},
+    {"query_id": "KQ20", "query": "肺炎支原体病原学和抗体检测", "relevant_source_ids": ["nhc-child-mpp-2025"]}
+  ]
+}

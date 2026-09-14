@@ -15,41 +15,81 @@ def read_html() -> str:
 def test_workflow_uses_five_steps_without_role_review_step() -> None:
     script = read_script()
 
-    assert "1.开始问诊" in script
-    assert "2.智能转写" in script
-    assert "3.生成病历" in script
-    assert "4.医生审核" in script
-    assert "5.导出" in script
+    assert "选择就诊" in script
+    assert "采集信息" in script
+    assert "AI处理" in script
+    assert "病历审核" in script
+    assert "导出完成" in script
     assert "3.角色校正" not in script
-    assert 'TRANSCRIBED: "GENERATE_RECORD"' in script
+    assert 'TRANSCRIBED: "AI_PROCESS"' in script
 
 
-def test_role_quality_passed_auto_continues_and_gate_errors_surface() -> None:
+def test_role_quality_no_longer_blocks_doctor_workflow() -> None:
     script = read_script()
 
-    assert "function roleQualityPassed" in script
-    assert 'roleQualityStatus(asr) === "passed" && speakerRolesComplete(asr)' in script
-    assert "if (roleQualityPassed(asr)) return false" in script
-    assert "function applyRoleQualityGateError" in script
-    assert "error?.detail?.role_quality" in script
-    assert "role_quality: roleQuality" in script
+    assert "function roleReviewRequired()" in script
+    assert "function roleReviewRequired() {\n  return false;" in script
+    assert "系统自动推定" in script
     assert "startRecordGenerationFromAudio(transcribed.audio_id)" in script
     assert "await startRecordGenerationFromAudio(appState.currentAudioId)" in script
 
 
-def test_identity_review_is_exceptional_and_only_targets_uncertain_speakers() -> None:
+def test_identity_review_has_no_doctor_workflow_entry() -> None:
     script = read_script()
 
-    assert '["needs_review", "blocked"].includes(roleQualityStatus(asr))' in script
-    assert "pendingSpeakerAssignments()" in script
-    assert "quality.low_confidence_clinical_roles" in script
-    assert "quality.unmapped_speakers" in script
-    assert 'key: rolePending ? "open-role-review" : "save-role-review"' in script
-    assert 'renderTranscriptDetailContent("role-review")' in script
-    assert "需要确认的说话人" in script
-    assert "更正转写（可选）" in script
+    assert '"open-role-review"' not in script
+    assert 'appState.currentAsrResult && appState.roleReviewDirty && appState.viewMode === "debug"' in script
+    assert "保存调试更正" in script
     assert "全局角色映射" not in script
     assert "保存角色校正" not in script
+
+
+def test_recognition_mode_replaces_visible_asr_engine_selector() -> None:
+    visible = read_html() + read_script()
+
+    for selector_id in ["topAsrEngineSelect", "audioEngineSelect", "recordingEngineSelect"]:
+        assert selector_id not in visible
+    assert "recognitionModeSelect" in visible
+    assert "尽快识别" in visible
+    assert "跟随识别" in visible
+    assert "requireEncounterBeforeInput" in visible
+    assert "selectedEncounterId()" in visible
+
+
+def test_doctor_audio_workflow_does_not_send_engine_parameter() -> None:
+    script = read_script()
+
+    assert "new URLSearchParams({ engine" not in script
+    assert 'sessionParams.set("engine"' not in script
+    assert 'transcribeParams.set("engine"' not in script
+    assert 'uploadParams.set("engine"' not in script
+    assert 'new URLSearchParams({ recognition_mode: "fast" })' in script
+    assert 'new URLSearchParams({ recognition_mode: "follow", diarization_engine: "auto" })' in script
+
+
+def test_transcript_auto_follow_and_role_warning_are_visible() -> None:
+    visible = read_html() + read_script() + (ROOT / "static" / "doctor-ui-v2.css").read_text(encoding="utf-8")
+
+    assert "data-transcript-auto-follow" in visible
+    assert "appState.transcriptAutoFollow = false" in visible
+    assert "transcript-role-cell" in visible
+    assert "transcript-role-warning" in visible
+    assert "roleWarning: displaySegment.role_warning" in visible
+    assert "patientDisplayName" in visible
+    assert "word-break: normal" in visible
+    assert "overflow-wrap: normal" in visible
+
+
+def test_asr_failures_are_sanitized_before_doctor_toast() -> None:
+    script = read_script()
+
+    assert "function doctorSafeErrorMessage(error)" in script
+    assert "function applyAsrFailureDetail(detail = {})" in script
+    assert "containsTechnicalErrorText(message)" in script
+    assert "const safeMessage = doctorSafeErrorMessage(error)" in script
+    assert "applyAsrFailureDetail(data)" in script
+    assert "applyAsrFailureDetail(error?.detail || {})" in script
+    assert "technical_detail" not in script
 
 
 def test_diagnosis_reference_shows_two_candidates_and_hides_rule_ids_normally() -> None:
@@ -61,7 +101,8 @@ def test_diagnosis_reference_shows_two_candidates_and_hides_rule_ids_normally() 
     assert "关注：" in script
     assert "查看完整依据" in script
     assert "仅供鉴别诊断参考，需医生判断，不能作为已确诊结论。" in script
-    assert "规则匹配度" in script
+    assert "证据匹配度" in script
+    assert "非疾病概率" in script
     assert "规则置信度" not in script
     assert 'appState.viewMode === "debug"' in script
     assert "diagnosis.rule_id" in script
@@ -77,6 +118,8 @@ def test_doctor_review_terms_are_user_facing() -> None:
         "病历审核已完成",
         "请核对病历内容及鉴别诊断参考",
         "完成医生审核后方可导出",
+        "AI 生成草稿，仅供医生审核",
+        "原审核已失效或尚未完成",
     ]:
         assert phrase in visible
 
@@ -90,3 +133,20 @@ def test_doctor_review_terms_are_user_facing() -> None:
         "确认后才能导出",
     ]:
         assert phrase not in visible
+
+
+def test_demo_rc_next_action_uses_single_primary_cta_and_processing_stages() -> None:
+    visible = read_html() + read_script() + (ROOT / "static" / "doctor-ui-v2.css").read_text(encoding="utf-8")
+
+    assert "const PROCESSING_STAGES" in visible
+    for phrase in ["音频上传", "FunASR 转写", "医患角色推定", "医学字段抽取", "病历草稿生成", "安全检查"]:
+        assert phrase in visible
+    assert "processing-stage-list" in visible
+    assert "singlePrimaryAction" in visible
+    assert 'key: "open-worklist", label: "选择今日就诊"' in visible
+    assert 'key: "start-live-demo", label: "开始问诊演示"' in visible
+    assert "固定音频跟随识别演示" in visible
+    assert "结束问诊并生成正式病历" in visible
+    assert 'key: "retry-transcription", label:' in visible
+    assert 'id="reviewBoundaryNotice"' in visible
+    assert "record-field-updated" in visible

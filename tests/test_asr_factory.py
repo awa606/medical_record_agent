@@ -188,6 +188,38 @@ class ASRFactoryTests(unittest.TestCase):
         self.assertTrue(all(segment.speaker_normalized == "speaker_unassigned" for segment in result.segments))
         self.assertTrue(all(segment.diarization_source == "missing_label" for segment in result.segments))
 
+    def test_funasr_rejects_null_result_payload(self):
+        class FakeModel:
+            def generate(self, **_kwargs):
+                return None
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audio_path = Path(temp_dir) / "invalid.wav"
+            audio_path.write_bytes(b"RIFF....WAVEfmt ")
+            engine = FunASREngine(model_instance=FakeModel(), hotword_path=None)
+
+            with self.assertRaises(RuntimeError) as context:
+                engine.transcribe("audio-invalid", audio_path)
+
+        self.assertIn("ASR_RESULT_INVALID", str(context.exception))
+        self.assertIn("no result payload", str(context.exception))
+
+    def test_funasr_rejects_non_mapping_result_payload(self):
+        class FakeModel:
+            def generate(self, **_kwargs):
+                return 123
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audio_path = Path(temp_dir) / "invalid.wav"
+            audio_path.write_bytes(b"RIFF....WAVEfmt ")
+            engine = FunASREngine(model_instance=FakeModel(), hotword_path=None)
+
+            with self.assertRaises(RuntimeError) as context:
+                engine.transcribe("audio-invalid", audio_path)
+
+        self.assertIn("ASR_RESULT_INVALID", str(context.exception))
+        self.assertIn("result format", str(context.exception))
+
     def test_whisper_engine_requires_optional_dependencies(self):
         original_import = builtins.__import__
 

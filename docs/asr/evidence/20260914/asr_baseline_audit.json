@@ -1,0 +1,159 @@
+{
+  "schema_version": "asr_baseline_audit_v1",
+  "generated_at": "2026-09-14T13:03:42+08:00",
+  "git_sha": "ba2eaf27db4928e04acff0f1b21278b774c7929f",
+  "audio_source_label": "original-worktree-video-readonly",
+  "manifest_sha256": "ffd61fe5ff00cc45e490e14dfbff2f2f78aabff756cf4c2853da0f7bde894fc6",
+  "expected_sample_ids": [
+    "chest_pain_01",
+    "fever_01",
+    "snakebite_01"
+  ],
+  "unique_sample_count": 3,
+  "unique_duration_seconds": 918.173,
+  "unique_duration_minutes": 15.3,
+  "audio_files": [
+    {
+      "filename": "chest_pain_01.wav",
+      "size_bytes": 87547982,
+      "sha256": "d638f3ed4b22683ba3fd2ee501332f6d5870d9df9427abbb12956eb7ffc8b55a",
+      "suffix": "WAV",
+      "detected_format": "WAV",
+      "decoder_format": "WAV",
+      "format_matches_suffix": true,
+      "duration_seconds": 496.303,
+      "sample_rate_hz": 44100,
+      "channels": 2,
+      "decoder_error": null,
+      "ground_truth_present": true,
+      "ground_truth_sha256": "08dfe695881ddebdb01b2006033987055f92086b11fcbb55615d22a26dc23428"
+    },
+    {
+      "filename": "fever_01.wav",
+      "size_bytes": 54673486,
+      "sha256": "93291c6894de5bcb7945af4f456e1ab3402fb8a78f60b5c00bfbc7185c8c414d",
+      "suffix": "WAV",
+      "detected_format": "WAV",
+      "decoder_format": "WAV",
+      "format_matches_suffix": true,
+      "duration_seconds": 309.94,
+      "sample_rate_hz": 44100,
+      "channels": 2,
+      "decoder_error": null,
+      "ground_truth_present": true,
+      "ground_truth_sha256": "61d57bc58b29f03a10ffc03391a1c9306102eea57364db8c22bf1bdd2218a90f"
+    },
+    {
+      "filename": "snakebite_01.mp3",
+      "size_bytes": 895437,
+      "sha256": "65da87600395d68acb53a13fa0d2f1d27cb1f34510a8334fe3c384de797ef764",
+      "suffix": "MP3",
+      "detected_format": "MP3",
+      "decoder_format": "MP3",
+      "format_matches_suffix": true,
+      "duration_seconds": 111.93,
+      "sample_rate_hz": 16000,
+      "channels": 1,
+      "decoder_error": null,
+      "ground_truth_present": true,
+      "ground_truth_sha256": "bd012d41a71214f49a589ce0c21a2b55f5785c64c51974890312f163b043eb48"
+    },
+    {
+      "filename": "snakebite_01.wav",
+      "size_bytes": 895437,
+      "sha256": "65da87600395d68acb53a13fa0d2f1d27cb1f34510a8334fe3c384de797ef764",
+      "suffix": "WAV",
+      "detected_format": "MP3",
+      "decoder_format": "MP3",
+      "format_matches_suffix": false,
+      "duration_seconds": 111.93,
+      "sample_rate_hz": 16000,
+      "channels": 1,
+      "decoder_error": null,
+      "ground_truth_present": true,
+      "ground_truth_sha256": "bd012d41a71214f49a589ce0c21a2b55f5785c64c51974890312f163b043eb48"
+    }
+  ],
+  "duplicate_groups": [
+    [
+      "snakebite_01.mp3",
+      "snakebite_01.wav"
+    ]
+  ],
+  "benchmarks": [
+    {
+      "engine_id": "funasr",
+      "engine": "funasr-paraformer-zh",
+      "report": "data/asr_eval/reports/v0_5_6_cn_medical_compare/funasr_report.csv",
+      "report_sha256": "5011bfae818ebe7aadbc439d263a4384050ee8ce4835740ff2ddcd5eba35644b",
+      "sample_count": 3,
+      "sample_ids": [
+        "chest_pain_01",
+        "fever_01",
+        "snakebite_01"
+      ],
+      "macro_cer": 0.195247,
+      "macro_keyword_recall": 0.766667,
+      "max_rtf": 0.195058,
+      "max_rss_mb": 4626.28,
+      "gate_checks": {
+        "all_expected_samples_measured": true,
+        "cer_le_0_15": false,
+        "keyword_recall_ge_0_90": false,
+        "rtf_le_1": true,
+        "metrics_complete": true
+      },
+      "t09_gate": "FAIL"
+    },
+    {
+      "engine_id": "sensevoice",
+      "engine": "sensevoice-small",
+      "report": "data/asr_eval/reports/v0_5_6_cn_medical_compare/sensevoice_report.csv",
+      "report_sha256": "25bef8fb5b3542b4a6ddc6955ad78201d47b66a52e657941937b78b6daaa10ba",
+      "sample_count": 3,
+      "sample_ids": [
+        "chest_pain_01",
+        "fever_01",
+        "snakebite_01"
+      ],
+      "macro_cer": 0.166945,
+      "macro_keyword_recall": 0.733333,
+      "max_rtf": 0.161033,
+      "max_rss_mb": 4297.01,
+      "gate_checks": {
+        "all_expected_samples_measured": true,
+        "cer_le_0_15": false,
+        "keyword_recall_ge_0_90": false,
+        "rtf_le_1": true,
+        "metrics_complete": true
+      },
+      "t09_gate": "FAIL"
+    },
+    {
+      "engine_id": "qwen3",
+      "engine": "qwen3-asr-0.6b",
+      "report": "data/asr_eval/reports/v0_5_6_cn_medical_compare/qwen3/qwen3_report.csv",
+      "report_sha256": "ddeb1b712d0b61c381f9be43ae4ee9d0a77c114ef22a4ad6672d4f70421b8f1f",
+      "sample_count": 3,
+      "sample_ids": [
+        "chest_pain_01",
+        "fever_01",
+        "snakebite_01"
+      ],
+      "macro_cer": 0.550381,
+      "macro_keyword_recall": 0.588889,
+      "max_rtf": 0.55412,
+      "max_rss_mb": 10502.26,
+      "gate_checks": {
+        "all_expected_samples_measured": true,
+        "cer_le_0_15": false,
+        "keyword_recall_ge_0_90": false,
+        "rtf_le_1": true,
+        "metrics_complete": true
+      },
+      "t09_gate": "FAIL"
+    }
+  ],
+  "training_data_gate": "BLOCKED_DATA_LT_60_MIN",
+  "jetson_gate": "HARDWARE_BLOCKED"
+}

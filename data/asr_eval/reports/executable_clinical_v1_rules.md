@@ -2,6 +2,9 @@
 
 - dataset_version: `executable_clinical_v1`
 - schema_version: `executable-speaker-role-dataset-v1`
+- evaluation_mode: `oracle_transcript_role_decision`
+- audio_pipeline_evaluated: `False`
+- evaluation_policy_override: `None`
 - provider: `rules`
 - product_accuracy: `True`
 - sample_count: 23
@@ -12,8 +15,9 @@
 | metric | value | 95% CI |
 | --- | ---: | --- |
 | role_accuracy | 1.0 | [0.9259, 1.0] |
-| auto_accept_coverage | 0.5208 | [0.3833, 0.6553] |
-| manual_confirmation_rate | 0.4792 | [0.3447, 0.6167] |
+| auto_accept_accuracy | 1.0 | [0.5655, 1.0] |
+| auto_accept_coverage | 0.1042 | [0.0453, 0.2217] |
+| manual_confirmation_rate | 0.8958 | [0.7783, 0.9547] |
 | speaker_count_accuracy | 1.0 | [0.8569, 1.0] |
 | mixed_utterance_rate | 0.0541 | [0.025, 0.1129] |
 | keyword_recall | 0.9697 | [0.8961, 0.9917] |

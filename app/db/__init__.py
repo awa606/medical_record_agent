@@ -1,4 +1,8 @@
 from app.db.sqlite import (
+    CHECK_IN_STATUSES,
+    StaleRecordRevisionError,
+    apply_review_revision_transaction,
+    bind_task_to_encounter,
     create_auth_session,
     create_audit_log,
     create_approval_for_task,
@@ -24,6 +28,8 @@ from app.db.sqlite import (
     increment_task_retry_count,
     init_db,
     json_dumps,
+    list_approval_items_for_approval,
+    list_approvals_for_task,
     list_export_events_for_task,
     list_encounters,
     list_record_revisions_for_task,
@@ -32,10 +38,16 @@ from app.db.sqlite import (
     revoke_auth_session,
     set_task_owner,
     update_task,
+    update_encounter_check_in_status,
     update_user_last_login,
+    record_content_hash,
 )
 
 __all__ = [
+    "CHECK_IN_STATUSES",
+    "StaleRecordRevisionError",
+    "apply_review_revision_transaction",
+    "bind_task_to_encounter",
     "create_auth_session",
     "create_audit_log",
     "create_approval_for_task",
@@ -61,6 +73,8 @@ __all__ = [
     "increment_task_retry_count",
     "init_db",
     "json_dumps",
+    "list_approval_items_for_approval",
+    "list_approvals_for_task",
     "list_export_events_for_task",
     "list_encounters",
     "list_record_revisions_for_task",
@@ -69,5 +83,7 @@ __all__ = [
     "revoke_auth_session",
     "set_task_owner",
     "update_task",
+    "update_encounter_check_in_status",
     "update_user_last_login",
+    "record_content_hash",
 ]

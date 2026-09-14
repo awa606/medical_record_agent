@@ -2,6 +2,7 @@ import unittest
 
 from app.schemas import (
     CandidateDiagnosis,
+    ClinicalReference,
     MedicalField,
     MedicalRecordFields,
     SafetyCheckResult,
@@ -59,6 +60,23 @@ class MedicalRecordSchemaTests(unittest.TestCase):
         self.assertEqual(diagnosis.medication_notes, [])
         self.assertEqual(diagnosis.risk_warnings, [])
         self.assertEqual(diagnosis.follow_up_questions, [])
+        self.assertEqual(diagnosis.references, [])
+
+    def test_clinical_reference_keeps_source_and_review_status_separate(self):
+        reference = ClinicalReference(
+            reference_id="TEST_GUIDE_2026",
+            title="Test clinical guide",
+            organization="Test organization",
+            source_type="clinical_guideline",
+            version="v1",
+            published_at="2026-01-01",
+            url="https://example.org/guide",
+            evidence_scope="Schema validation only.",
+            retrieved_at="2026-07-22",
+        )
+
+        self.assertEqual(reference.verification_status, "source_verified")
+        self.assertEqual(reference.clinical_review_status, "needs_medical_review")
 
     def test_medical_record_fields_default_to_missing(self):
         record = MedicalRecordFields()

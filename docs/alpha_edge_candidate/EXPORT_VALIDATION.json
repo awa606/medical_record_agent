@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "new_and_updated_files": 13,
+  "workbooks": 2,
+  "sheets_checked": 5,
+  "rendered_pngs": {
+    "20260911-20260914_1.2_Docker环境整合/1.2_环境验证展示_边缘端适用性说明版.png": [
+      2680,
+      2770
+    ],
+    "20260911_1.1_目标硬件与BOM/1.1_边缘端BOM展示.png": [
+      3080,
+      3778
+    ],
+    "20260911_1.1_目标硬件与BOM/1.1_边缘端硬件与模型容量.png": [
+      2740,
+      3264
+    ]
+  },
+  "relative_links_checked": 43,
+  "alpha_tasks": 15,
+  "hours": 87,
+  "technical_dependencies": 19,
+  "resource_dependencies": 6,
+  "milestones": 4,
+  "known_price": 2070,
+  "missing_prices": 5,
+  "candidate_gate": "NEEDS VALIDATION",
+  "protected_files_unchanged": 1064,
+  "historical_hashes_preserved": true
+}

@@ -1,0 +1,14 @@
+{
+  "source_id": "guideline_demo_003",
+  "title": "演示资料：旧版咳嗽处置片段",
+  "publisher": "MediListen 课程演示资料组",
+  "document_type": "clinical_guideline",
+  "year": 2024,
+  "version": "2024-demo-withdrawn",
+  "review_status": "withdrawn",
+  "excerpt": "该演示片段已撤回，仅用于验证 withdrawn 状态，不作为当前任务有效知识参考。",
+  "related_fields": ["处理建议"],
+  "keywords": ["咳嗽", "处置"],
+  "citation_anchor": "demo-withdrawn-cough-plan",
+  "source_url": null
+}

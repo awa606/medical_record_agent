@@ -1,30 +1,83 @@
 {
   "dataset_version": "executable_clinical_v1",
   "schema_version": "executable-speaker-role-dataset-v1",
+  "evaluation_mode": "oracle_transcript_role_decision",
+  "audio_pipeline_evaluated": false,
+  "evaluation_policy_override": null,
+  "audio_pipeline_note": "WAV/FLAC files are verified for data provenance and future end-to-end evaluation entry points; this report evaluates role decisions from oracle transcripts.",
   "manifest_path": "data/asr_eval/executable_clinical_v1/manifest.json",
   "selected_split": "all",
-  "generated_at": "2026-07-15T09:03:22.552983+00:00",
+  "generated_at": "2026-07-16T09:03:12.176252+00:00",
   "providers": [
     "rules"
   ],
   "provider_reports": {
     "rules": {
       "provider": "rules",
+      "evaluation_mode": "oracle_transcript_role_decision",
+      "audio_pipeline_evaluated": false,
+      "evaluation_policy_override": null,
       "provider_versions": [
-        "rules-text-markers-v1"
+        "rules-v1"
       ],
       "policy_versions": [
-        "executable-clinical-policy-v1"
+        "speaker-role-policy-v1"
       ],
       "git_commits": [
-        "04ea877-dirty"
+        "1b31db8"
       ],
       "provider_configs": [
         {
-          "auto_accept_threshold": 0.9,
-          "review_threshold": 0.65,
-          "role_source": "truth_transcript_text_only",
-          "single_speaker_counterexample_action": "blocked"
+          "llm": {
+            "auto_accept_threshold": 0.9,
+            "confidence_mapping": "llm_conservative",
+            "enabled": true,
+            "fallback_action": "needs_review",
+            "policy_version": "speaker-role-policy-v1",
+            "provider": "llm",
+            "provider_version": "llm-v1",
+            "review_threshold": 0.7
+          },
+          "manual": {
+            "auto_accept_threshold": 0.0,
+            "confidence_mapping": "identity",
+            "enabled": true,
+            "fallback_action": "auto_accept",
+            "policy_version": "speaker-role-policy-v1",
+            "provider": "manual",
+            "provider_version": "manual-review-v1",
+            "review_threshold": 0.0
+          },
+          "rules": {
+            "auto_accept_threshold": 0.9,
+            "confidence_mapping": "identity",
+            "enabled": true,
+            "fallback_action": "needs_review",
+            "policy_version": "speaker-role-policy-v1",
+            "provider": "rules",
+            "provider_version": "rules-v1",
+            "review_threshold": 0.65
+          },
+          "unknown": {
+            "auto_accept_threshold": 1.01,
+            "confidence_mapping": "identity",
+            "enabled": false,
+            "fallback_action": "needs_review",
+            "policy_version": "speaker-role-policy-v1",
+            "provider": "unknown",
+            "provider_version": "unknown-v1",
+            "review_threshold": 1.01
+          },
+          "voiceprint": {
+            "auto_accept_threshold": 0.9,
+            "confidence_mapping": "voiceprint_conservative",
+            "enabled": true,
+            "fallback_action": "needs_review",
+            "policy_version": "speaker-role-policy-v1",
+            "provider": "voiceprint",
+            "provider_version": "voiceprint-v1",
+            "review_threshold": 0.65
+          }
         }
       ],
       "counts_as_product_accuracy": true,
@@ -44,9 +97,10 @@
       },
       "metrics": {
         "role_accuracy": 1.0,
-        "auto_accept_coverage": 0.5208,
+        "auto_accept_accuracy": 1.0,
+        "auto_accept_coverage": 0.1042,
         "high_confidence_error_count": 0,
-        "manual_confirmation_rate": 0.4792,
+        "manual_confirmation_rate": 0.8958,
         "speaker_count_accuracy": 1.0,
         "mixed_utterance_rate": 0.0541,
         "keyword_recall": 0.9697
@@ -58,16 +112,22 @@
           "numerator": 48,
           "denominator": 48
         },
+        "auto_accept_accuracy": {
+          "low": 0.5655,
+          "high": 1.0,
+          "numerator": 5,
+          "denominator": 5
+        },
         "auto_accept_coverage": {
-          "low": 0.3833,
-          "high": 0.6553,
-          "numerator": 25,
+          "low": 0.0453,
+          "high": 0.2217,
+          "numerator": 5,
           "denominator": 48
         },
         "manual_confirmation_rate": {
-          "low": 0.3447,
-          "high": 0.6167,
-          "numerator": 23,
+          "low": 0.7783,
+          "high": 0.9547,
+          "numerator": 43,
           "denominator": 48
         },
         "speaker_count_accuracy": {
@@ -112,9 +172,10 @@
   },
   "metrics": {
     "role_accuracy": 1.0,
-    "auto_accept_coverage": 0.5208,
+    "auto_accept_accuracy": 1.0,
+    "auto_accept_coverage": 0.1042,
     "high_confidence_error_count": 0,
-    "manual_confirmation_rate": 0.4792,
+    "manual_confirmation_rate": 0.8958,
     "speaker_count_accuracy": 1.0,
     "mixed_utterance_rate": 0.0541,
     "keyword_recall": 0.9697
@@ -126,16 +187,22 @@
       "numerator": 48,
       "denominator": 48
     },
+    "auto_accept_accuracy": {
+      "low": 0.5655,
+      "high": 1.0,
+      "numerator": 5,
+      "denominator": 5
+    },
     "auto_accept_coverage": {
-      "low": 0.3833,
-      "high": 0.6553,
-      "numerator": 25,
+      "low": 0.0453,
+      "high": 0.2217,
+      "numerator": 5,
       "denominator": 48
     },
     "manual_confirmation_rate": {
-      "low": 0.3447,
-      "high": 0.6167,
-      "numerator": 23,
+      "low": 0.7783,
+      "high": 0.9547,
+      "numerator": 43,
       "denominator": 48
     },
     "speaker_count_accuracy": {

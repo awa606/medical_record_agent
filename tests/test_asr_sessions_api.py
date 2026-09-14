@@ -12,10 +12,17 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.api.asr_sessions import (
+    _RECORDING_SESSION_LOCKS,
     _append_events,
     _asr_session_event_stream,
     _chunk_seconds_for_duration,
+    _append_result_events,
+    _failed_event,
     _read_events,
+    _recording_chunk_summary,
+    _read_session,
+    _write_session,
+    _read_recording_chunk_state,
     _write_session_result,
     _should_use_realtime_upload_session,
     create_asr_session,
@@ -24,20 +31,23 @@ from app.api.asr_sessions import (
     update_asr_session_result,
     upload_asr_session_audio,
 )
-from app.api.audio import _write_transcript, read_audio_transcript
+from app.api.audio import _read_audio_record, _write_transcript, read_audio_transcript
 from app.main import app
 from app.schemas import (
     ASRResult,
     ASRSegment,
     ASRSpeakerMergeRequest,
+    ASRSpeakerRoleCorrection,
     ASRSegmentCorrection,
     ASRSessionCorrectionRequest,
     ASRSessionEvent,
+    ASRSessionRecord,
     SpeakerRoleAssignment,
 )
 from app.schemas.asr import DiarizationTurn
 from app.services.asr import AudioChunk
-from tests.auth_helpers import login_as_admin
+from app.services.asr.role_quality import attach_speaker_role_quality
+from tests.auth_helpers import create_user, login_as_admin, login_as_user
 
 
 class FakeUploadFile:
@@ -78,6 +88,39 @@ class FakeChunkEngine:
                     text=f"第{index}段转写",
                     start_time=0.0,
                     end_time=2.0,
+                )
+            ],
+            duration=2.0,
+        )
+
+
+class FakeRealtimeChunkEngine:
+    name = "fake-follow"
+
+    def __init__(self):
+        self.calls: list[str] = []
+
+    def transcribe(self, audio_id: str, audio_path: Path) -> ASRResult:
+        if "_chunk_" not in audio_id:
+            raise AssertionError("follow mode must not transcribe the full upload before chunk events")
+        self.calls.append(audio_id)
+        index = int(audio_id.rsplit("_", 1)[-1])
+        return ASRResult(
+            audio_id=audio_id,
+            engine=self.name,
+            text=f"chunk {index}",
+            conversation_text=f"[spk-shared] chunk {index}",
+            segments=[
+                ASRSegment(
+                    speaker="spk-shared",
+                    speaker_id="spk-shared",
+                    role="患者",
+                    role_confidence=0.72,
+                    role_source="system_auto_inference",
+                    role_warning="系统自动推定",
+                    text=f"chunk {index}",
+                    start_time=0.0,
+                    end_time=1.0,
                 )
             ],
             duration=2.0,
@@ -140,6 +183,72 @@ class FakeNativeStreamingEngine:
         )
 
 
+class FakeLiveChunkSession:
+    def __init__(self):
+        self.calls: list[dict[str, object]] = []
+
+    def transcribe_chunk(
+        self,
+        chunk_path,
+        *,
+        sequence,
+        chunk_started_at_ms=None,
+        chunk_ended_at_ms=None,
+        checksum=None,
+    ):
+        self.calls.append(
+            {
+                "chunk_path": str(chunk_path),
+                "sequence": sequence,
+                "chunk_started_at_ms": chunk_started_at_ms,
+                "chunk_ended_at_ms": chunk_ended_at_ms,
+                "checksum": checksum,
+            }
+        )
+        partial = ASRSegment(
+            segment_id=f"live-{sequence:04d}",
+            revision=1,
+            provisional=True,
+            speaker="streaming",
+            speaker_id="streaming",
+            text=f"partial {sequence}",
+            start_time=(chunk_started_at_ms or 0) / 1000,
+            end_time=(chunk_ended_at_ms or 0) / 1000,
+            needs_review=True,
+        )
+        stable = partial.model_copy(
+            update={
+                "revision": 2,
+                "provisional": False,
+                "text": f"stable {sequence}",
+            }
+        )
+        return [
+            (
+                "transcript.partial",
+                partial,
+                {
+                    "sequence": sequence,
+                    "chunk_started_at_ms": chunk_started_at_ms,
+                    "chunk_ended_at_ms": chunk_ended_at_ms,
+                    "checksum": checksum,
+                    "processed_audio_seconds": (chunk_ended_at_ms or 0) / 1000,
+                },
+            ),
+            (
+                "transcript.stable",
+                stable,
+                {
+                    "sequence": sequence,
+                    "chunk_started_at_ms": chunk_started_at_ms,
+                    "chunk_ended_at_ms": chunk_ended_at_ms,
+                    "checksum": checksum,
+                    "processed_audio_seconds": (chunk_ended_at_ms or 0) / 1000,
+                },
+            ),
+        ]
+
+
 class FakeReconciliationEngine:
     def transcribe(self, audio_id, audio_path):
         segments = [
@@ -191,6 +300,13 @@ def fake_audio_chunks() -> list[AudioChunk]:
     ]
 
 
+def fake_realtime_audio_chunks() -> list[AudioChunk]:
+    return [
+        AudioChunk(index=1, path=Path("chunk_001.wav"), start_seconds=0.0, duration_seconds=2.0),
+        AudioChunk(index=2, path=Path("chunk_002.wav"), start_seconds=2.0, duration_seconds=2.0),
+    ]
+
+
 def browser_wav_bytes(frame_count: int = 1600, sample_rate: int = 16000, amplitude: int = 1200) -> bytes:
     output = io.BytesIO()
     with wave.open(output, "wb") as writer:
@@ -206,21 +322,90 @@ def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def upload_browser_recording_chunk(
+    client: TestClient,
+    session_id: str,
+    *,
+    chunk_index: int,
+    payload: bytes,
+    duration_seconds: str = "0.1",
+):
+    return client.post(
+        f"/api/asr/sessions/{session_id}/chunks",
+        data={
+            "chunk_index": str(chunk_index),
+            "sha256": sha256_bytes(payload),
+            "duration_seconds": duration_seconds,
+        },
+        files={"file": (f"chunk-{chunk_index}.wav", payload, "audio/wav")},
+    )
+
+
 class ASRSessionApiTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
-        os.environ["MEDICAL_RECORD_AGENT_UPLOAD_DIR"] = os.path.join(
-            self.temp_dir.name,
-            "uploads",
-        )
+        self.original_env = {
+            key: os.environ.get(key)
+            for key in [
+                "MEDICAL_RECORD_AGENT_ASR_ENGINE",
+                "ASR_ENGINE",
+                "ASR_DEBUG_ENGINE_SELECTOR_ENABLED",
+            ]
+        }
+        for key in self.original_env:
+            os.environ.pop(key, None)
         os.environ["MEDICAL_RECORD_AGENT_DB"] = os.path.join(
             self.temp_dir.name,
             "asr_sessions.sqlite3",
         )
+        os.environ["MEDICAL_RECORD_AGENT_UPLOAD_DIR"] = os.path.join(
+            self.temp_dir.name,
+            "uploads",
+        )
+
+    def test_failed_event_hides_python_exception_and_keeps_technical_detail(self):
+        session = ASRSessionRecord(
+            session_id="S-safe-error",
+            engine="funasr",
+            status="failed",
+            audio_id="A-safe-error",
+        )
+
+        events = _failed_event(session, "None argument after ** must be a mapping, not NoneType")
+
+        self.assertEqual(len(events), 1)
+        data = events[0].data
+        self.assertEqual(data["error_code"], "ASR_RESULT_INVALID")
+        self.assertEqual(data["error_category"], "result_invalid")
+        self.assertEqual(data["stage"], "transcription")
+        self.assertTrue(data["retryable"])
+        self.assertTrue(data["audio_preserved"])
+        self.assertNotIn("NoneType", str(data["message"]))
+        self.assertNotIn("must be a mapping", str(data["error"]))
+        self.assertIn("NoneType", str(data["technical_detail"]))
+
+    def test_recording_chunk_summary_tolerates_legacy_null_metadata(self):
+        summary = _recording_chunk_summary(
+            {
+                "session_id": "S-legacy-null-chunk",
+                "chunks": {"0": None},
+            }
+        )
+
+        self.assertEqual(summary["chunk_count"], 1)
+        self.assertEqual(summary["chunks"][0]["chunk_index"], 0)
+        self.assertEqual(summary["chunks"][0]["status"], "invalid_metadata")
+        self.assertIn("not a mapping", summary["chunks"][0]["metadata_error"])
 
     def tearDown(self):
         os.environ.pop("MEDICAL_RECORD_AGENT_UPLOAD_DIR", None)
         os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
+        os.environ.pop("MEDICAL_RECORD_AGENT_MAX_RECORDING_CHUNK_BYTES", None)
+        for key, value in self.original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         self.temp_dir.cleanup()
 
     def test_asr_session_routes_are_registered(self):
@@ -231,9 +416,66 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("/api/asr/sessions/{session_id}/audio", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/chunks", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/chunks/status", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/finalize", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/complete", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/recording", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/events", route_paths)
         self.assertIn("/api/asr/sessions/{session_id}/result", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/live-draft", route_paths)
+        self.assertIn("/api/asr/sessions/{session_id}/converge-record", route_paths)
+
+    def test_result_events_emit_finalized_before_completed(self):
+        session = ASRSessionRecord(
+            session_id="S-finalized-order",
+            engine="funasr",
+            status="transcribing",
+            audio_id="A-finalized-order",
+            recognition_mode="follow",
+        )
+        result = ASRResult(
+            audio_id="A-finalized-order",
+            engine="funasr",
+            text="final text",
+            conversation_text="[spk] final text",
+            segments=[ASRSegment(segment_id="seg-final", speaker="spk", text="final text")],
+            duration=2.0,
+            backend="funasr",
+            model="funasr-paraformer-zh-streaming",
+            request_id="req-finalized-order",
+        )
+
+        _append_result_events(session.session_id, session=session, result=result, emit_segments=False)
+
+        events = _read_events(session.session_id)
+        event_names = [event.event for event in events]
+        self.assertEqual(event_names[-2:], ["session.finalized", "completed"])
+        finalized = events[-2]
+        self.assertEqual(finalized.data["recognition_mode"], "follow")
+        self.assertEqual(finalized.data["formal_record_status"], "ready_for_generation")
+
+    def test_explicit_session_funasr_request_is_rejected_when_configured_engine_is_mock(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "mock"
+        client = TestClient(app)
+        login_as_admin(client)
+
+        response = client.post("/api/asr/sessions?engine=funasr&recognition_mode=fast")
+
+        self.assertEqual(response.status_code, 409, response.text)
+        detail = response.json()["detail"]
+        self.assertEqual(detail["error_code"], "asr_engine_unavailable")
+        self.assertEqual(detail["requested_engine"], "funasr")
+        self.assertEqual(detail["effective_engine"], "mock")
+        self.assertFalse(detail["fallback"])
+
+    def test_omitted_session_engine_uses_configured_backend(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "funasr"
+        client = TestClient(app)
+        login_as_admin(client)
+
+        response = client.post("/api/asr/sessions?recognition_mode=fast")
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["engine"], "funasr")
 
     def test_browser_recording_chunks_are_idempotent_and_complete_to_asr_result(self):
         client = TestClient(app)
@@ -297,12 +539,228 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertEqual(status.json()["chunk_count"], 2)
         self.assertEqual(status.json()["next_chunk_index"], 2)
 
+        blocked = client.post(f"/api/asr/sessions/{session_id}/complete")
+        self.assertEqual(blocked.status_code, 409)
+        self.assertIn("finalized", blocked.text)
+
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 200, finalized.text)
+        self.assertEqual(finalized.json()["status"], "recorded")
+        self.assertEqual(finalized.json()["duration_seconds"], 0.2)
+        self.assertTrue(finalized.json()["media_url"].endswith("/media"))
+
+        second_finalize = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(second_finalize.status_code, 200, second_finalize.text)
+        self.assertEqual(second_finalize.json()["audio_id"], finalized.json()["audio_id"])
+
         completed = client.post(f"/api/asr/sessions/{session_id}/complete")
         self.assertEqual(completed.status_code, 200, completed.text)
         self.assertEqual(completed.json()["status"], "transcribing")
+        self.assertEqual(completed.json()["audio_id"], finalized.json()["audio_id"])
+        second_complete = client.post(f"/api/asr/sessions/{session_id}/complete")
+        self.assertEqual(second_complete.status_code, 200, second_complete.text)
+        self.assertEqual(second_complete.json()["audio_id"], finalized.json()["audio_id"])
+        self.assertNotIn(session_id, _RECORDING_SESSION_LOCKS)
         result = client.get(f"/api/asr/sessions/{session_id}/result")
         self.assertEqual(result.status_code, 200, result.text)
         self.assertIn("蛇咬伤", result.json()["text"])
+
+    def test_funasr_browser_recording_chunk_emits_live_transcript_before_finalize(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "funasr"
+        client = TestClient(app)
+        login_as_admin(client)
+        session = client.post("/api/asr/sessions?engine=funasr&recognition_mode=follow")
+        self.assertEqual(session.status_code, 200, session.text)
+        session_id = session.json()["session_id"]
+        chunk_zero = browser_wav_bytes(frame_count=32000, amplitude=1200)
+        live_session = FakeLiveChunkSession()
+
+        with patch(
+            "app.api.asr_sessions._create_funasr_live_chunk_session",
+            return_value=live_session,
+        ):
+            upload = client.post(
+                f"/api/asr/sessions/{session_id}/chunks",
+                data={
+                    "chunk_index": "0",
+                    "sha256": sha256_bytes(chunk_zero),
+                    "duration_seconds": "2.0",
+                    "chunk_started_at_ms": "0",
+                    "chunk_ended_at_ms": "2000",
+                },
+                files={"file": ("chunk-0.wav", chunk_zero, "audio/wav")},
+            )
+
+        self.assertEqual(upload.status_code, 200, upload.text)
+        self.assertEqual(live_session.calls[0]["sequence"], 0)
+        events = _read_events(session_id)
+        event_names = [event.event for event in events]
+        self.assertIn("audio.chunk.accepted", event_names)
+        self.assertIn("transcript.partial", event_names)
+        self.assertIn("transcript.stable", event_names)
+        self.assertIn("clinical_processing.started", event_names)
+        self.assertIn("record.live_patch", event_names)
+        self.assertIn("clinical_processing.completed", event_names)
+        self.assertNotIn("completed", event_names)
+        stable = next(event for event in events if event.event == "transcript.stable")
+        self.assertEqual(stable.data["sequence"], 0)
+        self.assertEqual(stable.data["chunk_started_at_ms"], 0)
+        self.assertEqual(stable.data["chunk_ended_at_ms"], 2000)
+        self.assertEqual(stable.data["segment"]["text"], "stable 0")
+        live_patch = next(event for event in events if event.event == "record.live_patch")
+        self.assertEqual(live_patch.data["version"], 1)
+        self.assertEqual(live_patch.data["based_on_sequence"], 0)
+        self.assertEqual(live_patch.data["status"], "temporary")
+        self.assertEqual(live_patch.data["stable_segment_count"], 1)
+        draft = client.get(f"/api/asr/sessions/{session_id}/live-draft")
+        self.assertEqual(draft.status_code, 200, draft.text)
+        self.assertEqual(draft.json()["version"], 1)
+        self.assertEqual(draft.json()["status"], "temporary")
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "recording")
+
+    def test_funasr_live_chunk_waits_for_missing_gap_without_fake_transcript(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "funasr"
+        client = TestClient(app)
+        login_as_admin(client)
+        session = client.post("/api/asr/sessions?engine=funasr&recognition_mode=follow")
+        self.assertEqual(session.status_code, 200, session.text)
+        session_id = session.json()["session_id"]
+        chunk_one = browser_wav_bytes(frame_count=32000, amplitude=1200)
+        live_session = FakeLiveChunkSession()
+
+        with patch(
+            "app.api.asr_sessions._create_funasr_live_chunk_session",
+            return_value=live_session,
+        ):
+            upload = client.post(
+                f"/api/asr/sessions/{session_id}/chunks",
+                data={
+                    "chunk_index": "1",
+                    "sha256": sha256_bytes(chunk_one),
+                    "duration_seconds": "2.0",
+                    "chunk_started_at_ms": "2000",
+                    "chunk_ended_at_ms": "4000",
+                },
+                files={"file": ("chunk-1.wav", chunk_one, "audio/wav")},
+            )
+
+        self.assertEqual(upload.status_code, 200, upload.text)
+        self.assertEqual(live_session.calls, [])
+        events = _read_events(session_id)
+        event_names = [event.event for event in events]
+        self.assertIn("audio.chunk.accepted", event_names)
+        self.assertIn("audio.chunk.waiting_for_gap", event_names)
+        self.assertNotIn("transcript.partial", event_names)
+        self.assertNotIn("record.live_patch", event_names)
+        gap = next(event for event in events if event.event == "audio.chunk.waiting_for_gap")
+        self.assertEqual(gap.data["missing_chunk_indices"], [0])
+
+    def test_live_draft_rejects_non_owner(self):
+        os.environ["MEDICAL_RECORD_AGENT_ASR_ENGINE"] = "funasr"
+        admin_client = TestClient(app)
+        create_user(admin_client, username="live-owner")
+        create_user(admin_client, username="live-other")
+
+        owner_client = TestClient(app)
+        login_as_user(owner_client, username="live-owner")
+        session = owner_client.post("/api/asr/sessions?engine=funasr&recognition_mode=follow")
+        self.assertEqual(session.status_code, 200, session.text)
+        session_id = session.json()["session_id"]
+
+        other_client = TestClient(app)
+        login_as_user(other_client, username="live-other")
+        forbidden = other_client.get(f"/api/asr/sessions/{session_id}/live-draft")
+        self.assertEqual(forbidden.status_code, 403)
+
+    def test_live_session_converge_requires_completed_session_and_creates_one_formal_task(self):
+        client = TestClient(app)
+        create_user(client, username="live-converge-doctor")
+        login_as_user(client, username="live-converge-doctor")
+        encounter = client.post(
+            "/api/encounters",
+            json={
+                "patient_deidentified_id": "LIVE-CONVERGE-001",
+                "patient_display_name": "Live Converge Patient",
+            },
+        )
+        self.assertEqual(encounter.status_code, 200, encounter.text)
+        encounter_id = encounter.json()["id"]
+        self.assertEqual(client.post(f"/api/encounters/{encounter_id}/check-in").status_code, 200)
+        self.assertEqual(client.post(f"/api/encounters/{encounter_id}/start").status_code, 200)
+
+        session = client.post("/api/asr/sessions?engine=mock&recognition_mode=follow")
+        self.assertEqual(session.status_code, 200, session.text)
+        session_id = session.json()["session_id"]
+        blocked = client.post(f"/api/asr/sessions/{session_id}/converge-record?encounter_id={encounter_id}")
+        self.assertEqual(blocked.status_code, 409, blocked.text)
+
+        chunk_zero = browser_wav_bytes(frame_count=3200, amplitude=1200)
+        upload = upload_browser_recording_chunk(
+            client,
+            session_id,
+            chunk_index=0,
+            payload=chunk_zero,
+            duration_seconds="0.2",
+        )
+        self.assertEqual(upload.status_code, 200, upload.text)
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 200, finalized.text)
+        audio_id = finalized.json()["audio_id"]
+        result = ASRResult(
+            audio_id=audio_id,
+            engine="mock-asr-v0.2",
+            text="患者发热伴咳嗽两天。",
+            conversation_text="[患者] 患者发热伴咳嗽两天。",
+            segments=[
+                ASRSegment(
+                    segment_id="seg-live-final",
+                    speaker="speaker_0",
+                    speaker_id="speaker_0",
+                    role="患者",
+                    role_confidence=1.0,
+                    role_source="manual_speaker_map",
+                    reviewed_by_doctor=True,
+                    text="患者发热伴咳嗽两天。",
+                    start_time=0.0,
+                    end_time=2.0,
+                )
+            ],
+            speaker_assignments=[
+                SpeakerRoleAssignment(
+                    speaker_id="speaker_0",
+                    role="患者",
+                    confidence=1.0,
+                    source="manual_speaker_map",
+                    requires_confirmation=False,
+                )
+            ],
+            duration=0.2,
+        )
+        result = attach_speaker_role_quality(result)
+        _write_session_result(session_id, result)
+        _write_transcript(result)
+        _write_session(_read_session(session_id).model_copy(update={"status": "stream_ready", "audio_id": audio_id}))
+
+        created = client.post(f"/api/asr/sessions/{session_id}/converge-record?encounter_id={encounter_id}")
+        self.assertEqual(created.status_code, 200, created.text)
+        created_payload = created.json()
+        self.assertTrue(created_payload["created"])
+        self.assertEqual(created_payload["formal_record_status"], "created")
+        task_id = created_payload["task_id"]
+        detail = client.get(f"/api/tasks/{task_id}")
+        self.assertEqual(detail.status_code, 200, detail.text)
+        self.assertEqual(detail.json()["encounter_id"], encounter_id)
+
+        repeated = client.post(f"/api/asr/sessions/{session_id}/converge-record?encounter_id={encounter_id}")
+        self.assertEqual(repeated.status_code, 200, repeated.text)
+        repeated_payload = repeated.json()
+        self.assertFalse(repeated_payload["created"])
+        self.assertEqual(repeated_payload["task_id"], task_id)
+        live_draft = client.get(f"/api/asr/sessions/{session_id}/live-draft")
+        self.assertEqual(live_draft.status_code, 200)
+        self.assertEqual(live_draft.json()["formal_record"]["task_id"], task_id)
 
     def test_browser_recording_complete_rejects_missing_chunk_gap(self):
         client = TestClient(app)
@@ -320,8 +778,191 @@ class ASRSessionApiTests(unittest.TestCase):
         )
         self.assertEqual(upload.status_code, 200, upload.text)
 
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 409)
+        self.assertEqual(finalized.json()["detail"]["missing_chunk_indices"], [0])
+
+    def test_browser_recording_finalize_rejects_corrupt_wav_and_stays_retryable(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        corrupt_chunk = b"not-a-valid-wav"
+        upload = upload_browser_recording_chunk(
+            client,
+            session_id,
+            chunk_index=0,
+            payload=corrupt_chunk,
+        )
+        self.assertEqual(upload.status_code, 200, upload.text)
+
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 400)
+        self.assertIn("invalid WAV", finalized.text)
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "recording")
+        self.assertEqual(status.json()["chunk_count"], 1)
+        state = _read_recording_chunk_state(session_id)
+        self.assertEqual(state["status"], "recording")
+        self.assertIn("last_finalize_error", state)
+
+    def test_browser_recording_finalize_rejects_mismatched_wav_format_and_stays_retryable(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(sample_rate=16000)
+        chunk_one = browser_wav_bytes(sample_rate=8000)
+        first = upload_browser_recording_chunk(client, session_id, chunk_index=0, payload=chunk_zero)
+        second = upload_browser_recording_chunk(client, session_id, chunk_index=1, payload=chunk_one)
+        self.assertEqual(first.status_code, 200, first.text)
+        self.assertEqual(second.status_code, 200, second.text)
+
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 400)
+        self.assertIn("different WAV formats", finalized.text)
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "recording")
+        self.assertEqual(status.json()["chunk_count"], 2)
+
+    def test_browser_recording_finalize_can_retry_after_transient_merge_failure(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = upload_browser_recording_chunk(client, session_id, chunk_index=0, payload=chunk_zero)
+        self.assertEqual(upload.status_code, 200, upload.text)
+
+        from app.api import asr_sessions as asr_sessions_module
+
+        real_combine = asr_sessions_module._combine_wav_chunks
+        calls = {"count": 0}
+
+        def flaky_combine(chunk_paths, destination):
+            if calls["count"] == 0:
+                calls["count"] += 1
+                raise OSError("simulated disk write failure")
+            return real_combine(chunk_paths, destination)
+
+        with patch("app.api.asr_sessions._combine_wav_chunks", side_effect=flaky_combine):
+            failed = client.post(f"/api/asr/sessions/{session_id}/finalize")
+            self.assertEqual(failed.status_code, 500)
+            status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+            self.assertEqual(status.json()["status"], "recording")
+            self.assertEqual(status.json()["chunk_count"], 1)
+
+            retried = client.post(f"/api/asr/sessions/{session_id}/finalize")
+            self.assertEqual(retried.status_code, 200, retried.text)
+            self.assertEqual(retried.json()["status"], "recorded")
+
+    def test_browser_recording_cancel_deletes_chunks_and_unused_audio(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "0",
+                "sha256": sha256_bytes(chunk_zero),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-0.wav", chunk_zero, "audio/wav")},
+        )
+        self.assertEqual(upload.status_code, 200, upload.text)
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 200, finalized.text)
+        audio_id = finalized.json()["audio_id"]
+        upload_dir = Path(os.environ["MEDICAL_RECORD_AGENT_UPLOAD_DIR"])
+        self.assertTrue((upload_dir / f"{audio_id}.wav").exists())
+        self.assertTrue((upload_dir / "asr_sessions" / session_id / "recording_chunks.json").exists())
+
+        cancelled = client.delete(f"/api/asr/sessions/{session_id}/recording")
+        self.assertEqual(cancelled.status_code, 200, cancelled.text)
+        self.assertEqual(cancelled.json()["status"], "cancelled")
+        self.assertFalse((upload_dir / f"{audio_id}.wav").exists())
+        self.assertFalse((upload_dir / f"{audio_id}.record.json").exists())
+        self.assertFalse((upload_dir / "asr_sessions" / session_id / "recording_chunks").exists())
+        self.assertFalse((upload_dir / "asr_sessions" / session_id / "recording_chunks.json").exists())
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "cancelled")
+
+        repeat = client.delete(f"/api/asr/sessions/{session_id}/recording")
+        self.assertEqual(repeat.status_code, 200, repeat.text)
+        self.assertNotIn(session_id, _RECORDING_SESSION_LOCKS)
+
+    def test_browser_recording_cancelled_session_rejects_late_chunks(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = upload_browser_recording_chunk(client, session_id, chunk_index=0, payload=chunk_zero)
+        self.assertEqual(upload.status_code, 200, upload.text)
+
+        cancelled = client.delete(f"/api/asr/sessions/{session_id}/recording")
+        self.assertEqual(cancelled.status_code, 200, cancelled.text)
+        late_chunk = browser_wav_bytes(amplitude=1500)
+        late_upload = upload_browser_recording_chunk(client, session_id, chunk_index=1, payload=late_chunk)
+        self.assertEqual(late_upload.status_code, 409)
+        status = client.get(f"/api/asr/sessions/{session_id}/chunks/status")
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["status"], "cancelled")
+        self.assertEqual(status.json()["chunk_count"], 0)
+
+    def test_browser_recording_cancel_rejects_non_owner(self):
+        admin_client = TestClient(app)
+        create_user(admin_client, username="doctor-a")
+        create_user(admin_client, username="doctor-b")
+
+        owner_client = TestClient(app)
+        login_as_user(owner_client, username="doctor-a")
+        session_id = owner_client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+
+        other_client = TestClient(app)
+        login_as_user(other_client, username="doctor-b")
+        forbidden = other_client.delete(f"/api/asr/sessions/{session_id}/recording")
+        self.assertEqual(forbidden.status_code, 403)
+
+    def test_browser_recording_chunk_size_limit_returns_413(self):
+        os.environ["MEDICAL_RECORD_AGENT_MAX_RECORDING_CHUNK_BYTES"] = "16"
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "0",
+                "sha256": sha256_bytes(chunk_zero),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-0.wav", chunk_zero, "audio/wav")},
+        )
+        self.assertEqual(upload.status_code, 413)
+
+    def test_browser_recording_cancel_rejects_after_complete(self):
+        client = TestClient(app)
+        login_as_admin(client)
+        session_id = client.post("/api/asr/sessions?engine=mock").json()["session_id"]
+        chunk_zero = browser_wav_bytes(amplitude=1000)
+        upload = client.post(
+            f"/api/asr/sessions/{session_id}/chunks",
+            data={
+                "chunk_index": "0",
+                "sha256": sha256_bytes(chunk_zero),
+                "duration_seconds": "0.1",
+            },
+            files={"file": ("chunk-0.wav", chunk_zero, "audio/wav")},
+        )
+        self.assertEqual(upload.status_code, 200, upload.text)
+        finalized = client.post(f"/api/asr/sessions/{session_id}/finalize")
+        self.assertEqual(finalized.status_code, 200, finalized.text)
         completed = client.post(f"/api/asr/sessions/{session_id}/complete")
-        self.assertEqual(completed.status_code, 409)
+        self.assertEqual(completed.status_code, 200, completed.text)
+
+        cancelled = client.delete(f"/api/asr/sessions/{session_id}/recording")
+        self.assertEqual(cancelled.status_code, 409)
 
     def test_session_accepts_doctor_profile_and_diarization_engine(self):
         session = create_asr_session(
@@ -351,7 +992,7 @@ class ASRSessionApiTests(unittest.TestCase):
 
         result = read_asr_session_result(session.session_id)
         self.assertEqual(result.audio_id, uploaded.audio_id)
-        self.assertEqual(result.engine, "mock-asr-v0.2-realtime")
+        self.assertEqual(result.engine, "mock-asr-v0.2")
         self.assertGreaterEqual(len(result.segments), 1)
 
         legacy_transcript = read_audio_transcript(uploaded.audio_id)
@@ -360,9 +1001,6 @@ class ASRSessionApiTests(unittest.TestCase):
         events = _read_events(session.session_id)
         event_names = [event.event for event in events]
         self.assertEqual(event_names[:3], ["session_created", "audio_uploaded", "transcribing"])
-        self.assertIn("chunk_plan", event_names)
-        self.assertIn("chunk_started", event_names)
-        self.assertIn("chunk_completed", event_names)
         self.assertIn("segment", event_names)
         self.assertEqual(event_names[-1], "completed")
 
@@ -389,7 +1027,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertEqual(duration, 1800.0)
 
     def test_funasr_realtime_upload_uses_model_native_streaming_without_temp_chunks(self):
-        session = create_asr_session(engine="funasr")
+        session = create_asr_session(engine="funasr", recognition_mode="follow")
         fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
 
         try:
@@ -427,7 +1065,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("transcribing_progress", event_names)
         self.assertIn("diarization_progress", event_names)
         self.assertIn("speaker_turn", event_names)
-        self.assertIn("speaker_mapping_update", event_names)
+        self.assertIn("speaker_mapping_required", event_names)
         self.assertIn("diarization_completed", event_names)
         self.assertIn("reconciliation_completed", event_names)
         self.assertEqual(event_names.count("segment"), 1)
@@ -438,6 +1076,31 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertTrue(first_segment.data["partial"])
         self.assertEqual(first_segment.data["mode"], "model_native_streaming")
         self.assertEqual(first_segment.data["progress_kind"], "actual")
+
+    def test_funasr_model_load_failure_marks_session_retryable_without_second_fallback_load(self):
+        session = create_asr_session(engine="funasr", recognition_mode="follow")
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+
+        try:
+            with (
+                patch(
+                    "app.api.asr_sessions._create_funasr_streaming_engine",
+                    side_effect=RuntimeError("NameResolutionError: Failed to resolve modelscope.cn"),
+                ),
+                patch("app.api.asr_sessions._audio_duration_for_chunking", return_value=9.5),
+                patch("app.api.asr_sessions.create_asr_engine") as fallback_engine,
+            ):
+                uploaded = upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+
+        self.assertEqual(uploaded.status, "failed")
+        fallback_engine.assert_not_called()
+        events = _read_events(session.session_id)
+        failed = next(event for event in events if event.event == "failed")
+        self.assertEqual(failed.data["error_category"], "dns_failure")
+        self.assertTrue(failed.data["retryable"])
+        self.assertEqual(failed.data["fallback_action"], "text_input")
 
     def test_upload_route_starts_background_transcription_and_streams_events(self):
         client = TestClient(app)
@@ -532,6 +1195,71 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertTrue(response.asr_result.segments[0].needs_review)
         self.assertEqual(response.asr_result.segments[0].role, "待确认")
 
+    def test_speaker_role_review_clears_one_global_confirmation_set(self):
+        session = create_asr_session(engine="mock")
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+        try:
+            uploaded = upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+        pending_result = attach_speaker_role_quality(
+            ASRResult(
+                audio_id=uploaded.audio_id,
+                engine="funasr",
+                text="请问哪里不舒服\n我发热三天",
+                conversation_text="[医生] 请问哪里不舒服\n[患者] 我发热三天",
+                segments=[
+                    ASRSegment(
+                        speaker_id="spk0",
+                        role="医生",
+                        role_confidence=0.66,
+                        role_source="speaker_context_rules",
+                        text="请问哪里不舒服",
+                    ),
+                    ASRSegment(
+                        speaker_id="spk1",
+                        role="患者",
+                        role_confidence=0.86,
+                        role_source="global_two_party_constraint",
+                        text="我发热三天",
+                    ),
+                ],
+                speaker_assignments=[
+                    SpeakerRoleAssignment(
+                        speaker_id="spk0",
+                        role="医生",
+                        confidence=0.66,
+                        source="speaker_context_rules",
+                    ),
+                    SpeakerRoleAssignment(
+                        speaker_id="spk1",
+                        role="患者",
+                        confidence=0.86,
+                        source="global_two_party_constraint",
+                    ),
+                ],
+            )
+        )
+        self.assertEqual(pending_result.role_quality.status, "needs_review")
+        self.assertEqual(len(pending_result.role_quality.pending_confirmation), 2)
+        _write_session_result(session.session_id, pending_result)
+        _write_transcript(pending_result)
+
+        response = update_asr_session_result(
+            session.session_id,
+            ASRSessionCorrectionRequest(
+                speaker_roles=[
+                    ASRSpeakerRoleCorrection(speaker_id="spk0", role="医生"),
+                    ASRSpeakerRoleCorrection(speaker_id="spk1", role="患者"),
+                ],
+                reviewer="doctor",
+            ),
+        )
+
+        self.assertEqual(response.asr_result.role_quality.status, "passed")
+        self.assertEqual(response.asr_result.role_quality.pending_confirmation, [])
+        self.assertTrue(response.asr_result.reviewed_by_doctor)
+
     def test_manual_speaker_merge_persists_segments_assignments_turns_and_quality(self):
         session = create_asr_session(engine="funasr")
         result = ASRResult(
@@ -615,7 +1343,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertEqual(same.status_code, 400)
         self.assertEqual(missing.status_code, 404)
 
-    def test_generate_record_gate_recovers_after_merge_and_role_confirmation(self):
+    def test_generate_record_blocks_pending_speaker_roles(self):
         session = create_asr_session(engine="funasr")
         result = ASRResult(
             audio_id="merge-gate",
@@ -640,29 +1368,14 @@ class ASRSessionApiTests(unittest.TestCase):
         login_as_admin(client)
 
         blocked = client.post("/api/audio/merge-gate/generate-record")
+        transcript = read_audio_transcript("merge-gate")
+
         self.assertEqual(blocked.status_code, 409)
-
-        merge_asr_session_speakers(
-            session.session_id,
-            ASRSpeakerMergeRequest(source_speaker="spk3", target_speaker="spk2"),
-        )
-        still_blocked = client.post("/api/audio/merge-gate/generate-record")
-        self.assertEqual(still_blocked.status_code, 409)
-
-        update_asr_session_result(
-            session.session_id,
-            ASRSessionCorrectionRequest(
-                speaker_roles=[
-                    {"speaker_id": "spk1", "role": "医生"},
-                    {"speaker_id": "spk2", "role": "患者"},
-                ]
-            ),
-        )
-        allowed = client.post("/api/audio/merge-gate/generate-record")
-        self.assertEqual(allowed.status_code, 200)
+        self.assertTrue(transcript.needs_review)
+        self.assertEqual({segment.speaker_id for segment in transcript.segments}, {"spk1", "spk2", "spk3"})
 
     def test_companion_and_pending_roles_are_accepted_for_speaker_review(self):
-        session = create_asr_session(engine="mock")
+        session = create_asr_session(engine="mock", recognition_mode="follow")
         result = ASRResult(
             audio_id="companion-role",
             engine="mock",
@@ -711,7 +1424,7 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("event: completed", stream)
 
     def test_sse_batches_500_events_without_per_event_delay_and_resumes(self):
-        session = create_asr_session(engine="mock")
+        session = create_asr_session(engine="mock", recognition_mode="follow")
         progress_events = [
             ASRSessionEvent(
                 id=1,
@@ -778,6 +1491,89 @@ class ASRSessionApiTests(unittest.TestCase):
         self.assertIn("event: chunk_completed", stream)
         self.assertIn("\"partial\": true", stream)
         self.assertIn("event: completed", stream)
+
+    def test_follow_transcribes_audio_chunk_by_chunk_without_full_audio_call(self):
+        session = create_asr_session(engine="mock", recognition_mode="follow")
+        engine = FakeRealtimeChunkEngine()
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+        try:
+            with (
+                patch("app.api.asr_sessions._audio_duration_for_chunking", return_value=4.0),
+                patch("app.api.asr_sessions.split_audio_to_chunks", return_value=fake_realtime_audio_chunks()),
+                patch("app.api.asr_sessions.create_asr_engine", return_value=engine),
+            ):
+                uploaded = upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+
+        self.assertEqual(uploaded.status, "stream_ready")
+        self.assertEqual(uploaded.recognition_mode, "follow")
+        self.assertEqual(
+            engine.calls,
+            [
+                f"{uploaded.audio_id}_chunk_001",
+                f"{uploaded.audio_id}_chunk_002",
+            ],
+        )
+        result = read_asr_session_result(session.session_id)
+        self.assertEqual(result.engine, "fake-follow-realtime")
+        self.assertEqual(result.recognition_mode, "follow")
+        self.assertGreaterEqual(len(result.segments), 1)
+        self.assertEqual({segment.speaker_id for segment in result.segments}, {"spk-shared"})
+        self.assertEqual(len({segment.role for segment in result.segments}), 1)
+        self.assertEqual(result.duration, 4.0)
+        self.assertEqual(result.audio_duration_seconds, 4.0)
+        self.assertIsNotNone(result.processing_duration_seconds)
+        self.assertIsNotNone(result.rtf)
+        self.assertEqual(result.backend, "mock")
+        self.assertEqual(result.model, "fake-follow-realtime")
+        self.assertEqual(result.request_id, session.session_id)
+        self.assertTrue(result.started_at)
+        self.assertTrue(result.completed_at)
+        self.assertTrue(any("realtime upload" in warning for warning in result.warnings))
+        audio_record = _read_audio_record(uploaded.audio_id)
+        self.assertEqual(audio_record.status, "completed")
+        self.assertEqual(audio_record.recognition_mode, "follow")
+
+    def test_follow_sse_segment_precedes_final_chunk_and_contains_evidence_fields(self):
+        session = create_asr_session(engine="mock", recognition_mode="follow")
+        engine = FakeRealtimeChunkEngine()
+        fake_file = FakeUploadFile(b"RIFF....WAVEfmt ")
+        try:
+            with (
+                patch("app.api.asr_sessions._audio_duration_for_chunking", return_value=4.0),
+                patch("app.api.asr_sessions.split_audio_to_chunks", return_value=fake_realtime_audio_chunks()),
+                patch("app.api.asr_sessions.create_asr_engine", return_value=engine),
+            ):
+                upload_asr_session_audio(session.session_id, fake_file)
+        finally:
+            fake_file.close()
+
+        events = _read_events(session.session_id)
+        event_names = [event.event for event in events]
+        first_segment_index = event_names.index("segment")
+        second_chunk_started_index = next(
+            index
+            for index, event in enumerate(events)
+            if event.event == "chunk_started" and event.data["chunk_index"] == 2
+        )
+        completed_index = event_names.index("completed")
+        self.assertLess(first_segment_index, second_chunk_started_index)
+        self.assertLess(first_segment_index, completed_index)
+        self.assertEqual(event_names.count("completed"), 1)
+
+        segment_events = [event for event in events if event.event == "segment"]
+        self.assertEqual([event.data["sequence"] for event in segment_events], [0, 1])
+        self.assertEqual([event.data["chunk_index"] for event in segment_events], [1, 2])
+        self.assertEqual([event.data["start_time"] for event in segment_events], [0.0, 2.0])
+        self.assertEqual([event.data["end_time"] for event in segment_events], [1.0, 3.0])
+        first_segment = segment_events[0].data
+        self.assertIsInstance(segment_events[0].id, int)
+        self.assertEqual(first_segment["original_speaker"], "spk-shared")
+        self.assertTrue(first_segment["inferred_role"])
+        self.assertLess(first_segment["role_confidence"], 0.9)
+        self.assertTrue(str(first_segment["role_source"]).startswith("auto_"))
+        self.assertTrue(first_segment["role_warning"])
 
     def test_chunk_failure_events_include_retry_hint(self):
         session = create_asr_session(engine="sensevoice")

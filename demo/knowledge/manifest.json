@@ -1,0 +1,10 @@
+{
+  "version": "medilisten-demo-knowledge-v1",
+  "scope": "发热、咳嗽、咳痰脱敏演示病例",
+  "disclaimer": "仅用于课程演示的人工核验资料，不作为自动诊断、自动治疗或真实临床指南声明。",
+  "sources": [
+    "sources/guideline_demo_001.json",
+    "sources/guideline_demo_002.json",
+    "sources/guideline_demo_003.json"
+  ]
+}

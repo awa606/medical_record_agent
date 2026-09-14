@@ -18,12 +18,18 @@ const appState = {
   currentAgentTrace: null,
   currentLlmStatus: null,
   currentInputText: "",
-  selectedEngine: "funasr",
+  productView: "workbench",
+  adminUsers: [],
+  adminRuntimeStatus: null,
+  adminStatus: "idle",
+  adminError: "",
+  selectedEngine: "system",
   assistTab: "ai",
   viewMode: "doctor",
   displayScale: "standard",
   screenshotMode: false,
   audioMode: "transcribe",
+  recognitionMode: "fast",
   pendingGenerateAfterRoleReview: false,
   uploadedFilename: "",
   taskStatus: "CREATED",
@@ -50,6 +56,9 @@ const appState = {
   asrChunkStatus: "",
   asrChunkLastError: "",
   asrRetryHint: "",
+  asrFailureCode: "",
+  asrFailureStage: "",
+  asrAudioPreserved: false,
   roleReviewDirty: false,
   roleReviewSaving: false,
   speakerRoleCorrections: {},
@@ -68,19 +77,29 @@ const appState = {
   browserRecordingAudioContext: null,
   browserRecordingSource: null,
   browserRecordingProcessor: null,
-  browserRecordingChunks: [],
   browserRecordingChunkBuffer: [],
   browserRecordingChunkIndex: 0,
-  browserRecordingChunkUploads: [],
+  browserRecordingRecordedChunks: 0,
+  browserRecordingUploadedChunks: 0,
+  browserRecordingPendingChunks: 0,
+  browserRecordingRetryStatus: "",
+  browserRecordingUploadInFlight: false,
+  browserRecordingRetryTimer: null,
+  browserRecordingRecovering: false,
+  browserRecordingMissingChunks: [],
   browserRecordingSessionId: "",
   browserRecordingPausedAt: 0,
   browserRecordingTotalPausedMs: 0,
   browserRecordingSampleRate: 0,
+  browserRecordingRecordedSamples: 0,
   browserRecordingObjectUrl: "",
   browserRecordingFile: null,
+  browserRecordingFinalized: null,
   browserRecordingMessage: "",
   browserRecordingChunkStatus: "",
   browserRecordingRequestId: 0,
+  pendingInputMethodAfterEncounterSelection: "",
+  encounterSelectionNotice: "",
   lastActionError: "",
   inputMenuOpen: false,
   settingsOpen: false,
@@ -95,6 +114,20 @@ const appState = {
   recordPreviewInFlight: false,
   recordPreviewRequestId: 0,
   recordPreviewAbortController: null,
+  liveClinicalDraft: null,
+  liveClinicalVersion: 0,
+  liveClinicalStatus: "idle",
+  liveClinicalUpdatedAt: "",
+  liveClinicalError: "",
+  fixedDemoStatus: "idle",
+  fixedDemoSessionId: "",
+  fixedDemoAudioUrl: "/api/audio/demo/fever-01",
+  fixedDemoChunkTotal: 0,
+  fixedDemoChunksUploaded: 0,
+  fixedDemoMessage: "",
+  fixedDemoFinalized: null,
+  fixedDemoFormalTaskId: null,
+  fixedDemoAbortController: null,
   audioObjectUrl: "",
   audioMediaUrl: "",
   audioDurationSeconds: 0,
@@ -105,6 +138,7 @@ const appState = {
   audioPlaybackRate: 1,
   audioSeekDragging: false,
   transcriptPacing: "fast",
+  transcriptAutoFollow: true,
   activeTranscriptSegmentId: "",
   asrPrewarmStatus: null,
   asrPrewarmCheckedAt: "",
@@ -115,7 +149,18 @@ const appState = {
   encounterWorklist: [],
   encounterWorklistStatus: "idle",
   encounterWorklistError: "",
+  approvalRegularFieldsConfirmed: false,
+  approvalMissingDecisions: {},
+  approvalDiagnosisDecisions: {},
+  approvalHighRiskConfirmations: {},
+  approvalRevisionId: null,
+  currentKnowledgeEvidence: null,
+  knowledgeEvidenceStatus: "idle",
+  knowledgeEvidenceError: "",
+  recordHighlightUntil: 0,
 };
+
+window.__MRA_APP_STATE__ = appState;
 
 const RECORD_PREVIEW_MIN_CHARS = 10;
 const RECORD_PREVIEW_MIN_SEGMENTS = 1;
@@ -124,7 +169,15 @@ const RECORD_PREVIEW_DEBOUNCE_MS = 450;
 const ROLE_DISPLAY_CONFIDENCE_THRESHOLD = 0.9;
 const MAX_BROWSER_RECORDING_SECONDS = 1800;
 const MIN_BROWSER_RECORDING_SECONDS = 0.5;
-const BROWSER_RECORDING_CHUNK_SECONDS = 10;
+const BROWSER_RECORDING_CHUNK_SECONDS = Number(window.__MRA_BROWSER_RECORDING_CHUNK_SECONDS || 10);
+const BROWSER_RECORDING_MAX_RETRY_ATTEMPTS = 8;
+const BROWSER_RECORDING_RETRY_BASE_MS = 1000;
+const BROWSER_RECORDING_RETRY_MAX_MS = 30000;
+const BROWSER_RECORDING_DB_NAME = "medical-record-agent-recording-v2";
+const BROWSER_RECORDING_DB_VERSION = 2;
+const BROWSER_RECORDING_STORE = "chunks";
+const BROWSER_RECORDING_CLEANUP_STORE = "recording_cleanups";
+const FIXED_DEMO_CHUNK_SECONDS = Number(window.__MRA_FIXED_DEMO_CHUNK_SECONDS || 3);
 
 const FIELD_DEFS = [
   ["chief_complaint", "主诉"],
@@ -152,33 +205,42 @@ const DRAFT_FIELD_DEFS = [
   ["past_history", "既往史"],
   ["allergy_history", "过敏史"],
   ["physical_exam", "查体"],
-  ["preliminary_diagnosis", "初步诊断"],
+  ["preliminary_diagnosis", "候选诊断（待医生确认）"],
   ["treatment_plan", "处理建议"],
 ];
 
 const WORKFLOW_STEPS = [
-  { key: "INPUT", label: "1.开始问诊" },
-  { key: "TRANSCRIBING", label: "2.智能转写" },
-  { key: "GENERATE_RECORD", label: "3.生成病历" },
-  { key: "DOCTOR_REVIEW", label: "4.医生审核" },
-  { key: "EXPORT", label: "5.导出" },
+  { key: "SELECT_ENCOUNTER", label: "选择就诊" },
+  { key: "CAPTURE_INPUT", label: "采集信息" },
+  { key: "AI_PROCESS", label: "AI处理" },
+  { key: "DOCTOR_REVIEW", label: "病历审核" },
+  { key: "EXPORT", label: "导出完成" },
 ];
 
 const STATUS_TO_STEP = {
-  CREATED: "INPUT",
-  TRANSCRIBING: "TRANSCRIBING",
-  TRANSCRIBED: "GENERATE_RECORD",
-  EXTRACTING_FIELDS: "GENERATE_RECORD",
-  GENERATING_DRAFT: "GENERATE_RECORD",
-  SAFETY_CHECKING: "GENERATE_RECORD",
+  CREATED: "CAPTURE_INPUT",
+  TRANSCRIBING: "AI_PROCESS",
+  TRANSCRIBED: "AI_PROCESS",
+  EXTRACTING_FIELDS: "AI_PROCESS",
+  GENERATING_DRAFT: "AI_PROCESS",
+  SAFETY_CHECKING: "AI_PROCESS",
   WAITING_DOCTOR_REVIEW: "DOCTOR_REVIEW",
   doctor_review: "DOCTOR_REVIEW",
-  FAILED: "GENERATE_RECORD",
+  FAILED: "AI_PROCESS",
   reviewed: "DOCTOR_REVIEW",
   approved: "EXPORT",
   EXPORTED: "EXPORT",
   exported: "EXPORT",
 };
+
+const PROCESSING_STAGES = [
+  { key: "audio", label: "音频上传" },
+  { key: "asr", label: "FunASR 转写" },
+  { key: "role", label: "医患角色推定" },
+  { key: "fields", label: "医学字段抽取" },
+  { key: "draft", label: "病历草稿生成" },
+  { key: "safety", label: "安全检查" },
+];
 
 const STATUS_LABELS = {
   CREATED: "任务已创建",
@@ -219,6 +281,7 @@ const ROLE_OPTIONS = [
   ["待确认", "暂不确定"],
 ];
 const FINAL_CLINICAL_ROLES = ["医生", "患者", "陪同人员", "其他"];
+const PRODUCT_VIEWS = ["workbench", "encounter", "admin"];
 
 const $ = (id) => document.getElementById(id);
 
@@ -240,6 +303,12 @@ function compactText(value, maxLength = 92) {
   return `${normalized.slice(0, maxLength)}...`;
 }
 
+function patientDisplayName(value, fallback = "脱敏患者") {
+  const normalized = String(value ?? "").trim();
+  if (!normalized || /^\?{3,}$/.test(normalized) || /^�+$/.test(normalized)) return fallback;
+  return normalized;
+}
+
 function detailButton(target, label = "查看详情") {
   return `<button type="button" class="detail-link" data-open-detail="${escapeHtml(target)}">${escapeHtml(label)}</button>`;
 }
@@ -259,6 +328,12 @@ function listPreview(items, limit = 2) {
     visible: values.slice(0, limit),
     hiddenCount: Math.max(0, values.length - limit),
   };
+}
+
+function friendlyUserName(user) {
+  if (!user) return "";
+  const displayName = user.display_name || user.username || "";
+  return displayName === ["Local", "Admin"].join(" ") ? "演示管理员" : displayName;
 }
 
 async function api(path, options = {}) {
@@ -314,7 +389,7 @@ function renderAuthPanel() {
   const message = $("loginMessage");
   if (label) {
     label.textContent = appState.authUser
-      ? `${appState.authUser.display_name || appState.authUser.username} · ${appState.authUser.role}`
+      ? `${friendlyUserName(appState.authUser)} · ${appState.authUser.role}`
       : "未登录";
   }
   if (logoutButton) logoutButton.hidden = !appState.authUser;
@@ -346,7 +421,9 @@ async function submitLogin(event) {
     appState.authUser = data.user;
     appState.authStatus = "authenticated";
     appState.authMessage = "";
+    if (!productViewFromHash()) appState.productView = "workbench";
     renderAll();
+    refreshEncounterWorklist().catch(reportActionError);
     refreshLlmStatus();
     showToast("登录成功");
   } catch (error) {
@@ -383,6 +460,30 @@ async function refreshExportReadiness() {
   }
 }
 
+async function refreshKnowledgeEvidence(taskId = appState.currentTaskId) {
+  if (!taskId) {
+    appState.currentKnowledgeEvidence = null;
+    appState.knowledgeEvidenceStatus = "idle";
+    appState.knowledgeEvidenceError = "";
+    return null;
+  }
+  appState.knowledgeEvidenceStatus = "loading";
+  appState.knowledgeEvidenceError = "";
+  try {
+    const evidence = await api(`/api/tasks/${encodeURIComponent(taskId)}/evidence`);
+    appState.currentKnowledgeEvidence = evidence;
+    appState.knowledgeEvidenceStatus = "ready";
+    if ($("assistPanels")) renderAssist();
+    return evidence;
+  } catch (error) {
+    appState.currentKnowledgeEvidence = null;
+    appState.knowledgeEvidenceStatus = "failed";
+    appState.knowledgeEvidenceError = error?.message || "相关知识参考加载失败";
+    if ($("assistPanels")) renderAssist();
+    return null;
+  }
+}
+
 function formatDateTime(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -393,6 +494,183 @@ function formatDateTime(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function productViewFromHash() {
+  const raw = window.location.hash.replace(/^#\/?/, "").split(/[/?]/)[0];
+  return PRODUCT_VIEWS.includes(raw) ? raw : "";
+}
+
+function setProductView(view, { updateHash = true } = {}) {
+  const nextView = PRODUCT_VIEWS.includes(view) ? view : "workbench";
+  if (nextView !== appState.productView) clearToast();
+  appState.productView = nextView;
+  if (updateHash && window.location.hash !== `#${nextView}`) {
+    window.location.hash = nextView;
+  }
+  renderProductShell();
+  if (nextView === "workbench" && appState.authUser) {
+    refreshEncounterWorklist().catch(reportActionError);
+  }
+  if (nextView === "admin" && appState.authUser) {
+    refreshAdminHome().catch(reportActionError);
+  }
+}
+
+function renderProductShell() {
+  const view = appState.authStatus === "authenticated" ? appState.productView : "workbench";
+  const viewTitles = {
+    workbench: "工作台",
+    encounter: "就诊工作区",
+    admin: "管理后台",
+  };
+  document.body.dataset.productView = view;
+  document.title = `${viewTitles[view] || "医生端"} - MediListen`;
+  document.querySelectorAll("[data-product-view]").forEach((element) => {
+    element.hidden = element.dataset.productView !== view;
+  });
+  document.querySelectorAll("[data-product-view-target]").forEach((button) => {
+    const active = button.dataset.productViewTarget === view;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+}
+
+function encounterCheckInStatusLabel(status) {
+  const labels = {
+    registered: "已登记",
+    checked_in: "已报到",
+    in_progress: "问诊中",
+    completed: "已完成",
+    cancelled: "已取消",
+  };
+  return labels[status] || status || "已报到";
+}
+
+function encounterActionButtons(item = {}, active = false) {
+  const encounterId = escapeHtml(item.id);
+  const checkInStatus = item.check_in_status || "checked_in";
+  const selectingForRecording = appState.pendingInputMethodAfterEncounterSelection === "record";
+  if (checkInStatus === "registered") {
+    return `
+      <button type="button" class="primary-action" data-encounter-action="check-in" data-encounter-id="${encounterId}">报到</button>
+      <button type="button" data-encounter-action="cancel" data-encounter-id="${encounterId}">取消</button>
+    `;
+  }
+  if (checkInStatus === "checked_in") {
+    if (selectingForRecording) {
+      return `
+        <button type="button" class="primary-action recording-action" data-encounter-action="start-recording" data-encounter-id="${encounterId}">开始问诊并录音</button>
+        <button type="button" data-encounter-action="cancel" data-encounter-id="${encounterId}">取消</button>
+      `;
+    }
+    return `
+      <button type="button" class="primary-action" data-encounter-action="start" data-encounter-id="${encounterId}">开始问诊</button>
+      <button type="button" data-encounter-action="cancel" data-encounter-id="${encounterId}">取消</button>
+    `;
+  }
+  if (checkInStatus === "completed") {
+    return `<button type="button" data-restore-encounter="${encounterId}">查看</button>`;
+  }
+  if (checkInStatus === "cancelled") {
+    return `<button type="button" data-restore-encounter="${encounterId}">只读查看</button>`;
+  }
+  if (selectingForRecording && checkInStatus === "in_progress") {
+    return `<button type="button" class="primary-action recording-action" data-restore-encounter="${encounterId}" data-after-restore-input="record">选择并开始录音</button>`;
+  }
+  return `<button type="button" data-restore-encounter="${encounterId}">${active ? "返回工作区" : "继续处理"}</button>`;
+}
+
+function encounterSelectionNoticeMarkup(includeRevisions = true) {
+  if (!includeRevisions || !appState.encounterSelectionNotice) return "";
+  return `
+    <div class="encounter-selection-notice" role="status">
+      <strong>先选择就诊</strong>
+      <span>${escapeHtml(appState.encounterSelectionNotice)}</span>
+    </div>
+  `;
+}
+
+function encounterWorklistMarkup({ includeRevisions = true } = {}) {
+  if (appState.encounterWorklistStatus === "loading") {
+    return `<div class="empty-state">正在加载今日就诊...</div>`;
+  }
+  if (appState.encounterWorklistError) {
+    return `<div class="safety-strip danger">${escapeHtml(appState.encounterWorklistError)}</div>`;
+  }
+  const items = appState.encounterWorklist || [];
+  if (!items.length) {
+    return `
+      ${encounterSelectionNoticeMarkup(includeRevisions)}
+      <div class="empty-state dashboard-empty-state">
+        <strong>今日暂无就诊任务</strong>
+        <span>可以从下方入口开始一次新的问诊工作。</span>
+        <div class="empty-state-actions">
+          <button type="button" class="primary-action" data-product-view-target="encounter">新建问诊</button>
+          <button type="button" data-input-method="audio">上传问诊音频</button>
+          <button type="button" data-input-method="text">粘贴问诊文本</button>
+        </div>
+      </div>
+    `;
+  }
+  const rows = items.map((item) => {
+    const active = appState.currentEncounter?.id === item.id;
+    const patient = patientDisplayName(item.patient_display_name, item.patient_deidentified_id || `Encounter ${item.id}`);
+    const encounterNo = item.patient_deidentified_id || `E-${item.id}`;
+    const phase = encounterPhaseLabel(item);
+    const status = encounterStatusLabel(item.status || item.task_current_stage);
+    const checkInStatus = encounterCheckInStatusLabel(item.check_in_status || "checked_in");
+    return `
+      <article class="encounter-worklist-item ${active ? "active" : ""}">
+        <div class="encounter-worklist-primary">
+          <strong>${escapeHtml(patient)}</strong>
+          <span>${escapeHtml(encounterNo)}</span>
+          <small class="debug-only">版本 ${escapeHtml(item.current_revision_id || "-")} · Task ${escapeHtml(item.task_id || "-")}</small>
+        </div>
+        <div class="encounter-worklist-meta" aria-label="就诊任务摘要">
+          <span><b>录入方式</b>${escapeHtml(encounterInputMethodLabel(item))}</span>
+          <span><b>报到状态</b>${escapeHtml(checkInStatus)}</span>
+          <span><b>当前阶段</b>${escapeHtml(phase)}</span>
+          <span><b>更新时间</b>${escapeHtml(formatDateTime(item.updated_at || item.created_at))}</span>
+        </div>
+        <div class="encounter-worklist-actions">
+          <span class="status-badge ${active ? "confirmed" : "neutral"}">${escapeHtml(status)}</span>
+          ${encounterActionButtons(item, active)}
+        </div>
+      </article>
+    `;
+  }).join("");
+  const revisions = appState.currentEncounter?.revisions || [];
+  const revisionHistory = includeRevisions && revisions.length ? `
+    <section class="encounter-revision-history">
+      <h3>当前就诊版本</h3>
+      ${revisions.map((revision) => `
+        <div class="encounter-revision-row">
+          <strong>v${escapeHtml(revision.revision_no || "-")}</strong>
+          <span>${escapeHtml(revision.source || "-")} · ${escapeHtml(formatDateTime(revision.created_at))}</span>
+        </div>
+      `).join("")}
+    </section>
+  ` : "";
+  return encounterSelectionNoticeMarkup(includeRevisions) + rows + revisionHistory;
+}
+
+function encounterInputMethodLabel(item = {}) {
+  const stage = String(item.task_current_stage || item.task_status || item.status || "").toLowerCase();
+  if (!item.task_id) return "待录入";
+  if (stage.includes("transcrib") || stage.includes("asr")) return "音频";
+  return "文本/音频";
+}
+
+function encounterPhaseLabel(item = {}) {
+  const status = String(item.status || item.task_current_stage || item.task_status || "").toLowerCase();
+  if (status.includes("fail")) return "异常待处理";
+  if (status === "draft" || !item.task_id) return "待录入";
+  if (status === "pending_review" || status === "reviewed") return "等待医生审核";
+  if (status === "approved") return "病历已审核";
+  if (status === "exported") return "已导出";
+  if (status.includes("transcrib")) return "智能转写";
+  return encounterStatusLabel(item.status || item.task_current_stage || item.task_status);
 }
 
 function encounterStatusLabel(status) {
@@ -408,51 +686,12 @@ function encounterStatusLabel(status) {
 
 function renderEncounterWorklistPanel() {
   const list = $("encounterWorklist");
-  if (!list) return;
-  if (appState.encounterWorklistStatus === "loading") {
-    list.innerHTML = `<div class="empty-state">正在加载今日就诊...</div>`;
-    return;
-  }
-  if (appState.encounterWorklistError) {
-    list.innerHTML = `<div class="safety-strip danger">${escapeHtml(appState.encounterWorklistError)}</div>`;
-    return;
-  }
-  const items = appState.encounterWorklist || [];
-  if (!items.length) {
-    list.innerHTML = `<div class="empty-state">暂无可恢复的就诊记录。</div>`;
-    return;
-  }
-  const rows = items.map((item) => {
-    const active = appState.currentEncounter?.id === item.id;
-    const patient = item.patient_display_name || item.patient_deidentified_id || `Encounter ${item.id}`;
-    const status = encounterStatusLabel(item.status || item.task_current_stage);
-    return `
-      <article class="encounter-worklist-item ${active ? "active" : ""}">
-        <div>
-          <strong>${escapeHtml(patient)}</strong>
-          <span>${escapeHtml(item.patient_deidentified_id || "-")}</span>
-          <small>更新 ${escapeHtml(formatDateTime(item.updated_at || item.created_at))} · 版本 ${escapeHtml(item.current_revision_id || "-")} · Task ${escapeHtml(item.task_id || "-")}</small>
-        </div>
-        <div class="encounter-worklist-actions">
-          <span class="status-badge ${active ? "confirmed" : "neutral"}">${escapeHtml(status)}</span>
-          <button type="button" data-restore-encounter="${escapeHtml(item.id)}">${active ? "已打开" : "继续编辑"}</button>
-        </div>
-      </article>
-    `;
-  }).join("");
-  const revisions = appState.currentEncounter?.revisions || [];
-  const revisionHistory = revisions.length ? `
-    <section class="encounter-revision-history">
-      <h3>当前就诊版本</h3>
-      ${revisions.map((revision) => `
-        <div class="encounter-revision-row">
-          <strong>v${escapeHtml(revision.revision_no || "-")}</strong>
-          <span>${escapeHtml(revision.source || "-")} · ${escapeHtml(formatDateTime(revision.created_at))}</span>
-        </div>
-      `).join("")}
-    </section>
-  ` : "";
-  list.innerHTML = rows + revisionHistory;
+  const dashboardList = $("dashboardEncounterList");
+  const drawerHtml = encounterWorklistMarkup({ includeRevisions: true });
+  const dashboardHtml = encounterWorklistMarkup({ includeRevisions: false });
+  if (list) list.innerHTML = drawerHtml;
+  if (dashboardList) dashboardList.innerHTML = dashboardHtml;
+  renderDashboardSummary();
 }
 
 async function refreshEncounterWorklist() {
@@ -499,7 +738,27 @@ function applyEncounterDetail(detail) {
   appState.currentInputText = "";
 }
 
-async function restoreEncounter(encounterId) {
+function selectedEncounterId() {
+  return appState.currentEncounter?.encounter_id || appState.currentEncounter?.id || null;
+}
+
+function encounterReadyForInput() {
+  const status = String(appState.currentEncounter?.check_in_status || "checked_in").toLowerCase();
+  return Boolean(selectedEncounterId() && ["checked_in", "in_progress"].includes(status));
+}
+
+function requireEncounterBeforeInput(method = "") {
+  if (encounterReadyForInput()) return true;
+  appState.pendingInputMethodAfterEncounterSelection = method;
+  appState.encounterSelectionNotice = method === "record"
+    ? "请先选择已报到或问诊中的患者，再开始录音生成。可用就诊会显示“选择并开始录音”。"
+    : "请先选择已报到或问诊中的患者，再开始录音、上传音频或粘贴文本。";
+  showToast(appState.encounterSelectionNotice);
+  openEncounterWorklist().catch(reportActionError);
+  return false;
+}
+
+async function restoreEncounter(encounterId, { nextInputMethod = "" } = {}) {
   if (!encounterId) return;
   setBusy(true, "正在恢复就诊草稿...");
   try {
@@ -511,7 +770,70 @@ async function restoreEncounter(encounterId) {
     }
     await refreshEncounterWorklist();
     closeDrawer();
+    setProductView("encounter");
+    appState.pendingInputMethodAfterEncounterSelection = "";
+    appState.encounterSelectionNotice = "";
     showToast("已恢复就诊草稿");
+    if (nextInputMethod === "record") {
+      openReservedRecording();
+    } else if (nextInputMethod === "audio") {
+      openAudioGenerate();
+    } else if (nextInputMethod === "text") {
+      openTextImport();
+    }
+  } catch (error) {
+    reportActionError(error);
+  } finally {
+    setBusy(false);
+    renderAll();
+  }
+}
+
+async function performEncounterAction(encounterId, action) {
+  if (!encounterId || !action) return;
+  setBusy(true, "正在更新就诊状态...");
+  try {
+    const detail = await api(`/api/encounters/${encodeURIComponent(encounterId)}/${encodeURIComponent(action)}`, {
+      method: "POST",
+    });
+    if (appState.currentEncounter?.id === detail.id || action === "start") {
+      applyEncounterDetail(detail);
+      setProductView("encounter");
+    }
+    if (action !== "check-in") {
+      appState.pendingInputMethodAfterEncounterSelection = "";
+      appState.encounterSelectionNotice = "";
+    }
+    await refreshEncounterWorklist();
+    showToast("就诊状态已更新");
+  } catch (error) {
+    reportActionError(error);
+  } finally {
+    setBusy(false);
+    renderAll();
+  }
+}
+
+async function createLocalEncounterFromForm(event) {
+  event?.preventDefault();
+  const deidentifiedId = $("localPatientDeidentifiedId")?.value?.trim() || "";
+  const displayName = $("localPatientDisplayName")?.value?.trim() || "";
+  setBusy(true, "正在登记患者...");
+  try {
+    const detail = await api("/api/encounters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        patient_deidentified_id: deidentifiedId || undefined,
+        patient_display_name: displayName || undefined,
+      }),
+    });
+    applyEncounterDetail(detail);
+    if ($("localPatientDeidentifiedId")) $("localPatientDeidentifiedId").value = "";
+    if ($("localPatientDisplayName")) $("localPatientDisplayName").value = "";
+    await refreshEncounterWorklist();
+    setProductView("encounter");
+    showToast("患者已登记，请先报到后开始问诊");
   } catch (error) {
     reportActionError(error);
   } finally {
@@ -531,15 +853,43 @@ function renderExportReadinessDetail(readiness = appState.currentExportReadiness
     rows.push("导出状态：尚未获取导出就绪状态。");
   }
 
-  const exportRows = exports
-    ? Object.entries(exports).map(([key, value]) => `${key}：${value}`)
-    : [];
+  const exportRows = exportSummaryRows(exports);
+  const downloadActions = renderExportDownloadActions(exports);
 
   return detailSection("导出状态与文件", `
     <div class="detail-evidence-list">
       ${[...rows, ...exportRows].map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")}
     </div>
+    ${downloadActions}
   `);
+}
+
+function exportDownloadDescriptors(exports = appState.currentExports) {
+  if (!exports) return [];
+  const items = [];
+  if (exports.word_path) items.push({ format: "docx", label: "下载 DOCX 病历" });
+  if (exports.markdown_path) items.push({ format: "markdown", label: "下载 Markdown 备份" });
+  return items;
+}
+
+function exportSummaryRows(exports = appState.currentExports) {
+  const descriptors = exportDownloadDescriptors(exports);
+  if (!descriptors.length) return [];
+  return descriptors.map((item) => `${item.label.replace(/^下载\s*/, "")}：已生成，可下载`);
+}
+
+function renderExportDownloadActions(exports = appState.currentExports) {
+  const descriptors = exportDownloadDescriptors(exports);
+  if (!descriptors.length) return "";
+  return `
+    <div class="detail-action-row">
+      ${descriptors.map((item) => `
+        <button type="button" class="secondary-action" data-export-download-format="${escapeHtml(item.format)}">
+          ${escapeHtml(item.label)}
+        </button>
+      `).join("")}
+    </div>
+  `;
 }
 
 function renderJson(element, value) {
@@ -577,10 +927,60 @@ function showToast(text) {
   toast.textContent = text;
   toast.classList.add("active");
   window.clearTimeout(showToast.timer);
-  showToast.timer = window.setTimeout(() => toast.classList.remove("active"), 2200);
+  showToast.timer = window.setTimeout(() => toast.classList.remove("active"), 3800);
+}
+
+function clearToast() {
+  const toast = $("toast");
+  window.clearTimeout(showToast.timer);
+  toast.classList.remove("active");
+  toast.textContent = "";
+}
+
+function containsTechnicalErrorText(message) {
+  return /\b(TypeError|Traceback|NoneType|RuntimeError|ValueError|FileNotFoundError|Exception|stack trace)\b/i.test(message || "")
+    || /must be a mapping/i.test(message || "");
+}
+
+function doctorSafeErrorMessage(error) {
+  const detail = error?.detail || {};
+  const nested = detail?.error || {};
+  const message = detail.message || nested.message || error?.message || String(error || "");
+  const code = detail.error_code || nested.code || appState.asrFailureCode || "";
+  const stage = detail.stage || nested.stage || appState.asrFailureStage || "";
+  const isAsrError = stage === "transcription" || String(code).startsWith("ASR_") || appState.taskStatus === "TRANSCRIBING" || appState.currentAudioId;
+  if (containsTechnicalErrorText(message)) {
+    if (isAsrError) {
+      return "转写服务暂时不可用，本次任务已暂停。音频已安全保存，可重新转写或改用文本输入。";
+    }
+    return "系统暂时无法完成操作，请稍后重试或联系管理员查看技术详情。";
+  }
+  return message || "操作失败";
+}
+
+function applyAsrFailureDetail(detail = {}) {
+  const nested = detail?.error || {};
+  appState.asrFailureCode = detail.error_code || nested.code || appState.asrFailureCode || "ASR_FAILED";
+  appState.asrFailureStage = detail.stage || nested.stage || appState.asrFailureStage || "transcription";
+  appState.asrAudioPreserved = Boolean(detail.audio_preserved ?? nested.audio_preserved ?? appState.currentAudioId);
+  appState.asrLastError = detail.message || nested.message || doctorSafeErrorMessage({ detail });
+  appState.asrRetryHint = detail.retry_hint || detail.message || nested.message || "音频已安全保存，可重新转写或改用文本输入。";
+}
+
+function failureStageLabel(stage) {
+  const labels = {
+    transcription: "智能转写",
+    upload: "音频上传",
+    generation: "病历生成",
+  };
+  return labels[stage] || stage || "智能转写";
 }
 
 function reportActionError(error) {
+  const safeMessage = doctorSafeErrorMessage(error);
+  setActionError(safeMessage);
+  showToast(safeMessage);
+  return;
   const message = error?.message || String(error || "操作失败");
   setActionError(message);
   showToast(message);
@@ -606,6 +1006,146 @@ function renderRunContext() {
   $("currentTaskIdValue").textContent = appState.currentTaskId || "-";
   $("currentAudioIdValue").textContent = appState.currentAudioId || "-";
   $("runLogCommand").textContent = runLogCommand();
+}
+
+function productRecordingStatusLabel() {
+  const labels = {
+    idle: "等待录音",
+    requesting: "请求麦克风",
+    recording: "录音中",
+    paused: "已暂停",
+    uploading: "转写启动中",
+    error: "录音异常",
+  };
+  return labels[appState.browserRecordingStatus] || appState.browserRecordingStatus || "等待录音";
+}
+
+function runtimeServiceLabel(key) {
+  const labels = {
+    sqlite: "数据存储服务",
+    uploads: "音频存储服务",
+    outputs: "病历输出服务",
+    speaker_profiles: "声纹资料服务",
+    provider: "AI生成服务",
+    ready: "服务可用性",
+  };
+  return labels[key] || key;
+}
+
+function runtimeServiceSummary(key, value) {
+  if (!value || typeof value !== "object") return String(value ?? "-");
+  if (key === "provider") {
+    const status = value.status || value;
+    const provider = status.provider || status.actual_provider || "mock";
+    const mode = status.mode || "demo";
+    if (provider === "mock" && mode === "demo") return "演示模式可用";
+    if (value.ok === false || status.reachable === false) return "服务不可用";
+    return `${provider} · ${mode}`;
+  }
+  if (key === "ready") return value.status || (value.ok === false ? "服务不可用" : "可用");
+  if (value.ok === false) return value.error || "服务不可用";
+  if (key === "sqlite") return "数据库可读写";
+  if (["uploads", "outputs", "speaker_profiles"].includes(key)) return `${runtimeServiceLabel(key)}可用`;
+  return value.status || "可用";
+}
+
+function renderDashboardSummary() {
+  const stats = (appState.encounterWorklist || []).reduce((acc, item) => {
+    const status = String(item.status || item.task_current_stage || item.task_status || "").toLowerCase();
+    if (!item.task_id || status === "draft") {
+      acc.pendingInput += 1;
+    } else if (status.includes("fail")) {
+      acc.exceptions += 1;
+    } else if (status === "pending_review" || status === "reviewed") {
+      acc.pendingReview += 1;
+    } else if (status !== "approved" && status !== "exported") {
+      acc.processing += 1;
+    }
+    return acc;
+  }, { pendingInput: 0, processing: 0, pendingReview: 0, exceptions: 0 });
+  if ($("dashboardDoctorLabel")) $("dashboardDoctorLabel").textContent = String(stats.pendingInput);
+  if ($("dashboardEncounterLabel")) $("dashboardEncounterLabel").textContent = String(stats.processing);
+  if ($("dashboardTaskStatusLabel")) $("dashboardTaskStatusLabel").textContent = String(stats.pendingReview);
+  if ($("dashboardRecordingLabel")) $("dashboardRecordingLabel").textContent = String(stats.exceptions);
+}
+
+function renderAdminHome() {
+  const usersPanel = $("adminUsersPanel");
+  const runtimePanel = $("adminRuntimePanel");
+  if (usersPanel) {
+    if (appState.adminStatus === "loading") {
+      usersPanel.innerHTML = `<div class="empty-state">正在加载用户...</div>`;
+    } else if (appState.authUser?.role !== "admin") {
+      usersPanel.innerHTML = `<div class="safety-strip warning"><strong>权限不足</strong><br>当前账号不是管理员，只能查看本人工作区。</div>`;
+    } else if (appState.adminError) {
+      usersPanel.innerHTML = `<div class="safety-strip danger">${escapeHtml(appState.adminError)}</div>`;
+    } else if (!appState.adminUsers.length) {
+      usersPanel.innerHTML = `<div class="empty-state">暂无用户数据。</div>`;
+    } else {
+      usersPanel.innerHTML = appState.adminUsers.map((user) => `
+        <div class="admin-list-row">
+          <strong>${escapeHtml(friendlyUserName(user))}</strong>
+          <span>${escapeHtml(user.username)} · ${escapeHtml(user.role || "-")} · ${user.is_active ? "已启用" : "已停用"}</span>
+        </div>
+      `).join("");
+    }
+  }
+  if (runtimePanel) {
+    const runtime = appState.adminRuntimeStatus;
+    if (appState.adminStatus === "loading" && !runtime) {
+      runtimePanel.innerHTML = `<div class="empty-state">正在检查系统健康...</div>`;
+    } else if (runtime) {
+      const checks = runtime.checks && typeof runtime.checks === "object"
+        ? Object.entries(runtime.checks).slice(0, 6)
+        : [];
+      runtimePanel.innerHTML = `
+        <div class="admin-list-row">
+          <strong>服务可用性</strong>
+          <span>${escapeHtml(runtime.status === "ready" || runtime.ready ? "可用" : "需检查")}</span>
+        </div>
+        ${checks.map(([key, value]) => `
+          <div class="admin-list-row">
+            <strong>${escapeHtml(runtimeServiceLabel(key))}</strong>
+            <span>${escapeHtml(runtimeServiceSummary(key, value))}</span>
+          </div>
+        `).join("")}
+        <div class="admin-list-row technical-detail-row">
+          <strong>技术详情</strong>
+          <span>服务器路径和原始 JSON 已隐藏，可在需要排障时查看。</span>
+        </div>
+      `;
+    } else {
+      runtimePanel.innerHTML = `<div class="empty-state">尚未检查运行状态。</div>`;
+    }
+  }
+}
+
+async function refreshAdminHome() {
+  appState.adminStatus = "loading";
+  appState.adminError = "";
+  renderAdminHome();
+  try {
+    const [readyResult, usersResult] = await Promise.allSettled([
+      api("/ready"),
+      appState.authUser?.role === "admin" ? api("/api/auth/users") : Promise.resolve({ users: [] }),
+    ]);
+    if (readyResult.status === "fulfilled") {
+      appState.adminRuntimeStatus = readyResult.value;
+    } else {
+      appState.adminRuntimeStatus = { status: "not_ready", ready: false, checks: { ready: { status: readyResult.reason?.message || "检查失败" } } };
+    }
+    if (usersResult.status === "fulfilled") {
+      appState.adminUsers = usersResult.value.users || [];
+    } else {
+      appState.adminUsers = [];
+      appState.adminError = usersResult.reason?.message || "无法加载用户列表。";
+    }
+    appState.adminStatus = "ready";
+  } catch (error) {
+    appState.adminStatus = "error";
+    appState.adminError = error?.message || "管理后台状态加载失败。";
+  }
+  renderAdminHome();
 }
 
 function hasActiveSession() {
@@ -775,11 +1315,13 @@ function riskSummary() {
 
 function renderMode() {
   const isDebug = appState.viewMode === "debug";
+  const displayState = doctorDisplayState().key;
   document.body.classList.toggle("debug-mode", isDebug);
   document.body.classList.toggle("doctor-mode", !isDebug);
   document.body.classList.toggle("screenshot-mode", appState.screenshotMode);
   document.body.classList.toggle("standard-mode", appState.displayScale !== "care");
   document.body.classList.toggle("care-mode", appState.displayScale === "care");
+  document.body.dataset.displayState = displayState;
   $("doctorModeButton").classList.toggle("active", !isDebug);
   $("debugModeButton").classList.toggle("active", isDebug);
   $("demoModeButton").classList.toggle("active", !appState.screenshotMode);
@@ -810,12 +1352,26 @@ function renderInputMethodMenu() {
   const button = $("inputMethodButton");
   const menu = $("inputMethodMenu");
   if (!button || !menu) return;
-  button.textContent = "开始生成";
+  const fixedDemoProcessing = ["preparing", "uploading", "streaming", "finalizing", "converging"].includes(appState.fixedDemoStatus);
+  const fixedDemoReadyToFinalize = appState.fixedDemoStatus === "ready_to_finalize";
+  if (!encounterReadyForInput()) {
+    button.textContent = "选择今日就诊";
+  } else if (fixedDemoReadyToFinalize) {
+    button.textContent = "结束问诊并生成正式病历";
+  } else if (["preparing", "uploading", "streaming"].includes(appState.fixedDemoStatus)) {
+    button.textContent = "问诊演示中";
+  } else if (["finalizing", "converging"].includes(appState.fixedDemoStatus)) {
+    button.textContent = "正在收敛";
+  } else {
+    button.textContent = appState.currentTaskId ? "继续审核" : "新建问诊";
+  }
+  button.disabled = Boolean((appState.busy && !fixedDemoReadyToFinalize) || fixedDemoProcessing);
+  button.dataset.busyAllowed = fixedDemoReadyToFinalize ? "true" : "false";
   const labels = {
-    audio: "上传音频",
-    text: "粘贴文本",
+    audio: "音频生成",
+    text: "文本生成",
     record: "录音生成",
-    mock: "Mock 演示",
+    mock: "固定音频演示",
   };
   menu.querySelectorAll("[data-input-method]").forEach((item) => {
     const method = item.dataset.inputMethod;
@@ -869,7 +1425,10 @@ function renderStepPrompt() {
   let text = "请上传问诊音频或粘贴问诊文本开始。";
   let tone = "";
 
-  if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") {
+  if (doctorDisplayState().key === "transcription_failed") {
+    text = "转写服务暂时不可用，请先重新转写或改用文本输入。";
+    tone = "danger";
+  } else if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") {
     text = "病历已导出，可归档或开始下一次任务。";
   } else if (hasActiveSession() && risk.hasRisk) {
     text = "请优先处理红色/黄色提示。";
@@ -887,69 +1446,281 @@ function renderStepPrompt() {
 }
 
 function workflowStepKey() {
+  const displayState = doctorDisplayState().key;
+  if (!encounterReadyForInput() && !hasActiveSession()) return "SELECT_ENCOUNTER";
+  if (displayState === "transcription_failed") return "AI_PROCESS";
+  if (displayState === "draft_generated") return "DOCTOR_REVIEW";
+  if (displayState === "pending_review") return "DOCTOR_REVIEW";
+  if (displayState === "approved" || displayState === "exported") return "EXPORT";
   if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") return "EXPORT";
   if (isApprovedForExport()) return "EXPORT";
   if (appState.currentRecordFields || appState.currentDraft) return "DOCTOR_REVIEW";
-  if (appState.currentTaskId) return "GENERATE_RECORD";
+  if (appState.currentTaskId) return "AI_PROCESS";
   if (appState.currentAsrResult) {
-    return "GENERATE_RECORD";
+    return "AI_PROCESS";
   }
   if (appState.taskStatus === "TRANSCRIBING" || appState.currentAsrSessionId || appState.liveTranscriptSegments.length) {
-    return "TRANSCRIBING";
+    return "AI_PROCESS";
   }
-  return STATUS_TO_STEP[appState.taskStatus] || "INPUT";
+  return STATUS_TO_STEP[appState.taskStatus] || "CAPTURE_INPUT";
 }
 
-function workflowAction({ key, label, tone = "secondary", disabled = false }) {
-  return `<button type="button" class="${tone === "primary" ? "primary-action" : "secondary-action"}" data-workflow-action="${escapeHtml(key)}" ${disabled ? "disabled" : ""}>${escapeHtml(label)}</button>`;
+function workflowAction({ key, label, tone = "secondary", disabled = false, reason = "" }) {
+  const reasonAttrs = reason
+    ? ` title="${escapeHtml(reason)}" aria-describedby="nextActionReason"`
+    : "";
+  return `<button type="button" class="${tone === "primary" ? "primary-action" : "secondary-action"}" data-workflow-action="${escapeHtml(key)}" ${disabled ? "disabled" : ""}${reasonAttrs}>${escapeHtml(label)}</button>`;
+}
+
+function currentInputInProgress() {
+  return appState.busy
+    || ["requesting", "recording", "paused", "finalizing", "uploading"].includes(appState.browserRecordingStatus)
+    || ["TRANSCRIBING", "EXTRACTING_FIELDS", "GENERATING_DRAFT", "SAFETY_CHECKING", "CREATED"].includes(appState.taskStatus);
+}
+
+function processingStageStatuses() {
+  const statuses = Object.fromEntries(PROCESSING_STAGES.map((stage) => [stage.key, "pending"]));
+  const failed = doctorDisplayState().key === "transcription_failed";
+  if (appState.currentAudioId || appState.uploadedFilename || appState.currentAsrSessionId || appState.browserRecordingFinalized?.audio_id) {
+    statuses.audio = "done";
+  }
+  if (["requesting", "recording", "paused", "finalizing"].includes(appState.browserRecordingStatus)) {
+    statuses.audio = "active";
+  }
+  if (appState.browserRecordingStatus === "uploading") {
+    statuses.audio = "done";
+    statuses.asr = "active";
+  }
+  if (appState.taskStatus === "TRANSCRIBING" || appState.currentAsrSessionId) {
+    statuses.audio = "done";
+    statuses.asr = "active";
+  }
+  if (appState.currentAsrResult || appState.liveTranscriptSegments.length || appState.taskStatus === "TRANSCRIBED") {
+    statuses.audio = "done";
+    statuses.asr = "done";
+    statuses.role = "done";
+  }
+  if (appState.currentTaskId || ["EXTRACTING_FIELDS", "GENERATING_DRAFT", "SAFETY_CHECKING"].includes(appState.taskStatus)) {
+    statuses.audio = statuses.audio === "pending" ? "done" : statuses.audio;
+    statuses.asr = statuses.asr === "pending" ? "done" : statuses.asr;
+    statuses.role = statuses.role === "pending" ? "done" : statuses.role;
+    statuses.fields = "active";
+  }
+  if (appState.taskStatus === "GENERATING_DRAFT") {
+    statuses.fields = "done";
+    statuses.draft = "active";
+  }
+  if (appState.taskStatus === "SAFETY_CHECKING") {
+    statuses.fields = "done";
+    statuses.draft = "done";
+    statuses.safety = "active";
+  }
+  if (appState.currentRecordFields) {
+    statuses.audio = statuses.audio === "pending" ? "done" : statuses.audio;
+    statuses.asr = statuses.asr === "pending" ? "done" : statuses.asr;
+    statuses.role = statuses.role === "pending" ? "done" : statuses.role;
+    statuses.fields = "done";
+    statuses.draft = "done";
+    statuses.safety = "done";
+  }
+  if (failed) {
+    statuses.asr = "failed";
+    ["role", "fields", "draft", "safety"].forEach((key) => {
+      if (statuses[key] !== "done") statuses[key] = "pending";
+    });
+  }
+  return statuses;
+}
+
+function renderProcessingStages() {
+  const statuses = processingStageStatuses();
+  const labels = {
+    pending: "等待",
+    active: "进行中",
+    done: "完成",
+    failed: "失败",
+  };
+  return `
+    <ol class="processing-stage-list" aria-label="AI 处理阶段">
+      ${PROCESSING_STAGES.map((stage) => {
+        const status = statuses[stage.key] || "pending";
+        return `
+          <li class="processing-stage ${status}">
+            <span>${escapeHtml(stage.label)}</span>
+            <small>${escapeHtml(labels[status])}</small>
+          </li>
+        `;
+      }).join("")}
+    </ol>
+  `;
+}
+
+function singlePrimaryAction(action) {
+  return action ? [workflowAction({ ...action, tone: "primary" })] : [];
+}
+
+function doctorDisplayState() {
+  const flowFailed = appState.taskStatus === "FAILED" || Boolean(appState.asrLastError || appState.asrChunkLastError);
+  const exported = appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported";
+  const approved = isApprovedForExport();
+  const hasFields = Boolean(appState.currentRecordFields);
+  const inputStatus = appState.currentAudioId ? "音频上传" : appState.currentInputText ? "文本导入" : "未上传";
+  if (flowFailed) {
+    return {
+      key: "transcription_failed",
+      title: "智能转写失败",
+      taskHint: "任务失败 · 音频上传",
+      reviewLabel: "智能转写失败",
+      dataStatus: "音频已安全保存",
+      inputStatus: "音频上传",
+    };
+  }
+  if (exported) {
+    return {
+      key: "exported",
+      title: "导出已完成",
+      taskHint: "导出已完成",
+      reviewLabel: "已导出",
+      dataStatus: "已导出",
+      inputStatus,
+    };
+  }
+  if (approved) {
+    return {
+      key: "approved",
+      title: "病历审核已完成",
+      taskHint: "病历审核已完成",
+      reviewLabel: "病历审核已完成",
+      dataStatus: "医生已确认",
+      inputStatus,
+    };
+  }
+  if (hasFields && appState.taskStatus === "reviewed") {
+    return {
+      key: "pending_review",
+      title: "等待医生审核",
+      taskHint: "等待医生审核",
+      reviewLabel: "等待医生审核",
+      dataStatus: "修改已保存",
+      inputStatus,
+    };
+  }
+  if (hasFields) {
+    return {
+      key: "draft_generated",
+      title: "病历草稿已生成，可编辑",
+      taskHint: "病历草稿已生成，可编辑",
+      reviewLabel: "病历草稿已生成",
+      dataStatus: "AI草稿待保存",
+      inputStatus,
+    };
+  }
+  return {
+    key: "input",
+    title: STATUS_LABELS[appState.taskStatus] || "等待输入",
+    taskHint: appState.currentTaskId
+      ? `${STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "任务已创建"} · ${appState.currentAudioId ? "音频生成" : "文本生成"}`
+      : "等待输入",
+    reviewLabel: STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入",
+    dataStatus: appState.currentAsrResult ? "转写已完成" : "等待输入",
+    inputStatus: appState.uploadedFilename
+      ? "音频上传"
+      : inputStatus,
+  };
+}
+
+function doctorFacingTranscriptionIssue() {
+  const rawIssue = appState.asrLastError || appState.asrChunkLastError || "";
+  if (!rawIssue) return "";
+  if (appState.viewMode === "debug") return rawIssue;
+  if (rawIssue.includes("转写连接正在恢复")) return rawIssue;
+  return "转写服务暂时不可用，本次任务已暂停。";
 }
 
 function nextActionState() {
   const risk = riskSummary();
-  const rolePending = roleReviewRequired();
+  const displayState = doctorDisplayState();
+
+  if (appState.fixedDemoStatus === "ready_to_finalize" && appState.fixedDemoSessionId && !appState.currentTaskId) {
+    return {
+      tone: "ready",
+      title: "实时问诊已结束，可以正式收敛",
+      detail: "固定音频跟随识别已完成。点击后冻结稳定转写，生成唯一正式病历 revision，再进入医生审核。",
+      stages: true,
+      actions: singlePrimaryAction({ key: "finalize-live-demo", label: "结束问诊并生成正式病历" }),
+    };
+  }
 
   if (appState.busy) {
     return {
       tone: "active",
       title: STATUS_LABELS[appState.taskStatus] || "处理中",
       detail: appState.asrChunkStatus || "系统正在处理当前任务，请等待页面状态更新。",
+      stages: true,
       actions: [],
     };
   }
 
   if (appState.lastActionError) {
+    const action = appState.currentAudioId
+      ? { key: "retry-transcription", label: "重试转写" }
+      : encounterReadyForInput()
+        ? { key: "record-audio", label: "重新采集" }
+        : { key: "open-worklist", label: "选择今日就诊" };
     return {
       tone: "danger",
       title: "请处理当前提示",
       detail: appState.lastActionError,
-      actions: [
-        workflowAction({ key: "upload-audio", label: "音频生成", tone: "primary" }),
-        workflowAction({ key: "import-text", label: "文本生成" }),
-      ],
+      stages: true,
+      actions: singlePrimaryAction(action),
     };
   }
 
-  if (appState.taskStatus === "FAILED" || appState.asrLastError) {
+  if (displayState.key === "transcription_failed") {
     return {
       tone: "danger",
       title: "流程中断",
-      detail: appState.asrLastError || appState.asrChunkLastError || "当前流程失败，请重新上传音频或改用文本导入继续。",
-      actions: [
-        workflowAction({ key: "upload-audio", label: "重新上传音频", tone: "primary" }),
-        workflowAction({ key: "import-text", label: "改用文本导入" }),
-      ],
+      detail: "智能转写失败，音频已保存时可直接重新转写；也可以改用文本输入。",
+      stages: true,
+      actions: singlePrimaryAction({ key: "retry-transcription", label: appState.currentAudioId ? "重试转写" : "重新上传" }),
+    };
+  }
+
+  if (["preparing", "uploading", "streaming"].includes(appState.fixedDemoStatus)) {
+    return {
+      tone: "active",
+      title: "固定音频跟随识别演示",
+      detail: appState.fixedDemoMessage || `正在按真实时间发送音频块 ${appState.fixedDemoChunksUploaded || 0}/${appState.fixedDemoChunkTotal || "-" }，页面会持续追加转写和临床参考。`,
+      stages: true,
+      actions: [],
+    };
+  }
+
+  if (["finalizing", "converging"].includes(appState.fixedDemoStatus)) {
+    return {
+      tone: "active",
+      title: "正在正式收敛",
+      detail: appState.fixedDemoMessage || "正在冻结完整转写、创建正式病历并进入审核流程。",
+      stages: true,
+      actions: [],
+    };
+  }
+
+  if (!encounterReadyForInput() && !hasActiveSession()) {
+    return {
+      tone: "neutral",
+      title: "选择今日就诊",
+      detail: "先选择已报到或问诊中的患者，再开始录音、上传音频或文本生成。",
+      actions: singlePrimaryAction({ key: "open-worklist", label: "选择今日就诊" }),
     };
   }
 
   if (!hasActiveSession()) {
     return {
       tone: "neutral",
-      title: "开始一次病历生成",
-      detail: "优先上传中文问诊音频；演示兜底可选择 Mock ASR，文本导入可直接验证病历生成。",
-      actions: [
-        workflowAction({ key: "upload-audio", label: "音频生成", tone: "primary" }),
-        workflowAction({ key: "import-text", label: "文本生成" }),
-      ],
+      title: "开始问诊演示",
+      detail: "当前就诊已就绪。答辩版固定使用脱敏音频跟随识别演示，不把备用音频回放冒充真人麦克风。",
+      actions: singlePrimaryAction({ key: "start-live-demo", label: "开始问诊演示" }),
     };
   }
 
@@ -959,13 +1730,14 @@ function nextActionState() {
       : "短音频直接转写";
     return {
       tone: "active",
-      title: "实时转写中",
-      detail: `${chunkText}，请等待 SSE 分段文本追加到中间栏。`,
+      title: "AI处理中",
+      detail: `${chunkText}，系统正在完成转写、角色推定、字段抽取和草稿生成。`,
+      stages: true,
       actions: [],
     };
   }
 
-  if (appState.currentAsrResult && (rolePending || appState.roleReviewDirty)) {
+  if (appState.currentAsrResult && appState.roleReviewDirty && appState.viewMode === "debug") {
     const pendingCount = roleReviewPendingCount();
     const pendingText = pendingCount
       ? `仍有 ${pendingCount} 位说话人需要确认；已可靠识别的说话人不会重复要求确认。`
@@ -975,12 +1747,12 @@ function nextActionState() {
       : "保存后可继续生成病历。";
     return {
       tone: "warning",
-      title: rolePending ? "请确认说话人身份" : "请保存身份确认",
+      title: "保存调试更正",
       detail: `${pendingText}${resumeText}`,
       actions: [
         workflowAction({
-          key: rolePending ? "open-role-review" : "save-role-review",
-          label: appState.roleReviewSaving ? "保存中" : rolePending ? "确认说话人身份" : "保存身份确认",
+          key: "save-role-review",
+          label: appState.roleReviewSaving ? "保存中" : "保存调试更正",
           tone: "primary",
           disabled: appState.roleReviewSaving,
         }),
@@ -993,17 +1765,17 @@ function nextActionState() {
       tone: "ready",
       title: "转写已完成",
       detail: "说话人角色已自动识别，可以用当前对话生成病历草稿。",
-      actions: [
-        workflowAction({ key: "generate-record", label: "生成病历", tone: "primary" }),
-      ],
+      stages: true,
+      actions: singlePrimaryAction({ key: "generate-record", label: "生成病历草稿" }),
     };
   }
 
   if (appState.currentTaskId && !appState.currentRecordFields) {
     return {
       tone: "active",
-      title: "病历草稿生成中",
+      title: "AI处理中",
       detail: "字段抽取、草稿生成和安全校验会依次完成。",
+      stages: true,
       actions: [],
     };
   }
@@ -1012,12 +1784,8 @@ function nextActionState() {
     return {
       tone: "ready",
       title: "导出已完成",
-      detail: "Markdown / Word 文件已生成，可重新导出或开始下一次输入。",
-      actions: [
-        workflowAction({ key: "export-record", label: "重新导出" }),
-        workflowAction({ key: "upload-audio", label: "上传新音频", tone: "primary" }),
-        workflowAction({ key: "import-text", label: "粘贴新文本" }),
-      ],
+      detail: "DOCX 文件已生成。需要再次下载时，可继续使用导出按钮。",
+      actions: singlePrimaryAction({ key: "export-record", label: "再次下载" }),
     };
   }
 
@@ -1025,50 +1793,117 @@ function nextActionState() {
     return {
       tone: "ready",
       title: "病历审核已完成，可以导出",
-      detail: "导出前请确认鉴别诊断参考和安全校验提示已由医生审核。",
-      actions: [
-        workflowAction({ key: "export-record", label: "确认导出", tone: "primary" }),
-      ],
+      detail: "导出文件会绑定当前医生、就诊和最新病历版本。",
+      actions: singlePrimaryAction({ key: "export-record", label: "导出病历" }),
     };
   }
 
   if (appState.currentRecordFields) {
-    const missingText = risk.missing.length ? `缺失项：${risk.missing.join("、")}。` : "病历草稿已生成。";
+    if (displayState.key === "pending_review") {
+      return {
+        tone: risk.hasError ? "danger" : risk.hasRisk ? "warning" : "ready",
+        title: "等待医生审核",
+        detail: risk.missing.length
+          ? `当前仍有 ${risk.missing.length} 项未采集或需医生确认；完成审核即表示医生已确认处理。`
+          : "修改已保存，等待医生完成病历审核。",
+        actions: singlePrimaryAction({ key: "confirm-fields", label: "审核病历", disabled: risk.hasError, reason: risk.hasError ? "请先处理红色风险或缺失项" : "" }),
+      };
+    }
+    const missingText = risk.missing.length
+      ? `当前草稿仍有 ${risk.missing.length} 项待补充；请先保存修改，再进入医生审核。`
+      : "AI 已生成病历草稿，请先保存修改后再完成医生审核。";
     return {
       tone: risk.hasError ? "danger" : risk.hasRisk ? "warning" : "ready",
-      title: "请审核病历内容",
-      detail: `${missingText} 保存修改后完成病历审核，完成医生审核后方可导出。`,
-      actions: [
-        workflowAction({ key: "save-draft", label: "保存修改" }),
-        workflowAction({ key: "confirm-fields", label: "完成病历审核", tone: "primary" }),
-      ],
+      title: "病历草稿已生成，可编辑",
+      detail: missingText,
+      actions: singlePrimaryAction({ key: "save-draft", label: "保存修改" }),
     };
   }
 
   return {
     tone: "neutral",
-    title: "等待下一步",
-    detail: "可继续上传音频或粘贴文本开始新的病历生成流程。",
-    actions: [
-      workflowAction({ key: "upload-audio", label: "音频生成", tone: "primary" }),
-      workflowAction({ key: "import-text", label: "文本生成" }),
-    ],
+    title: "选择今日就诊",
+    detail: "答辩演示从选择已报到患者开始，避免产生未绑定就诊的录音或病历。",
+    actions: singlePrimaryAction({ key: "open-worklist", label: "选择今日就诊" }),
   };
 }
 
 function renderNextActionPanel() {
   const state = nextActionState();
   $("nextActionPanel").className = `next-action-panel ${state.tone}`.trim();
+  const stages = state.stages ? renderProcessingStages() : "";
   $("nextActionPanel").innerHTML = `
     <div>
       <span class="meta-label">下一步</span>
       <strong>${escapeHtml(state.title)}</strong>
-      <p>${escapeHtml(state.detail)}</p>
+      <p id="nextActionReason">${escapeHtml(state.detail)}</p>
+      ${stages}
     </div>
     <div class="next-action-buttons">
       ${state.actions.join("")}
     </div>
   `;
+}
+
+function renderReviewBoundaryNotice() {
+  const notice = $("reviewBoundaryNotice");
+  if (!notice) return;
+  if (!appState.currentRecordFields) {
+    notice.hidden = true;
+    notice.textContent = "";
+    notice.className = "review-boundary-notice";
+    return;
+  }
+  const displayState = doctorDisplayState();
+  notice.hidden = false;
+  notice.className = `review-boundary-notice ${displayState.key}`.trim();
+  if (["approved", "exported"].includes(displayState.key)) {
+    notice.textContent = "医生审核已完成；导出文件绑定当前就诊和最新病历版本。";
+    return;
+  }
+  if (displayState.key === "pending_review") {
+    notice.textContent = "AI 生成草稿，仅供医生审核；原审核已失效或尚未完成，审核通过后方可导出。";
+    return;
+  }
+  notice.textContent = "AI 生成草稿，仅供医生审核；保存修改并完成审核后方可导出。";
+}
+
+function focusRecordWorkspace() {
+  const recordColumn = document.querySelector(".field-column");
+  if (!recordColumn) return;
+  recordColumn.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+}
+
+function renderTranscriptionFailurePanel() {
+  const panel = $("transcriptionFailurePanel");
+  if (!panel) return;
+  const failed = doctorDisplayState().key === "transcription_failed";
+  panel.hidden = !failed;
+  if (!failed) return;
+  const message = $("transcriptionFailureMessage");
+  const retryButton = $("retryTranscriptionButton");
+  const stageNode = $("transcriptionFailureStage");
+  const codeNode = $("transcriptionFailureCode");
+  const audioStateNode = $("transcriptionFailureAudioState");
+  const reason = doctorFacingTranscriptionIssue() || "转写服务暂时不可用，本次任务已暂停。";
+  if (message) {
+    message.textContent = `${reason} 可以重新转写、改用文本输入，或查看技术详情后交给管理员处理。`;
+  }
+  if (stageNode) {
+    stageNode.textContent = failureStageLabel(appState.asrFailureStage);
+  }
+  if (codeNode) {
+    codeNode.textContent = appState.asrFailureCode || "ASR_FAILED";
+  }
+  if (audioStateNode) {
+    audioStateNode.textContent = appState.asrAudioPreserved || appState.currentAudioId ? "音频已安全保存" : "需要重新上传音频";
+  }
+  if (retryButton) {
+    retryButton.textContent = appState.currentAudioId ? "重新转写" : "重新上传并转写";
+    retryButton.title = appState.currentAudioId
+      ? "使用当前已保存音频重新执行 ASR 转写"
+      : "当前没有可复用音频，请重新上传问诊音频";
+  }
 }
 
 function openDrawer(panelId, title) {
@@ -1084,11 +1919,15 @@ function openDrawer(panelId, title) {
 
 function closeDrawer() {
   if (appState.browserRecordingStatus === "recording" || appState.browserRecordingStatus === "requesting") {
-    cancelBrowserRecording({ silent: true });
+    appState.browserRecordingMessage = "录音正在进行。请先点击“停止”完成试听，或点击“取消”放弃本次录音。";
+    renderBrowserRecordingPanel();
+    showToast("录音进行中，请先停止或取消录音");
+    return false;
   }
   $("drawerBackdrop").classList.remove("active");
   $("drawer").classList.remove("active");
   $("drawer").setAttribute("aria-hidden", "true");
+  return true;
 }
 
 function openDetailDrawer(title, html) {
@@ -1100,7 +1939,11 @@ function openDetailDrawer(title, html) {
 
 function renderPatientBar() {
   const llm = llmDisplayState();
-  $("patientName").textContent = appState.currentEncounter?.patient_display_name || "模拟患者";
+  const displayState = doctorDisplayState();
+  $("patientName").textContent = patientDisplayName(
+    appState.currentEncounter?.patient_display_name,
+    appState.currentEncounter?.patient_deidentified_id || "模拟患者",
+  );
   $("patientProfile").textContent = "女 / 32岁";
   $("sessionId").textContent = appState.currentTaskId
     ? `T-${appState.currentTaskId}`
@@ -1109,18 +1952,12 @@ function renderPatientBar() {
       : appState.currentAudioId
         ? `A-${appState.currentAudioId}`
         : "未创建";
-  $("recordingStatus").textContent = appState.currentEncounter?.id
-    ? `就诊 ${appState.currentEncounter.id} · ${encounterStatusLabel(appState.currentEncounter.status)}`
-    : appState.uploadedFilename
-      || (appState.currentAudioId ? "音频已上传" : appState.currentInputText ? "输入方式：文本" : "未上传");
-  $("topAsrEngineSelect").value = appState.selectedEngine;
-  $("audioEngineSelect").value = appState.selectedEngine;
-  const recordingEngineSelect = $("recordingEngineSelect");
-  if (recordingEngineSelect) recordingEngineSelect.value = appState.selectedEngine;
+  $("recordingStatus").textContent = displayState.inputStatus;
   $("llmProvider").textContent = `${llm.provider} / ${llm.mode || "demo"}`;
   $("llmModel").textContent = llm.model;
   $("llmFallback").textContent = llm.fallbackLabel;
-  $("reviewStatus").textContent = STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入";
+  if ($("patientDataStatus")) $("patientDataStatus").textContent = displayState.dataStatus;
+  $("reviewStatus").textContent = displayState.reviewLabel;
   renderAsrPrewarmStatus();
 }
 
@@ -1133,37 +1970,54 @@ function renderBrowserRecordingPanel() {
   const stopButton = $("stopBrowserRecordingButton");
   const cancelButton = $("cancelBrowserRecordingButton");
   const submitButton = $("submitBrowserRecordingButton");
+  const retryButton = $("retryBrowserRecordingChunksButton");
   const preview = $("browserRecordingPreview");
   const chunkStatus = $("browserRecordingChunkStatus");
   const message = $("browserRecordingMessage");
-  if (!statusLabel || !timer || !startButton || !pauseButton || !resumeButton || !stopButton || !cancelButton || !submitButton || !preview || !chunkStatus || !message) return;
+  if (!statusLabel || !timer || !startButton || !pauseButton || !resumeButton || !stopButton || !cancelButton || !submitButton || !retryButton || !preview || !chunkStatus || !message) return;
 
   const statusLabels = {
     idle: "等待录音",
     requesting: "正在请求麦克风权限",
     recording: "正在录音",
     paused: "录音已暂停",
+    finalizing: "正在准备试听",
     recorded: "录音已就绪",
-    uploading: "正在上传录音",
+    uploading: "正在生成病历",
     error: "录音异常",
   };
   const isRecording = appState.browserRecordingStatus === "recording";
   const isPaused = appState.browserRecordingStatus === "paused";
   const isRequesting = appState.browserRecordingStatus === "requesting";
-  const isUploading = appState.browserRecordingStatus === "uploading";
-  const hasServerChunks = Boolean(appState.browserRecordingSessionId && appState.browserRecordingChunkIndex > 0);
+  const isUploading = ["uploading", "finalizing"].includes(appState.browserRecordingStatus);
+  const hasQueuedChunks = Boolean(appState.browserRecordingSessionId && (appState.browserRecordingChunkIndex > 0 || appState.browserRecordingRecordedChunks > 0));
+  const hasFailedChunks = Boolean(appState.browserRecordingPendingChunks > 0 || appState.browserRecordingRetryStatus);
   statusLabel.textContent = statusLabels[appState.browserRecordingStatus] || statusLabels.idle;
   timer.textContent = formatRelativeTime(appState.browserRecordingElapsedSeconds);
   startButton.disabled = appState.busy || isRequesting || isRecording || isUploading;
   pauseButton.disabled = !isRecording || isUploading;
   resumeButton.disabled = !isPaused || isUploading;
   stopButton.disabled = !(isRecording || isPaused);
-  cancelButton.disabled = isUploading || (appState.browserRecordingStatus === "idle" && !appState.browserRecordingFile);
-  submitButton.disabled = appState.busy || isUploading || !(appState.browserRecordingFile || hasServerChunks);
+  cancelButton.disabled = isUploading || (appState.browserRecordingStatus === "idle" && !hasQueuedChunks && !appState.browserRecordingFinalized);
+  submitButton.disabled = appState.busy || isUploading || !appState.browserRecordingFinalized || hasFailedChunks || appState.browserRecordingRecovering;
+  retryButton.disabled = appState.browserRecordingUploadInFlight || !appState.browserRecordingSessionId || !hasFailedChunks;
   preview.style.display = appState.browserRecordingObjectUrl ? "block" : "none";
   chunkStatus.textContent = appState.browserRecordingChunkStatus || "";
-  message.textContent = appState.browserRecordingMessage || "";
+  message.textContent = appState.browserRecordingMessage || browserRecordingDefaultMessage();
   message.classList.toggle("error", appState.browserRecordingStatus === "error");
+}
+
+function browserRecordingDefaultMessage() {
+  if (!encounterReadyForInput()) {
+    return "请先选择已报到或问诊中的患者，再开始录音生成。";
+  }
+  if (appState.browserRecordingStatus === "recorded") {
+    return "录音已停止，可先试听；确认后点击“上传并生成病历”。";
+  }
+  if (appState.browserRecordingStatus === "uploading") {
+    return "正在转写并生成病历，请保持页面打开。";
+  }
+  return "点击“开始录音”后允许麦克风权限；停止后可试听并上传生成病历。";
 }
 
 function renderAsrPrewarmStatus() {
@@ -1339,8 +2193,14 @@ function diagnosisList(items) {
 }
 
 function diagnosisConfidence(diagnosis = {}) {
-  if (diagnosis.confidence == null) return "规则匹配度待评估";
-  return `规则匹配度 ${Math.round(Number(diagnosis.confidence) * 100)}%`;
+  if (diagnosis.confidence == null) return "证据匹配度待评估（非疾病概率）";
+  return `证据匹配度 ${Math.round(Number(diagnosis.confidence) * 100)}%（非疾病概率）`;
+}
+
+function doctorFacingDiagnosisText(text = "") {
+  return String(text || "")
+    .replace(/fever_respiratory_v\d+/gi, "发热/呼吸系统规则包")
+    .replace(new RegExp("规则匹配" + "度", "g"), "证据匹配度");
 }
 
 function renderDiagnosisDetailLine(label, value) {
@@ -1359,18 +2219,81 @@ function renderDiagnosisDetailList(label, items) {
   return renderDiagnosisDetailLine(label, values.join("；"));
 }
 
+function diagnosisReferences(diagnosis = {}) {
+  const references = diagnosis.references
+    || diagnosis.clinical_references
+    || diagnosis.guideline_references
+    || diagnosis.reference
+    || diagnosis.source_references
+    || [];
+  return Array.isArray(references) ? references.filter(Boolean) : [];
+}
+
+function referenceStatusLabel(reference = {}) {
+  const verification = reference.verification_status || reference.verification || "";
+  const clinicalReview = reference.clinical_review_status || reference.clinical_status || "";
+  if (clinicalReview === "needs_medical_review") {
+    return "来源已核验，临床映射待复核";
+  }
+  if (clinicalReview === "clinically_reviewed") {
+    return "来源已核验，临床映射已复核";
+  }
+  if (verification === "verified") {
+    return "来源已核验";
+  }
+  if (verification === "unverified") {
+    return "来源待核验";
+  }
+  return "来源状态待核验";
+}
+
+function referenceMetaLine(reference = {}) {
+  const organization = reference.organization || reference.institution || reference.publisher || reference.source || "";
+  const version = reference.version || reference.year || reference.published_at || "";
+  return [organization, version].filter(Boolean).join(" · ");
+}
+
+function renderReferenceList(diagnosis = {}, { compact = false } = {}) {
+  const references = diagnosisReferences(diagnosis);
+  if (!references.length) {
+    return `<div class="empty-state">暂无指南来源信息，需医生结合原文证据判断。</div>`;
+  }
+  return `
+    <div class="${compact ? "reference-list compact" : "reference-list"}">
+      ${references.map((reference) => {
+        if (typeof reference === "string") {
+          return `<article class="reference-item">
+            <strong>${escapeHtml(reference)}</strong>
+            <span>${escapeHtml(referenceStatusLabel({}))}</span>
+          </article>`;
+        }
+        const title = reference.title || reference.name || reference.reference_id || "未命名来源";
+        const meta = referenceMetaLine(reference);
+        const url = reference.url || reference.link || "";
+        return `<article class="reference-item">
+          <strong>${escapeHtml(title)}</strong>
+          ${meta ? `<span>${escapeHtml(meta)}</span>` : ""}
+          <span>${escapeHtml(referenceStatusLabel(reference))}</span>
+          ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">查看来源</a>` : ""}
+        </article>`;
+      }).join("")}
+    </div>
+  `;
+}
+
 function renderDiagnosisDetails(diagnosis = {}) {
   const ruleParts = appState.viewMode === "debug"
     ? [diagnosis.rule_id, diagnosisConfidence(diagnosis)]
     : [diagnosisConfidence(diagnosis)];
   const ruleText = ruleParts.filter(Boolean).join(" · ");
   const details = [
-    renderDiagnosisDetailLine("规则匹配", ruleText),
-    renderDiagnosisDetailLine("触发原因", diagnosis.reason),
+    renderDiagnosisDetailLine("证据匹配", doctorFacingDiagnosisText(ruleText)),
+    renderDiagnosisDetailLine("触发原因", doctorFacingDiagnosisText(diagnosis.reason)),
     renderDiagnosisDetailList("建议检查", diagnosis.suggested_checks),
     renderDiagnosisDetailList("用药提示", diagnosis.medication_notes),
     renderDiagnosisDetailList("风险提醒", diagnosis.risk_warnings),
     renderDiagnosisDetailList("建议补问", diagnosis.follow_up_questions),
+    detailSection("指南来源与核验状态", renderReferenceList(diagnosis)),
   ].join("");
   return details || `<div class="diagnosis-detail"><span>规则说明</span><strong>暂无扩展说明，需医生结合原始转写复核。</strong></div>`;
 }
@@ -1385,13 +2308,13 @@ function renderFieldDetailContent(key) {
     const diagnoses = draftDiagnoses(fields);
     return diagnoses.length
       ? diagnoses.map((diagnosis, index) => `
-          ${detailSection(`初步诊断 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
+          ${detailSection(`候选诊断 ${index + 1}（待医生确认）：${diagnosis.name || "未命名诊断"}`, `
             <div class="detail-kv"><span>状态</span><strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong></div>
-            <div class="detail-kv"><span>规则匹配度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
+            <div class="detail-kv"><span>证据匹配度（非疾病概率）</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
             <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
           `)}
         `).join("")
-      : `<div class="empty-state">暂无初步诊断。生成病历后会显示鉴别诊断参考摘要，需医生判断。</div>`;
+      : `<div class="empty-state">暂无候选诊断（待医生确认）。生成病历后会显示鉴别诊断参考摘要，需医生判断。</div>`;
   }
   const field = fields[key] || null;
   const status = fieldStatus(field, key);
@@ -1429,7 +2352,7 @@ function renderDiagnosisDetailContent(index) {
         <strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong>
       </div>
       <div class="detail-kv">
-        <span>规则匹配度</span>
+        <span>证据匹配度（非疾病概率）</span>
         <strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong>
       </div>
       <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
@@ -1443,7 +2366,7 @@ function renderDiagnosisDetailContent(index) {
           : (diagnosisQuality.suggested_action || "鉴别诊断参考结构完整，等待医生判断。")
       )}</div>
     `) : ""}
-    ${detailSection("诊断证据", `<div class="detail-text">${escapeHtml((diagnosis.evidence || []).map((item) => item.text).filter(Boolean).join("\n") || "暂无鉴别诊断参考证据。")}</div>`)}
+    ${detailSection("诊断证据", `<div class="detail-text">${escapeHtml(doctorFacingDiagnosisText((diagnosis.evidence || []).map((item) => item.text).filter(Boolean).join("\n") || "暂无鉴别诊断参考证据。"))}</div>`)}
   `;
 }
 
@@ -1474,9 +2397,262 @@ function renderAllFieldsDetailContent() {
   return fieldSections + diagnosisSection;
 }
 
+function clearApprovalReviewSelections() {
+  appState.approvalRegularFieldsConfirmed = false;
+  appState.approvalMissingDecisions = {};
+  appState.approvalDiagnosisDecisions = {};
+  appState.approvalHighRiskConfirmations = {};
+}
+
+function currentRevisionInfo(readiness = appState.currentExportReadiness) {
+  const task = appState.currentTask || {};
+  const result = task.result_json || {};
+  const revision = result.record_revision || {};
+  return {
+    revisionId: readiness?.revision_id || task.current_record_revision_id || revision.id || null,
+    revisionNumber: readiness?.revision_number || task.current_record_revision_no || revision.revision_no || null,
+    contentHash: readiness?.content_hash || revision.content_hash || "",
+  };
+}
+
+function currentApprovalRevisionKey(readiness = appState.currentExportReadiness) {
+  const info = currentRevisionInfo(readiness);
+  if (!info.revisionId && !info.contentHash) return "";
+  return `${info.revisionId || ""}:${info.contentHash || ""}`;
+}
+
+function syncApprovalReviewStateWithRevision(readiness = appState.currentExportReadiness) {
+  const key = currentApprovalRevisionKey(readiness);
+  if (!key) return;
+  if (appState.approvalRevisionId !== key) {
+    clearApprovalReviewSelections();
+    appState.approvalRevisionId = key;
+  }
+}
+
+function approvalFieldItems(fields) {
+  if (!fields) return [];
+  return FIELD_DEFS
+    .map(([key, title]) => ({ key, title, field: fields[key] || null }))
+    .filter((item) => item.field);
+}
+
+function fieldHasReviewableContent(field) {
+  return Boolean(field && !field.missing && field.value);
+}
+
+function fieldReviewComplete(field) {
+  return ["content_confirmed", "not_asked_confirmed", "missing_accepted"].includes(field?.doctor_review_status);
+}
+
+function diagnosisReviewComplete(diagnosis) {
+  return ["candidate_confirmed", "ai_candidate_deleted"].includes(diagnosis?.doctor_review_status);
+}
+
+function highRiskReviewItems(fields) {
+  if (!fields) return [];
+  const items = [];
+  approvalFieldItems(fields).forEach(({ key, title, field }) => {
+    if (field?.status === "conflicting") {
+      items.push({
+        key: `field:${key}`,
+        label: `${title}证据冲突`,
+        confirmed: Boolean(field.high_risk_confirmed_by_doctor),
+      });
+    }
+  });
+  (fields.candidate_diagnoses || []).forEach((diagnosis, index) => {
+    if ((diagnosis.risk_warnings || []).length) {
+      items.push({
+        key: `diagnosis:${index}`,
+        label: `${diagnosis.name || `候选诊断${index + 1}`}高风险提示`,
+        confirmed: Boolean(diagnosis.high_risk_confirmed_by_doctor),
+      });
+    }
+  });
+  return items;
+}
+
+function pendingApprovalCount(fields) {
+  if (!fields) return 0;
+  let pending = 0;
+  const fieldItems = approvalFieldItems(fields);
+  const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
+  if (regularFields.some(({ field }) => !fieldReviewComplete(field)) && !appState.approvalRegularFieldsConfirmed) {
+    pending += 1;
+  }
+  fieldItems
+    .filter(({ field }) => !fieldHasReviewableContent(field))
+    .forEach(({ key, field }) => {
+      if (!fieldReviewComplete(field) && !appState.approvalMissingDecisions[key]) pending += 1;
+    });
+  (fields.candidate_diagnoses || []).forEach((diagnosis, index) => {
+    if (!diagnosisReviewComplete(diagnosis) && !appState.approvalDiagnosisDecisions[index]) pending += 1;
+  });
+  highRiskReviewItems(fields).forEach((item) => {
+    if (!item.confirmed && !appState.approvalHighRiskConfirmations[item.key]) pending += 1;
+  });
+  return pending;
+}
+
+function approvalStatusPill(done) {
+  return `<span class="approval-item-status ${done ? "done" : "pending"}">${done ? "已处理" : "待处理"}</span>`;
+}
+
+function renderApprovalChecklist(fields) {
+  if (!fields || isRecordPreviewActive() || !appState.currentTaskId) return "";
+  syncApprovalReviewStateWithRevision();
+  const revision = currentRevisionInfo();
+  const fieldItems = approvalFieldItems(fields);
+  const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
+  const missingFields = fieldItems.filter(({ field }) => !fieldHasReviewableContent(field));
+  const diagnoses = fields.candidate_diagnoses || [];
+  const risks = highRiskReviewItems(fields);
+  const pending = pendingApprovalCount(fields);
+  const regularDone = regularFields.length === 0
+    || regularFields.every(({ field }) => fieldReviewComplete(field))
+    || appState.approvalRegularFieldsConfirmed;
+  const missingRows = missingFields.map(({ key, title, field }) => {
+    const selected = appState.approvalMissingDecisions[key] || field.doctor_review_status || "";
+    const done = fieldReviewComplete(field) || Boolean(appState.approvalMissingDecisions[key]);
+    return `
+      <div class="approval-item" data-approval-item="field:${escapeHtml(key)}">
+        <div>
+          <strong>${escapeHtml(title)}</strong>
+          <span>${escapeHtml(field?.hint || "本次未采集，需要医生处理")}</span>
+        </div>
+        ${approvalStatusPill(done)}
+        <div class="approval-item-actions">
+          <button type="button" class="${selected === "confirm_not_asked" ? "active" : ""}" data-approval-missing-key="${escapeHtml(key)}" data-approval-action="confirm_not_asked">确认未询问</button>
+          <button type="button" class="${selected === "accept_missing" || selected === "missing_accepted" ? "active" : ""}" data-approval-missing-key="${escapeHtml(key)}" data-approval-action="accept_missing">接受本次缺失</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+  const diagnosisRows = diagnoses.map((diagnosis, index) => {
+    const selected = appState.approvalDiagnosisDecisions[index] || diagnosis.doctor_review_status || "";
+    const done = diagnosisReviewComplete(diagnosis) || Boolean(appState.approvalDiagnosisDecisions[index]);
+    return `
+      <div class="approval-item" data-approval-item="diagnosis:${index}">
+        <div>
+          <strong>${escapeHtml(diagnosis.name || `候选诊断${index + 1}`)}</strong>
+          <span>AI候选诊断需医生明确保留或删除。</span>
+        </div>
+        ${approvalStatusPill(done)}
+        <div class="approval-item-actions">
+          <button type="button" class="${selected === "confirm_candidate" || selected === "candidate_confirmed" ? "active" : ""}" data-approval-diagnosis-index="${index}" data-approval-action="confirm_candidate">接受保留</button>
+          <button type="button" class="${selected === "delete_ai_candidate" || selected === "ai_candidate_deleted" ? "active" : ""}" data-approval-diagnosis-index="${index}" data-approval-action="delete_ai_candidate">删除AI候选</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+  const riskRows = risks.map((item) => {
+    const selected = item.confirmed || appState.approvalHighRiskConfirmations[item.key];
+    return `
+      <div class="approval-item high-risk" data-approval-item="${escapeHtml(item.key)}">
+        <div>
+          <strong>${escapeHtml(item.label)}</strong>
+          <span>高风险或证据冲突项必须逐项单独确认。</span>
+        </div>
+        ${approvalStatusPill(Boolean(selected))}
+        <div class="approval-item-actions">
+          <button type="button" class="${selected ? "active" : ""}" data-approval-risk-key="${escapeHtml(item.key)}">已单独确认</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+  return `
+    <section class="approval-checklist" aria-label="分项审核">
+      <div class="approval-checklist-head">
+        <div>
+          <span class="eyebrow">医生分项审核</span>
+          <h3>当前版本 #${escapeHtml(revision.revisionNumber || revision.revisionId || "-")}</h3>
+          <p>${pending ? `还有 ${pending} 项未处理，完成后才能导出。` : "所有审核项已处理，可完成病历审核。"}</p>
+        </div>
+        <span class="status-badge ${pending ? "missing" : "confirmed"}">${pending ? `${pending}项待处理` : "可完成审核"}</span>
+      </div>
+      <div class="approval-section">
+        <div class="approval-section-title">
+          <strong>普通字段</strong>
+          ${approvalStatusPill(regularDone)}
+        </div>
+        <button type="button" class="approval-primary-action ${regularDone ? "active" : ""}" data-approval-confirm-regular>
+          确认当前全部普通字段
+        </button>
+      </div>
+      ${missingFields.length ? `<div class="approval-section"><div class="approval-section-title"><strong>缺失项处理</strong></div>${missingRows}</div>` : ""}
+      ${diagnoses.length ? `<div class="approval-section"><div class="approval-section-title"><strong>候选诊断处理</strong></div>${diagnosisRows}</div>` : ""}
+      ${risks.length ? `<div class="approval-section"><div class="approval-section-title"><strong>高风险与冲突确认</strong></div>${riskRows}</div>` : ""}
+    </section>
+  `;
+}
+
+async function buildTaskApprovalPayload() {
+  if (!appState.currentTaskId) throw new Error("暂无可确认的任务");
+  const fields = activeRecordFields();
+  if (!fields) throw new Error("暂无可审核的病历字段");
+  const readiness = await refreshExportReadiness();
+  const revision = currentRevisionInfo(readiness);
+  syncApprovalReviewStateWithRevision(readiness);
+  if (!revision.revisionId || !revision.contentHash) {
+    throw new Error("缺少当前病历版本信息，请刷新后重试。");
+  }
+  const payload = {
+    revision_id: Number(revision.revisionId),
+    content_hash: revision.contentHash,
+    confirm_all_regular_fields: Boolean(appState.approvalRegularFieldsConfirmed),
+    fields: [],
+    diagnoses: [],
+    high_risk_conflicts: [],
+  };
+  const fieldItems = approvalFieldItems(fields);
+  const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
+  if (regularFields.some(({ field }) => !fieldReviewComplete(field)) && !appState.approvalRegularFieldsConfirmed) {
+    throw new Error("请先显式确认当前全部普通字段。");
+  }
+  fieldItems
+    .filter(({ field }) => !fieldHasReviewableContent(field))
+    .forEach(({ key, title, field }) => {
+      const action = appState.approvalMissingDecisions[key] || field.doctor_review_status;
+      if (!["confirm_not_asked", "missing_accepted", "accept_missing"].includes(action)) {
+        throw new Error(`请处理缺失项：${title}`);
+      }
+      payload.fields.push({
+        key,
+        action: action === "missing_accepted" ? "accept_missing" : action,
+      });
+    });
+  (fields.candidate_diagnoses || []).forEach((diagnosis, index) => {
+    const action = appState.approvalDiagnosisDecisions[index] || diagnosis.doctor_review_status;
+    if (!["candidate_confirmed", "ai_candidate_deleted", "confirm_candidate", "delete_ai_candidate"].includes(action)) {
+      throw new Error(`请处理候选诊断：${diagnosis.name || `候选诊断${index + 1}`}`);
+    }
+    payload.diagnoses.push({
+      index,
+      action: action === "candidate_confirmed" ? "confirm_candidate" : action === "ai_candidate_deleted" ? "delete_ai_candidate" : action,
+    });
+  });
+  highRiskReviewItems(fields).forEach((item) => {
+    if (!item.confirmed && !appState.approvalHighRiskConfirmations[item.key]) {
+      throw new Error(`请单独确认高风险项：${item.label}`);
+    }
+    if (item.key.startsWith("field:")) {
+      const fieldKey = item.key.split(":", 2)[1];
+      if (!payload.fields.some((fieldItem) => fieldItem.key === fieldKey)) {
+        payload.fields.push({ key: fieldKey, action: "confirm_content" });
+      }
+    }
+    payload.high_risk_conflicts.push({ key: item.key, confirmed: true });
+  });
+  return payload;
+}
+
 function renderFields() {
   const fields = activeRecordFields();
   const isPreview = isRecordPreviewActive();
+  const displayState = doctorDisplayState();
+  const isApprovedDisplay = ["approved", "exported"].includes(displayState.key);
+  const highlightClass = appState.recordHighlightUntil > Date.now() ? "record-field-updated" : "";
   if (!fields) {
     $("fieldCountBadge").textContent = "待生成";
     $("fieldCountBadge").className = "status-badge neutral";
@@ -1485,9 +2661,15 @@ function renderFields() {
   let missingCount = 0;
   const displayFieldDefs = appState.viewMode === "doctor" ? DRAFT_FIELD_DEFS : FIELD_DEFS;
   const cards = displayFieldDefs.map(([key, title]) => {
-    const status = appState.viewMode === "doctor"
+    let status = appState.viewMode === "doctor"
       ? draftFieldStatus(fields, key)
       : fieldStatus(fields?.[key] || null, key);
+    if (isApprovedDisplay && ["missing", "partial", "low"].includes(status.key)) {
+      status = {
+        key: "confirmed",
+        label: status.key === "missing" ? "医生已确认未采集" : "医生已确认部分采集",
+      };
+    }
     if (status.key === "missing") missingCount += 1;
     const value = appState.viewMode === "doctor" ? draftFieldValue(fields, key) : fieldValue(fields, key);
     const evidence = appState.viewMode === "doctor" ? draftFieldEvidence(fields, key) : fieldEvidence(fields?.[key] || null, key);
@@ -1513,7 +2695,7 @@ function renderFields() {
     `
       : "";
     return `
-      <article class="field-card ${status.key} ${fieldWeightClass(key)} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}">
+      <article class="field-card ${status.key} ${fieldWeightClass(key)} ${highlightClass} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${isApprovedDisplay ? "readonly-field" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}">
         <div class="field-head">
           <span class="field-title">${escapeHtml(title)}</span>
           ${appState.viewMode === "doctor"
@@ -1560,13 +2742,15 @@ function renderFields() {
     const allMissingCount = missingItems().length;
     $("fieldCountBadge").textContent = isPreview
       ? "实时预览"
-      : allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
-    $("fieldCountBadge").className = `status-badge ${isPreview ? "info" : allMissingCount ? "missing" : "confirmed"}`;
+      : isApprovedDisplay
+        ? "已审核"
+        : allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
+    $("fieldCountBadge").className = `status-badge ${isApprovedDisplay ? "confirmed" : isPreview ? "info" : allMissingCount ? "missing" : "confirmed"}`;
   }
   const previewNotice = isPreview
     ? `<div class="preview-notice">${escapeHtml(previewNoticeText())}；正式生成病历后会替换为审核版结果。</div>`
     : "";
-  $("recordFields").innerHTML = previewNotice + cards + diagnoses + summaryFooter + draftLegend;
+  $("recordFields").innerHTML = previewNotice + cards + diagnoses + renderApprovalChecklist(fields) + summaryFooter + draftLegend;
 }
 
 function classifySpeaker(line, segment = {}) {
@@ -2027,6 +3211,7 @@ function transcriptRows() {
         roleConfidence: displaySegment.role_confidence,
         roleSource: displaySegment.role_source,
         roleNote: displaySegment.role_note,
+        roleWarning: displaySegment.role_warning,
         needsReview: transcriptRoleNeedsReview(displaySegment, label),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
@@ -2054,6 +3239,7 @@ function transcriptRows() {
         roleConfidence: displaySegment.role_confidence,
         roleSource: displaySegment.role_source,
         roleNote: displaySegment.role_note,
+        roleWarning: displaySegment.role_warning,
         needsReview: transcriptRoleNeedsReview(displaySegment, label),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
@@ -2190,17 +3376,38 @@ async function restoreAsrSessionFromUrl() {
       appState.taskStatus = "TRANSCRIBING";
       appState.asrPhase = "model_loading";
       listenForAsrEvents(session.events_url || `/api/asr/sessions/${sessionId}/events`);
-    } else if (session.status === "recording") {
-      const chunkStatus = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/chunks/status`);
+    } else if (["created", "recording", "finalizing", "recorded"].includes(session.status)) {
+      const localRows = await listBrowserRecordingQueueEntries(session.session_id).catch(() => []);
+      if (session.status === "created" && !localRows.length) {
+        renderAll();
+        return;
+      }
       appState.browserRecordingSessionId = session.session_id;
-      appState.browserRecordingStatus = "paused";
-      appState.browserRecordingChunkIndex = Number(chunkStatus.next_chunk_index || 0);
-      appState.browserRecordingChunkStatus = `已恢复 ${chunkStatus.chunk_count || 0} 个音频块`;
-      appState.browserRecordingMessage = "录音会话已恢复，可点击“恢复”继续录音，或结束后合并上传。";
+      const chunkStatus = await reconcileBrowserRecordingQueue(session.session_id);
+      appState.browserRecordingStatus = chunkStatus?.status === "recorded" ? "recorded" : "paused";
+      appState.browserRecordingChunkIndex = Number(chunkStatus?.next_chunk_index || 0);
+      appState.browserRecordingRecordedChunks = Math.max(
+        Number(chunkStatus?.chunk_count || 0),
+        appState.browserRecordingRecordedChunks || 0,
+      );
+      if (chunkStatus?.status === "recorded" && chunkStatus.audio_id) {
+        appState.browserRecordingFinalized = chunkStatus;
+        appState.browserRecordingObjectUrl = chunkStatus.media_url || `/api/audio/${encodeURIComponent(chunkStatus.audio_id)}/media`;
+        const preview = $("browserRecordingPreview");
+        if (preview) {
+          preview.src = appState.browserRecordingObjectUrl;
+          preview.load();
+        }
+        appState.browserRecordingMessage = "录音会话已恢复，可试听并继续生成病历。";
+      } else if (appState.browserRecordingMissingChunks?.length) {
+        appState.browserRecordingMessage = `录音会话缺少第 ${appState.browserRecordingMissingChunks.join(", ")} 段，本地也没有可补传数据。`;
+        appState.browserRecordingStatus = "error";
+      } else {
+        appState.browserRecordingMessage = "录音会话已恢复，可点击“恢复”继续录音，或停止后准备试听。";
+      }
+      updateBrowserRecordingChunkStatusText();
       appState.taskStatus = "CREATED";
     }
-    $("topAsrEngineSelect").value = appState.selectedEngine;
-    $("audioEngineSelect").value = appState.selectedEngine;
     renderAll();
   } catch (error) {
     appState.asrLastError = `会话恢复失败：${error?.message || error}`;
@@ -2319,6 +3526,7 @@ function toggleAudioPlayback() {
 function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unreviewedCount }) {
   const progress = asrProgressPercent();
   const total = appState.asrStreamTotalSegments || asr?.segments?.length || rows.length || 0;
+  const friendlyIssue = doctorFacingTranscriptionIssue();
   const current = asr
     ? total
     : Math.min(appState.asrStreamCurrentSegment || rows.length || 0, total || rows.length || 0);
@@ -2369,8 +3577,7 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
       <div class="progress-track" aria-label="转写进度">
         <span style="width: ${progress}%"></span>
       </div>
-      ${appState.asrLastError ? `<div class="safety-strip danger">${escapeHtml(appState.asrLastError)}</div>` : ""}
-      ${appState.asrChunkLastError ? `<div class="safety-strip danger">${escapeHtml(appState.asrChunkLastError)}</div>` : ""}
+      ${friendlyIssue ? `<div class="safety-strip danger">${escapeHtml(friendlyIssue)}</div>` : ""}
       ${appState.asrRetryHint ? `<div class="safety-strip warning"><strong>重试提示</strong><br>${escapeHtml(appState.asrRetryHint)}</div>` : ""}
       ${actionButton || detailAction ? `<div class="quick-action-row">${actionButton}${detailAction}</div>` : ""}
     </section>
@@ -2382,6 +3589,7 @@ function renderTranscript() {
   const rows = transcriptRows();
   const isStreaming = appState.currentAsrSessionId && appState.taskStatus === "TRANSCRIBING" && !asr;
   const hasTranscriptIssue = Boolean(appState.asrLastError || appState.asrChunkLastError);
+  const friendlyIssue = doctorFacingTranscriptionIssue();
   const progressPercent = asrProgressPercent();
   renderAudioPlayer();
 
@@ -2422,10 +3630,14 @@ function renderTranscript() {
     ? `<div class="empty-state transcript-empty">已识别 ${rows.length} 段。播放音频后，文字会跟随播放位置出现。</div>`
     : "";
   const issueBlock = hasTranscriptIssue
-    ? `<div class="transcript-inline-alert">${escapeHtml(appState.asrLastError || appState.asrChunkLastError)}</div>`
+    ? `<div class="transcript-inline-alert">${escapeHtml(friendlyIssue)}</div>`
     : "";
 
   $("transcriptList").innerHTML = `
+    <label class="transcript-follow-toggle">
+      <input type="checkbox" data-transcript-auto-follow ${appState.transcriptAutoFollow ? "checked" : ""}>
+      <span>自动跟随最新内容</span>
+    </label>
     ${issueBlock}
     ${streamingEmptyBlock}
     ${followEmptyBlock}
@@ -2440,13 +3652,19 @@ function renderTranscript() {
           tabindex="0"
         >
           <span class="transcript-row-time">${escapeHtml(item.time)}</span>
-          <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount, speakerAliases))}】</span>
+          <span class="transcript-role-cell">
+            <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount, speakerAliases))}】</span>
+            ${item.roleWarning ? `<span class="transcript-role-warning">系统自动推定</span>` : ""}
+          </span>
           <span class="transcript-row-text">${escapeHtml(item.text || "（无文本）")}</span>
           <button type="button" class="transcript-row-link" data-open-detail="transcript:${item.index}" data-busy-allowed="true">详情</button>
         </div>
       `).join("")}
     </div>
   `;
+  if (appState.transcriptAutoFollow && isStreaming) {
+    $("transcriptList").scrollTop = $("transcriptList").scrollHeight;
+  }
 }
 
 function renderTranscriptDetailContent(target = "all") {
@@ -2721,7 +3939,7 @@ function saveBehaviorBlock() {
             <li>保存病历字段：是，保存医生端当前字段卡片内容。</li>
             <li>保存 ASRResult：不是此按钮负责；转写完成时已保存在 <code>data/uploads/{audio_id}.transcript.json</code>。</li>
             <li>保存 Agent Trace：不单独写库；可通过 <code>/api/tasks/{task_id}/trace</code> 和调试抽屉查看。</li>
-            <li>生成文件：不会；只有点击“确认导出”后才写入 <code>data/outputs/</code>。</li>
+            <li>生成文件：不会；只有点击“导出已审核病历”后才写入 <code>data/outputs/</code>。</li>
           </ul>
         </div>
         <div class="safety-strip">
@@ -2772,6 +3990,148 @@ function diagnosisRiskLine(diagnosis = {}) {
     || diagnosisList(diagnosis.suggested_checks)[0]
     || diagnosisList(diagnosis.follow_up_questions)[0]
     || "需结合查体、检查和病情变化继续判断。";
+}
+
+function applyLiveClinicalDraft(data = {}) {
+  const version = Number(data.version || 0);
+  if (!version || version <= Number(appState.liveClinicalVersion || 0)) return false;
+  appState.liveClinicalVersion = version;
+  appState.liveClinicalDraft = {
+    live_session_id: data.live_session_id || data.session_id || appState.currentAsrSessionId || "",
+    session_id: data.session_id || data.live_session_id || appState.currentAsrSessionId || "",
+    version,
+    based_on_sequence: Number(data.based_on_sequence ?? -1),
+    status: data.status || "temporary",
+    updated_at: data.updated_at || new Date().toISOString(),
+    record_patch: data.record_patch || {},
+    alerts: (data.alerts || []).slice(0, 3),
+    missing_items: (data.missing_items || []).slice(0, 3),
+    differentials: (data.differentials || []).slice(0, 3),
+    care_plan: (data.care_plan || []).slice(0, 3),
+    next_questions: (data.next_questions || []).slice(0, 3),
+    stable_segment_count: Number(data.stable_segment_count || 0),
+  };
+  appState.liveClinicalStatus = "completed";
+  appState.liveClinicalUpdatedAt = appState.liveClinicalDraft.updated_at;
+  appState.liveClinicalError = "";
+  return true;
+}
+
+function liveClinicalDraft() {
+  return appState.liveClinicalDraft || null;
+}
+
+function liveClinicalFieldRows(recordPatch = {}) {
+  const labels = {
+    chief_complaint: "主诉",
+    present_illness: "现病史",
+    past_history: "既往史",
+    allergy_history: "过敏史",
+    associated_symptoms: "伴随症状",
+  };
+  return Object.entries(recordPatch)
+    .map(([key, value]) => ({
+      key,
+      label: labels[key] || key,
+      value: value?.value || "",
+      evidence: value?.evidence_segment_ids || [],
+    }))
+    .filter((item) => item.value);
+}
+
+function renderLiveClinicalReferenceCard() {
+  const draft = liveClinicalDraft();
+  if (!draft) {
+    return assistCard({
+      title: "实时临床参考",
+      badgeClass: appState.liveClinicalStatus === "failed" ? "missing" : "neutral",
+      badgeText: appState.liveClinicalStatus === "processing" ? "生成中" : "待转写",
+      body: appState.liveClinicalError
+        ? `<div class="empty-state">${escapeHtml(appState.liveClinicalError)}</div>`
+        : `<div class="empty-state">实时问诊开始后，稳定转写片段会生成临时病历和参考摘要。</div>`,
+    });
+  }
+  const alerts = draft.alerts || [];
+  const missing = draft.missing_items || [];
+  const differentials = draft.differentials || [];
+  const carePlan = draft.care_plan || [];
+  const fields = liveClinicalFieldRows(draft.record_patch);
+  return assistCard({
+    title: "实时临床参考",
+    badgeClass: "candidate",
+    badgeText: `临时 v${draft.version}`,
+    detailTarget: "assist:live-clinical",
+    detailLabel: "查看详情",
+    body: `
+      <div class="assist-plan-block">
+        <span>实时草稿</span>
+        <strong>${escapeHtml(fields[0]?.value || "稳定转写累积后更新")}</strong>
+      </div>
+      ${alerts.length ? `<div class="assist-check-row warning"><span></span><strong>${escapeHtml(alerts[0].summary || alerts[0].title || "存在风险提示")}</strong></div>` : ""}
+      <div class="assist-mini-grid">
+        <div><span>待补充</span><strong>${escapeHtml(missing.map((item) => item.summary).slice(0, 3).join("；") || "暂无")}</strong></div>
+        <div><span>鉴别参考</span><strong>${escapeHtml(differentials.map((item) => item.name).slice(0, 3).join("；") || "暂无")}</strong></div>
+        <div><span>诊疗参考</span><strong>${escapeHtml(carePlan.map((item) => item.title).slice(0, 3).join("；") || "暂无")}</strong></div>
+        <div><span>依据片段</span><strong>${escapeHtml(String(draft.stable_segment_count || 0))} 段</strong></div>
+      </div>
+      <div class="summary-note">实时草稿为临时内容，停止问诊并完成收敛后方可进入医生审核。</div>
+    `,
+  });
+}
+
+function renderLiveClinicalDetailContent() {
+  const draft = liveClinicalDraft();
+  if (!draft) return `<div class="empty-state">暂无实时临床参考。</div>`;
+  const fields = liveClinicalFieldRows(draft.record_patch);
+  const evidenceButton = (segmentId) => segmentId
+    ? `<button type="button" class="assist-evidence-quote linked" data-evidence-segment-id="${escapeHtml(segmentId)}">${escapeHtml(segmentId)}<span>定位证据</span></button>`
+    : "";
+  const listRows = (items, label, renderer) => detailSection(label, items.length
+    ? `<div class="detail-evidence-list">${items.map(renderer).join("")}</div>`
+    : `<div class="empty-state">暂无${escapeHtml(label)}。</div>`);
+  return `
+    ${detailSection("实时状态", `
+      <div class="detail-kv"><span>版本</span><strong>${escapeHtml(String(draft.version))}</strong></div>
+      <div class="detail-kv"><span>基于片段序号</span><strong>${escapeHtml(String(draft.based_on_sequence))}</strong></div>
+      <div class="detail-kv"><span>状态</span><strong>临时结果，待医生确认</strong></div>
+      <div class="detail-kv"><span>更新时间</span><strong>${escapeHtml(draft.updated_at || "-")}</strong></div>
+    `)}
+    ${listRows(fields, "实时病历字段", (item) => `
+      <div class="assist-evidence-quote">
+        <strong>${escapeHtml(item.label)}</strong><br>${escapeHtml(item.value)}
+        ${(item.evidence || []).map(evidenceButton).join("")}
+      </div>
+    `)}
+    ${listRows(draft.alerts || [], "危险征象", (item) => `<div class="assist-evidence-quote">${escapeHtml(item.title || "")}<br>${escapeHtml(item.summary || "")}</div>`)}
+    ${listRows(draft.missing_items || [], "待补充项", (item) => `<div class="assist-evidence-quote">${escapeHtml(item.summary || "")}</div>`)}
+    ${listRows(draft.differentials || [], "鉴别诊断参考", (item) => `
+      <div class="assist-evidence-quote">
+        <strong>${escapeHtml(item.name || "")}</strong><br>${escapeHtml(item.summary || "")}
+        <div>缺失证据：${escapeHtml((item.missing_evidence || []).join("；") || "需医生继续判断")}</div>
+        <div>建议追问：${escapeHtml((item.recommended_questions || []).join("；") || "暂无")}</div>
+        <div>推荐检查：${escapeHtml((item.recommended_tests || []).join("；") || "暂无")}</div>
+      </div>
+    `)}
+    ${listRows(draft.care_plan || [], "诊疗方案参考", (item) => `
+      <div class="assist-evidence-quote">
+        <strong>${escapeHtml(item.title || "")}</strong><br>${escapeHtml(item.summary || "")}
+        <div>${escapeHtml(item.reason || "需医生确认")}</div>
+        ${(item.evidence_segment_ids || []).map(evidenceButton).join("")}
+      </div>
+    `)}
+    ${listRows(draft.next_questions || [], "建议继续询问", (item) => `<div class="assist-evidence-quote">${escapeHtml(item.question || "")}</div>`)}
+    ${detailSection("医生操作", `
+      <div class="live-clinical-actions">
+        <button type="button" data-live-clinical-action="mark-asked">标记已询问</button>
+        <button type="button" data-live-clinical-action="add-question">加入待问</button>
+        <button type="button" data-live-clinical-action="adopt-candidate">采纳为候选</button>
+        <button type="button" data-live-clinical-action="defer">暂不采纳</button>
+        <button type="button" data-live-clinical-action="ignore">忽略提示</button>
+        <button type="button" data-live-clinical-action="close">关闭详情</button>
+      </div>
+      <div class="summary-note">采纳仅写入医生可编辑草稿或候选状态，不形成已审核诊断或正式医嘱。</div>
+    `)}
+  `;
 }
 
 function renderCandidateDiagnosisCard(diagnoses) {
@@ -2877,6 +4237,60 @@ function renderEvidenceCard(evidence, diagnoses) {
         : `<div class="assist-evidence-quote">${escapeHtml(item.text)}</div>`).join("")
         + (items.length > 2 ? `<div class="summary-note">另有 ${items.length - 2} 条证据，点击详情查看。</div>` : "")
       : `<div class="empty-state">暂无诊断证据。</div>`,
+  });
+}
+
+function knowledgeStatusText(status) {
+  const labels = {
+    verified_demo: "人工核验演示资料",
+    unverified: "未核验资料",
+    mock: "模拟资料",
+    withdrawn: "资料已撤回，不作为当前参考",
+  };
+  return labels[status] || status || "状态未标注";
+}
+
+function knowledgeResults() {
+  return appState.currentKnowledgeEvidence?.results || [];
+}
+
+function renderKnowledgeReferenceCard() {
+  const results = knowledgeResults();
+  if (appState.knowledgeEvidenceStatus === "loading") {
+    return assistCard({
+      title: "相关知识参考",
+      badgeClass: "neutral",
+      badgeText: "加载中",
+      body: `<div class="empty-state">正在匹配与当前病历字段相关的人工核验演示资料。</div>`,
+    });
+  }
+  if (appState.knowledgeEvidenceStatus === "failed") {
+    return assistCard({
+      title: "相关知识参考",
+      badgeClass: "missing",
+      badgeText: "加载失败",
+      detailTarget: "assist:knowledge",
+      body: `<div class="empty-state">${escapeHtml(appState.knowledgeEvidenceError || "相关知识参考加载失败。")}</div>`,
+    });
+  }
+  return assistCard({
+    title: "相关知识参考",
+    badgeClass: results.length ? "info" : "neutral",
+    badgeText: results.length ? `${results.length} 条` : "暂无",
+    detailTarget: "assist:knowledge",
+    body: results.length
+      ? `<div class="knowledge-reference-list compact">
+          ${results.slice(0, 2).map((item) => `
+            <div class="knowledge-reference-item">
+              <strong>${escapeHtml(item.title || item.source_id || "演示资料")}</strong>
+              <span>${escapeHtml(item.publisher || "发布机构未标注")} · ${escapeHtml(item.year || "-")} · ${escapeHtml(item.version || "-")}</span>
+              <em>${escapeHtml(item.status_label || knowledgeStatusText(item.review_status))}</em>
+              <p>${escapeHtml(item.match_reason || "与当前病历字段相关。")}</p>
+            </div>
+          `).join("")}
+          ${results.length > 2 ? `<div class="summary-note">另有 ${results.length - 2} 条参考，点击详情查看。</div>` : ""}
+        </div>`
+      : `<div class="empty-state">暂无与当前任务字段匹配的知识参考。</div>`,
   });
 }
 
@@ -2993,6 +4407,10 @@ function renderAssistDetailContent(section) {
   }
   const errors = risk.errors;
 
+  if (section === "live-clinical") {
+    return renderLiveClinicalDetailContent();
+  }
+
   if (section === "quality") {
     const quality = activeQualityReport();
     if (!quality) return `<div class="empty-state">暂无病历质量报告。</div>`;
@@ -3040,7 +4458,7 @@ function renderAssistDetailContent(section) {
       ? diagnoses.map((diagnosis, index) => `
           ${detailSection(`鉴别诊断参考 ${index + 1}：${diagnosis.name || "未命名诊断"}`, `
             <div class="detail-kv"><span>状态</span><strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong></div>
-            <div class="detail-kv"><span>规则匹配度</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
+            <div class="detail-kv"><span>证据匹配度（非疾病概率）</span><strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong></div>
             <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
             ${diagnosisQuality[index] ? `<div class="detail-text">${escapeHtml(
               diagnosisQuality[index].missing?.length
@@ -3070,7 +4488,7 @@ function renderAssistDetailContent(section) {
 
   if (section === "evidence") {
     const diagnosisReasons = diagnoses
-      .map((diagnosis) => diagnosis.reason ? `${diagnosis.name || "鉴别诊断参考"}：${diagnosis.reason}` : "")
+      .map((diagnosis) => diagnosis.reason ? doctorFacingDiagnosisText(`${diagnosis.name || "鉴别诊断参考"}：${diagnosis.reason}`) : "")
       .filter(Boolean);
     const items = [...diagnosisReasons, ...evidence];
     return items.length
@@ -3080,6 +4498,24 @@ function renderAssistDetailContent(section) {
         </div>
       `)
       : `<div class="empty-state">暂无判断证据。</div>`;
+  }
+
+  if (section === "knowledge") {
+    const results = knowledgeResults();
+    if (appState.knowledgeEvidenceStatus === "failed") {
+      return detailSection("相关知识参考", `<div class="detail-text">${escapeHtml(appState.knowledgeEvidenceError || "相关知识参考加载失败。")}</div>`);
+    }
+    return results.length
+      ? results.map((item) => detailSection(item.title || item.source_id || "演示资料", `
+          <div class="detail-kv"><span>发布机构</span><strong>${escapeHtml(item.publisher || "未标注")}</strong></div>
+          <div class="detail-kv"><span>年份与版本</span><strong>${escapeHtml(item.year || "-")} · ${escapeHtml(item.version || "-")}</strong></div>
+          <div class="detail-kv"><span>来源状态</span><strong>${escapeHtml(item.status_label || knowledgeStatusText(item.review_status))}</strong></div>
+          <div class="detail-kv"><span>关联字段</span><strong>${escapeHtml((item.matched_fields || item.related_fields || []).join("、") || "未匹配字段")}</strong></div>
+          <div class="detail-kv"><span>引用锚点</span><strong>${escapeHtml(item.citation_anchor || "-")}</strong></div>
+          <div class="detail-text">${escapeHtml(item.excerpt || "暂无片段。")}</div>
+          <div class="summary-note">${escapeHtml(item.match_reason || "与当前病历字段相关。")} 本模块仅展示相关知识参考，不自动确认诊断或处置。</div>
+        `)).join("")
+      : `<div class="empty-state">暂无与当前任务字段匹配的相关知识参考。</div>`;
   }
 
   const rows = [
@@ -3097,14 +4533,13 @@ function renderAssistDetailContent(section) {
         readiness.next_action ? `下一步：${readiness.next_action}` : "",
       ].filter(Boolean)
     : [];
-  const exportedRows = exports
-    ? Object.entries(exports).map(([key, value]) => `导出文件 ${key}：${value}`)
-    : [];
+  const exportedRows = exportSummaryRows(exports);
   const detailRows = [...rows, ...exportRows, ...exportedRows];
   return detailSection("安全校验结果", `
     <div class="detail-evidence-list">
       ${detailRows.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")}
     </div>
+    ${renderExportDownloadActions(exports)}
   `);
 }
 
@@ -3119,9 +4554,11 @@ function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
     ${previewNotice}
     ${previewError}
     <div class="doctor-assist-overview">
+      ${renderLiveClinicalReferenceCard()}
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}
       ${renderEvidenceCard(evidence, diagnoses)}
+      ${renderKnowledgeReferenceCard()}
     </div>
   `;
 }
@@ -3269,18 +4706,71 @@ function renderDebug() {
 }
 
 function renderFooter() {
+  const displayState = doctorDisplayState();
+  const actionBar = document.querySelector(".encounter-action-bar");
+  const regenerateButton = $("regenerateButton");
+  const saveButton = $("saveDraftButton");
+  const confirmButton = $("confirmFieldsButton");
+  const exportButton = $("exportButton");
+  const footerHints = {
+    draft_generated: "病历草稿已生成，可先保存修改；保存后进入医生审核。",
+    pending_review: "等待医生审核；完成医生审核后方可导出。",
+    transcription_failed: "流程中断；请先重新转写或改用文本输入。",
+    approved: "病历审核已完成；可以导出已审核病历。",
+    exported: "病历已导出；可以再次下载已审核病历。",
+  };
   $("currentTaskLabel").textContent = "操作区";
-  $("currentTaskHint").textContent = appState.currentTaskId
-    ? `${STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "任务已创建"} · ${appState.currentAudioId ? "音频生成" : "文本生成"}`
-    : "等待输入";
-  $("regenerateButton").disabled = appState.busy || !(appState.currentAsrResult || appState.currentInputText);
-  $("saveDraftButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
-  $("confirmFieldsButton").disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
-  const exportBlocked = !appState.currentTaskId || !isApprovedForExport();
-  $("exportButton").disabled = appState.busy || !appState.currentTaskId;
-  $("exportButton").classList.toggle("blocked-action", Boolean(appState.currentTaskId && !isApprovedForExport()));
-  $("exportButton").setAttribute("aria-disabled", exportBlocked ? "true" : "false");
-  $("exportButton").title = exportBlocked ? "点击查看暂不可导出的原因" : "确认导出病历";
+  $("currentTaskHint").textContent = footerHints[displayState.key] || displayState.taskHint;
+  actionBar?.classList.toggle("draft-generated", displayState.key === "draft_generated");
+  actionBar?.classList.toggle("pending-review", displayState.key === "pending_review");
+  actionBar?.classList.toggle("export-ready", ["approved", "exported"].includes(displayState.key));
+  actionBar?.classList.toggle("flow-failed", displayState.key === "transcription_failed");
+
+  regenerateButton.hidden = false;
+  saveButton.hidden = false;
+  confirmButton.hidden = false;
+  exportButton.hidden = false;
+  regenerateButton.disabled = appState.busy || !(appState.currentAsrResult || appState.currentInputText);
+  saveButton.disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
+  confirmButton.disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
+  exportButton.disabled = appState.busy || !appState.currentTaskId || !isApprovedForExport();
+  exportButton.classList.toggle("blocked-action", Boolean(appState.currentTaskId && !isApprovedForExport()));
+  exportButton.setAttribute("aria-disabled", exportButton.disabled ? "true" : "false");
+  exportButton.dataset.disabledReason = exportButton.disabled ? "完成医生审核后方可导出" : "";
+  exportButton.title = exportButton.disabled ? "完成医生审核后方可导出" : "导出已审核病历";
+
+  if (displayState.key === "draft_generated") {
+    regenerateButton.hidden = true;
+    confirmButton.hidden = true;
+    exportButton.hidden = true;
+    saveButton.disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
+  } else if (displayState.key === "pending_review") {
+    regenerateButton.hidden = true;
+    saveButton.hidden = true;
+    confirmButton.disabled = appState.busy || !appState.currentTaskId || !appState.currentRecordFields;
+    exportButton.disabled = true;
+    exportButton.classList.add("blocked-action");
+    exportButton.setAttribute("aria-disabled", "true");
+    exportButton.dataset.disabledReason = "完成医生审核后方可导出";
+    exportButton.title = "完成医生审核后方可导出";
+  } else if (["approved", "exported"].includes(displayState.key)) {
+    regenerateButton.hidden = true;
+    saveButton.hidden = true;
+    confirmButton.hidden = true;
+    exportButton.disabled = appState.busy || !appState.currentTaskId;
+    exportButton.classList.remove("blocked-action");
+    exportButton.setAttribute("aria-disabled", exportButton.disabled ? "true" : "false");
+    exportButton.dataset.disabledReason = exportButton.disabled ? "暂无可导出的病历任务" : "";
+  } else if (displayState.key === "transcription_failed") {
+    regenerateButton.disabled = true;
+    saveButton.disabled = true;
+    confirmButton.disabled = true;
+    exportButton.disabled = true;
+    exportButton.classList.add("blocked-action");
+    exportButton.setAttribute("aria-disabled", "true");
+    exportButton.dataset.disabledReason = "转写失败，需先恢复流程";
+    exportButton.title = "转写失败，需先恢复流程";
+  }
 }
 
 function openWorkbenchDetail(target = "") {
@@ -3309,6 +4799,7 @@ function openWorkbenchDetail(target = "") {
       candidates: "鉴别诊断参考完整依据",
       treatment: "治疗方案推荐详情",
       evidence: "判断证据详情",
+      knowledge: "相关知识参考",
       quality: "病历质量摘要",
       safety: "安全校验结果详情",
     };
@@ -3317,22 +4808,31 @@ function openWorkbenchDetail(target = "") {
 }
 
 function isApprovedForExport() {
-  return appState.taskStatus === "approved" || appState.currentTask?.current_stage === "approved";
+  if (appState.currentExportReadiness && Number(appState.currentExportReadiness.task_id) === Number(appState.currentTaskId)) {
+    return Boolean(appState.currentExportReadiness.ready);
+  }
+  return ["approved", "exported", "EXPORTED"].includes(appState.taskStatus)
+    || ["approved", "exported"].includes(appState.currentTask?.current_stage);
 }
 
 function renderAll() {
   renderMode();
   renderAuthPanel();
+  renderProductShell();
   renderInputMethodMenu();
   renderDisplaySettingsMenu();
   renderPatientBar();
   renderEncounterWorklistPanel();
   renderBrowserRecordingPanel();
   renderRunContext();
+  renderDashboardSummary();
+  renderAdminHome();
   renderStartGuide();
   renderStepPrompt();
   renderWorkflow();
   renderNextActionPanel();
+  renderTranscriptionFailurePanel();
+  renderReviewBoundaryNotice();
   renderFields();
   renderTranscript();
   renderAssist();
@@ -3373,11 +4873,12 @@ function resetRecordPreview() {
   appState.recordPreviewInFlight = false;
 }
 
-function resetTaskState({ keepAsr = false } = {}) {
+function resetTaskState({ keepAsr = false, keepEncounter = false } = {}) {
+  const preservedEncounter = keepEncounter ? appState.currentEncounter : null;
   appState.currentTaskId = null;
   appState.currentEvaluation = null;
   appState.currentTask = null;
-  appState.currentEncounter = null;
+  appState.currentEncounter = preservedEncounter;
   appState.currentSteps = [];
   appState.currentRecordFields = null;
   appState.currentDraft = "";
@@ -3386,6 +4887,11 @@ function resetTaskState({ keepAsr = false } = {}) {
   appState.currentExportReadiness = null;
   appState.currentExports = null;
   appState.currentAgentTrace = null;
+  appState.currentKnowledgeEvidence = null;
+  appState.knowledgeEvidenceStatus = "idle";
+  appState.knowledgeEvidenceError = "";
+  clearApprovalReviewSelections();
+  appState.approvalRevisionId = null;
   appState.currentInputText = "";
   appState.taskStatus = "CREATED";
   resetRecordPreview();
@@ -3417,10 +4923,20 @@ function resetTaskState({ keepAsr = false } = {}) {
     appState.asrRetryHint = "";
     resetRoleReviewState();
     appState.uploadedFilename = "";
+    appState.fixedDemoStatus = "idle";
+    appState.fixedDemoSessionId = "";
+    appState.fixedDemoChunkTotal = 0;
+    appState.fixedDemoChunksUploaded = 0;
+    appState.fixedDemoMessage = "";
+    appState.fixedDemoFinalized = null;
+    appState.fixedDemoFormalTaskId = null;
+    appState.fixedDemoAbortController?.abort();
+    appState.fixedDemoAbortController = null;
   }
 }
 
 async function refreshTask(taskId, taskFromEvent = null) {
+  const previousApprovalRevisionKey = appState.approvalRevisionId;
   const task = taskFromEvent || await api(`/api/tasks/${taskId}`);
   const steps = await api(`/api/tasks/${taskId}/steps`);
   appState.currentTask = task;
@@ -3433,6 +4949,15 @@ async function refreshTask(taskId, taskFromEvent = null) {
   appState.currentSafetyCheck = result.safety_check || appState.currentSafetyCheck;
   appState.currentQualityReport = result.quality_report || appState.currentQualityReport;
   appState.currentExports = result.exports || appState.currentExports;
+  const taskRevisionId = task.current_record_revision_id || result.record_revision?.id || null;
+  if (appState.currentExportReadiness?.revision_id && taskRevisionId && Number(appState.currentExportReadiness.revision_id) !== Number(taskRevisionId)) {
+    appState.currentExportReadiness = null;
+  }
+  syncApprovalReviewStateWithRevision(null);
+  if (previousApprovalRevisionKey && previousApprovalRevisionKey !== appState.approvalRevisionId) {
+    appState.currentExportReadiness = null;
+  }
+  await refreshKnowledgeEvidence(appState.currentTaskId);
   await refreshAgentTrace(appState.currentTaskId);
   renderAll();
 }
@@ -3458,10 +4983,13 @@ function listenForEvents(taskId, eventsUrl) {
     terminalReceived = true;
     appState.taskStatus = "WAITING_DOCTOR_REVIEW";
     await refreshTask(data.task_id, data.task);
+    appState.recordHighlightUntil = Date.now() + 2800;
     source.close();
     appState.eventSource = null;
     setBusy(false);
-    showToast("病历已生成，等待医生审核");
+    renderAll();
+    focusRecordWorkspace();
+    showToast("病历草稿已生成，请修改并完成审核");
   });
 
   source.addEventListener("FAILED", async (event) => {
@@ -3527,6 +5055,11 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     appState.asrChunkLastError = "";
     appState.asrRetryHint = "";
     appState.provisionalTranscriptSegments = [];
+    appState.liveClinicalDraft = null;
+    appState.liveClinicalVersion = 0;
+    appState.liveClinicalStatus = "idle";
+    appState.liveClinicalUpdatedAt = "";
+    appState.liveClinicalError = "";
     renderAll();
   });
 
@@ -3617,6 +5150,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
 
   source.addEventListener("chunk_failed", (event) => {
     const data = JSON.parse(event.data);
+    applyAsrFailureDetail(data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.selectedEngine = data.engine || appState.selectedEngine;
     appState.taskStatus = "FAILED";
@@ -3668,6 +5202,55 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
 
   source.addEventListener("segment", handleTranscriptSegment);
   source.addEventListener("segment_update", handleTranscriptSegment);
+  source.addEventListener("transcript.partial", handleTranscriptSegment);
+  source.addEventListener("transcript.stable", handleTranscriptSegment);
+
+  source.addEventListener("clinical_processing.started", (event) => {
+    const data = JSON.parse(event.data);
+    if (data.version && Number(data.version) <= Number(appState.liveClinicalVersion || 0)) return;
+    appState.liveClinicalStatus = "processing";
+    appState.liveClinicalError = "";
+    renderAssist();
+  });
+
+  source.addEventListener("record.live_patch", (event) => {
+    const data = JSON.parse(event.data);
+    if (applyLiveClinicalDraft(data)) renderAssist();
+  });
+
+  source.addEventListener("clinical_processing.completed", (event) => {
+    const data = JSON.parse(event.data);
+    if (data.version && Number(data.version) < Number(appState.liveClinicalVersion || 0)) return;
+    appState.liveClinicalStatus = "completed";
+    appState.liveClinicalUpdatedAt = data.updated_at || appState.liveClinicalUpdatedAt;
+    appState.liveClinicalError = "";
+    renderAssist();
+  });
+
+  source.addEventListener("clinical_processing.failed", (event) => {
+    const data = JSON.parse(event.data);
+    appState.liveClinicalStatus = "failed";
+    appState.liveClinicalError = data.message || data.error || "临床参考暂时不可用，实时转写会继续。";
+    renderAssist();
+  });
+
+  source.addEventListener("session.finalizing", (event) => {
+    const data = JSON.parse(event.data);
+    appState.asrPhase = "finalizing";
+    appState.asrChunkStatus = data.mode === "browser_live_chunk_finalization"
+      ? "正在收敛完整录音和最终转写"
+      : appState.asrChunkStatus;
+    renderAll();
+  });
+
+  source.addEventListener("session.finalized", (event) => {
+    const data = JSON.parse(event.data);
+    appState.asrPhase = "finalized";
+    appState.asrChunkStatus = data.formal_record_status === "ready_for_generation"
+      ? "完整转写已收敛，正在生成正式草稿"
+      : "完整转写已收敛";
+    renderAll();
+  });
 
   source.addEventListener("diarization_progress", (event) => {
     const data = JSON.parse(event.data);
@@ -3766,6 +5349,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
 
   source.addEventListener("failed", (event) => {
     const data = JSON.parse(event.data);
+    applyAsrFailureDetail(data);
     terminalReceived = true;
     appState.taskStatus = "FAILED";
     appState.asrLastError = data.error || "ASR 实时转写失败";
@@ -3790,8 +5374,82 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
   };
 }
 
+function applyCompletedAsrResult(result = {}) {
+  const mergedSegments = finalTranscriptSegments(result.segments || [], appState.liveTranscriptSegments);
+  appState.currentAudioId = result.audio_id || appState.currentAudioId;
+  appState.selectedEngine = result.backend || result.engine || appState.selectedEngine;
+  appState.currentAsrResult = {
+    ...result,
+    segments: mergedSegments,
+    text: textFromSegments(mergedSegments) || result.text,
+    conversation_text: conversationFromSegments(mergedSegments) || result.conversation_text,
+  };
+  appState.speakerAssignments = appState.currentAsrResult?.speaker_assignments || appState.speakerAssignments;
+  appState.speakerMappingRequired = appState.speakerAssignments.some((item) => item.requires_confirmation);
+  appState.liveTranscriptSegments = mergedSegments;
+  appState.provisionalTranscriptSegments = [];
+  appState.taskStatus = "TRANSCRIBED";
+  appState.asrPhase = "completed";
+  appState.asrProgressKind = "actual";
+  appState.asrStreamProgress = 1;
+  appState.asrProgressEstimated = false;
+  appState.asrElapsedSeconds = 0;
+  appState.asrVisibleAudioSeconds = Math.max(
+    appState.asrVisibleAudioSeconds || 0,
+    Number(result.duration || result.audio_duration_seconds || 0),
+  );
+  appState.asrProcessedAudioSeconds = Number(result.duration || result.audio_duration_seconds || appState.asrProcessedAudioSeconds || 0);
+  appState.asrAudioDurationSeconds = Number(result.duration || result.audio_duration_seconds || appState.asrAudioDurationSeconds || 0);
+  appState.asrStreamTotalSegments = result.segments?.length || appState.asrStreamTotalSegments || appState.liveTranscriptSegments.length;
+  appState.asrStreamCurrentSegment = appState.asrStreamTotalSegments;
+  appState.asrLastError = "";
+  appState.asrConnectionStatus = "completed";
+  appState.asrChunkStatus = appState.asrChunkTotal ? "切片转写完成" : "";
+  appState.asrChunkLastError = "";
+  appState.asrRetryHint = "";
+  appState.currentEvaluation = null;
+  resetRoleReviewState();
+}
+
+async function waitForAsrResultReady(sessionId, eventsUrl, { timeoutMs = 600000, intervalMs = 2500 } = {}) {
+  let eventOutcome = null;
+  const eventPromise = new Promise((resolve, reject) => {
+    listenForAsrEvents(eventsUrl, { resolve, reject });
+  }).then(
+    (value) => {
+      eventOutcome = { ok: true, value };
+      return eventOutcome;
+    },
+    (error) => {
+      eventOutcome = { ok: false, error };
+      return eventOutcome;
+    },
+  );
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const race = await Promise.race([eventPromise, delay(intervalMs).then(() => null)]);
+    if (race?.ok) return race.value;
+    if (race?.ok === false) throw race.error;
+    if (appState.currentAsrResult) {
+      return { audio_id: appState.currentAsrResult.audio_id, asr_result: appState.currentAsrResult };
+    }
+    try {
+      const result = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/result`);
+      applyCompletedAsrResult(result);
+      scheduleRecordPreview({ force: true });
+      closeAsrStream();
+      setBusy(false);
+      renderAll();
+      return { audio_id: result.audio_id, asr_result: result, fallback: "result_poll" };
+    } catch (error) {
+      if (eventOutcome?.ok === false) throw eventOutcome.error;
+    }
+  }
+  throw new Error("等待 ASR 最终结果超时，请刷新任务或重试正式收敛。");
+}
+
 async function createRecordTask(conversationText, { keepAsr = false } = {}) {
-  resetTaskState({ keepAsr });
+  resetTaskState({ keepAsr, keepEncounter: true });
   appState.currentInputText = conversationText;
   if (!keepAsr) {
     appState.currentAsrResult = {
@@ -3811,7 +5469,10 @@ async function createRecordTask(conversationText, { keepAsr = false } = {}) {
   const created = await api("/api/records/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ conversation_text: conversationText }),
+    body: JSON.stringify({
+      conversation_text: conversationText,
+      encounter_id: selectedEncounterId() || undefined,
+    }),
   });
   appState.currentTaskId = created.task_id;
   appState.taskStatus = created.status;
@@ -3972,39 +5633,18 @@ function transcriptSpeakerGroups(rows = transcriptRows()) {
 }
 
 function roleReviewRequired() {
-  const asr = appState.currentAsrResult;
-  if (!asr) return false;
-  if (roleQualityPassed(asr)) return false;
-  if (roleQualityNeedsIdentityReview(asr)) return true;
-  const segments = currentReviewSegments();
-  const assignments = asr?.speaker_assignments || appState.speakerAssignments || [];
-  if (assignments.length) {
-    return assignments.some((item) => speakerAssignmentNeedsReview(item))
-      || appState.speakerMappingRequired;
-  }
-  return Boolean(
-    asr?.needs_review
-      || asr?.role_strategy === "single_segment_needs_review"
-      || segments.some((segment) => segment.needs_review || !segment.role || segment.role === "待确认"),
-  );
+  return false;
 }
 
 function roleReviewPendingCount() {
-  if (roleQualityPassed()) return 0;
-  const assignments = appState.currentAsrResult?.speaker_assignments || appState.speakerAssignments || [];
-  if (assignments.length) {
-    return pendingSpeakerAssignments().length;
-  }
-  return currentReviewSegments()
-    .filter((segment) => segment.needs_review || !segment.role || segment.role === "待确认")
-    .length;
+  return 0;
 }
 
 function focusNextActionPanel() {
   const panel = $("nextActionPanel");
   if (!panel) return;
   panel.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
-  panel.querySelector("[data-workflow-action='generate-record'], [data-workflow-action='open-role-review'], [data-workflow-action='save-role-review']")?.focus?.();
+  panel.querySelector("[data-workflow-action='finalize-live-demo'], [data-workflow-action='generate-record'], [data-workflow-action='save-role-review']")?.focus?.();
 }
 
 function speakerRolesForReviewSave() {
@@ -4134,21 +5774,16 @@ async function uploadAndTranscribe(file, engine) {
   appState.asrChunkStatus = "";
   appState.asrChunkLastError = "";
   appState.asrRetryHint = "";
-  if (engine === "funasr") {
-    const prewarm = await refreshAsrPrewarmStatus();
-    if (prewarm?.status === "warming") {
-      appState.asrLastError = "FunASR 模型仍在准备中，首次真实转写可能需要等待；Mock ASR 可作为现场保底。";
-    } else if (prewarm?.status === "failed") {
-      appState.asrLastError = "FunASR 自动预热失败，真实转写可能回退为按需加载；如现场演示受阻请切换 Mock ASR。";
-    }
+  if (appState.recognitionMode === "fast") {
+    renderAll();
+    return uploadAndTranscribeFast(file, engine);
   }
+  await refreshAsrPrewarmStatus();
   renderAll();
 
   setBusy(true, "正在创建 ASR 实时转写会话...");
-  const sessionParams = new URLSearchParams({
-    engine,
-    diarization_engine: "auto",
-  });
+  const sessionParams = new URLSearchParams({ recognition_mode: "follow", diarization_engine: "auto" });
+  if (selectedEncounterId()) sessionParams.set("encounter_id", selectedEncounterId());
   if (appState.selectedDoctorProfileId) {
     sessionParams.set("doctor_profile_id", appState.selectedDoctorProfileId);
   }
@@ -4166,7 +5801,7 @@ async function uploadAndTranscribe(file, engine) {
   appState.taskStatus = "TRANSCRIBING";
   renderAll();
 
-  setBusy(true, `正在使用 ${ENGINE_LABELS[engine] || engine} 实时转写...`);
+  setBusy(true, "正在跟随识别音频...");
   return new Promise((resolve, reject) => {
     listenForAsrEvents(uploaded.events_url, { resolve, reject });
   });
@@ -4212,10 +5847,18 @@ function applyRoleQualityGateError(error) {
 async function startRecordGenerationFromAudio(audioId) {
   setBusy(true, "正在从转写文本生成病历...");
   try {
-    const created = await api(`/api/audio/${audioId}/generate-record`, { method: "POST" });
+    const params = new URLSearchParams();
+    if (selectedEncounterId()) params.set("encounter_id", selectedEncounterId());
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    const created = await api(`/api/audio/${audioId}/generate-record${suffix}`, { method: "POST" });
     appState.currentTaskId = created.task_id;
     appState.taskStatus = created.status;
-    appState.currentTask = { id: created.task_id, status: created.status };
+    appState.currentTask = {
+      id: created.task_id,
+      status: created.status,
+      encounter_id: created.encounter_id || selectedEncounterId(),
+      patient_id: created.patient_id || appState.currentEncounter?.patient_id,
+    };
     renderAll();
     listenForEvents(created.task_id, created.events_url);
     return created;
@@ -4226,7 +5869,7 @@ async function startRecordGenerationFromAudio(audioId) {
 }
 
 async function runAudioWorkflowFromFile(file, engine, mode = appState.audioMode) {
-  resetTaskState();
+  resetTaskState({ keepEncounter: true });
   appState.selectedEngine = engine;
   const transcribed = await uploadAndTranscribe(file, engine);
   if (mode === "generate") {
@@ -4237,8 +5880,40 @@ async function runAudioWorkflowFromFile(file, engine, mode = appState.audioMode)
   return transcribed;
 }
 
+async function uploadAndTranscribeFast(file, engine) {
+  const form = new FormData();
+  form.append("file", file);
+  const uploadParams = new URLSearchParams({ recognition_mode: "fast" });
+  if (selectedEncounterId()) uploadParams.set("encounter_id", selectedEncounterId());
+  setBusy(true, "正在上传音频并准备尽快识别...");
+  const uploaded = await api(`/api/audio/upload?${uploadParams.toString()}`, { method: "POST", body: form });
+  appState.currentAudioId = uploaded.audio_id;
+  appState.uploadedFilename = uploaded.filename || uploaded.audio_id;
+  applyUploadedAudioMetadata(uploaded);
+  appState.taskStatus = "TRANSCRIBING";
+  renderAll();
+
+  const transcribeParams = new URLSearchParams({ recognition_mode: "fast" });
+  setBusy(true, "正在尽快识别完整音频...");
+  const transcribed = await api(`/api/audio/${encodeURIComponent(uploaded.audio_id)}/transcribe?${transcribeParams.toString()}`, {
+    method: "POST",
+  });
+  appState.currentAsrResult = transcribed.asr_result;
+  appState.liveTranscriptSegments = transcribed.asr_result?.segments || [];
+  appState.provisionalTranscriptSegments = [];
+  appState.speakerAssignments = transcribed.asr_result?.speaker_assignments || [];
+  appState.speakerMappingRequired = false;
+  appState.taskStatus = "TRANSCRIBED";
+  appState.asrProcessedAudioSeconds = Number(transcribed.audio_duration_seconds || 0);
+  appState.asrAudioDurationSeconds = Number(transcribed.audio_duration_seconds || 0);
+  setBusy(false);
+  renderAll();
+  return transcribed;
+}
+
 async function submitTextImport() {
   try {
+    if (!requireEncounterBeforeInput()) return;
     const text = $("conversationInput").value.trim();
     if (!text) throw new Error("请输入问诊文本");
     closeDrawer();
@@ -4251,9 +5926,11 @@ async function submitTextImport() {
 
 async function submitAudio() {
   try {
+    if (!requireEncounterBeforeInput()) return;
     const file = $("audioFileInput").files[0];
     if (!file) throw new Error("请选择音频文件");
-    const engine = $("audioEngineSelect").value;
+    const engine = appState.selectedEngine;
+    appState.recognitionMode = $("recognitionModeSelect")?.value || "fast";
     closeDrawer();
     await runAudioWorkflowFromFile(file, engine, appState.audioMode);
   } catch (error) {
@@ -4308,16 +5985,71 @@ async function regenerateRecord() {
   }
 }
 
+async function retryTranscriptionFromFailure() {
+  try {
+    if (!appState.currentAudioId) {
+      showToast("暂无可复用音频，请重新上传并转写。");
+      openAudioGenerate();
+      return;
+    }
+    appState.asrLastError = "";
+    appState.asrChunkLastError = "";
+    appState.asrChunkStatus = "";
+    appState.taskStatus = "TRANSCRIBING";
+    setBusy(true, "正在重新执行 ASR 转写...");
+    renderAll();
+    const params = new URLSearchParams();
+    const transcribed = await api(`/api/audio/${encodeURIComponent(appState.currentAudioId)}/transcribe?${params.toString()}`, {
+      method: "POST",
+    });
+    appState.currentAsrResult = transcribed.asr_result;
+    appState.liveTranscriptSegments = transcribed.asr_result?.segments || [];
+    appState.provisionalTranscriptSegments = [];
+    appState.speakerAssignments = transcribed.asr_result?.speaker_assignments || [];
+    appState.taskStatus = "TRANSCRIBED";
+    appState.pendingGenerateAfterRoleReview = false;
+    setBusy(false);
+    renderAll();
+    showToast("重新转写完成，正在生成病历草稿");
+    await continueGeneratingFromTranscription({
+      audio_id: transcribed.audio_id || appState.currentAudioId,
+      asr_result: transcribed.asr_result,
+      status: transcribed.status || "completed",
+    });
+  } catch (error) {
+    appState.taskStatus = "FAILED";
+    applyAsrFailureDetail(error?.detail || {});
+    appState.asrLastError = doctorSafeErrorMessage(error);
+    appState.asrLastError = error?.message || "重新转写失败";
+    setBusy(false);
+    appState.asrLastError = doctorSafeErrorMessage(error);
+    renderAll();
+    reportActionError(error);
+  }
+}
+
 async function saveDraftReview() {
   try {
     if (!appState.currentTaskId || !appState.currentRecordFields) throw new Error("暂无可保存的病历字段");
     setBusy(true, "正在保存修改到 SQLite...");
+    if (!appState.currentExportReadiness?.revision_id || !appState.currentExportReadiness?.content_hash) {
+      await refreshExportReadiness();
+    }
+    const revision = appState.currentExportReadiness;
+    if (!revision?.revision_id || !revision?.content_hash) {
+      throw new Error("Unable to verify the current record revision; refresh and retry.");
+    }
     appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fields: appState.currentRecordFields }),
+      body: JSON.stringify({
+        fields: appState.currentRecordFields,
+        expected_revision_id: revision.revision_id,
+        expected_content_hash: revision.content_hash,
+      }),
     });
     await refreshTask(appState.currentTaskId, appState.currentTask);
+    await refreshExportReadiness();
     setBusy(false);
     showToast("修改已保存到 SQLite");
   } catch (error) {
@@ -4330,15 +6062,58 @@ async function confirmFields() {
   try {
     if (!appState.currentTaskId) throw new Error("暂无可确认的任务");
     setBusy(true, "正在完成审核...");
-    appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/approve`, { method: "POST" });
+    const payload = await buildTaskApprovalPayload();
+    appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
     appState.taskStatus = "approved";
     await refreshTask(appState.currentTaskId, appState.currentTask);
+    await refreshExportReadiness();
+    renderAll();
     setBusy(false);
     showToast("病历审核已完成");
   } catch (error) {
     setBusy(false);
     reportActionError(error);
   }
+}
+
+function filenameFromContentDisposition(disposition, fallback) {
+  if (!disposition) return fallback;
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match) return decodeURIComponent(utf8Match[1].replace(/"/g, ""));
+  const asciiMatch = disposition.match(/filename="?([^";]+)"?/i);
+  return asciiMatch ? asciiMatch[1] : fallback;
+}
+
+async function downloadTaskExport(format = "docx") {
+  if (!appState.currentTaskId) throw new Error("暂无可下载的导出文件");
+  const response = await fetch(`/api/tasks/${encodeURIComponent(appState.currentTaskId)}/exports/${encodeURIComponent(format)}`);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const detail = data.detail;
+    const errorMessage = typeof detail === "string"
+      ? detail
+      : detail?.next_action || detail?.message || "导出文件暂不可下载";
+    throw new Error(errorMessage);
+  }
+  const blob = await response.blob();
+  const extension = format === "markdown" ? "md" : "docx";
+  const filename = filenameFromContentDisposition(
+    response.headers.get("content-disposition"),
+    `task_${appState.currentTaskId}_medical_record.${extension}`,
+  );
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  return filename;
 }
 
 async function exportRecord() {
@@ -4375,7 +6150,12 @@ async function exportRecord() {
     renderAll();
     setBusy(false);
     openDetailDrawer("导出完成", renderExportReadinessDetail(appState.currentExportReadiness));
-    showToast(`导出完成：${Object.values(result.exports || {}).join(" / ")}`);
+    try {
+      const filename = await downloadTaskExport("docx");
+      showToast(`导出完成，${filename} 下载已开始`);
+    } catch (downloadError) {
+      showToast(`导出已生成，请在详情中手动下载：${downloadError.message}`);
+    }
   } catch (error) {
     if (error.detail?.errors) {
       appState.currentExportReadiness = error.detail;
@@ -4387,6 +6167,22 @@ async function exportRecord() {
 }
 
 async function handleWorkflowAction(action) {
+  if (action === "open-worklist") {
+    await openEncounterWorklist();
+    return;
+  }
+  if (action === "record-audio") {
+    openReservedRecording();
+    return;
+  }
+  if (action === "start-live-demo") {
+    await startFixedAudioLiveDemo();
+    return;
+  }
+  if (action === "finalize-live-demo") {
+    await finalizeFixedAudioLiveDemo();
+    return;
+  }
   if (action === "upload-audio") {
     openAudioGenerate();
     return;
@@ -4399,8 +6195,8 @@ async function handleWorkflowAction(action) {
     await saveRoleReview();
     return;
   }
-  if (action === "open-role-review") {
-    openRoleReview();
+  if (action === "retry-transcription") {
+    await retryTranscriptionFromFailure();
     return;
   }
   if (action === "generate-record") {
@@ -4421,19 +6217,14 @@ async function handleWorkflowAction(action) {
 }
 
 function handleInputMethod(method) {
+  if (!requireEncounterBeforeInput(method)) return;
   if (method === "record") {
     openReservedRecording();
     return;
   }
   if (method === "mock") {
     closeInputMethodMenu();
-    appState.selectedEngine = "mock";
-    const topSelect = $("topAsrEngineSelect");
-    const audioSelect = $("audioEngineSelect");
-    if (topSelect) topSelect.value = "mock";
-    if (audioSelect) audioSelect.value = "mock";
-    showToast("已切换为 Mock ASR 演示，可上传任意 MP3/WAV 跑通流程");
-    openAudioGenerate();
+    startFixedAudioLiveDemo().catch(reportActionError);
     return;
   }
   if (method === "audio") {
@@ -4446,25 +6237,30 @@ function handleInputMethod(method) {
 }
 
 function openTextImport() {
+  if (!requireEncounterBeforeInput("text")) return;
   clearActionError();
   openDrawer("textImportPanel", "文本导入生成病历");
 }
 
 function openAudioTranscribe() {
+  if (!requireEncounterBeforeInput("audio")) return;
   clearActionError();
   appState.audioMode = "transcribe";
-  $("audioEngineSelect").value = appState.selectedEngine;
-  $("audioPanelHint").textContent = "上传 MP3/WAV 预录音频，系统创建 ASR 会话并通过 SSE 实时显示分段转写。";
+  appState.recognitionMode = "follow";
+  if ($("recognitionModeSelect")) $("recognitionModeSelect").value = appState.recognitionMode;
+  $("audioPanelHint").textContent = "跟随识别会对已录好的完整音频逐段处理，并通过 SSE 持续追加转写、角色和进度。";
   $("submitAudioButton").textContent = "上传并实时转写";
   openDrawer("audioPanel", "MP3/WAV 实时转写");
   refreshDoctorProfiles();
 }
 
 function openAudioGenerate() {
+  if (!requireEncounterBeforeInput("audio")) return;
   clearActionError();
   appState.audioMode = "generate";
-  $("audioEngineSelect").value = appState.selectedEngine;
-  $("audioPanelHint").textContent = "上传 MP3/WAV 预录音频，先完成 SSE 实时转写，再进入病历生成流程。";
+  appState.recognitionMode = "follow";
+  if ($("recognitionModeSelect")) $("recognitionModeSelect").value = appState.recognitionMode;
+  $("audioPanelHint").textContent = "选择尽快识别可批量处理完整音频；选择跟随识别会逐段显示转写并在完成后生成草稿。";
   $("submitAudioButton").textContent = "实时转写并生成病历";
   openDrawer("audioPanel", "MP3/WAV 生成病历");
   refreshDoctorProfiles();
@@ -4541,7 +6337,7 @@ function browserRecordingErrorMessage(error) {
 }
 
 function releaseBrowserRecordingPreview() {
-  if (appState.browserRecordingObjectUrl) {
+  if (appState.browserRecordingObjectUrl?.startsWith("blob:")) {
     URL.revokeObjectURL(appState.browserRecordingObjectUrl);
   }
   appState.browserRecordingObjectUrl = "";
@@ -4666,21 +6462,457 @@ async function sha256Blob(blob) {
     .join("");
 }
 
-async function ensureBrowserRecordingSession(engine) {
+function recordingQueueKey(sessionId, chunkIndex) {
+  return `${sessionId}:${String(chunkIndex).padStart(8, "0")}`;
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function waitForFormalRecordReady(taskId, { timeoutMs = 180000, intervalMs = 1200 } = {}) {
+  const startedAt = Date.now();
+  let lastReadiness = null;
+  while (Date.now() - startedAt < timeoutMs) {
+    await refreshTask(taskId);
+    lastReadiness = await refreshExportReadiness();
+    const taskRevisionId = appState.currentTask?.current_record_revision_id
+      || appState.currentExportReadiness?.revision_id
+      || null;
+    if (appState.currentRecordFields && taskRevisionId) {
+      return {
+        task: appState.currentTask,
+        readiness: lastReadiness,
+        revision_id: taskRevisionId,
+      };
+    }
+    if (appState.taskStatus === "FAILED") {
+      throw new Error(appState.currentTask?.error_message || "正式病历生成失败，请检查任务日志。");
+    }
+    appState.fixedDemoMessage = "正式病历正在生成，请稍候。";
+    renderAll();
+    await delay(intervalMs);
+  }
+  throw new Error("等待正式病历生成超时，请刷新任务列表后重试。");
+}
+
+async function fetchFixedDemoAudioBuffer() {
+  const response = await fetch(appState.fixedDemoAudioUrl, { cache: "no-store" });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(text || "固定音频演示资源不可用，请检查 MEDILISTEN_DEMO_AUDIO_PATH。");
+  }
+  return response.arrayBuffer();
+}
+
+function monoSamplesFromAudioBuffer(audioBuffer) {
+  const frameCount = audioBuffer.length;
+  const channelCount = Math.max(1, audioBuffer.numberOfChannels || 1);
+  const samples = new Float32Array(frameCount);
+  for (let channel = 0; channel < channelCount; channel += 1) {
+    const data = audioBuffer.getChannelData(channel);
+    for (let index = 0; index < frameCount; index += 1) {
+      samples[index] += data[index] / channelCount;
+    }
+  }
+  return samples;
+}
+
+async function decodeFixedDemoAudioChunks(arrayBuffer) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) throw new Error("当前浏览器不支持固定音频解码。");
+  const audioContext = new AudioContextClass();
+  try {
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    const sampleRate = audioBuffer.sampleRate;
+    const samples = monoSamplesFromAudioBuffer(audioBuffer);
+    const chunkSamples = Math.max(1, Math.round(sampleRate * FIXED_DEMO_CHUNK_SECONDS));
+    const chunks = [];
+    for (let offset = 0; offset < samples.length; offset += chunkSamples) {
+      const chunk = samples.slice(offset, Math.min(offset + chunkSamples, samples.length));
+      const startedAtMs = Math.round(offset / sampleRate * 1000);
+      const endedAtMs = Math.round((offset + chunk.length) / sampleRate * 1000);
+      chunks.push({
+        chunk,
+        chunk_index: chunks.length,
+        chunk_started_at_ms: startedAtMs,
+        chunk_ended_at_ms: endedAtMs,
+        duration_seconds: chunk.length / sampleRate,
+        sample_rate: sampleRate,
+      });
+    }
+    return { chunks, sampleRate, durationSeconds: samples.length / sampleRate };
+  } finally {
+    audioContext.close?.().catch(() => {});
+  }
+}
+
+async function createFixedDemoLiveSession() {
+  const sessionParams = new URLSearchParams({ recognition_mode: "follow", diarization_engine: "auto" });
+  if (selectedEncounterId()) sessionParams.set("encounter_id", selectedEncounterId());
+  const session = await api(`/api/asr/sessions?${sessionParams.toString()}`, { method: "POST" });
+  appState.currentAsrSessionId = session.session_id;
+  appState.fixedDemoSessionId = session.session_id;
+  appState.selectedEngine = session.engine || appState.selectedEngine;
+  updateSessionUrl(session.session_id);
+  listenForAsrEvents(session.events_url);
+  return session;
+}
+
+async function uploadFixedDemoAudioChunk(sessionId, chunkInfo) {
+  const blob = encodeWavFromFloat32([chunkInfo.chunk], chunkInfo.sample_rate);
+  const checksum = await sha256Blob(blob);
+  const form = new FormData();
+  form.append("chunk_index", String(chunkInfo.chunk_index));
+  form.append("sha256", checksum);
+  form.append("duration_seconds", String(chunkInfo.duration_seconds || 0));
+  form.append("chunk_started_at_ms", String(chunkInfo.chunk_started_at_ms));
+  form.append("chunk_ended_at_ms", String(chunkInfo.chunk_ended_at_ms));
+  form.append("file", blob, `fixed-demo-chunk-${String(chunkInfo.chunk_index).padStart(6, "0")}.wav`);
+  return api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/chunks`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+async function startFixedAudioLiveDemo() {
+  if (!requireEncounterBeforeInput("record")) return;
+  clearActionError();
+  closeInputMethodMenu();
+  resetTaskState({ keepEncounter: true });
+  appState.recognitionMode = "follow";
+  appState.audioMode = "generate";
+  appState.fixedDemoStatus = "preparing";
+  appState.fixedDemoMessage = "正在载入固定音频跟随识别演示资源。";
+  appState.fixedDemoFinalized = null;
+  appState.fixedDemoFormalTaskId = null;
+  appState.fixedDemoChunksUploaded = 0;
+  appState.fixedDemoChunkTotal = 0;
+  appState.fixedDemoAbortController?.abort();
+  appState.fixedDemoAbortController = new AbortController();
+  setProductView("encounter");
+  renderAll();
+
+  try {
+    const buffer = await fetchFixedDemoAudioBuffer();
+    const decoded = await decodeFixedDemoAudioChunks(buffer);
+    if (!decoded.chunks.length) throw new Error("固定音频没有可上传的有效片段。");
+    appState.fixedDemoChunkTotal = decoded.chunks.length;
+    appState.asrAudioDurationSeconds = decoded.durationSeconds;
+    const session = await createFixedDemoLiveSession();
+    appState.fixedDemoStatus = "streaming";
+    appState.taskStatus = "TRANSCRIBING";
+    appState.fixedDemoMessage = `固定音频跟随识别演示：0/${decoded.chunks.length} 块已发送。`;
+    renderAll();
+
+    const startedAt = Date.now();
+    for (const chunkInfo of decoded.chunks) {
+      if (appState.fixedDemoAbortController?.signal?.aborted) {
+        throw new Error("固定音频演示已取消。");
+      }
+      await uploadFixedDemoAudioChunk(session.session_id, chunkInfo);
+      appState.fixedDemoChunksUploaded = chunkInfo.chunk_index + 1;
+      appState.fixedDemoMessage = `固定音频跟随识别演示：${appState.fixedDemoChunksUploaded}/${decoded.chunks.length} 块已发送。`;
+      renderAll();
+      const shouldReplayInRealtime = window.__MRA_FIXED_AUDIO_REALTIME !== false;
+      if (shouldReplayInRealtime && chunkInfo.chunk_index < decoded.chunks.length - 1) {
+        const nextDueAt = startedAt + chunkInfo.chunk_ended_at_ms;
+        await delay(Math.max(0, nextDueAt - Date.now()));
+      }
+    }
+    appState.fixedDemoStatus = "ready_to_finalize";
+    appState.fixedDemoMessage = "固定音频已按跟随识别链路发送完毕，请点击“结束问诊并生成正式病历”。";
+    setBusy(false);
+    renderAll();
+    focusNextActionPanel();
+  } catch (error) {
+    appState.fixedDemoStatus = "failed";
+    appState.fixedDemoMessage = `固定音频演示失败：${error?.message || String(error)}`;
+    setBusy(false);
+    renderAll();
+    reportActionError(error);
+  }
+}
+
+async function finalizeFixedAudioLiveDemo() {
+  if (!appState.fixedDemoSessionId) throw new Error("固定音频演示会话尚未创建。");
+  if (appState.fixedDemoStatus !== "ready_to_finalize" && appState.currentAsrResult && appState.fixedDemoFinalized) {
+    return convergeFixedAudioLiveDemo();
+  }
+  appState.fixedDemoStatus = "finalizing";
+  appState.fixedDemoMessage = "正在冻结稳定转写并生成完整可播放音频。";
+  appState.taskStatus = "TRANSCRIBING";
+  renderAll();
+  const finalized = await api(`/api/asr/sessions/${encodeURIComponent(appState.fixedDemoSessionId)}/finalize`, { method: "POST" });
+  appState.fixedDemoFinalized = finalized;
+  appState.currentAudioId = finalized.audio_id;
+  appState.uploadedFilename = finalized.filename || finalized.audio_id;
+  appState.audioMediaUrl = finalized.media_url || `/api/audio/${encodeURIComponent(finalized.audio_id)}/media`;
+  appState.audioDurationSeconds = Number(finalized.duration_seconds || appState.audioDurationSeconds || 0);
+  appState.fixedDemoMessage = "正在完成最终转写收敛。";
+  renderAll();
+  const completed = await api(`/api/asr/sessions/${encodeURIComponent(appState.fixedDemoSessionId)}/complete`, { method: "POST" });
+  appState.currentAsrSessionId = completed.session_id || appState.fixedDemoSessionId;
+  appState.currentAudioId = completed.audio_id || appState.currentAudioId;
+  const finalizedAudioSeconds = Number(appState.audioDurationSeconds || appState.asrAudioDurationSeconds || finalized.duration_seconds || 0);
+  const resultTimeoutMs = Math.max(600000, Math.ceil(finalizedAudioSeconds * 2500));
+  await waitForAsrResultReady(appState.currentAsrSessionId, completed.events_url, { timeoutMs: resultTimeoutMs });
+  return convergeFixedAudioLiveDemo();
+}
+
+async function convergeFixedAudioLiveDemo() {
+  if (!appState.fixedDemoSessionId) throw new Error("固定音频演示会话尚未创建。");
+  appState.fixedDemoStatus = "converging";
+  appState.fixedDemoMessage = "正在使用完整转写创建正式病历，live draft 不会直接审核或导出。";
+  renderAll();
+  const params = new URLSearchParams();
+  if (selectedEncounterId()) params.set("encounter_id", selectedEncounterId());
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const created = await api(`/api/asr/sessions/${encodeURIComponent(appState.fixedDemoSessionId)}/converge-record${suffix}`, { method: "POST" });
+  appState.fixedDemoStatus = "formalized";
+  appState.fixedDemoFormalTaskId = created.task_id;
+  appState.currentTaskId = created.task_id;
+  appState.taskStatus = created.status;
+  appState.currentTask = {
+    id: created.task_id,
+    status: created.status,
+    encounter_id: created.encounter_id || selectedEncounterId(),
+    patient_id: appState.currentEncounter?.patient_id,
+  };
+  appState.fixedDemoMessage = created.created
+    ? "正式病历已创建，正在等待病历字段生成。"
+    : "已复用该会话的正式病历，正在恢复审核流程。";
+  renderAll();
+  listenForEvents(created.task_id, created.events_url);
+  await waitForFormalRecordReady(created.task_id);
+  appState.fixedDemoMessage = created.created
+    ? "正式病历已创建，请医生修改并审核。"
+    : "已复用该会话的正式病历，请医生继续审核。";
+  renderAll();
+  focusRecordWorkspace();
+  return created;
+}
+
+function openBrowserRecordingDb() {
+  if (!window.indexedDB) {
+    return Promise.reject(new Error("当前浏览器不支持录音恢复队列，请使用最新版 Chrome 或 Edge。"));
+  }
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(BROWSER_RECORDING_DB_NAME, BROWSER_RECORDING_DB_VERSION);
+    request.onerror = () => reject(request.error || new Error("无法打开录音恢复队列。"));
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(BROWSER_RECORDING_STORE)) {
+        const store = db.createObjectStore(BROWSER_RECORDING_STORE, { keyPath: "key" });
+        store.createIndex("session_id", "session_id", { unique: false });
+        store.createIndex("status", "status", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(BROWSER_RECORDING_CLEANUP_STORE)) {
+        const cleanupStore = db.createObjectStore(BROWSER_RECORDING_CLEANUP_STORE, { keyPath: "session_id" });
+        cleanupStore.createIndex("status", "status", { unique: false });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+async function withBrowserRecordingStore(mode, callback) {
+  const db = await openBrowserRecordingDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(BROWSER_RECORDING_STORE, mode);
+      const store = transaction.objectStore(BROWSER_RECORDING_STORE);
+      let result;
+      transaction.oncomplete = () => resolve(result);
+      transaction.onerror = () => reject(transaction.error || new Error("录音恢复队列操作失败。"));
+      transaction.onabort = () => reject(transaction.error || new Error("录音恢复队列操作已取消。"));
+      try {
+        result = callback(store);
+      } catch (error) {
+        transaction.abort();
+        reject(error);
+      }
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function withBrowserRecordingCleanupStore(mode, callback) {
+  const db = await openBrowserRecordingDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(BROWSER_RECORDING_CLEANUP_STORE, mode);
+      const store = transaction.objectStore(BROWSER_RECORDING_CLEANUP_STORE);
+      let result;
+      transaction.oncomplete = () => resolve(result);
+      transaction.onerror = () => reject(transaction.error || new Error("Recording cleanup queue operation failed."));
+      transaction.onabort = () => reject(transaction.error || new Error("Recording cleanup queue operation aborted."));
+      try {
+        result = callback(store);
+      } catch (error) {
+        transaction.abort();
+        reject(error);
+      }
+    });
+  } finally {
+    db.close();
+  }
+}
+
+function requestToPromise(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("录音恢复队列请求失败。"));
+  });
+}
+
+async function putBrowserRecordingQueueEntry(entry) {
+  return withBrowserRecordingStore("readwrite", (store) => {
+    store.put({
+      ...entry,
+      updated_at: new Date().toISOString(),
+    });
+  });
+}
+
+async function listBrowserRecordingQueueEntries(sessionId) {
+  return withBrowserRecordingStore("readonly", async (store) => {
+    const index = store.index("session_id");
+    const rows = await requestToPromise(index.getAll(sessionId));
+    return rows.sort((left, right) => Number(left.chunk_index) - Number(right.chunk_index));
+  });
+}
+
+async function deleteBrowserRecordingQueueEntry(sessionId, chunkIndex) {
+  return withBrowserRecordingStore("readwrite", (store) => {
+    store.delete(recordingQueueKey(sessionId, chunkIndex));
+  });
+}
+
+async function clearBrowserRecordingQueue(sessionId) {
+  const rows = await listBrowserRecordingQueueEntries(sessionId);
+  await withBrowserRecordingStore("readwrite", (store) => {
+    rows.forEach((row) => store.delete(row.key));
+  });
+}
+
+async function putBrowserRecordingCleanup(sessionId, reason = "cancel") {
+  if (!sessionId) return;
+  return withBrowserRecordingCleanupStore("readwrite", (store) => {
+    store.put({
+      session_id: sessionId,
+      status: "pending",
+      reason,
+      retry_count: 0,
+      last_error: "",
+      next_retry_at: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  });
+}
+
+async function listBrowserRecordingCleanups() {
+  return withBrowserRecordingCleanupStore("readonly", (store) => requestToPromise(store.getAll()));
+}
+
+async function deleteBrowserRecordingCleanup(sessionId) {
+  return withBrowserRecordingCleanupStore("readwrite", (store) => {
+    store.delete(sessionId);
+  });
+}
+
+async function updateBrowserRecordingCleanup(sessionId, updates) {
+  const rows = await listBrowserRecordingCleanups();
+  const current = rows.find((row) => row.session_id === sessionId);
+  if (!current) return;
+  return withBrowserRecordingCleanupStore("readwrite", (store) => {
+    store.put({
+      ...current,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    });
+  });
+}
+
+async function updateBrowserRecordingQueueEntry(sessionId, chunkIndex, updates) {
+  const db = await openBrowserRecordingDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(BROWSER_RECORDING_STORE, "readwrite");
+      const store = transaction.objectStore(BROWSER_RECORDING_STORE);
+      const key = recordingQueueKey(sessionId, chunkIndex);
+      const request = store.get(key);
+      request.onerror = () => reject(request.error || new Error("录音恢复队列读取失败。"));
+      request.onsuccess = () => {
+        const current = request.result;
+        if (!current) return;
+        store.put({
+          ...current,
+          ...updates,
+          updated_at: new Date().toISOString(),
+        });
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error || new Error("录音恢复队列更新失败。"));
+      transaction.onabort = () => reject(transaction.error || new Error("录音恢复队列更新已取消。"));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function refreshBrowserRecordingQueueCounts(sessionId = appState.browserRecordingSessionId) {
+  if (!sessionId) return { pending: 0, failed: 0, uploaded: appState.browserRecordingUploadedChunks || 0 };
+  const rows = await listBrowserRecordingQueueEntries(sessionId).catch(() => []);
+  appState.browserRecordingPendingChunks = rows.length;
+  const failed = rows.filter((row) => row.status === "failed").length;
+  return {
+    pending: rows.length,
+    failed,
+    uploaded: appState.browserRecordingUploadedChunks || 0,
+  };
+}
+
+async function ensureBrowserRecordingSession() {
   if (appState.browserRecordingSessionId) return appState.browserRecordingSessionId;
-  const sessionParams = new URLSearchParams({ engine });
+  const sessionParams = new URLSearchParams({ recognition_mode: appState.recognitionMode || "fast" });
+  if (selectedEncounterId()) sessionParams.set("encounter_id", selectedEncounterId());
   if (appState.selectedDoctorProfileId) {
     sessionParams.set("doctor_profile_id", appState.selectedDoctorProfileId);
   }
   const session = await api(`/api/asr/sessions?${sessionParams.toString()}`, { method: "POST" });
   appState.currentAsrSessionId = session.session_id;
   appState.browserRecordingSessionId = session.session_id;
-  appState.selectedEngine = session.engine || engine || appState.selectedEngine;
+  appState.selectedEngine = session.engine || appState.selectedEngine;
   updateSessionUrl(session.session_id);
   return session.session_id;
 }
 
-async function uploadBrowserRecordingChunk({ force = false } = {}) {
+function shouldUseLiveBrowserRecordingFollow() {
+  const engine = String(appState.selectedEngine || "").toLowerCase();
+  if (engine.includes("funasr")) return true;
+  const asrModels = appState.adminRuntimeStatus?.checks?.asr_models;
+  const status = asrModels?.status && typeof asrModels.status === "object" ? asrModels.status : asrModels;
+  const components = Array.isArray(status?.components) ? status.components : [];
+  return Boolean(asrModels?.ok && components.some((component) => String(component).toLowerCase().includes("paraformer")));
+}
+
+function updateBrowserRecordingChunkStatusText() {
+  const parts = [
+    `已录制 ${appState.browserRecordingRecordedChunks || 0} 块`,
+    `已上传 ${appState.browserRecordingUploadedChunks || 0} 块`,
+    `待上传 ${appState.browserRecordingPendingChunks || 0} 块`,
+  ];
+  if (appState.browserRecordingRetryStatus) parts.push(appState.browserRecordingRetryStatus);
+  if (appState.browserRecordingMissingChunks?.length) {
+    parts.push(`缺少第 ${appState.browserRecordingMissingChunks.join(", ")} 段，无法完成`);
+  }
+  appState.browserRecordingChunkStatus = parts.join(" · ");
+}
+
+async function queueBrowserRecordingChunk({ force = false } = {}) {
   if (!appState.browserRecordingSessionId) return null;
   const chunks = appState.browserRecordingChunkBuffer || [];
   const sampleCount = chunks.reduce((total, chunk) => total + chunk.length, 0);
@@ -4688,33 +6920,332 @@ async function uploadBrowserRecordingChunk({ force = false } = {}) {
     return null;
   }
   if (sampleCount === 0) return null;
-  appState.browserRecordingChunkBuffer = [];
   const sampleRate = appState.browserRecordingSampleRate || 44100;
   const blob = encodeWavFromFloat32(chunks, sampleRate);
   const chunkIndex = appState.browserRecordingChunkIndex;
-  appState.browserRecordingChunkIndex += 1;
+  const chunkStartedAtMs = Math.max(
+    0,
+    Math.round(((appState.browserRecordingRecordedSamples || sampleCount) - sampleCount) / sampleRate * 1000),
+  );
+  const chunkEndedAtMs = chunkStartedAtMs + Math.round(sampleCount / sampleRate * 1000);
   const checksum = await sha256Blob(blob);
+  await putBrowserRecordingQueueEntry({
+    key: recordingQueueKey(appState.browserRecordingSessionId, chunkIndex),
+    session_id: appState.browserRecordingSessionId,
+    chunk_index: chunkIndex,
+    sha256: checksum,
+    chunk_started_at_ms: chunkStartedAtMs,
+    chunk_ended_at_ms: chunkEndedAtMs,
+    duration_seconds: sampleCount / sampleRate,
+    blob,
+    status: "pending",
+    retry_count: 0,
+    next_retry_at: 0,
+    last_error: "",
+    created_at: new Date().toISOString(),
+  });
+  appState.browserRecordingChunkBuffer = [];
+  appState.browserRecordingChunkIndex += 1;
+  appState.browserRecordingRecordedChunks += 1;
+  await refreshBrowserRecordingQueueCounts();
+  updateBrowserRecordingChunkStatusText();
+  renderBrowserRecordingPanel();
+  pumpBrowserRecordingUploadQueue().catch(() => undefined);
+  return { chunk_index: chunkIndex, sha256: checksum };
+}
+
+async function uploadQueuedBrowserRecordingChunk(entry) {
   const form = new FormData();
-  form.append("chunk_index", String(chunkIndex));
-  form.append("sha256", checksum);
-  form.append("duration_seconds", String(sampleCount / sampleRate));
-  form.append("file", blob, `browser-recording-chunk-${String(chunkIndex).padStart(6, "0")}.wav`);
-  const uploadPromise = api(`/api/asr/sessions/${encodeURIComponent(appState.browserRecordingSessionId)}/chunks`, {
+  form.append("chunk_index", String(entry.chunk_index));
+  form.append("sha256", entry.sha256);
+  form.append("duration_seconds", String(entry.duration_seconds || 0));
+  if (entry.chunk_started_at_ms != null) form.append("chunk_started_at_ms", String(entry.chunk_started_at_ms));
+  if (entry.chunk_ended_at_ms != null) form.append("chunk_ended_at_ms", String(entry.chunk_ended_at_ms));
+  form.append("file", entry.blob, `browser-recording-chunk-${String(entry.chunk_index).padStart(6, "0")}.wav`);
+  return api(`/api/asr/sessions/${encodeURIComponent(entry.session_id)}/chunks`, {
     method: "POST",
     body: form,
   });
-  appState.browserRecordingChunkUploads.push(uploadPromise);
-  const result = await uploadPromise;
-  appState.browserRecordingChunkStatus = `已上传 ${result.chunk_count || appState.browserRecordingChunkIndex} 个音频块`;
+}
+
+function scheduleBrowserRecordingQueueRetry(delayMs) {
+  if (appState.browserRecordingRetryTimer) window.clearTimeout(appState.browserRecordingRetryTimer);
+  appState.browserRecordingRetryTimer = window.setTimeout(() => {
+    appState.browserRecordingRetryTimer = null;
+    pumpBrowserRecordingUploadQueue().catch(() => undefined);
+  }, Math.max(500, delayMs));
+}
+
+function isBrowserRecordingChunkConflict(error) {
+  const message = String(error?.message || error?.detail?.message || "");
+  return error?.status === 409 && /different hash|分块冲突|chunk_index/i.test(message);
+}
+
+async function pumpBrowserRecordingUploadQueue(sessionId = appState.browserRecordingSessionId) {
+  if (!sessionId || appState.browserRecordingUploadInFlight) return;
+  appState.browserRecordingUploadInFlight = true;
+  try {
+    while (true) {
+      const rows = await listBrowserRecordingQueueEntries(sessionId);
+      appState.browserRecordingPendingChunks = rows.length;
+      const uploadable = rows
+        .filter((row) => row.status !== "uploaded" && row.status !== "conflict")
+        .sort((left, right) => Number(left.chunk_index) - Number(right.chunk_index));
+      if (!uploadable.length) {
+        appState.browserRecordingRetryStatus = rows.some((row) => row.status === "conflict")
+          ? "分块冲突，请取消并重新录制"
+          : "";
+        break;
+      }
+      const next = uploadable[0];
+      const now = Date.now();
+      if (Number(next.next_retry_at || 0) > now) {
+        const waitMs = Number(next.next_retry_at) - now;
+        appState.browserRecordingRetryStatus = `等待 ${Math.ceil(waitMs / 1000)} 秒后重试第 ${next.chunk_index} 段`;
+        scheduleBrowserRecordingQueueRetry(waitMs);
+        break;
+      }
+      await updateBrowserRecordingQueueEntry(sessionId, next.chunk_index, {
+        status: "uploading",
+        last_error: "",
+      });
+      updateBrowserRecordingChunkStatusText();
+      renderBrowserRecordingPanel();
+      try {
+        const result = await uploadQueuedBrowserRecordingChunk(next);
+        await deleteBrowserRecordingQueueEntry(sessionId, next.chunk_index);
+        appState.browserRecordingUploadedChunks = Math.max(
+          appState.browserRecordingUploadedChunks || 0,
+          Number(result.chunk_count || 0),
+          Number(next.chunk_index) + 1,
+        );
+        appState.browserRecordingRetryStatus = "";
+        await refreshBrowserRecordingQueueCounts(sessionId);
+        updateBrowserRecordingChunkStatusText();
+        renderBrowserRecordingPanel();
+      } catch (error) {
+        if (isBrowserRecordingChunkConflict(error)) {
+          await updateBrowserRecordingQueueEntry(sessionId, next.chunk_index, {
+            status: "conflict",
+            retry_count: Number(next.retry_count || 0) + 1,
+            next_retry_at: 0,
+            last_error: error?.message || String(error),
+          });
+          appState.browserRecordingRetryStatus = `第 ${next.chunk_index} 段分块冲突，请取消并重新录制`;
+          await refreshBrowserRecordingQueueCounts(sessionId);
+          updateBrowserRecordingChunkStatusText();
+          renderBrowserRecordingPanel();
+          break;
+        }
+        const retryCount = Number(next.retry_count || 0) + 1;
+        const retryable = retryCount < BROWSER_RECORDING_MAX_RETRY_ATTEMPTS;
+        const delayMs = Math.min(
+          BROWSER_RECORDING_RETRY_MAX_MS,
+          BROWSER_RECORDING_RETRY_BASE_MS * (2 ** Math.max(0, retryCount - 1)),
+        );
+        await updateBrowserRecordingQueueEntry(sessionId, next.chunk_index, {
+          status: retryable ? "pending" : "failed",
+          retry_count: retryCount,
+          next_retry_at: retryable ? Date.now() + delayMs : 0,
+          last_error: error?.message || String(error),
+        });
+        appState.browserRecordingRetryStatus = retryable
+          ? `第 ${next.chunk_index} 段上传失败，${Math.ceil(delayMs / 1000)} 秒后重试`
+          : `第 ${next.chunk_index} 段上传失败，请点击重新上传`;
+        await refreshBrowserRecordingQueueCounts(sessionId);
+        updateBrowserRecordingChunkStatusText();
+        renderBrowserRecordingPanel();
+        if (retryable) scheduleBrowserRecordingQueueRetry(delayMs);
+        break;
+      }
+    }
+  } finally {
+    appState.browserRecordingUploadInFlight = false;
+  }
+}
+
+async function retryFailedBrowserRecordingChunks() {
+  const sessionId = appState.browserRecordingSessionId;
+  if (!sessionId) return;
+  const rows = await listBrowserRecordingQueueEntries(sessionId);
+  const retryableRows = rows.filter((row) => row.status !== "conflict");
+  await Promise.all(retryableRows.map((row) => updateBrowserRecordingQueueEntry(sessionId, row.chunk_index, {
+    status: "pending",
+    retry_count: 0,
+    next_retry_at: 0,
+    last_error: "",
+  })));
+  appState.browserRecordingRetryStatus = "正在重新上传失败片段";
+  await refreshBrowserRecordingQueueCounts(sessionId);
+  updateBrowserRecordingChunkStatusText();
   renderBrowserRecordingPanel();
-  return result;
+  await pumpBrowserRecordingUploadQueue(sessionId);
+}
+
+async function processPendingBrowserRecordingCleanups() {
+  const rows = await listBrowserRecordingCleanups().catch(() => []);
+  for (const row of rows) {
+    const sessionId = row.session_id;
+    if (!sessionId) continue;
+    const now = Date.now();
+    if (Number(row.next_retry_at || 0) > now) continue;
+    try {
+      await updateBrowserRecordingCleanup(sessionId, { status: "deleting", last_error: "" });
+      await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/recording`, { method: "DELETE" });
+      const cleanupStatus = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/chunks/status?cleanup_check=${Date.now()}`);
+      if (cleanupStatus?.status !== "cancelled") {
+        throw new Error("Recording cleanup was not confirmed by the server.");
+      }
+      await clearBrowserRecordingQueue(sessionId).catch(() => undefined);
+      await deleteBrowserRecordingCleanup(sessionId);
+      if (appState.browserRecordingSessionId === sessionId) {
+        appState.browserRecordingRetryStatus = "";
+        appState.browserRecordingChunkStatus = "";
+        appState.browserRecordingPendingChunks = 0;
+      }
+    } catch (error) {
+      if (error?.status === 404) {
+        await clearBrowserRecordingQueue(sessionId).catch(() => undefined);
+        await deleteBrowserRecordingCleanup(sessionId);
+        continue;
+      }
+      const retryCount = Number(row.retry_count || 0) + 1;
+      const delayMs = Math.min(
+        BROWSER_RECORDING_RETRY_MAX_MS,
+        BROWSER_RECORDING_RETRY_BASE_MS * (2 ** Math.max(0, retryCount - 1)),
+      );
+      await updateBrowserRecordingCleanup(sessionId, {
+        status: "pending",
+        retry_count: retryCount,
+        next_retry_at: Date.now() + delayMs,
+        last_error: error?.message || String(error),
+      });
+      if (appState.browserRecordingSessionId === sessionId) {
+        appState.browserRecordingRetryStatus = `取消清理失败，${Math.ceil(delayMs / 1000)} 秒后重试`;
+        updateBrowserRecordingChunkStatusText();
+        renderBrowserRecordingPanel();
+      }
+    }
+  }
+}
+
+async function refreshBrowserRecordingServerStatus(sessionId = appState.browserRecordingSessionId) {
+  if (!sessionId) return null;
+  const status = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/chunks/status`);
+  appState.browserRecordingUploadedChunks = Number(status.next_chunk_index || status.chunk_count || 0);
+  appState.browserRecordingMissingChunks = Array.isArray(status.missing_chunk_indices)
+    ? status.missing_chunk_indices
+    : [];
+  if (status.status === "recorded" && status.audio_id) {
+    appState.browserRecordingFinalized = status;
+    appState.currentAudioId = status.audio_id;
+    appState.audioMediaUrl = status.media_url || `/api/audio/${encodeURIComponent(status.audio_id)}/media`;
+  }
+  updateBrowserRecordingChunkStatusText();
+  return status;
+}
+
+async function reconcileBrowserRecordingQueue(sessionId = appState.browserRecordingSessionId) {
+  if (!sessionId) return null;
+  appState.browserRecordingRecovering = true;
+  try {
+    const serverStatus = await refreshBrowserRecordingServerStatus(sessionId);
+    const serverChunks = new Map((serverStatus?.chunks || []).map((chunk) => [Number(chunk.chunk_index), chunk]));
+    const rows = await listBrowserRecordingQueueEntries(sessionId);
+    for (const row of rows) {
+      const serverChunk = serverChunks.get(Number(row.chunk_index));
+      if (serverChunk?.sha256 === row.sha256) {
+        await deleteBrowserRecordingQueueEntry(sessionId, row.chunk_index);
+      } else if (!serverChunk) {
+        await updateBrowserRecordingQueueEntry(sessionId, row.chunk_index, {
+          status: "pending",
+          next_retry_at: 0,
+        });
+      }
+    }
+    await refreshBrowserRecordingQueueCounts(sessionId);
+    await pumpBrowserRecordingUploadQueue(sessionId);
+    const latestStatus = await refreshBrowserRecordingServerStatus(sessionId);
+    const localRows = await listBrowserRecordingQueueEntries(sessionId);
+    const localIndexes = new Set(localRows.map((row) => Number(row.chunk_index)));
+    appState.browserRecordingMissingChunks = (latestStatus?.missing_chunk_indices || [])
+      .filter((index) => !localIndexes.has(Number(index)));
+    appState.browserRecordingChunkIndex = Math.max(
+      Number(latestStatus?.next_chunk_index || 0),
+      ...localRows.map((row) => Number(row.chunk_index) + 1),
+      appState.browserRecordingChunkIndex || 0,
+    );
+    updateBrowserRecordingChunkStatusText();
+    return latestStatus;
+  } finally {
+    appState.browserRecordingRecovering = false;
+    renderBrowserRecordingPanel();
+  }
+}
+
+async function waitForBrowserRecordingUploads(sessionId = appState.browserRecordingSessionId) {
+  const deadline = Date.now() + 60000;
+  while (Date.now() < deadline) {
+    await pumpBrowserRecordingUploadQueue(sessionId);
+    await refreshBrowserRecordingQueueCounts(sessionId);
+    const rows = await listBrowserRecordingQueueEntries(sessionId);
+    if (!rows.length && !appState.browserRecordingUploadInFlight) {
+      const status = await refreshBrowserRecordingServerStatus(sessionId);
+      if (status?.missing_chunk_indices?.length) {
+        throw new Error(`缺少第 ${status.missing_chunk_indices.join(", ")} 段，无法完成录音。`);
+      }
+      return status;
+    }
+    const hasConflict = rows.some((row) => row.status === "conflict");
+    const permanentlyFailed = rows.some((row) => row.status === "failed");
+    updateBrowserRecordingChunkStatusText();
+    if (hasConflict) {
+      throw new Error("分块冲突，请取消并重新录制。");
+    }
+    if (permanentlyFailed) {
+      throw new Error(`还有 ${rows.length} 个音频块未上传，请点击重新上传失败片段。`);
+    }
+    await delay(500);
+  }
+  throw new Error("音频块上传等待超时，请检查网络后点击重新上传失败片段。");
+}
+
+async function finalizeBrowserRecording() {
+  const sessionId = appState.browserRecordingSessionId;
+  if (!sessionId) throw new Error("录音会话尚未创建，请重新开始录音。");
+  await waitForBrowserRecordingUploads(sessionId);
+  appState.browserRecordingStatus = "finalizing";
+  appState.browserRecordingMessage = "正在校验音频块并准备试听...";
+  renderBrowserRecordingPanel();
+  const finalized = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/finalize`, { method: "POST" });
+  appState.browserRecordingFinalized = finalized;
+  appState.currentAsrSessionId = finalized.session_id;
+  appState.currentAudioId = finalized.audio_id;
+  appState.uploadedFilename = finalized.filename || finalized.audio_id;
+  appState.audioMediaUrl = finalized.media_url || `/api/audio/${encodeURIComponent(finalized.audio_id)}/media`;
+  appState.audioDurationSeconds = Number(finalized.duration_seconds || 0);
+  const preview = $("browserRecordingPreview");
+  if (preview) {
+    preview.src = appState.audioMediaUrl;
+    preview.load();
+  }
+  appState.browserRecordingObjectUrl = appState.audioMediaUrl;
+  appState.browserRecordingStatus = "recorded";
+  appState.browserRecordingMessage = "录音已准备完成，可先试听，再点击上传并生成病历。";
+  await refreshBrowserRecordingServerStatus(sessionId);
+  renderAll();
+  return finalized;
+}
+
+async function uploadBrowserRecordingChunk({ force = false } = {}) {
+  return queueBrowserRecordingChunk({ force });
 }
 
 async function flushBrowserRecordingChunk({ force = false } = {}) {
   try {
-    return await uploadBrowserRecordingChunk({ force });
+    return await queueBrowserRecordingChunk({ force });
   } catch (error) {
-    setBrowserRecordingError(`音频块上传失败：${error?.message || String(error)}`);
+    setBrowserRecordingError(`音频块保存失败：${error?.message || String(error)}`);
     throw error;
   }
 }
@@ -4766,8 +7297,8 @@ async function startBrowserRecordingCaptureForExistingSession(requestId) {
         mixed[index] += data[index] / channelCount;
       }
     }
-    appState.browserRecordingChunks.push(mixed);
     appState.browserRecordingChunkBuffer.push(mixed);
+    appState.browserRecordingRecordedSamples += mixed.length;
   };
   source.connect(processor);
   processor.connect(audioContext.destination);
@@ -4782,11 +7313,9 @@ async function completeBrowserRecordingUpload() {
   if (!appState.browserRecordingSessionId) {
     throw new Error("录音会话尚未创建，请重新开始录音。");
   }
-  await flushBrowserRecordingChunk({ force: true });
-  const settled = await Promise.allSettled(appState.browserRecordingChunkUploads);
-  const failedUpload = settled.find((item) => item.status === "rejected");
-  if (failedUpload) {
-    throw failedUpload.reason || new Error("存在未成功上传的音频块。");
+  await waitForBrowserRecordingUploads(appState.browserRecordingSessionId);
+  if (!appState.browserRecordingFinalized?.audio_id) {
+    await finalizeBrowserRecording();
   }
   const completed = await api(`/api/asr/sessions/${encodeURIComponent(appState.browserRecordingSessionId)}/complete`, {
     method: "POST",
@@ -4796,7 +7325,7 @@ async function completeBrowserRecordingUpload() {
   appState.uploadedFilename = completed.filename || completed.audio_id;
   applyUploadedAudioMetadata(completed);
   appState.taskStatus = "TRANSCRIBING";
-  setBusy(true, `正在使用 ${ENGINE_LABELS[completed.engine] || completed.engine} 转写录音...`);
+  setBusy(true, "正在跟随识别录音...");
   return new Promise((resolve, reject) => {
     listenForAsrEvents(completed.events_url, { resolve, reject });
   });
@@ -4804,19 +7333,34 @@ async function completeBrowserRecordingUpload() {
 
 async function startBrowserRecording() {
   clearActionError();
+  if (!requireEncounterBeforeInput("record")) return;
+  const useLiveFollow = shouldUseLiveBrowserRecordingFollow();
+  if (useLiveFollow) {
+    appState.recognitionMode = "follow";
+    if ($("recognitionModeSelect")) $("recognitionModeSelect").value = appState.recognitionMode;
+  }
   releaseBrowserRecordingPreview();
-  appState.browserRecordingChunks = [];
   appState.browserRecordingChunkBuffer = [];
-  appState.browserRecordingChunkUploads = [];
   appState.browserRecordingChunkIndex = 0;
+  appState.browserRecordingRecordedChunks = 0;
+  appState.browserRecordingUploadedChunks = 0;
+  appState.browserRecordingPendingChunks = 0;
+  appState.browserRecordingRetryStatus = "";
+  appState.browserRecordingMissingChunks = [];
   appState.browserRecordingSessionId = "";
+  appState.browserRecordingFinalized = null;
   appState.browserRecordingPausedAt = 0;
   appState.browserRecordingTotalPausedMs = 0;
   appState.browserRecordingElapsedSeconds = 0;
+  appState.browserRecordingRecordedSamples = 0;
   appState.browserRecordingMessage = "";
   appState.browserRecordingChunkStatus = "";
   const requestId = appState.browserRecordingRequestId + 1;
   appState.browserRecordingRequestId = requestId;
+  if (appState.browserRecordingRetryTimer) {
+    window.clearTimeout(appState.browserRecordingRetryTimer);
+    appState.browserRecordingRetryTimer = null;
+  }
 
   if (!navigator.mediaDevices?.getUserMedia) {
     setBrowserRecordingError("当前浏览器不支持麦克风录音，请使用最新版 Chrome 或 Edge。");
@@ -4855,8 +7399,10 @@ async function startBrowserRecording() {
     if (!stream.getAudioTracks().length) {
       throw new DOMException("No audio input track", "NotFoundError");
     }
-    const engine = $("recordingEngineSelect").value;
-    await ensureBrowserRecordingSession(engine);
+    const liveSessionId = await ensureBrowserRecordingSession();
+    if (useLiveFollow) {
+      listenForAsrEvents(`/api/asr/sessions/${encodeURIComponent(liveSessionId)}/events`);
+    }
     if (!browserRecordingRequestActive(requestId)) {
       stream.getTracks().forEach((track) => track.stop());
       return;
@@ -4883,8 +7429,8 @@ async function startBrowserRecording() {
           mixed[index] += data[index] / channelCount;
         }
       }
-      appState.browserRecordingChunks.push(mixed);
       appState.browserRecordingChunkBuffer.push(mixed);
+      appState.browserRecordingRecordedSamples += mixed.length;
     };
     source.connect(processor);
     processor.connect(audioContext.destination);
@@ -4970,8 +7516,7 @@ async function stopBrowserRecording({ auto = false } = {}) {
   appState.browserRecordingElapsedSeconds = Math.min(elapsed, MAX_BROWSER_RECORDING_SECONDS);
   cleanupBrowserRecordingCapture();
 
-  const sampleCount = appState.browserRecordingChunks.reduce((total, chunk) => total + chunk.length, 0);
-  if (sampleCount === 0 || appState.browserRecordingElapsedSeconds < MIN_BROWSER_RECORDING_SECONDS) {
+  if ((appState.browserRecordingRecordedSamples || 0) === 0 || appState.browserRecordingElapsedSeconds < MIN_BROWSER_RECORDING_SECONDS) {
     releaseBrowserRecordingPreview();
     appState.browserRecordingStatus = "error";
     appState.browserRecordingMessage = "未录到有效声音，请重新录制。";
@@ -4982,21 +7527,14 @@ async function stopBrowserRecording({ auto = false } = {}) {
 
   try {
     await flushBrowserRecordingChunk({ force: true });
-  } catch (_error) {
+    await finalizeBrowserRecording();
+  } catch (error) {
+    appState.browserRecordingStatus = "error";
+    appState.browserRecordingMessage = `录音已停止，但仍需补传音频块：${error?.message || String(error)}`;
+    renderAll();
     return;
   }
 
-  const blob = encodeWavFromFloat32(appState.browserRecordingChunks, appState.browserRecordingSampleRate || 44100);
-  const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
-  const file = new File([blob], `browser-recording-${timestamp}.wav`, { type: "audio/wav" });
-  appState.browserRecordingFile = file;
-  appState.browserRecordingObjectUrl = URL.createObjectURL(blob);
-  const preview = $("browserRecordingPreview");
-  if (preview) {
-    preview.src = appState.browserRecordingObjectUrl;
-    preview.load();
-  }
-  appState.browserRecordingStatus = "recorded";
   appState.browserRecordingMessage = auto
     ? "已达到最长 30 分钟录音限制，可先试听再上传生成病历。"
     : "录音已停止，可先试听再上传生成病历。";
@@ -5004,7 +7542,8 @@ async function stopBrowserRecording({ auto = false } = {}) {
   showToast(auto ? "已达到最长 30 分钟录音限制" : "录音已停止");
 }
 
-function cancelBrowserRecording({ silent = false } = {}) {
+async function cancelBrowserRecording({ silent = false } = {}) {
+  const sessionId = appState.browserRecordingSessionId;
   appState.browserRecordingRequestId += 1;
   if (appState.browserRecordingSessionId && appState.currentAsrSessionId === appState.browserRecordingSessionId) {
     appState.currentAsrSessionId = null;
@@ -5012,10 +7551,32 @@ function cancelBrowserRecording({ silent = false } = {}) {
   }
   cleanupBrowserRecordingCapture();
   releaseBrowserRecordingPreview();
-  appState.browserRecordingChunks = [];
   appState.browserRecordingChunkBuffer = [];
-  appState.browserRecordingChunkUploads = [];
+  if (appState.browserRecordingRetryTimer) {
+    window.clearTimeout(appState.browserRecordingRetryTimer);
+    appState.browserRecordingRetryTimer = null;
+  }
+  let serverCleanupConfirmed = !sessionId;
+  if (sessionId) {
+    try {
+      await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/recording`, { method: "DELETE" });
+      await deleteBrowserRecordingCleanup(sessionId).catch(() => undefined);
+      serverCleanupConfirmed = true;
+    } catch (error) {
+      await putBrowserRecordingCleanup(sessionId, "cancel").catch(() => undefined);
+      appState.browserRecordingRetryStatus = "取消清理待网络恢复后重试";
+      if (!silent && window.navigator.onLine) reportActionError(error);
+    }
+    if (serverCleanupConfirmed) {
+      await clearBrowserRecordingQueue(sessionId).catch(() => undefined);
+    }
+  }
   appState.browserRecordingChunkIndex = 0;
+  appState.browserRecordingRecordedChunks = 0;
+  appState.browserRecordingUploadedChunks = 0;
+  appState.browserRecordingPendingChunks = 0;
+  appState.browserRecordingRetryStatus = "";
+  appState.browserRecordingMissingChunks = [];
   appState.browserRecordingSessionId = "";
   appState.browserRecordingChunkStatus = "";
   appState.browserRecordingPausedAt = 0;
@@ -5023,27 +7584,39 @@ function cancelBrowserRecording({ silent = false } = {}) {
   appState.browserRecordingStartedAt = 0;
   appState.browserRecordingElapsedSeconds = 0;
   appState.browserRecordingSampleRate = 0;
+  appState.browserRecordingRecordedSamples = 0;
   appState.browserRecordingStatus = "idle";
-  appState.browserRecordingMessage = silent ? "" : "录音已取消。";
+  appState.browserRecordingMessage = silent
+    ? ""
+    : (serverCleanupConfirmed ? "录音已取消。" : "取消请求已保存，网络恢复后会自动清理服务端录音。");
+  appState.browserRecordingFinalized = null;
+  appState.browserRecordingFile = null;
   renderAll();
-  if (!silent) showToast("录音已取消");
+  if (!silent) showToast(serverCleanupConfirmed ? "录音已取消" : "取消请求已保存，网络恢复后会自动清理");
 }
 
 async function submitBrowserRecording() {
   try {
-    if (!appState.browserRecordingFile && !(appState.browserRecordingSessionId && appState.browserRecordingChunkIndex > 0)) {
+    if (!requireEncounterBeforeInput("record")) return;
+    if (!appState.browserRecordingFinalized?.audio_id) {
       throw new Error("请先完成录音并试听确认。");
     }
     appState.browserRecordingStatus = "uploading";
-    appState.browserRecordingMessage = "正在合并音频块并生成病历...";
+    appState.browserRecordingMessage = "正在转写录音并生成病历草稿，请保持页面打开。";
     renderAll();
-    closeDrawer();
     appState.audioMode = "generate";
     const transcribed = await completeBrowserRecordingUpload();
-    await continueGeneratingFromTranscription(transcribed);
-    appState.browserRecordingStatus = "recorded";
-    appState.browserRecordingMessage = "录音已合并上传，正在等待生成流程。";
+    appState.browserRecordingMessage = "录音转写完成，正在生成结构化病历草稿...";
     renderBrowserRecordingPanel();
+    const generated = await continueGeneratingFromTranscription(transcribed);
+    appState.browserRecordingStatus = "recorded";
+    appState.browserRecordingMessage = "病历草稿已生成，可在工作区继续修改、审核和导出。";
+    renderBrowserRecordingPanel();
+    if (generated?.task_id || appState.currentTaskId) {
+      closeDrawer();
+      setProductView("encounter");
+      showToast("病历草稿已生成，请继续修改和审核");
+    }
   } catch (error) {
     appState.browserRecordingStatus = appState.browserRecordingFile ? "recorded" : "error";
     appState.browserRecordingMessage = `上传失败：${error?.message || String(error)}`;
@@ -5054,10 +7627,11 @@ async function submitBrowserRecording() {
 }
 
 function openReservedRecording() {
+  if (!requireEncounterBeforeInput("record")) return;
   closeInputMethodMenu();
   clearActionError();
   appState.audioMode = "generate";
-  $("recordingEngineSelect").value = appState.selectedEngine;
+  appState.browserRecordingMessage = browserRecordingDefaultMessage();
   openDrawer("recordingPanel", "浏览器录音生成病历");
 }
 
@@ -5102,6 +7676,27 @@ function bindEvents() {
   $("careModeButton").addEventListener("click", () => setDisplayScale("care"));
   $("inputMethodButton").addEventListener("click", (event) => {
     event.stopPropagation();
+    if (!encounterReadyForInput()) {
+      closeInputMethodMenu();
+      closeDisplaySettingsMenu();
+      requireEncounterBeforeInput("record");
+      return;
+    }
+    if (appState.fixedDemoStatus === "ready_to_finalize") {
+      finalizeFixedAudioLiveDemo().catch(reportActionError);
+      return;
+    }
+    if (["preparing", "uploading", "streaming", "finalizing", "converging"].includes(appState.fixedDemoStatus)) {
+      closeInputMethodMenu();
+      showToast(appState.fixedDemoMessage || "当前问诊演示正在进行，请等待状态更新。");
+      focusNextActionPanel();
+      return;
+    }
+    if (appState.currentTaskId || appState.currentRecordFields) {
+      closeInputMethodMenu();
+      focusRecordWorkspace();
+      return;
+    }
     toggleInputMethodMenu();
   });
   $("displaySettingsButton").addEventListener("click", (event) => {
@@ -5122,6 +7717,19 @@ function bindEvents() {
     }
     if (appState.settingsOpen && !event.target.closest(".display-settings-menu")) {
       closeDisplaySettingsMenu();
+    }
+  });
+  document.querySelectorAll("[data-product-view-target]").forEach((button) => {
+    button.addEventListener("click", () => setProductView(button.dataset.productViewTarget));
+  });
+  window.addEventListener("hashchange", () => {
+    const view = productViewFromHash();
+    if (view) setProductView(view, { updateHash: false });
+  });
+  window.addEventListener("online", () => {
+    processPendingBrowserRecordingCleanups().catch(reportActionError);
+    if (appState.browserRecordingSessionId) {
+      reconcileBrowserRecordingQueue(appState.browserRecordingSessionId).catch(reportActionError);
     }
   });
   $("openAudioTranscribeButton").addEventListener("click", openAudioTranscribe);
@@ -5145,10 +7753,60 @@ function bindEvents() {
     refreshEncounterWorklist();
   });
   $("encounterWorklist").addEventListener("click", async (event) => {
+    const actionButton = event.target.closest("[data-encounter-action]");
+    if (actionButton) {
+      if (actionButton.dataset.encounterAction === "start-recording") {
+        await performEncounterAction(actionButton.dataset.encounterId, "start");
+        openReservedRecording();
+        return;
+      }
+      await performEncounterAction(actionButton.dataset.encounterId, actionButton.dataset.encounterAction);
+      return;
+    }
     const button = event.target.closest("[data-restore-encounter]");
     if (!button) return;
-    await restoreEncounter(button.dataset.restoreEncounter);
+    await restoreEncounter(button.dataset.restoreEncounter, { nextInputMethod: button.dataset.afterRestoreInput || "" });
   });
+  $("dashboardEncounterList")?.addEventListener("click", async (event) => {
+    const actionButton = event.target.closest("[data-encounter-action]");
+    if (actionButton) {
+      if (actionButton.dataset.encounterAction === "start-recording") {
+        await performEncounterAction(actionButton.dataset.encounterId, "start");
+        openReservedRecording();
+        return;
+      }
+      await performEncounterAction(actionButton.dataset.encounterId, actionButton.dataset.encounterAction);
+      return;
+    }
+    const restoreButton = event.target.closest("[data-restore-encounter]");
+    if (restoreButton) {
+      await restoreEncounter(restoreButton.dataset.restoreEncounter, { nextInputMethod: restoreButton.dataset.afterRestoreInput || "" });
+      return;
+    }
+    const routeButton = event.target.closest("[data-product-view-target]");
+    if (routeButton) {
+      setProductView(routeButton.dataset.productViewTarget);
+      return;
+    }
+    const inputButton = event.target.closest("[data-input-method]");
+    if (inputButton) {
+      setProductView("encounter");
+      handleInputMethod(inputButton.dataset.inputMethod);
+    }
+  });
+  $("dashboardRefreshWorklistButton")?.addEventListener("click", () => {
+    refreshEncounterWorklist().catch(reportActionError);
+  });
+  $("localEncounterForm")?.addEventListener("submit", createLocalEncounterFromForm);
+  $("dashboardOpenWorklistButton")?.addEventListener("click", openEncounterWorklist);
+  $("refreshAdminHomeButton")?.addEventListener("click", () => {
+    refreshAdminHome().catch(reportActionError);
+  });
+  $("retryTranscriptionButton")?.addEventListener("click", () => {
+    retryTranscriptionFromFailure().catch(reportActionError);
+  });
+  $("fallbackTextInputButton")?.addEventListener("click", openTextImport);
+  $("openTechnicalDetailButton")?.addEventListener("click", openDebug);
   $("submitTextButton").addEventListener("click", submitTextImport);
   $("submitAudioButton").addEventListener("click", submitAudio);
   $("startBrowserRecordingButton").addEventListener("click", startBrowserRecording);
@@ -5235,25 +7893,34 @@ function bindEvents() {
       reportActionError(error);
     }
   });
-  $("topAsrEngineSelect").addEventListener("change", () => {
-    appState.selectedEngine = $("topAsrEngineSelect").value;
-    $("audioEngineSelect").value = appState.selectedEngine;
-    $("recordingEngineSelect").value = appState.selectedEngine;
-    renderPatientBar();
-  });
-  $("audioEngineSelect").addEventListener("change", () => {
-    appState.selectedEngine = $("audioEngineSelect").value;
-    $("topAsrEngineSelect").value = appState.selectedEngine;
-    $("recordingEngineSelect").value = appState.selectedEngine;
-    renderPatientBar();
-  });
-  $("recordingEngineSelect").addEventListener("change", () => {
-    appState.selectedEngine = $("recordingEngineSelect").value;
-    $("topAsrEngineSelect").value = appState.selectedEngine;
-    $("audioEngineSelect").value = appState.selectedEngine;
-    renderPatientBar();
+  $("recognitionModeSelect")?.addEventListener("change", () => {
+    appState.recognitionMode = $("recognitionModeSelect").value || "fast";
   });
   $("recordFields").addEventListener("click", (event) => {
+    const confirmRegular = event.target.closest("[data-approval-confirm-regular]");
+    if (confirmRegular) {
+      appState.approvalRegularFieldsConfirmed = true;
+      renderFields();
+      return;
+    }
+    const missingAction = event.target.closest("[data-approval-missing-key]");
+    if (missingAction) {
+      appState.approvalMissingDecisions[missingAction.dataset.approvalMissingKey] = missingAction.dataset.approvalAction;
+      renderFields();
+      return;
+    }
+    const diagnosisAction = event.target.closest("[data-approval-diagnosis-index]");
+    if (diagnosisAction) {
+      appState.approvalDiagnosisDecisions[diagnosisAction.dataset.approvalDiagnosisIndex] = diagnosisAction.dataset.approvalAction;
+      renderFields();
+      return;
+    }
+    const riskAction = event.target.closest("[data-approval-risk-key]");
+    if (riskAction) {
+      appState.approvalHighRiskConfirmations[riskAction.dataset.approvalRiskKey] = true;
+      renderFields();
+      return;
+    }
     const detail = event.target.closest("[data-open-detail]");
     if (detail) {
       openWorkbenchDetail(detail.dataset.openDetail);
@@ -5264,6 +7931,14 @@ function bindEvents() {
     }
   });
   $("transcriptList").addEventListener("change", (event) => {
+    const autoFollow = event.target.closest("[data-transcript-auto-follow]");
+    if (autoFollow) {
+      appState.transcriptAutoFollow = autoFollow.checked;
+      if (appState.transcriptAutoFollow) {
+        $("transcriptList").scrollTop = $("transcriptList").scrollHeight;
+      }
+      return;
+    }
     const roleSelect = event.target.closest("[data-role-select]");
     if (!roleSelect) return;
     const card = roleSelect.closest("[data-segment-index]");
@@ -5298,6 +7973,15 @@ function bindEvents() {
       await saveRoleReview();
     } catch (error) {
       reportActionError(error);
+    }
+  });
+  $("transcriptList").addEventListener("scroll", () => {
+    const list = $("transcriptList");
+    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 24;
+    if (!atBottom && appState.transcriptAutoFollow) {
+      appState.transcriptAutoFollow = false;
+      const toggle = list.querySelector("[data-transcript-auto-follow]");
+      if (toggle) toggle.checked = false;
     }
   });
   $("transcriptList").addEventListener("keydown", (event) => {
@@ -5354,6 +8038,46 @@ function bindEvents() {
       $("detailDrawerContent").innerHTML = renderTranscriptDetailContent(target);
       return;
     }
+    const exportDownloadButton = event.target.closest("[data-export-download-format]");
+    if (exportDownloadButton) {
+      try {
+        const filename = await downloadTaskExport(exportDownloadButton.dataset.exportDownloadFormat);
+        showToast(`${filename} 下载已开始`);
+      } catch (error) {
+        reportActionError(error);
+      }
+      return;
+    }
+    const evidenceButton = event.target.closest("[data-evidence-segment-id]");
+    if (evidenceButton) {
+      const row = transcriptRows().find((item) => item.segmentId === evidenceButton.dataset.evidenceSegmentId);
+      const start = evidenceButton.dataset.evidenceStart !== undefined
+        ? Number(evidenceButton.dataset.evidenceStart)
+        : row?.startTime;
+      if (start != null) {
+        seekConsultationAudio(start, { autoplay: true });
+        showToast("已定位到关联转写证据");
+      } else {
+        showToast("该证据暂未绑定可播放时间戳");
+      }
+      return;
+    }
+    const liveClinicalAction = event.target.closest("[data-live-clinical-action]");
+    if (liveClinicalAction) {
+      const labels = {
+        "mark-asked": "已标记为已询问",
+        "add-question": "已加入待问清单",
+        "adopt-candidate": "已采纳为候选，仍需医生保存并审核",
+        defer: "已暂不采纳",
+        ignore: "已忽略该提示",
+      };
+      if (liveClinicalAction.dataset.liveClinicalAction === "close") {
+        closeDrawer();
+      } else {
+        showToast(labels[liveClinicalAction.dataset.liveClinicalAction] || "操作已记录");
+      }
+      return;
+    }
     const saveButton = event.target.closest("[data-save-role-review]");
     if (!saveButton) return;
     try {
@@ -5393,9 +8117,14 @@ function bindEvents() {
 }
 
 async function init() {
+  appState.productView = productViewFromHash() || "workbench";
   bindEvents();
   await refreshAuth();
   renderAll();
+  if (appState.authUser) {
+    refreshEncounterWorklist().catch(reportActionError);
+    processPendingBrowserRecordingCleanups().catch(reportActionError);
+  }
   startAsrPrewarmPolling();
   refreshLlmStatus();
   await restoreAsrSessionFromUrl();

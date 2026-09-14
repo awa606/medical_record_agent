@@ -16,6 +16,7 @@ services:
       MEDICAL_RECORD_AGENT_MAX_UPLOAD_BYTES: "209715200"
       MEDICAL_RECORD_AGENT_MAX_RECORDING_CHUNK_BYTES: "16777216"
       MEDICAL_RECORD_AGENT_MAX_RECORDING_SECONDS: "1800"
+      MEDILISTEN_DEMO_AUDIO_PATH: /app/demo_audio/fever_01.wav
       MEDICAL_RECORD_AGENT_MIN_FREE_BYTES: "52428800"
       ASR_SESSION_CHUNK_ENABLED: "1"
       ASR_SESSION_DYNAMIC_CHUNKING: "1"
@@ -23,6 +24,8 @@ services:
       FUNASR_STREAMING_MODEL_ID: paraformer-zh-streaming
       FUNASR_STREAMING_SEGMENT_SECONDS: "6"
       FUNASR_DEVICE: cpu
+      MEDICAL_RECORD_AGENT_ASR_ENGINE: funasr
+      MEDICAL_RECORD_AGENT_REQUIRE_FUNASR: "1"
       ASR_PREWARM_ENABLED: "1"
       ASR_SESSION_REALTIME_CHUNK_SECONDS: "3"
       ASR_SESSION_REALTIME_CHUNK_MIN_SECONDS: "0"
@@ -40,11 +43,13 @@ services:
       SPEAKER_ROLE_OLLAMA_MODEL: qwen3:4b-instruct
       HF_HOME: /app/model_cache/hf
       MODELSCOPE_CACHE: /app/model_cache/modelscope
+      MODELSCOPE_HOME: /app/model_cache/modelscope
       TORCH_HOME: /app/model_cache/torch
       XDG_CACHE_HOME: /app/model_cache/xdg
     volumes:
       - ./data/docker_runtime:/app/runtime
       - ./data/asr_model_cache:/app/model_cache
+      - ${MEDILISTEN_DEMO_AUDIO_HOST_PATH:-../../medical_record_agent/video/fever_01.wav}:/app/demo_audio/fever_01.wav:ro
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/ready"]
       interval: 30s

@@ -1,0 +1,871 @@
+{
+  "schema": "mra-alpha-edge-candidate-v1",
+  "exported_on": "2026-09-14",
+  "source_plan_snapshot_on": "2026-09-13",
+  "candidate_environment": "MRA-ALPHA-EDGE-01",
+  "candidate_gate": "NEEDS VALIDATION",
+  "formal_state_changed": false,
+  "real_jetson_tests_executed": false,
+  "responsibilities": {
+    "existing_pc": [
+      "browser_ui",
+      "microphone_capture",
+      "doctor_review"
+    ],
+    "jetson": [
+      "asr_inference",
+      "llm_inference",
+      "backend",
+      "storage"
+    ]
+  },
+  "budget": {
+    "currency": "CNY",
+    "ceiling": 3000,
+    "known_reference_subtotal": 2070,
+    "missing_price_rows": 5,
+    "full_total": null,
+    "remaining_budget": null,
+    "budget_verified": false,
+    "quote_date": "2026-09-13"
+  },
+  "procurement": [
+    {
+      "id": "P01",
+      "name": "Jetson Orin Nano Super开发套件",
+      "spec": "8GB开发套件，官方载板与原装散热",
+      "qty": 1,
+      "unit": "套",
+      "price": 2070,
+      "nature": "官方参考价，非采购报价",
+      "source": "S01 / 2026-09-13",
+      "why": "一次采购计算模组、载板、散热和配套电源，减少硬件整合变量。",
+      "check": "核对完整SKU、包装清单、19V电源及含税运费总价。"
+    },
+    {
+      "id": "P02",
+      "name": "NVMe SSD",
+      "spec": "512GB / M.2 2280 / NVMe；品牌型号待定",
+      "qty": 1,
+      "unit": "块",
+      "price": null,
+      "nature": "待报价",
+      "source": "规格S03；价格未取得",
+      "why": "集中保存系统、容器、模型、音频与数据库，预留运行空间。",
+      "check": "必须是NVMe而非SATA；部署后可用空间至少100GB。"
+    },
+    {
+      "id": "P03",
+      "name": "保护外壳及安装件",
+      "spec": "兼容官方载板、原装散热及2280 SSD；型号待定",
+      "qty": 1,
+      "unit": "套",
+      "price": null,
+      "nature": "待报价",
+      "source": "按兼容要求询价",
+      "why": "保护板卡并固定走线，保持主动散热风道。",
+      "check": "孔位、风扇高度、SSD间隙、接口开口及绝缘安装。"
+    },
+    {
+      "id": "P04",
+      "name": "USB会议麦克风",
+      "spec": "连接现有电脑；USB音频设备；型号待定",
+      "qty": 1,
+      "unit": "个",
+      "price": null,
+      "nature": "待报价",
+      "source": "按采音要求询价",
+      "why": "采集双方问诊语音，减少自制音频电路与驱动工作。",
+      "check": "浏览器识别、双方清晰度、噪声与削波；设备不保证角色识别。"
+    },
+    {
+      "id": "P05",
+      "name": "网线",
+      "spec": "Cat5e或Cat6成品线；长度现场核对",
+      "qty": 1,
+      "unit": "根",
+      "price": null,
+      "nature": "待报价",
+      "source": "按接线长度询价",
+      "why": "连接Jetson与既有路由器或交换机，降低网络变量。",
+      "check": "电脑已有网络连接属外部前提；新增第二根时修改数量。"
+    },
+    {
+      "id": "P06",
+      "name": "USB安装介质",
+      "spec": "至少16GB USB安装盘；按实际镜像大小复核",
+      "qty": 1,
+      "unit": "个",
+      "price": null,
+      "nature": "待报价，尚未确认可复用",
+      "source": "规格S02；价格未取得",
+      "why": "作为部署工具写入系统安装介质，与运行SSD分离。",
+      "check": "确认容量与介质可靠性；若复用需记录实物，不能把未知当零元。"
+    }
+  ],
+  "components": [
+    {
+      "id": "C01",
+      "name": "计算模组",
+      "included_in": "P01套件内",
+      "spec": "Orin Nano Super 8GB，Arm CPU与Ampere GPU",
+      "responsibility": "在边缘盒独立承担ASR、LLM与后端。",
+      "reason": "选择Jetson软硬件生态，适合验证GPU本地推理。",
+      "alternative_tradeoff": "CPU小板可减少CUDA依赖，但需重做性能对照；更大内存Jetson成本更高。",
+      "compatibility": "核对准确模组与固件；CPU/GPU不是独立采购散件。",
+      "validation": "真实音频ASR和真实LLM分别运行，记录正确性、耗时和负载。",
+      "source": "S01"
+    },
+    {
+      "id": "C02",
+      "name": "官方载板",
+      "included_in": "P01套件内",
+      "spec": "开发套件官方载板",
+      "responsibility": "连接供电、USB、以太网与NVMe。",
+      "reason": "复用经过配套设计的接口，避免本轮自制载板。",
+      "alternative_tradeoff": "第三方载板可缩小体积，但引入引脚、固件和外壳差异。",
+      "compatibility": "M.2 2280 Key-M、网口、USB和供电版本均核对。",
+      "validation": "识别SSD与网口，记录板卡版本并检查每个实际使用接口。",
+      "source": "S03"
+    },
+    {
+      "id": "C03",
+      "name": "板载共享内存",
+      "included_in": "P01计算模组内",
+      "spec": "8GB LPDDR5，由CPU与GPU共享",
+      "responsibility": "容纳系统、模型权重、激活、KV缓存和运行服务。",
+      "reason": "采用套件既定容量，先做最小内存验证；不是另加8GB显存。",
+      "alternative_tradeoff": "更大内存平台留量更大但增加预算；SSD交换区不等同物理内存。",
+      "compatibility": "不可作为普通DIMM另购；模型文件大小不等于运行峰值。",
+      "validation": "记录系统总内存及可用量、进程RSS、阶段切换、OOM和交换活动。",
+      "source": "S01 / S06；工程容量分析"
+    },
+    {
+      "id": "C04",
+      "name": "NVMe SSD",
+      "included_in": "P02独立采购",
+      "spec": "512GB，M.2 2280，NVMe",
+      "responsibility": "保存系统、镜像、模型、问诊音频、SQLite与导出文件。",
+      "reason": "以一块运行盘集中管理持久化，目标部署后至少100GB余量。",
+      "alternative_tradeoff": "microSD成本可能更低但需比较写入可靠性；更大SSD增加成本。",
+      "compatibility": "不选M.2 SATA；确认固定螺丝、厚度、温度、NVMe识别。",
+      "validation": "核对真实容量，安装后检查可用空间与写入/重启持久化。",
+      "source": "S03；项目容量要求"
+    },
+    {
+      "id": "C05",
+      "name": "19V电源适配器",
+      "included_in": "P01套件内",
+      "spec": "原厂配套电源，额定值以铭牌为准",
+      "responsibility": "为计算模组、载板与外设稳定供电。",
+      "reason": "使用与官方接口匹配的套件电源，减少供电不稳定因素。",
+      "alternative_tradeoff": "第三方适配器需额外核对极性、插头及额定能力，无缺件时不另购。",
+      "compatibility": "核对19V及载板电源插口；普通USB手机充电器不适用。",
+      "validation": "记录铭牌，连续推理期间检查掉电、重启和接头发热。",
+      "source": "S02 / S03"
+    },
+    {
+      "id": "C06",
+      "name": "散热器与风扇",
+      "included_in": "P01套件内",
+      "spec": "套件原装主动散热，保留风扇",
+      "responsibility": "排出持续CPU/GPU推理产生的热量。",
+      "reason": "先使用配套方案，避免无依据改为被动散热。",
+      "alternative_tradeoff": "被动外壳更安静但散热能力需重验；大型风扇改变外壳适配。",
+      "compatibility": "外壳不能遮挡进出风；核对风扇接口、固定件及线缆。",
+      "validation": "记录环境温度、芯片温度、频率、功耗模式与是否降频。",
+      "source": "套件组成按到货清单核对；工程热设计要求"
+    },
+    {
+      "id": "C07",
+      "name": "保护外壳及安装件",
+      "included_in": "P03独立采购",
+      "spec": "通风外壳，型号待定",
+      "responsibility": "保护板卡、固定SSD和线缆，便于展示搬运。",
+      "reason": "降低裸板接触和拉扯风险，同时保留原装散热空间。",
+      "alternative_tradeoff": "裸板支架便宜但保护较少；定制外壳增加制造和适配工作。",
+      "compatibility": "必须明确兼容官方载板，不只写兼容Orin Nano模组。",
+      "validation": "逐一试装孔位、接口、SSD与风道，检查绝缘和稳固性。",
+      "source": "工程装配要求"
+    },
+    {
+      "id": "C08",
+      "name": "USB会议麦克风",
+      "included_in": "P04独立采购",
+      "spec": "型号待定，接现有电脑USB口",
+      "responsibility": "在浏览器端采集医生和患者的真实声音。",
+      "reason": "选择通用USB音频设备，避免增加模拟前端或单片机采音链路。",
+      "alternative_tradeoff": "电脑内置麦克风可作对照，但不能假定满足双人拾音质量。",
+      "compatibility": "核对电脑系统、Chrome/Edge、权限及安全上下文；线缆不重复购买。",
+      "validation": "固定距离录制双方对话，检查识别、噪声、削波和ASR输入可读性。",
+      "source": "S04；项目采音要求"
+    },
+    {
+      "id": "C09",
+      "name": "网线与必要连接件",
+      "included_in": "P05独立采购",
+      "spec": "1根Cat5e/Cat6，按现场补足",
+      "responsibility": "将Jetson接入既有局域网。",
+      "reason": "有线连接便于复现传输与中断问题。",
+      "alternative_tradeoff": "Wi-Fi减少布线，但增加信号和接入变量；本轮不另购无线模块。",
+      "compatibility": "电脑已有联网条件需核实；套件或已有线材不能重复计价。",
+      "validation": "电脑访问Jetson，测试上传、结果返回、HTTPS录音及断网不依赖云推理。",
+      "source": "S03 / S04"
+    },
+    {
+      "id": "C10",
+      "name": "系统安装介质",
+      "included_in": "P06部署工具",
+      "spec": "USB安装盘至少16GB",
+      "responsibility": "承载系统安装程序，安装完成后运行数据留在SSD。",
+      "reason": "与运行盘分工明确，便于重新部署。",
+      "alternative_tradeoff": "复用现有合格U盘可降低新增费用，需先核实并记录；不默认再买microSD。",
+      "compatibility": "核对官方安装版本、固件前提和实际镜像尺寸；显示器或串口方案另核对。",
+      "validation": "检查介质可写可读及安装文档匹配；本轮不执行写盘或刷机。",
+      "source": "S02"
+    }
+  ],
+  "deployment_boundaries": [
+    {
+      "topic": "目标环境",
+      "proposal": "MRA-ALPHA-EDGE-01（展示候选编号）",
+      "status": "未采购、未部署、未验收",
+      "limitation": "不覆盖历史MRA-ALPHA-ENV-01办公主机基线。"
+    },
+    {
+      "topic": "电脑端",
+      "proposal": "现有电脑负责网页、麦克风采音、审核操作",
+      "status": "外部前提",
+      "limitation": "不承担ASR或LLM推理；不按零元硬件混进采购BOM。"
+    },
+    {
+      "topic": "Jetson端",
+      "proposal": "运行ASR、真实LLM、FastAPI后端及持久化",
+      "status": "待实机验证",
+      "limitation": "8GB共享内存必须同时预留操作系统、服务与模型运行空间。"
+    },
+    {
+      "topic": "模型容量",
+      "proposal": "先尝试ASR与LLM串行加载，阶段切换释放内存",
+      "status": "规划假设",
+      "limitation": "关闭ASR进程或卸载模型的效果要记录；不能只做逻辑串行却让模型常驻。"
+    },
+    {
+      "topic": "ASR候选",
+      "proposal": "SenseVoiceSmall；FunASR作为现有复用路线",
+      "status": "不是Jetson实测",
+      "limitation": "核对模型版本、Arm依赖与运行后端；历史CPU峰值不能移植为Jetson指标。"
+    },
+    {
+      "topic": "LLM候选",
+      "proposal": "沿用qwen3:4b-instruct方向，量化与后端待冻结",
+      "status": "真实模型尚未运行",
+      "limitation": "小模型/量化可降低压力，但不得降低原有字段、角色、安全验收标准。"
+    },
+    {
+      "topic": "运行存储",
+      "proposal": "512GB NVMe；部署后至少100GB可用",
+      "status": "容量要求",
+      "limitation": "记录模型、容器、音频及数据库占用；磁盘余量不能证明RAM充足。"
+    },
+    {
+      "topic": "软件栈",
+      "proposal": "JetPack、CUDA、容器运行时与模型依赖组合待确认",
+      "status": "兼容性待验证",
+      "limitation": "当前官方快速开始为JetPack 7.2.1；不能据此认定项目依赖已适配。"
+    },
+    {
+      "topic": "历史Docker",
+      "proposal": "开发机CPU环境，LLM Mock",
+      "status": "历史证据不适用Jetson验收",
+      "limitation": "healthy、HTTP 200、ASR ready不证明ARM/CUDA镜像或真实LLM通过。"
+    },
+    {
+      "topic": "局域网录音",
+      "proposal": "电脑通过受信任HTTPS访问Jetson网页",
+      "status": "浏览器部署前提",
+      "limitation": "麦克风需要用户权限和安全上下文；普通局域网HTTP可能不可采音。"
+    },
+    {
+      "topic": "安装工具",
+      "proposal": "暂借兼容显示器及键鼠，安装后无屏运行",
+      "status": "ASSUMPTION A03，待核对",
+      "limitation": "如无DisplayPort接入，补列必要转接件或官方串口工具，并重新算预算。"
+    },
+    {
+      "topic": "最小验证",
+      "proposal": "真实短音频ASR，再释放内存并加载真实LLM生成草稿",
+      "status": "仅验证方案，本轮未执行",
+      "limitation": "记录模型/后端版本、RAM、耗时、温度、降频、错误与输出。"
+    },
+    {
+      "topic": "工程可行性Gate",
+      "proposal": "NEEDS VALIDATION",
+      "status": "不能继承旧16GB办公主机结论",
+      "limitation": "完整人民币报价、内存、速度、软件兼容与局域网采音仍待验证。"
+    },
+    {
+      "topic": "Alpha出口",
+      "proposal": "≤3000元、离线、连续5次真实音频E2E、证据完整",
+      "status": "标准保持原样",
+      "limitation": "最小实验成功也不能直接宣称M4或Alpha通过。"
+    }
+  ],
+  "formal_alpha_snapshot": {
+    "leaf_count": 15,
+    "hours": 87,
+    "technical_edges": 19,
+    "resource_edges": 6,
+    "tasks": [
+      {
+        "task_id": "MRA-ALPHA-1.1",
+        "wbs": "1.1",
+        "task": "目标硬件与BOM基线",
+        "owner": "李国毅",
+        "status": "done",
+        "start": "2026-09-11",
+        "due": "2026-09-11",
+        "hours": 3,
+        "allocation_json": "[{\"day\":5,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [],
+        "repo_state": "verification_only",
+        "deliverable": [
+          "目标硬件配置基线",
+          "带价格依据的BOM表",
+          "总成本≤3000元的目标方案"
+        ],
+        "acceptance": [
+          "记录CPU、RAM、显存或无独显配置及模型规格",
+          "按一致计价口径汇总目标方案成本，合计≤3000元",
+          "冻结后续测试环境编号",
+          "现有设备不直接按零元计入"
+        ],
+        "milestone": "M1"
+      },
+      {
+        "task_id": "MRA-ALPHA-1.2",
+        "wbs": "1.2",
+        "task": "Docker / 本地运行环境整合",
+        "owner": "李国毅",
+        "status": "in_progress",
+        "start": "2026-09-11",
+        "due": "2026-09-14",
+        "hours": 6,
+        "allocation_json": "[{\"day\":5,\"start_hour\":3,\"hours\":3},{\"day\":6,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/1.1 目标硬件与BOM基线]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          }
+        ],
+        "repo_state": "integration_needed",
+        "deliverable": [
+          "复用并核对医疗系统Docker Compose配置",
+          "版本化启动参数说明",
+          "health / ready检查记录"
+        ],
+        "acceptance": [
+          "在1.1目标环境按文档启动成功",
+          "health通过且ready检查绑定实际选定Provider，不把demo ready当作真实模型就绪",
+          "记录镜像、代码SHA与运行模式，无凭据进入报告"
+        ],
+        "milestone": "M1"
+      },
+      {
+        "task_id": "MRA-ALPHA-1.3",
+        "wbs": "1.3",
+        "task": "本地ASR / LLM Provider核对与整合",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-14",
+        "due": "2026-09-15",
+        "hours": 6,
+        "allocation_json": "[{\"day\":6,\"start_hour\":3,\"hours\":3},{\"day\":7,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/1.2 Docker _ 本地运行环境整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          }
+        ],
+        "repo_state": "integration_needed",
+        "deliverable": [
+          "Provider与本地模型配置",
+          "模型加载运行记录",
+          "模型缓存清单与就绪状态"
+        ],
+        "acceptance": [
+          "预下载并固定ASR和LLM模型版本",
+          "断网后模型仍可加载，记录实际Provider和模型位置",
+          "正式证据不得依赖Mock、云端调用或未披露的fallback"
+        ],
+        "milestone": "M1"
+      },
+      {
+        "task_id": "MRA-ALPHA-2.1",
+        "wbs": "2.1",
+        "task": "浏览器真实录音基础链路整合",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-15",
+        "due": "2026-09-16",
+        "hours": 6,
+        "allocation_json": "[{\"day\":7,\"start_hour\":3,\"hours\":3},{\"day\":8,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/1.2 Docker _ 本地运行环境整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/1.3 本地ASR _ LLM Provider核对与整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "resource"
+          }
+        ],
+        "repo_state": "integration_needed",
+        "deliverable": [
+          "开始、停止、取消、试听、提交音频的录音入口",
+          "真实麦克风录音提交记录"
+        ],
+        "acceptance": [
+          "复用已合入录音MVP，逐项核对5种基础操作",
+          "至少一次真实麦克风短录音成功进入后端并取得音频标识",
+          "取消录音不误提交任务"
+        ],
+        "milestone": "M1"
+      },
+      {
+        "task_id": "MRA-ALPHA-2.2",
+        "wbs": "2.2",
+        "task": "真实本地ASR转写",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-17",
+        "due": "2026-09-18",
+        "hours": 6,
+        "allocation_json": "[{\"day\":9,\"start_hour\":3,\"hours\":3},{\"day\":10,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/1.3 本地ASR _ LLM Provider核对与整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/2.1 浏览器真实录音基础链路整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/4.1 Encounter _ Transcript _ Draft基础持久化]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "resource"
+          }
+        ],
+        "repo_state": "verification_only",
+        "deliverable": [
+          "真实Audio到ASRResult结果",
+          "音频ID、Provider与ASR运行证据"
+        ],
+        "acceptance": [
+          "至少一次经2.1提交的真实录音由本地Provider转写成功",
+          "保存输入标识、结果和日志，能够对应同一音频",
+          "Mock结果不得计为正式转写通过"
+        ],
+        "milestone": "M2"
+      },
+      {
+        "task_id": "MRA-ALPHA-2.3",
+        "wbs": "2.3",
+        "task": "医患角色判断与质量门禁",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-18",
+        "due": "2026-09-21",
+        "hours": 6,
+        "allocation_json": "[{\"day\":10,\"start_hour\":3,\"hours\":3},{\"day\":11,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/2.2 真实本地ASR转写]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          }
+        ],
+        "repo_state": "integration_needed",
+        "deliverable": [
+          "speaker、role、role_quality结果",
+          "服务端门禁正反向测试记录"
+        ],
+        "acceptance": [
+          "同一真实音频能追踪speaker、role及role_quality",
+          "至少一个合格路径允许继续，至少一个不合格路径被服务端阻止正式生成",
+          "直接调用API不能绕过角色门禁"
+        ],
+        "milestone": "M2"
+      },
+      {
+        "task_id": "MRA-ALPHA-3.1",
+        "wbs": "3.1",
+        "task": "医生工作台状态流整合",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-21",
+        "due": "2026-09-22",
+        "hours": 6,
+        "allocation_json": "[{\"day\":11,\"start_hour\":3,\"hours\":3},{\"day\":12,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/2.1 浏览器真实录音基础链路整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/2.2 真实本地ASR转写]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/2.3 医患角色判断与质量门禁]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "resource"
+          }
+        ],
+        "repo_state": "integration_needed",
+        "deliverable": [
+          "录音、转写、生成、待审核、已审核状态界面",
+          "前后端状态映射与下一步操作说明"
+        ],
+        "acceptance": [
+          "上述5个状态均有明确界面及可执行下一步操作",
+          "界面状态与同一任务的后端状态一致",
+          "状态整合先完成，完整审核导出闭环仍由3.3和M3验收"
+        ],
+        "milestone": "M3"
+      },
+      {
+        "task_id": "MRA-ALPHA-3.2",
+        "wbs": "3.2",
+        "task": "医学字段、候选诊断与病历草稿整合",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-22",
+        "due": "2026-09-23",
+        "hours": 6,
+        "allocation_json": "[{\"day\":12,\"start_hour\":3,\"hours\":3},{\"day\":13,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/2.3 医患角色判断与质量门禁]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/3.1 医生工作台状态流整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "resource"
+          }
+        ],
+        "repo_state": "integration_needed",
+        "deliverable": [
+          "结构化字段",
+          "候选诊断及对应证据",
+          "医生可审核的病历草稿"
+        ],
+        "acceptance": [
+          "至少一份通过角色门禁的真实ASR结果完成字段、证据和草稿生成",
+          "记录实际本地LLM Provider，不将Mock演示结果作为正式证据",
+          "候选诊断作为医生审核提示，不作为自动确诊"
+        ],
+        "milestone": "M3"
+      },
+      {
+        "task_id": "MRA-ALPHA-3.3",
+        "wbs": "3.3",
+        "task": "医生修改、审核与导出",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-24",
+        "due": "2026-09-25",
+        "hours": 6,
+        "allocation_json": "[{\"day\":14,\"start_hour\":3,\"hours\":3},{\"day\":15,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/3.2 医学字段、候选诊断与病历草稿整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/4.1 Encounter _ Transcript _ Draft基础持久化]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/4.2 病历证据与Revision版本关联]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "resource"
+          }
+        ],
+        "repo_state": "integration_needed",
+        "deliverable": [
+          "编辑、保存、审核、导出完整路径",
+          "审核前后服务端导出检查记录",
+          "导出样例"
+        ],
+        "acceptance": [
+          "医生修改保存后重新读取内容一致",
+          "未审核时直接API导出被受控业务响应拒绝，无文件泄露且不能以500异常代替正确门禁",
+          "审核后可以导出，打开文件核对修改后内容"
+        ],
+        "milestone": "M3"
+      },
+      {
+        "task_id": "MRA-ALPHA-4.1",
+        "wbs": "4.1",
+        "task": "Encounter / Transcript / Draft基础持久化",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-16",
+        "due": "2026-09-17",
+        "hours": 6,
+        "allocation_json": "[{\"day\":8,\"start_hour\":3,\"hours\":3},{\"day\":9,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/1.2 Docker _ 本地运行环境整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/2.1 浏览器真实录音基础链路整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "resource"
+          }
+        ],
+        "repo_state": "integration_needed",
+        "deliverable": [
+          "Encounter、Transcript、Draft数据存储映射",
+          "Approval基础记录",
+          "保存与重新读取核对记录"
+        ],
+        "acceptance": [
+          "四类基础业务记录均有可定位存储位置和关联ID",
+          "保存后的业务数据可重新读取并核对一致",
+          "复用现有SQLite及本地文件，不强制为每种对象新增独立数据表"
+        ],
+        "milestone": "M1"
+      },
+      {
+        "task_id": "MRA-ALPHA-4.2",
+        "wbs": "4.2",
+        "task": "病历证据与Revision版本关联",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-23",
+        "due": "2026-09-24",
+        "hours": 6,
+        "allocation_json": "[{\"day\":13,\"start_hour\":3,\"hours\":3},{\"day\":14,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/3.2 医学字段、候选诊断与病历草稿整合]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/4.1 Encounter _ Transcript _ Draft基础持久化]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          }
+        ],
+        "repo_state": "integration_needed",
+        "deliverable": [
+          "字段证据关联",
+          "病历Revision记录",
+          "修改前后版本比对样例"
+        ],
+        "acceptance": [
+          "至少一份病历的修改前后两个版本可追踪",
+          "Revision关联同一业务对象，字段证据可定位对应输入片段",
+          "保存后重新读取关联不丢失"
+        ],
+        "milestone": "M3"
+      },
+      {
+        "task_id": "MRA-ALPHA-5.1",
+        "wbs": "5.1",
+        "task": "三条主路径E2E Smoke",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-25",
+        "due": "2026-09-28",
+        "hours": 6,
+        "allocation_json": "[{\"day\":15,\"start_hour\":3,\"hours\":3},{\"day\":16,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/3.3 医生修改、审核与导出]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          },
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/4.2 病历证据与Revision版本关联]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          }
+        ],
+        "repo_state": "verification_only",
+        "deliverable": [
+          "文本输入Smoke Report",
+          "音频上传Smoke Report",
+          "浏览器录音Smoke Report"
+        ],
+        "acceptance": [
+          "三条路径分别至少成功一次，3/3通过",
+          "各路径均核对生成、修改、审核、导出与文件内容",
+          "音频路径使用真实本地Provider，文本或Mock成功不能替代音频路径"
+        ],
+        "milestone": "M4"
+      },
+      {
+        "task_id": "MRA-ALPHA-5.2",
+        "wbs": "5.2",
+        "task": "断网本地运行验证",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-28",
+        "due": "2026-09-29",
+        "hours": 6,
+        "allocation_json": "[{\"day\":16,\"start_hour\":3,\"hours\":3},{\"day\":17,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          }
+        ],
+        "repo_state": "verification_only",
+        "deliverable": [
+          "目标环境Offline Test Report",
+          "断网条件、Provider和模型缓存证明"
+        ],
+        "acceptance": [
+          "在已冻结目标配置上验证断网核心流程",
+          "至少一次本地ASR、病历生成、审核和导出完整成功",
+          "记录断网方式，确认未切换云端或Mock",
+          "不未经授权中断其他本机服务"
+        ],
+        "milestone": "M4"
+      },
+      {
+        "task_id": "MRA-ALPHA-5.3",
+        "wbs": "5.3",
+        "task": "连续5次真实音频E2E",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-29",
+        "due": "2026-09-30",
+        "hours": 6,
+        "allocation_json": "[{\"day\":17,\"start_hour\":3,\"hours\":3},{\"day\":18,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/5.2 断网本地运行验证]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          }
+        ],
+        "repo_state": "verification_only",
+        "deliverable": [
+          "5次完整任务执行记录",
+          "输入、ASR、角色、草稿、修改、审核及导出关联索引"
+        ],
+        "acceptance": [
+          "同一冻结代码SHA、环境和Provider下连续5次真实音频E2E成功，5/5且无不可恢复失败",
+          "每次包含录音→ASR→角色→生成→修改→审核→导出",
+          "发生失败或修改代码后，连续成功计数重置并保留失败记录"
+        ],
+        "milestone": "M4"
+      },
+      {
+        "task_id": "MRA-ALPHA-5.4",
+        "wbs": "5.4",
+        "task": "Alpha缺陷回归和证据归档",
+        "owner": "李国毅",
+        "status": "backlog",
+        "start": "2026-09-30",
+        "due": "2026-10-01",
+        "hours": 6,
+        "allocation_json": "[{\"day\":18,\"start_hour\":3,\"hours\":3},{\"day\":19,\"start_hour\":0,\"hours\":3}]",
+        "blockedBy": [
+          {
+            "uid": "[[Projects/Medical_Record_Agent/Tasks/5.3 连续5次真实音频E2E]]",
+            "reltype": "FINISHTOSTART",
+            "kind": "technical"
+          }
+        ],
+        "repo_state": "verification_only",
+        "deliverable": [
+          "Alpha验收报告",
+          "Bug List及已知问题清单",
+          "测试日志、截图、导出样例与证据索引"
+        ],
+        "acceptance": [
+          "M4四项Exit条件均关联到可读取证据，记录代码SHA、环境、执行时间和结果",
+          "有修复时重跑受影响测试和连续5次E2E，不沿用修复前通过结果",
+          "当天无法完成修复、回归和归档时M4保持未通过，报告实际延期"
+        ],
+        "milestone": "M4"
+      }
+    ]
+  },
+  "verification_measurements_required": [
+    "device_sku",
+    "firmware_jetpack_cuda_versions",
+    "model_name_version_hash",
+    "inference_backend",
+    "cold_load_seconds",
+    "asr_seconds",
+    "llm_seconds",
+    "peak_ram",
+    "memory_before_after_unload",
+    "temperature",
+    "throttling",
+    "real_output",
+    "errors",
+    "offline_result"
+  ],
+  "sources": [
+    {
+      "id": "S01",
+      "title": "NVIDIA中国：Orin Nano Super产品规格与官方参考价",
+      "url": "https://www.nvidia.cn/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit/",
+      "result": "页面列出人民币2070元。采用官方参考价，未取得含税运费的经销商成交报价。8GB LPDDR5、Arm CPU与Ampere GPU规格仅用于选型，不代表业务速度。"
+    },
+    {
+      "id": "S02",
+      "title": "NVIDIA Quick Start：包装内容和安装流程",
+      "url": "https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/quick_start.html",
+      "result": "核对套件配套19V电源；运行存储另配；USB安装介质与运行盘分开。当前文档为JetPack 7.2.1流程，实际软件版本仍需按模型兼容性冻结，旧板卡固件路径须核对。"
+    },
+    {
+      "id": "S03",
+      "title": "NVIDIA Hardware Layout：载板与接口",
+      "url": "https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/hardware_layout.html",
+      "result": "核对官方载板的M.2 Key-M 2280 NVMe、千兆以太网、USB和DisplayPort。USB-C不是显示输出；安装时若只提供HDMI显示器，须核对转接件。"
+    },
+    {
+      "id": "S04",
+      "title": "MDN：MediaDevices.getUserMedia",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia",
+      "result": "麦克风采集要求安全上下文及用户授权。局域网网页部署需验证受信任HTTPS；普通HTTP局域网地址不应当作可直接录音的保证。"
+    },
+    {
+      "id": "S05",
+      "title": "Waveshare：官方开发套件商品查询",
+      "url": "https://www.waveshare.net/shop/Jetson-Orin-Nano-Super-Developer-Kit.htm",
+      "result": "本次页面读取失败，未采集可信人民币供应商报价。未用搜索摘要、旧价或虚构数值补齐。"
+    },
+    {
+      "id": "S06",
+      "title": "NVIDIA CUDA for Tegra：共享内存架构",
+      "url": "https://docs.nvidia.com/cuda/archive/12.8.2/cuda-for-tegra-appnote/index.html",
+      "result": "CPU与集成GPU共享SoC DRAM。用于解释物理内存边界，不作为当前模型或容器兼容性证明。"
+    }
+  ]
+}

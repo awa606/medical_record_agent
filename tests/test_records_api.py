@@ -281,6 +281,12 @@ class RecordsApiTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 409)
         self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
+        self.assertEqual(raised.exception.detail["policy_version"], "speaker-role-policy-v1")
+        self.assertEqual(
+            raised.exception.detail["reason_code"],
+            "rules_global_two_party_constraint",
+        )
+        self.assertEqual(len(raised.exception.detail["pending_confirmation"]), 1)
 
     def test_live_mode_preview_returns_503_when_provider_is_mock(self):
         os.environ["RECORD_PROVIDER_MODE"] = "live"
@@ -330,6 +336,21 @@ class RecordsApiTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 409)
         self.assertEqual(raised.exception.detail["role_quality"]["status"], "needs_review")
+        self.assertEqual(raised.exception.detail["reason_code"], "unmapped_speaker")
+
+    def test_extract_fields_text_only_demo_path_remains_compatible(self):
+        extracted = extract_fields(
+            ExtractFieldsRequest(
+                conversation_text=(
+                    "[doctor] hello, what is wrong?\n"
+                    "[patient] fever for three days and cough."
+                ),
+                source="external_api",
+            )
+        )
+
+        self.assertEqual(extracted.status, "fields_extracted")
+        self.assertEqual(extracted.segment_count, 0)
 
 
 if __name__ == "__main__":

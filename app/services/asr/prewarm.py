@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from app.services.asr.funasr_reliability import classify_funasr_error, funasr_cache_status
+
 
 @dataclass
 class PrewarmState:
@@ -14,6 +16,8 @@ class PrewarmState:
     started_at: str | None = None
     completed_at: str | None = None
     last_error: str | None = None
+    error_category: str | None = None
+    retryable: bool = False
     model_load_seconds: float | None = None
     components: list[str] = field(default_factory=list)
 
@@ -23,8 +27,11 @@ class PrewarmState:
             "started_at": self.started_at,
             "completed_at": self.completed_at,
             "last_error": self.last_error,
+            "error_category": self.error_category,
+            "retryable": self.retryable,
             "model_load_seconds": self.model_load_seconds,
             "components": list(self.components),
+            "model_cache": funasr_cache_status(),
         }
 
 
@@ -54,6 +61,8 @@ def reset_prewarm_state_for_tests() -> None:
         _STATE.started_at = None
         _STATE.completed_at = None
         _STATE.last_error = None
+        _STATE.error_category = None
+        _STATE.retryable = False
         _STATE.model_load_seconds = None
         _STATE.components = []
         _THREAD = None
@@ -74,6 +83,8 @@ def start_funasr_prewarm(*, force: bool = False) -> dict[str, Any]:
         _STATE.started_at = _now()
         _STATE.completed_at = None
         _STATE.last_error = None
+        _STATE.error_category = None
+        _STATE.retryable = False
         _STATE.model_load_seconds = None
         _STATE.components = []
         _THREAD = threading.Thread(target=_run_prewarm, name="funasr-prewarm", daemon=True)
@@ -98,12 +109,17 @@ def _run_prewarm() -> None:
             _STATE.status = "ready"
             _STATE.completed_at = _now()
             _STATE.last_error = None
+            _STATE.error_category = None
+            _STATE.retryable = False
             _STATE.model_load_seconds = round(time.perf_counter() - started, 3)
             _STATE.components = components
     except Exception as exc:  # pragma: no cover - exact dependency failure is environment-specific.
+        classified = classify_funasr_error(exc)
         with _LOCK:
             _STATE.status = "failed"
             _STATE.completed_at = _now()
             _STATE.last_error = str(exc)
+            _STATE.error_category = classified["category"]
+            _STATE.retryable = classified["retryable"]
             _STATE.model_load_seconds = round(time.perf_counter() - started, 3)
             _STATE.components = components

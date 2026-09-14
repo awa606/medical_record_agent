@@ -1,0 +1,398 @@
+{
+  "schema_version": "semantic_lora_dataset_manifest_v1",
+  "generated_at": "2026-09-14T13:06:53+08:00",
+  "source_dataset": "field_disease_pack_v1",
+  "source_manifest_sha256": "3550d73411bfe063f2baafc7e251a9ad031e04d0e0a2f678118bb371b7b36bd5",
+  "privacy": {
+    "synthetic": true,
+    "contains_real_patient_data": false,
+    "note": "All cases are synthetic or classroom-style examples. No real patient data is included."
+  },
+  "split_policy": "case 001-030 train; 031-040 validation; 041-060 frozen_test",
+  "target_scope": "transcript_to_supported_facts_and_field_status_only",
+  "excluded_targets": [
+    "diagnosis",
+    "treatment",
+    "candidate_diagnoses",
+    "risk_signals"
+  ],
+  "outputs": {
+    "train": {
+      "path": "train.jsonl",
+      "count": 30,
+      "sha256": "e5534c01ad57faf16a114ee64e06a1c2767a8c89953a1adc460e5447a965fbe5"
+    },
+    "validation": {
+      "path": "validation.jsonl",
+      "count": 10,
+      "sha256": "15244f38ece1fce5f7c73a728ccd8173ecd0a337a5802e38c150baf1435af141"
+    },
+    "frozen_test": {
+      "path": "frozen_test.jsonl",
+      "count": 20,
+      "sha256": "6a948725bc7d4771d2581a0ef23f0cc35d0cf99cc8c61b1e0977ac9e41b218b8"
+    }
+  },
+  "source_cases": [
+    {
+      "case_id": "ce2e_v1_001_short_fever_temp",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_001_short_fever_temp.json",
+      "sha256": "1694cbecd97a10623a45c2d11c7d8fc874e2e692dbff6e2240d84ce0440d0027"
+    },
+    {
+      "case_id": "ce2e_v1_002_short_fever_headache",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_002_short_fever_headache.json",
+      "sha256": "6cc43afc4478221c0dcf9edc8167d3353d19ac5c4be374b3c50465ef157f6997"
+    },
+    {
+      "case_id": "ce2e_v1_003_fever_duration",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_003_fever_duration.json",
+      "sha256": "bce01097d8697a676fd6a125d41a5974ab8ecb7594e2568abe4f366119ca1f8c"
+    },
+    {
+      "case_id": "ce2e_v1_004_cough_duration_only",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_004_cough_duration_only.json",
+      "sha256": "e8f5b24157f849e42e8db499811173e190ce2a544617fbecf0110f2e8ee85cde"
+    },
+    {
+      "case_id": "ce2e_v1_005_absent_fever_headache",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_005_absent_fever_headache.json",
+      "sha256": "d6f8140c8f615a7f269f5c591bc9c57282a9bccd15600fa7b91dda61ac44bbfd"
+    },
+    {
+      "case_id": "ce2e_v1_006_question_answer_absent_fever",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_006_question_answer_absent_fever.json",
+      "sha256": "3da220bea8fdd5d16737fba1110729bc00ab0ef95c8eafd3b2b30bd77a48cab1"
+    },
+    {
+      "case_id": "ce2e_v1_007_resolved_fever",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_007_resolved_fever.json",
+      "sha256": "72a8bdcbad0e77fa76f710156c875a2402340d2d8a3f964805ce10144fc73c0b"
+    },
+    {
+      "case_id": "ce2e_v1_008_ibuprofen_defervescence",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_008_ibuprofen_defervescence.json",
+      "sha256": "f171b877c5b0b5e1c8533f1c3fb3bbcfbb656ab8ea8359796574d02c3b556bf8"
+    },
+    {
+      "case_id": "ce2e_v1_009_fever_cough",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_009_fever_cough.json",
+      "sha256": "cf035955d7ab99e7d092b23feda2f45bd9120eb9b1092e746757c805aace61ba"
+    },
+    {
+      "case_id": "ce2e_v1_010_fever_headache_duration",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_010_fever_headache_duration.json",
+      "sha256": "079955a2927477c343a48cb7d88d5339a25ab421f2fcd238e69b944f5ff884c2"
+    },
+    {
+      "case_id": "ce2e_v1_011_three_party_child_fever",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_011_three_party_child_fever.json",
+      "sha256": "06d2928eea0c7685cdde0342531dc35343a354ac64dab664b760b8c83e6c1a71"
+    },
+    {
+      "case_id": "ce2e_v1_012_family_medication_effect",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_012_family_medication_effect.json",
+      "sha256": "55276df8fe05d0833665fd859c0205262371e70f6be7ef7050c539e0da7f0ebf"
+    },
+    {
+      "case_id": "ce2e_v1_015_asr_typo_fever",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_015_asr_typo_fever.json",
+      "sha256": "b3c984598124b40bfdea56ab9fa9947f46d5e8ec362c98dc1377b38648dc6736"
+    },
+    {
+      "case_id": "ce2e_v1_016_asr_cough_temp",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_016_asr_cough_temp.json",
+      "sha256": "56501a5e003078fbb407d3bcd43ef9f174c0136aed5ff960065f1e00dd237368"
+    },
+    {
+      "case_id": "ce2e_v1_017_fever_duration_temp_cough",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_017_fever_duration_temp_cough.json",
+      "sha256": "917cfbab41acf70d6472917299a7303d5c846eff7c3a39bccda53cbea2963568"
+    },
+    {
+      "case_id": "ce2e_v1_018_negative_cough_context",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_018_negative_cough_context.json",
+      "sha256": "b2cac044c30171aa6d7a855c35a5722a9ccb5b31adf00b0be9adc560becf37f6"
+    },
+    {
+      "case_id": "ce2e_v1_019_resolved_after_antipyretic",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_019_resolved_after_antipyretic.json",
+      "sha256": "db64b975dd1092f38c740a55cfb3445c6ad5c54ecee97b4c4e6fa4878a4580e8"
+    },
+    {
+      "case_id": "ce2e_v1_020_fever_chest_tightness",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_020_fever_chest_tightness.json",
+      "sha256": "2c8128eca42d1f727be9a2c024d316dda13636ae83186318de3d9eccd21783cf"
+    },
+    {
+      "case_id": "ce2e_v1_021_flu_like",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_021_flu_like.json",
+      "sha256": "89be3714eb7cd30bcbfe9f39ac2cb74b77ba35b266761a5dbeeb831916edb161"
+    },
+    {
+      "case_id": "ce2e_v1_022_pulmonary_reference",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_022_pulmonary_reference.json",
+      "sha256": "73aa58c429ade20f03f9ca2b889ad7afe1a4ba32f1fdb2b7de609517929d65ec"
+    },
+    {
+      "case_id": "ce2e_v1_025_temperature_only",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_025_temperature_only.json",
+      "sha256": "575029ac1b4709b4b75d012dcde6cacd0ef53160f02c3ce953fde644036a83cf"
+    },
+    {
+      "case_id": "ce2e_v1_028_numeric_duration",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_028_numeric_duration.json",
+      "sha256": "4a54e2c6c35fa8e762f318d2ad270dc5297b74fbd8d47f444f0b7e391e3ea9bf"
+    },
+    {
+      "case_id": "ce2e_v1_029_high_fever",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_029_high_fever.json",
+      "sha256": "20f19cac9313ea852e628e2600b8412cd1571b3a1349cfb5c74ce4db1adc38cd"
+    },
+    {
+      "case_id": "ce2e_v1_030_fever_headache_cough",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_030_fever_headache_cough.json",
+      "sha256": "3f8d1170a999eb4d02adc542bd09df8e4fdfe36d9b8ab0428d2d01e88b579560"
+    },
+    {
+      "case_id": "ce2e_v1_031_family_describes_elder",
+      "split": "validation",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_031_family_describes_elder.json",
+      "sha256": "01e02b6aa17546aa0f01b098fbe4ee267f71dec097d072f5860d8d592f087727"
+    },
+    {
+      "case_id": "ce2e_v1_032_two_party_structured",
+      "split": "validation",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_032_two_party_structured.json",
+      "sha256": "9ce419d60ef5890f072a6521dbc838568e4d50c4085beeac419214cf0f7bc47d"
+    },
+    {
+      "case_id": "ce2e_v1_037_resolved_fever_current_cough",
+      "split": "validation",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_037_resolved_fever_current_cough.json",
+      "sha256": "d72cca23342278f4a6e3e009716f63391342876a13b4221ae0cae39818ec22d5"
+    },
+    {
+      "case_id": "ce2e_v1_038_low_grade_temp_cough",
+      "split": "validation",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_038_low_grade_temp_cough.json",
+      "sha256": "bb4d5b0ed2f55dd7c7f9725131523fee0bf765ff950d0809e68eaf914a53dc08"
+    },
+    {
+      "case_id": "ce2e_v1_039_fever_no_temperature",
+      "split": "validation",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_039_fever_no_temperature.json",
+      "sha256": "ad9a63ed4a181506e32257264ea497186bc8280b8181525b4cede4a06fbe913f"
+    },
+    {
+      "case_id": "ce2e_v1_013_insufficient_hot",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_013_insufficient_hot.json",
+      "sha256": "7a5ce934d74ebc4ef2cb7b7f04ba7e83bae1a82591eed7451d2e0d49d4e4f7ff"
+    },
+    {
+      "case_id": "ce2e_v1_014_out_of_scope_abdominal",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_014_out_of_scope_abdominal.json",
+      "sha256": "f5b854f93c2face2baf1a012091f220550aa76d4d1b28f740682f357092e1736"
+    },
+    {
+      "case_id": "ce2e_v1_023_insufficient_general",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_023_insufficient_general.json",
+      "sha256": "54f7d9b0911e7a143cfbf7856be187a30fec54ca51857c4d35a018eb7df89e16"
+    },
+    {
+      "case_id": "ce2e_v1_024_unspecified_treatment",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_024_unspecified_treatment.json",
+      "sha256": "415c8fd61c9a2e3db4eeefa6f3b000a841d7598da0651adeeac6fc397e40e8fd"
+    },
+    {
+      "case_id": "ce2e_v1_026_absent_fever_cough",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_026_absent_fever_cough.json",
+      "sha256": "aa6fbfcf470c04f02b909120f9f9b099370bf3a730a598e2558fce964da7eb99"
+    },
+    {
+      "case_id": "ce2e_v1_027_self_correction_absent",
+      "split": "train",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_027_self_correction_absent.json",
+      "sha256": "7f55ca4b1444f558ebd54a310352aadf6f7bb2f3a20f39bc7291b2e6a2e3a384"
+    },
+    {
+      "case_id": "ce2e_v1_033_out_of_scope_hypertension",
+      "split": "validation",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_033_out_of_scope_hypertension.json",
+      "sha256": "5454af581af0a863cdfc9a387a24d3a9e555454dbd831af55920668d1c00ed09"
+    },
+    {
+      "case_id": "ce2e_v1_034_out_of_scope_bite",
+      "split": "validation",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_034_out_of_scope_bite.json",
+      "sha256": "0ab12a93a31df6cb866043ef2571595ae5a8be79d92b7da47e2780ff7f216dec"
+    },
+    {
+      "case_id": "ce2e_v1_035_allergy_fact",
+      "split": "validation",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_035_allergy_fact.json",
+      "sha256": "510fd3771f5928e01a7e3986d529de32e1a1615fe3334b836b73c88544bed7c7"
+    },
+    {
+      "case_id": "ce2e_v1_036_absent_fever_synonym_headache",
+      "split": "validation",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_036_absent_fever_synonym_headache.json",
+      "sha256": "dc900c2c4f06c673ff9565dd970b7fce846f24e18befa1439a5d07fd70a08da4"
+    },
+    {
+      "case_id": "ce2e_v1_040_question_style_absent",
+      "split": "validation",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_040_question_style_absent.json",
+      "sha256": "522732ab160aa1f2760a2a8b54ea9dc7ac1832e1df7149bb343a6e90cfaecf42"
+    },
+    {
+      "case_id": "ce2e_v1_041_final_short_fever",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_041_final_short_fever.json",
+      "sha256": "ea51d47de9ff356f14e96a2e1a3e1d212c7ab53455b6ae37d2c6473d98dd5575"
+    },
+    {
+      "case_id": "ce2e_v1_042_final_headache_temp",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_042_final_headache_temp.json",
+      "sha256": "50fa3f04013f36dc9a48c9f28e616a249e7ec1fe78444bc9aaa3e4fb6e86e7e4"
+    },
+    {
+      "case_id": "ce2e_v1_043_final_fever_two_days",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_043_final_fever_two_days.json",
+      "sha256": "2eae87fd36e13115d19c5d3cdbffcff49459b96793ae9afa4bdbf50fbde00b5f"
+    },
+    {
+      "case_id": "ce2e_v1_044_final_negative_fever",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_044_final_negative_fever.json",
+      "sha256": "1404d333b06efe58b93d86c64301eee077028a4ac1194e8692621a80b63078d1"
+    },
+    {
+      "case_id": "ce2e_v1_045_final_resolved",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_045_final_resolved.json",
+      "sha256": "03e54e7fb8de1933a5638a506349bfcc17f3ac41870e18e8f9c498143e33b758"
+    },
+    {
+      "case_id": "ce2e_v1_046_final_cough_fever",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_046_final_cough_fever.json",
+      "sha256": "926cb7c08783df34f3e61810f693e1223b645b20e5e8668aba72b61682d092cb"
+    },
+    {
+      "case_id": "ce2e_v1_047_final_three_party",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_047_final_three_party.json",
+      "sha256": "db0b45305de26104b98ae3fe994d0ed108c5972d47857dd84c836400bc47208f"
+    },
+    {
+      "case_id": "ce2e_v1_048_final_ibuprofen",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_048_final_ibuprofen.json",
+      "sha256": "a527c1086c877293c8fc17041f54fad1917e892945fd0bac6516e04f0eb2a504"
+    },
+    {
+      "case_id": "ce2e_v1_049_final_high_fever",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_049_final_high_fever.json",
+      "sha256": "79de532a701ec1dc345358eb4ac4386d3c163d5ff25a3e83f3da291e495a8204"
+    },
+    {
+      "case_id": "ce2e_v1_050_final_info_insufficient",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_050_final_info_insufficient.json",
+      "sha256": "c88fc399067e757cb224376ba91f596de70e7ac0c1476807493382e59597fa93"
+    },
+    {
+      "case_id": "ce2e_v1_051_final_out_scope_allergy",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_051_final_out_scope_allergy.json",
+      "sha256": "234f762767002909a3c500892758e49817d37f2eafb3c98bc0ef7f35a0f55118"
+    },
+    {
+      "case_id": "ce2e_v1_052_final_out_scope_abdominal",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_052_final_out_scope_abdominal.json",
+      "sha256": "c0a77a401c1255171021748ea443c48fe313f1a5c77405ae25a9bbc8a59b7db2"
+    },
+    {
+      "case_id": "ce2e_v1_053_final_asr_typo_temp",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_053_final_asr_typo_temp.json",
+      "sha256": "2800820adaec40d9bdb7f5bb7b9cd716b0cc61c85f1fb4c6a86350aabffd0f13"
+    },
+    {
+      "case_id": "ce2e_v1_054_final_no_fever_cough",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_054_final_no_fever_cough.json",
+      "sha256": "a2265aad78db6fbb227ac69fa1fb77b60ad447f66a50dc5a55da128f3e1d8c48"
+    },
+    {
+      "case_id": "ce2e_v1_055_final_fever_no_course",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_055_final_fever_no_course.json",
+      "sha256": "088edee7a3cd0278d5f2de810d642d89199156ad21735d3109fc966b9785b4fa"
+    },
+    {
+      "case_id": "ce2e_v1_056_final_fever_cough_no_temp",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_056_final_fever_cough_no_temp.json",
+      "sha256": "8001e1679ad66ad810b42c82783ec5ec1dd787bdc41218594a80d7808329ce39"
+    },
+    {
+      "case_id": "ce2e_v1_057_final_doctor_no_answer",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_057_final_doctor_no_answer.json",
+      "sha256": "2200f15506a24915e9dcdd53cce08bb85df6ef40eca83752b3d0fe9141267035"
+    },
+    {
+      "case_id": "ce2e_v1_058_final_fever_after_medicine",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_058_final_fever_after_medicine.json",
+      "sha256": "e5353986fc6e12380f23f2543020b1f5ae474cd89469c832961b7e6b2e5a2cd3"
+    },
+    {
+      "case_id": "ce2e_v1_059_final_fever_with_breath",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_059_final_fever_with_breath.json",
+      "sha256": "dafbf6086150b40a879532b6f3ab9b2df89e1c97ba1d9cfdbd461fbee0266697"
+    },
+    {
+      "case_id": "ce2e_v1_060_final_out_scope_chest_pain",
+      "split": "frozen_test",
+      "source_path": "data/clinical_e2e/field_disease_pack_v1/cases/ce2e_v1_060_final_out_scope_chest_pain.json",
+      "sha256": "01ceedfbde468fff9fc84380bb73d569ef1b3f4333b450eea6699e1389ddaf7a"
+    }
+  ]
+}

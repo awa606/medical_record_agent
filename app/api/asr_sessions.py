@@ -13,7 +13,7 @@ import uuid
 import wave
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -23,6 +23,7 @@ from app.api.audio import (
     _sample_id_from_record,
     _write_audio_record,
     _write_transcript,
+    generate_record_from_audio,
     get_upload_dir,
 )
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
@@ -49,10 +50,20 @@ from app.services.asr import (
     merge_chunk_transcriptions,
     split_audio_to_chunks,
 )
+from app.services.asr.auto_roles import ensure_automatic_speaker_roles
 from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
+from app.services.asr.config import backend_capabilities, configured_asr_backend, requested_asr_engine_mismatch
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
+from app.services.asr.funasr_reliability import classify_funasr_error, funasr_error_code
 from app.services.asr.role_quality import attach_speaker_role_quality
 from app.services.asr.speaker_role_classifier import resolve_speaker_roles
+from app.services.live_clinical import (
+    build_live_clinical_snapshot,
+    merge_live_segment,
+    merge_snapshot_if_newer,
+    normalize_live_segment,
+    should_emit_live_snapshot,
+)
 from app.services.runtime_limits import (
     audio_upload_max_bytes,
     copy_upload_with_limit,
@@ -98,9 +109,13 @@ ROLE_LABELS = {
 
 _EVENTS_LOCK = threading.Lock()
 _EVENT_ID_CACHE: dict[str, int] = {}
+_RECORDING_SESSION_LOCKS_LOCK = threading.Lock()
+_RECORDING_SESSION_LOCKS: dict[str, threading.Lock] = {}
 _FUNASR_MODEL_CACHE_LOCK = threading.Lock()
 _FUNASR_STREAMING_ENGINE: Any | None = None
 _FUNASR_RECONCILIATION_ENGINE: Any | None = None
+_FUNASR_LIVE_CHUNK_SESSIONS_LOCK = threading.Lock()
+_FUNASR_LIVE_CHUNK_SESSIONS: dict[str, Any] = {}
 
 
 def _now() -> str:
@@ -139,12 +154,20 @@ def _result_path(session_id: str) -> Path:
     return _session_dir(session_id) / "result.json"
 
 
+def _live_clinical_state_path(session_id: str) -> Path:
+    return _session_dir(session_id) / "live_draft.json"
+
+
 def _recording_chunks_dir(session_id: str) -> Path:
     return _session_dir(session_id) / "recording_chunks"
 
 
 def _recording_chunk_state_path(session_id: str) -> Path:
     return _session_dir(session_id) / "recording_chunks.json"
+
+
+def _recording_cancelled_path(session_id: str) -> Path:
+    return _session_dir(session_id) / "recording_cancelled.json"
 
 
 def _recording_chunk_path(session_id: str, chunk_index: int) -> Path:
@@ -165,7 +188,9 @@ def _read_recording_chunk_state(session_id: str) -> dict[str, Any]:
     if not path.exists():
         return {
             "session_id": session_id,
+            "status": "recording",
             "chunks": {},
+            "finalized": False,
             "completed": False,
             "created_at": _now(),
             "updated_at": _now(),
@@ -179,28 +204,92 @@ def _write_recording_chunk_state(session_id: str, state: dict[str, Any]) -> None
     _write_json(_recording_chunk_state_path(session_id), state)
 
 
+def _recording_cancelled(session_id: str) -> bool:
+    return _recording_cancelled_path(session_id).exists()
+
+
+def _write_recording_cancelled(session_id: str) -> None:
+    _write_json(
+        _recording_cancelled_path(session_id),
+        {
+            "session_id": session_id,
+            "status": "cancelled",
+            "cancelled_at": _now(),
+        },
+    )
+
+
+def _recording_session_lock(session_id: str) -> threading.Lock:
+    with _RECORDING_SESSION_LOCKS_LOCK:
+        lock = _RECORDING_SESSION_LOCKS.get(session_id)
+        if lock is None:
+            lock = threading.Lock()
+            _RECORDING_SESSION_LOCKS[session_id] = lock
+        return lock
+
+
+def _release_recording_session_lock(session_id: str) -> None:
+    with _RECORDING_SESSION_LOCKS_LOCK:
+        _RECORDING_SESSION_LOCKS.pop(session_id, None)
+
+
+def _release_live_chunk_session(session_id: str) -> None:
+    with _FUNASR_LIVE_CHUNK_SESSIONS_LOCK:
+        _FUNASR_LIVE_CHUNK_SESSIONS.pop(session_id, None)
+
+
+def _recording_state_status(state: dict[str, Any]) -> str:
+    status = str(state.get("status") or "").strip()
+    if status:
+        return status
+    if state.get("completed"):
+        return "transcribing"
+    if state.get("finalized") or state.get("audio_id"):
+        return "recorded"
+    return "recording"
+
+
+def _recording_missing_indices(chunks: dict[str, Any]) -> list[int]:
+    if not chunks:
+        return []
+    received = {int(index) for index in chunks}
+    return [index for index in range(max(received) + 1) if index not in received]
+
+
 def _recording_chunk_summary(state: dict[str, Any]) -> dict[str, Any]:
     chunks = state.get("chunks") or {}
-    ordered = [
-        {
-            "chunk_index": int(index),
-            **metadata,
-        }
-        for index, metadata in sorted(chunks.items(), key=lambda item: int(item[0]))
-    ]
+    ordered: list[dict[str, Any]] = []
+    for index, metadata in sorted(chunks.items(), key=lambda item: int(item[0])):
+        item: dict[str, Any] = {"chunk_index": int(index)}
+        if isinstance(metadata, dict):
+            item.update(metadata)
+        else:
+            item.update(
+                {
+                    "status": "invalid_metadata",
+                    "metadata_error": "recording chunk metadata is not a mapping",
+                }
+            )
+        ordered.append(item)
+    missing_indices = _recording_missing_indices(chunks)
     expected_next = 0
     for item in ordered:
         if item["chunk_index"] != expected_next:
             break
         expected_next += 1
+    audio_id = state.get("audio_id")
     return {
         "session_id": state.get("session_id"),
-        "status": "completed" if state.get("completed") else "recording",
+        "status": _recording_state_status(state),
         "chunk_count": len(ordered),
         "next_chunk_index": expected_next,
+        "missing_chunk_indices": missing_indices,
         "chunks": ordered,
+        "finalized": bool(state.get("finalized") or audio_id),
         "completed": bool(state.get("completed")),
-        "audio_id": state.get("audio_id"),
+        "audio_id": audio_id,
+        "media_url": f"/api/audio/{audio_id}/media" if audio_id else None,
+        "duration_seconds": state.get("duration_seconds"),
         "updated_at": state.get("updated_at"),
     }
 
@@ -248,6 +337,73 @@ def _combine_wav_chunks(chunk_paths: list[Path], destination: Path) -> float | N
     return round(total_frames / float(params[2]), 3)
 
 
+def _recording_upload_response(
+    session: ASRSessionRecord,
+    *,
+    audio_id: str,
+    filename: str,
+    duration_seconds: float | None,
+    status: str | None = None,
+) -> ASRSessionUploadResponse:
+    return ASRSessionUploadResponse(
+        session_id=session.session_id,
+        audio_id=audio_id,
+        status=status or session.status,
+        filename=filename,
+        engine=session.engine,
+        events_url=session.events_url or f"/api/asr/sessions/{session.session_id}/events",
+        result_url=session.result_url or f"/api/asr/sessions/{session.session_id}/result",
+        media_url=f"/api/audio/{audio_id}/media",
+        duration_seconds=duration_seconds,
+    )
+
+
+def _delete_recording_audio(audio_id: str | None) -> None:
+    if not audio_id:
+        return
+    upload_dir = get_upload_dir()
+    for path in upload_dir.glob(f"{audio_id}.*"):
+        if path.is_file():
+            path.unlink(missing_ok=True)
+    (upload_dir / f"{audio_id}.record.json").unlink(missing_ok=True)
+    (upload_dir / f"{audio_id}.transcript.json").unlink(missing_ok=True)
+
+
+def _restore_recording_after_finalize_failure(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    state: dict[str, Any],
+    audio_id: str,
+    error: str,
+) -> None:
+    _delete_recording_audio(audio_id)
+    state["status"] = "recording"
+    state["finalized"] = False
+    state["completed"] = False
+    state["last_finalize_error"] = error
+    for key in (
+        "audio_id",
+        "filename",
+        "audio_path",
+        "duration_seconds",
+        "chunk_count",
+        "finalized_at",
+    ):
+        state.pop(key, None)
+    _write_recording_chunk_state(session_id, state)
+    _write_session(
+        session.model_copy(
+            update={
+                "status": "recording",
+                "audio_id": None,
+                "filename": None,
+                "updated_at": _now(),
+            }
+        )
+    )
+
+
 def _normalize_engine_name(engine: str) -> str:
     normalized = (engine or "mock").strip().lower()
     if normalized not in SUPPORTED_ASR_ENGINES:
@@ -276,6 +432,13 @@ def _create_funasr_reconciliation_engine() -> Any:
         if _FUNASR_RECONCILIATION_ENGINE is None:
             _FUNASR_RECONCILIATION_ENGINE = FunASREngine(enable_speaker_diarization=True)
         return _FUNASR_RECONCILIATION_ENGINE
+
+
+def _create_funasr_live_chunk_session(audio_id: str) -> Any:
+    engine = _create_funasr_streaming_engine()
+    if not hasattr(engine, "create_live_chunk_session"):
+        raise RuntimeError("FunASR streaming engine does not support live chunk sessions")
+    return engine.create_live_chunk_session(audio_id)
 
 
 def _write_session(session: ASRSessionRecord) -> None:
@@ -352,6 +515,37 @@ def _read_events(session_id: str) -> list[ASRSessionEvent]:
 
 def _write_session_result(session_id: str, result: ASRResult) -> None:
     _write_json(_result_path(session_id), result.model_dump())
+
+
+def _read_live_clinical_state(session_id: str) -> dict[str, Any]:
+    path = _live_clinical_state_path(session_id)
+    if not path.exists():
+        return {
+            "live_session_id": session_id,
+            "session_id": session_id,
+            "version": None,
+            "based_on_sequence": -1,
+            "status": "idle",
+            "stable_segments": [],
+            "record_patch": {},
+            "alerts": [],
+            "missing_items": [],
+            "differentials": [],
+            "care_plan": [],
+            "next_questions": [],
+        }
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_live_clinical_state(session_id: str, state: dict[str, Any]) -> None:
+    state["live_session_id"] = session_id
+    state["session_id"] = session_id
+    _write_json(_live_clinical_state_path(session_id), state)
+
+
+def _live_formal_record(state: dict[str, Any]) -> dict[str, Any] | None:
+    formal = state.get("formal_record")
+    return formal if isinstance(formal, dict) and formal.get("task_id") else None
 
 
 def _normalize_role(role: str | None) -> str | None:
@@ -848,6 +1042,22 @@ def _append_result_events(
             )
 
     append(
+        "session.finalized",
+        {
+            "status": "finalized",
+            "session_id": session_id,
+            "audio_id": result.audio_id,
+            "segments": total,
+            "duration": result.duration,
+            "recognition_mode": session.recognition_mode,
+            "backend": result.backend or result.engine,
+            "model": result.model,
+            "request_id": result.request_id,
+            "updated_at": _now(),
+            "formal_record_status": "ready_for_generation",
+        },
+    )
+    append(
         "completed",
         {
             "status": "completed",
@@ -883,6 +1093,7 @@ def _offset_segment_for_chunk(segment: ASRSegment, chunk_start_seconds: float) -
         role_confidence=segment.role_confidence,
         role_source=segment.role_source,
         role_note=segment.role_note,
+        role_warning=segment.role_warning,
         speaker_turn=segment.speaker_turn,
         needs_review=True if not segment.role else segment.needs_review,
         reviewed_by_doctor=segment.reviewed_by_doctor,
@@ -906,6 +1117,7 @@ def _append_partial_segment_events(
     progress = round(chunk_index / total_chunks, 4) if total_chunks else 1.0
     for offset, segment in enumerate(segments):
         adjusted = _offset_segment_for_chunk(segment, chunk_start_seconds)
+        sequence = start_index + offset
         events.append(
             _session_event(
                 session=session,
@@ -916,11 +1128,19 @@ def _append_partial_segment_events(
                     "mode": mode,
                     "chunk_index": chunk_index,
                     "total_chunks": total_chunks,
-                    "index": start_index + offset,
+                    "index": sequence,
+                    "sequence": sequence,
                     "total": start_index + len(segments),
                     "progress": progress,
                     "role": adjusted.role,
                     "speaker": adjusted.speaker,
+                    "original_speaker": adjusted.speaker_id or adjusted.speaker,
+                    "inferred_role": adjusted.role,
+                    "role_confidence": adjusted.role_confidence,
+                    "role_source": adjusted.role_source,
+                    "role_warning": adjusted.role_warning,
+                    "start_time": adjusted.start_time,
+                    "end_time": adjusted.end_time,
                     "text": adjusted.text,
                     "segment": adjusted.model_dump(),
                 },
@@ -933,6 +1153,14 @@ def _append_partial_segment_events(
 
 def _failed_event(session: ASRSessionRecord, message: str) -> list[ASRSessionEvent]:
     hint = _retry_hint(session.engine)
+    classified = classify_funasr_error(message) if session.engine == "funasr" else None
+    user_message = (
+        classified["user_message"]
+        if classified
+        else "转写服务暂时不可用，本次任务已暂停。音频已安全保存，可重新转写或改用文本输入。"
+    )
+    error_category = classified["category"] if classified else "asr_failed"
+    error_code = funasr_error_code(error_category) if classified else "ASR_FAILED"
     return [
         ASRSessionEvent(
             id=1,
@@ -942,9 +1170,16 @@ def _failed_event(session: ASRSessionRecord, message: str) -> list[ASRSessionEve
                 "audio_id": session.audio_id,
                 "engine": session.engine,
                 "status": "failed",
-                "error": message,
+                "error": user_message,
+                "message": user_message,
+                "error_code": error_code,
+                "error_category": error_category,
+                "stage": "transcription",
                 "retryable": True,
+                "audio_preserved": True,
                 "retry_hint": hint,
+                "fallback_action": "text_input" if session.engine == "funasr" else None,
+                "technical_detail": message,
             },
             created_at=_now(),
         )
@@ -982,6 +1217,19 @@ def _realtime_max_seconds() -> float:
 
 def _realtime_mock_delay_seconds() -> float:
     return _env_float("ASR_SESSION_REALTIME_MOCK_DELAY_SECONDS", 0.0)
+
+
+def _live_chunk_transcription_enabled() -> bool:
+    value = str(os.environ.get("ASR_SESSION_LIVE_CHUNK_ENABLED", "1")).strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+def _supports_live_chunk_transcription(session: ASRSessionRecord) -> bool:
+    return (
+        _live_chunk_transcription_enabled()
+        and session.engine == "funasr"
+        and session.recognition_mode == "follow"
+    )
 
 
 def _dynamic_chunking_enabled() -> bool:
@@ -1053,6 +1301,316 @@ def _should_use_realtime_upload_session(
     if resolved_duration < _realtime_chunk_min_seconds():
         return False, resolved_duration
     return resolved_duration <= _realtime_max_seconds(), resolved_duration
+
+
+def _recording_chunk_time_range_ms(
+    chunks: dict[str, Any],
+    chunk_index: int,
+    *,
+    duration_seconds: float | None,
+    chunk_started_at_ms: int | None,
+    chunk_ended_at_ms: int | None,
+) -> tuple[int | None, int | None]:
+    if chunk_started_at_ms is not None and chunk_ended_at_ms is not None:
+        return chunk_started_at_ms, chunk_ended_at_ms
+    start_seconds = 0.0
+    for index in range(chunk_index):
+        metadata = chunks.get(str(index))
+        if not isinstance(metadata, dict):
+            return None, None
+        value = metadata.get("duration_seconds")
+        if value is None:
+            return None, None
+        try:
+            start_seconds += float(value)
+        except (TypeError, ValueError):
+            return None, None
+    if duration_seconds is None:
+        return round(start_seconds * 1000), None
+    return round(start_seconds * 1000), round((start_seconds + float(duration_seconds)) * 1000)
+
+
+def _live_chunk_state(state: dict[str, Any]) -> dict[str, Any]:
+    live = state.setdefault(
+        "live",
+        {
+            "status": "idle",
+            "next_chunk_index": 0,
+            "processed_chunks": [],
+            "started_at": None,
+            "updated_at": None,
+        },
+    )
+    if not isinstance(live, dict):
+        live = {
+            "status": "invalid_legacy_state",
+            "next_chunk_index": 0,
+            "processed_chunks": [],
+            "started_at": None,
+            "updated_at": None,
+        }
+        state["live"] = live
+    live.setdefault("processed_chunks", [])
+    live.setdefault("next_chunk_index", len(live.get("processed_chunks") or []))
+    return live
+
+
+def _get_funasr_live_chunk_session(session_id: str, *, audio_id: str) -> Any:
+    with _FUNASR_LIVE_CHUNK_SESSIONS_LOCK:
+        live_session = _FUNASR_LIVE_CHUNK_SESSIONS.get(session_id)
+        if live_session is None:
+            live_session = _create_funasr_live_chunk_session(audio_id)
+            _FUNASR_LIVE_CHUNK_SESSIONS[session_id] = live_session
+        return live_session
+
+
+def _append_live_transcript_event(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    event_name: str,
+    segment: ASRSegment,
+    metadata: dict[str, object],
+) -> None:
+    sequence = int(metadata.get("sequence") or 0)
+    data = {
+        "live_session_id": session_id,
+        "session_id": session_id,
+        "audio_id": session.audio_id,
+        "engine": session.engine,
+        "recognition_mode": session.recognition_mode,
+        "sequence": sequence,
+        "status": "live_transcribing",
+        "partial": segment.provisional,
+        "mode": "browser_live_chunk",
+        "segment_id": segment.segment_id,
+        "revision": segment.revision,
+        "chunk_started_at_ms": metadata.get("chunk_started_at_ms"),
+        "chunk_ended_at_ms": metadata.get("chunk_ended_at_ms"),
+        "checksum": metadata.get("checksum"),
+        "processed_audio_seconds": metadata.get("processed_audio_seconds"),
+        "role": segment.role,
+        "speaker": segment.speaker,
+        "text": segment.text,
+        "segment": segment.model_dump(),
+        "recoverable": True,
+    }
+    _append_session_event(session_id, session=session, event=event_name, data=data)
+
+
+def _live_clinical_event_data(snapshot: dict[str, Any], *, event_id: str) -> dict[str, object]:
+    return {
+        "live_session_id": snapshot["live_session_id"],
+        "session_id": snapshot["session_id"],
+        "event_id": event_id,
+        "version": snapshot["version"],
+        "based_on_sequence": snapshot["based_on_sequence"],
+        "status": snapshot["status"],
+        "updated_at": snapshot["updated_at"],
+        "recoverable": True,
+    }
+
+
+def _append_live_clinical_events(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    snapshot: dict[str, Any],
+) -> None:
+    base_id = f"{session_id}:{snapshot['version']}:{snapshot['based_on_sequence']}"
+    events: list[ASRSessionEvent] = [
+        _session_event(
+            session=session,
+            event="clinical_processing.started",
+            data={
+                **_live_clinical_event_data(snapshot, event_id=f"{base_id}:started"),
+                "phase": "live_clinical_inference",
+            },
+        ),
+        _session_event(
+            session=session,
+            event="record.live_patch",
+            data={
+                **_live_clinical_event_data(snapshot, event_id=f"{base_id}:record"),
+                "record_patch": snapshot.get("record_patch") or {},
+                "alerts": snapshot.get("alerts") or [],
+                "missing_items": snapshot.get("missing_items") or [],
+                "differentials": snapshot.get("differentials") or [],
+                "care_plan": snapshot.get("care_plan") or [],
+                "next_questions": snapshot.get("next_questions") or [],
+                "stable_segment_count": snapshot.get("stable_segment_count") or 0,
+            },
+        ),
+    ]
+    for item in snapshot.get("alerts") or []:
+        events.append(
+            _session_event(
+                session=session,
+                event="clinical_alert.upsert",
+                data={**_live_clinical_event_data(snapshot, event_id=f"{base_id}:alert:{item.get('id')}"), "item": item},
+            )
+        )
+    for item in snapshot.get("missing_items") or []:
+        events.append(
+            _session_event(
+                session=session,
+                event="missing_item.upsert",
+                data={**_live_clinical_event_data(snapshot, event_id=f"{base_id}:missing:{item.get('id')}"), "item": item},
+            )
+        )
+    for item in snapshot.get("differentials") or []:
+        events.append(
+            _session_event(
+                session=session,
+                event="differential.upsert",
+                data={**_live_clinical_event_data(snapshot, event_id=f"{base_id}:diff:{item.get('id')}"), "item": item},
+            )
+        )
+    for item in snapshot.get("care_plan") or []:
+        events.append(
+            _session_event(
+                session=session,
+                event="care_plan.upsert",
+                data={**_live_clinical_event_data(snapshot, event_id=f"{base_id}:care:{item.get('id')}"), "item": item},
+            )
+        )
+    for item in snapshot.get("next_questions") or []:
+        events.append(
+            _session_event(
+                session=session,
+                event="next_question.upsert",
+                data={**_live_clinical_event_data(snapshot, event_id=f"{base_id}:next:{item.get('id')}"), "item": item},
+            )
+        )
+    events.append(
+        _session_event(
+            session=session,
+            event="clinical_processing.completed",
+            data={
+                **_live_clinical_event_data(snapshot, event_id=f"{base_id}:completed"),
+                "phase": "live_clinical_inference",
+            },
+        )
+    )
+    _append_events(session_id, events)
+
+
+def _update_live_clinical_state_from_segment(
+    session_id: str,
+    *,
+    session: ASRSessionRecord,
+    segment: ASRSegment,
+    sequence: int,
+) -> None:
+    if segment.provisional:
+        return
+    state = _read_live_clinical_state(session_id)
+    normalized = normalize_live_segment(segment.model_dump(), sequence=sequence)
+    changed = merge_live_segment(state, normalized)
+    if not changed:
+        _write_live_clinical_state(session_id, state)
+        return
+    if not should_emit_live_snapshot(state, based_on_sequence=sequence):
+        _write_live_clinical_state(session_id, state)
+        return
+    version = int(state.get("version") or 0) + 1
+    snapshot = build_live_clinical_snapshot(
+        session_id=session_id,
+        stable_segments=state.get("stable_segments") or [],
+        version=version,
+        based_on_sequence=sequence,
+        updated_at=_now(),
+    )
+    next_state = merge_snapshot_if_newer(state, {**state, **snapshot})
+    _write_live_clinical_state(session_id, next_state)
+    if next_state is not state or int(next_state.get("version") or 0) == version:
+        _append_live_clinical_events(session_id, session=session, snapshot=next_state)
+
+
+def _process_live_recording_chunks(session_id: str, *, session: ASRSessionRecord) -> None:
+    if not _supports_live_chunk_transcription(session):
+        return
+    state = _read_recording_chunk_state(session_id)
+    chunks = state.get("chunks") or {}
+    live = _live_chunk_state(state)
+    processed_chunks = set(int(value) for value in live.get("processed_chunks") or [])
+    next_index = int(live.get("next_chunk_index") or 0)
+    while str(next_index) in chunks:
+        metadata = chunks.get(str(next_index))
+        if not isinstance(metadata, dict):
+            break
+        chunk_path = Path(str(metadata.get("path") or ""))
+        if not chunk_path.exists():
+            break
+        checksum = str(metadata.get("sha256") or "")
+        chunk_started_at_ms = metadata.get("chunk_started_at_ms")
+        chunk_ended_at_ms = metadata.get("chunk_ended_at_ms")
+        try:
+            started_ms = int(chunk_started_at_ms) if chunk_started_at_ms is not None else None
+            ended_ms = int(chunk_ended_at_ms) if chunk_ended_at_ms is not None else None
+        except (TypeError, ValueError):
+            started_ms = None
+            ended_ms = None
+        if live.get("started_at") is None:
+            live["started_at"] = _now()
+        live["status"] = "transcribing"
+        live["updated_at"] = _now()
+        _write_recording_chunk_state(session_id, state)
+        try:
+            live_session = _get_funasr_live_chunk_session(session_id, audio_id=session_id)
+            transcript_events = live_session.transcribe_chunk(
+                chunk_path,
+                sequence=next_index,
+                chunk_started_at_ms=started_ms,
+                chunk_ended_at_ms=ended_ms,
+                checksum=checksum,
+            )
+        except Exception as exc:  # noqa: BLE001
+            message = _compact_error(exc)
+            live["status"] = "failed"
+            live["failed_at"] = _now()
+            live["error"] = message
+            _write_recording_chunk_state(session_id, state)
+            failed = session.model_copy(update={"status": "failed", "error": message, "updated_at": _now()})
+            _write_session(failed)
+            _append_events(session_id, _failed_event(failed, message))
+            return
+        for event_name, segment, event_metadata in transcript_events:
+            _append_live_transcript_event(
+                session_id,
+                session=session,
+                event_name=event_name,
+                segment=segment,
+                metadata=event_metadata,
+            )
+            if event_name == "transcript.stable":
+                _update_live_clinical_state_from_segment(
+                    session_id,
+                    session=session,
+                    segment=segment,
+                    sequence=int(event_metadata.get("sequence") or next_index),
+                )
+        processed_chunks.add(next_index)
+        live["processed_chunks"] = sorted(processed_chunks)
+        live["next_chunk_index"] = next_index + 1
+        live["status"] = "streaming"
+        live["updated_at"] = _now()
+        _write_recording_chunk_state(session_id, state)
+        next_index += 1
+    if chunks and str(next_index) not in chunks and _recording_missing_indices(chunks):
+        _append_session_event(
+            session_id,
+            session=session,
+            event="audio.chunk.waiting_for_gap",
+            data={
+                "live_session_id": session_id,
+                "session_id": session_id,
+                "status": "waiting_for_gap",
+                "next_chunk_index": next_index,
+                "missing_chunk_indices": _recording_missing_indices(chunks),
+                "recoverable": True,
+            },
+        )
 
 
 def _compact_error(exc: Exception) -> str:
@@ -1151,12 +1709,22 @@ async def _asr_session_event_stream(
 
 @router.post("")
 def create_asr_session(
-    engine: str = Query(default="mock"),
+    engine: str | None = Query(default=None),
     doctor_profile_id: str | None = Query(default=None),
     diarization_engine: str = Query(default="auto"),
+    recognition_mode: Literal["fast", "follow"] = Query(default="fast"),
     request: Request = None,
 ) -> ASRSessionRecord:
-    normalized_engine = _normalize_engine_name(engine)
+    user = current_user_from_request(request)
+    resolved_recognition_mode: Literal["fast", "follow"] = (
+        recognition_mode if recognition_mode in {"fast", "follow"} else "fast"
+    )
+    normalized_engine = _normalize_engine_name(
+        configured_asr_backend(engine, user_role=user.role if user is not None else None)
+    )
+    engine_mismatch = requested_asr_engine_mismatch(engine, normalized_engine)
+    if engine_mismatch is not None:
+        raise HTTPException(status_code=409, detail=engine_mismatch)
     if not isinstance(doctor_profile_id, str):
         doctor_profile_id = None
     normalized_diarization_engine = (
@@ -1181,7 +1749,8 @@ def create_asr_session(
         diarization_engine=normalized_diarization_engine,
         created_at=now,
         updated_at=now,
-        owner_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
+        owner_user_id=user.id if user is not None else None,
+            recognition_mode=resolved_recognition_mode,
     )
     _write_session(session)
     return session
@@ -1191,6 +1760,14 @@ def create_asr_session(
 def read_asr_session(session_id: str, request: Request = None) -> ASRSessionRecord:
     session = _read_session(session_id)
     _assert_session_access(session, request)
+    if _recording_cancelled(session_id) and session.status not in {"transcribing", "stream_ready", "reviewed"}:
+        return session.model_copy(
+            update={
+                "status": "cancelled",
+                "audio_id": None,
+                "filename": None,
+            }
+        )
     return session
 
 
@@ -1198,7 +1775,13 @@ def read_asr_session(session_id: str, request: Request = None) -> ASRSessionReco
 def read_recording_chunk_status(session_id: str, request: Request = None) -> dict[str, Any]:
     session = _read_session(session_id)
     _assert_session_access(session, request)
-    return _recording_chunk_summary(_read_recording_chunk_state(session.session_id))
+    summary = _recording_chunk_summary(_read_recording_chunk_state(session.session_id))
+    if session.status == "cancelled" or _recording_cancelled(session_id):
+        summary["status"] = "cancelled"
+        summary["chunk_count"] = 0
+        summary["chunks"] = []
+        summary["missing_chunk_indices"] = []
+    return summary
 
 
 @router.post("/{session_id}/chunks")
@@ -1208,11 +1791,15 @@ def upload_recording_chunk(
     chunk_index: int = Form(..., ge=0),
     sha256: str = Form(..., min_length=64, max_length=64),
     duration_seconds: float | None = Form(default=None),
+    chunk_started_at_ms: int | None = Form(default=None, ge=0),
+    chunk_ended_at_ms: int | None = Form(default=None, ge=0),
     file: UploadFile = File(...),
 ) -> dict[str, Any]:
     session = _read_session(session_id)
     _assert_session_access(session, request)
-    if session.status in {"transcribing", "stream_ready", "reviewed"}:
+    if _recording_cancelled(session_id):
+        raise HTTPException(status_code=409, detail="Recording session has been cancelled")
+    if session.status in {"transcribing", "stream_ready", "reviewed", "cancelled"}:
         raise HTTPException(status_code=409, detail="ASR session is no longer accepting recording chunks")
 
     extension = _safe_extension(file.filename or "chunk.wav")
@@ -1223,64 +1810,265 @@ def upload_recording_chunk(
     if not all(character in "0123456789abcdef" for character in expected_hash):
         raise HTTPException(status_code=400, detail="sha256 must be lowercase hexadecimal")
 
-    state = _read_recording_chunk_state(session_id)
-    if state.get("completed"):
-        raise HTTPException(status_code=409, detail="Recording session has already been completed")
+    with _recording_session_lock(session_id):
+        session = _read_session(session_id)
+        _assert_session_access(session, request)
+        if _recording_cancelled(session_id):
+            raise HTTPException(status_code=409, detail="Recording session has been cancelled")
+        if session.status in {"transcribing", "stream_ready", "reviewed", "cancelled"}:
+            raise HTTPException(status_code=409, detail="ASR session is no longer accepting recording chunks")
 
-    chunks = state.setdefault("chunks", {})
-    chunk_key = str(chunk_index)
-    existing = chunks.get(chunk_key)
-    if existing is not None:
-        if existing.get("sha256") == expected_hash:
-            return {
-                **_recording_chunk_summary(state),
-                "chunk_index": chunk_index,
-                "duplicate": True,
-                "status": "already_received",
-            }
-        raise HTTPException(status_code=409, detail=f"chunk_index {chunk_index} was already uploaded with a different hash")
+        state = _read_recording_chunk_state(session_id)
+        state_status = _recording_state_status(state)
+        if state_status in {"finalizing", "recorded", "transcribing", "cancelled"}:
+            raise HTTPException(status_code=409, detail=f"Recording session is {state_status} and no longer accepts chunks")
 
-    destination = _recording_chunk_path(session_id, chunk_index)
-    size_bytes = copy_upload_with_limit(
-        file.file,
-        destination,
-        max_bytes=recording_chunk_max_bytes(),
-    )
+        chunks = state.setdefault("chunks", {})
+        chunk_key = str(chunk_index)
+        existing = chunks.get(chunk_key)
+        if existing is not None:
+            if existing.get("sha256") == expected_hash:
+                return {
+                    **_recording_chunk_summary(state),
+                    "chunk_index": chunk_index,
+                    "duplicate": True,
+                    "status": "already_received",
+                }
+            raise HTTPException(status_code=409, detail=f"chunk_index {chunk_index} was already uploaded with a different hash")
 
-    actual_hash = _sha256_file(destination)
-    if actual_hash != expected_hash:
-        destination.unlink(missing_ok=True)
-        raise HTTPException(status_code=400, detail="Uploaded chunk sha256 does not match request metadata")
+        destination = _recording_chunk_path(session_id, chunk_index)
+        size_bytes = copy_upload_with_limit(
+            file.file,
+            destination,
+            max_bytes=recording_chunk_max_bytes(),
+        )
 
-    chunks[chunk_key] = {
-        "sha256": actual_hash,
-        "path": str(destination),
-        "size_bytes": size_bytes,
-        "duration_seconds": duration_seconds,
-        "received_at": _now(),
-    }
-    _write_recording_chunk_state(session_id, state)
+        actual_hash = _sha256_file(destination)
+        if actual_hash != expected_hash:
+            destination.unlink(missing_ok=True)
+            raise HTTPException(status_code=400, detail="Uploaded chunk sha256 does not match request metadata")
+        started_ms, ended_ms = _recording_chunk_time_range_ms(
+            chunks,
+            chunk_index,
+            duration_seconds=duration_seconds,
+            chunk_started_at_ms=chunk_started_at_ms,
+            chunk_ended_at_ms=chunk_ended_at_ms,
+        )
+        if started_ms is not None and ended_ms is not None and ended_ms < started_ms:
+            destination.unlink(missing_ok=True)
+            raise HTTPException(status_code=400, detail="chunk_ended_at_ms must be greater than or equal to chunk_started_at_ms")
 
-    recording_session = session.model_copy(update={"status": "recording", "updated_at": _now()})
-    _write_session(recording_session)
-    _append_session_event(
-        session_id,
-        session=recording_session,
-        event="recording_chunk_received",
-        data={
-            "status": "recording_chunk_received",
-            "chunk_index": chunk_index,
+        latest_session = _read_session(session_id)
+        if latest_session.status == "cancelled" or _recording_cancelled(session_id):
+            destination.unlink(missing_ok=True)
+            raise HTTPException(status_code=409, detail="Recording session has been cancelled")
+
+        chunks[chunk_key] = {
             "sha256": actual_hash,
+            "path": str(destination),
             "size_bytes": size_bytes,
             "duration_seconds": duration_seconds,
-        },
-    )
-    return {
-        **_recording_chunk_summary(state),
-        "chunk_index": chunk_index,
-        "duplicate": False,
-        "status": "received",
-    }
+            "chunk_started_at_ms": started_ms,
+            "chunk_ended_at_ms": ended_ms,
+            "received_at": _now(),
+        }
+        state["status"] = "recording"
+        _write_recording_chunk_state(session_id, state)
+
+        recording_session = session.model_copy(update={"status": "recording", "updated_at": _now()})
+        _write_session(recording_session)
+        _append_session_event(
+            session_id,
+            session=recording_session,
+            event="recording_chunk_received",
+            data={
+                "status": "recording_chunk_received",
+                "chunk_index": chunk_index,
+                "sha256": actual_hash,
+                "size_bytes": size_bytes,
+                "duration_seconds": duration_seconds,
+                "chunk_started_at_ms": started_ms,
+                "chunk_ended_at_ms": ended_ms,
+            },
+        )
+        _append_session_event(
+            session_id,
+            session=recording_session,
+            event="audio.chunk.accepted",
+            data={
+                "live_session_id": session_id,
+                "session_id": session_id,
+                "status": "accepted",
+                "sequence": chunk_index,
+                "chunk_index": chunk_index,
+                "checksum": actual_hash,
+                "chunk_started_at_ms": started_ms,
+                "chunk_ended_at_ms": ended_ms,
+                "duration_seconds": duration_seconds,
+                "recoverable": True,
+            },
+        )
+        _process_live_recording_chunks(session_id, session=recording_session)
+        return {
+            **_recording_chunk_summary(state),
+            "chunk_index": chunk_index,
+            "duplicate": False,
+            "status": "received",
+        }
+
+
+@router.post("/{session_id}/finalize")
+def finalize_recording_chunks(session_id: str, request: Request = None) -> ASRSessionUploadResponse:
+    session = _read_session(session_id)
+    _assert_session_access(session, request)
+    with _recording_session_lock(session_id):
+        session = _read_session(session_id)
+        _assert_session_access(session, request)
+        if _recording_cancelled(session_id):
+            raise HTTPException(status_code=409, detail="Recording session has been cancelled")
+        if session.status in {"transcribing", "stream_ready", "reviewed"} and session.audio_id:
+            state = _read_recording_chunk_state(session_id)
+            return _recording_upload_response(
+                session,
+                audio_id=session.audio_id,
+                filename=session.filename or f"{session.audio_id}.wav",
+                duration_seconds=state.get("duration_seconds"),
+                status=session.status,
+            )
+
+        state = _read_recording_chunk_state(session_id)
+        if _recording_state_status(state) == "cancelled":
+            raise HTTPException(status_code=409, detail="Recording session has been cancelled")
+        if state.get("audio_id"):
+            filename = state.get("filename") or session.filename or f"browser-recording-{session_id[:8]}.wav"
+            return _recording_upload_response(
+                session.model_copy(update={"status": "recorded"}),
+                audio_id=str(state["audio_id"]),
+                filename=filename,
+                duration_seconds=state.get("duration_seconds"),
+                status="recorded",
+            )
+
+        chunks = state.get("chunks") or {}
+        if not chunks:
+            raise HTTPException(status_code=400, detail="No recording chunks have been uploaded")
+        missing_indices = _recording_missing_indices(chunks)
+        if missing_indices:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "Recording chunks are not contiguous",
+                    "missing_chunk_indices": missing_indices,
+                },
+            )
+
+        ordered_indices = sorted(int(index) for index in chunks)
+        audio_id = uuid.uuid4().hex
+        upload_dir = get_upload_dir()
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        destination = upload_dir / f"{audio_id}.wav"
+        try:
+            state["status"] = "finalizing"
+            _write_recording_chunk_state(session_id, state)
+            finalizing_session = session.model_copy(update={"status": "finalizing", "updated_at": _now()})
+            _write_session(finalizing_session)
+
+            chunk_paths = [_recording_chunk_path(session_id, index) for index in ordered_indices]
+            duration = _combine_wav_chunks(chunk_paths, destination)
+            if duration is not None and duration > recording_max_seconds():
+                raise HTTPException(status_code=413, detail="Recording duration exceeds the configured maximum")
+
+            filename = f"browser-recording-{session_id[:8]}.wav"
+            record = AudioRecord(
+                audio_id=audio_id,
+                filename=filename,
+                path=str(destination),
+                status="recorded",
+                content_type="audio/wav",
+                size_bytes=destination.stat().st_size,
+                created_at=_now(),
+                owner_user_id=session.owner_user_id,
+            )
+            _write_audio_record(record)
+
+            recorded_session = session.model_copy(
+                update={
+                    "status": "recorded",
+                    "audio_id": audio_id,
+                    "filename": filename,
+                    "updated_at": _now(),
+                }
+            )
+            _write_session(recorded_session)
+            state.update(
+                {
+                    "status": "recorded",
+                    "finalized": True,
+                    "completed": False,
+                    "audio_id": audio_id,
+                    "filename": filename,
+                    "audio_path": str(destination),
+                    "duration_seconds": duration,
+                    "chunk_count": len(ordered_indices),
+                    "finalized_at": _now(),
+                }
+            )
+            state.pop("last_finalize_error", None)
+            _write_recording_chunk_state(session_id, state)
+            _append_session_event(
+                session_id,
+                session=recorded_session,
+                event="recording_finalized",
+                data={
+                    "status": "recorded",
+                    "audio_id": audio_id,
+                    "duration_seconds": duration,
+                    "chunk_count": len(ordered_indices),
+                },
+            )
+            return _recording_upload_response(
+                recorded_session,
+                audio_id=audio_id,
+                filename=filename,
+                duration_seconds=duration,
+                status="recorded",
+            )
+        except HTTPException as exc:
+            _restore_recording_after_finalize_failure(
+                session_id,
+                session=session,
+                state=state,
+                audio_id=audio_id,
+                error=str(exc.detail),
+            )
+            raise
+        except (EOFError, wave.Error) as exc:
+            _restore_recording_after_finalize_failure(
+                session_id,
+                session=session,
+                state=state,
+                audio_id=audio_id,
+                error=str(exc),
+            )
+            raise HTTPException(status_code=400, detail="Recording chunks contain invalid WAV data") from exc
+        except OSError as exc:
+            _restore_recording_after_finalize_failure(
+                session_id,
+                session=session,
+                state=state,
+                audio_id=audio_id,
+                error=str(exc),
+            )
+            raise HTTPException(status_code=500, detail="Recording finalize failed; please retry") from exc
+        except Exception as exc:
+            _restore_recording_after_finalize_failure(
+                session_id,
+                session=session,
+                state=state,
+                audio_id=audio_id,
+                error=str(exc),
+            )
+            raise HTTPException(status_code=500, detail="Recording finalize failed; please retry") from exc
 
 
 @router.post("/{session_id}/complete")
@@ -1292,85 +2080,168 @@ def complete_recording_chunks(
     session = _read_session(session_id)
     _assert_session_access(session, request)
     if session.status in {"transcribing", "stream_ready", "reviewed"} and session.audio_id:
-        return ASRSessionUploadResponse(
-            session_id=session.session_id,
+        state = _read_recording_chunk_state(session_id)
+        return _recording_upload_response(
+            session,
             audio_id=session.audio_id,
-            status=session.status,
             filename=session.filename or f"{session.audio_id}.wav",
-            engine=session.engine,
-            events_url=session.events_url or f"/api/asr/sessions/{session_id}/events",
-            result_url=session.result_url or f"/api/asr/sessions/{session_id}/result",
-            media_url=f"/api/audio/{session.audio_id}/media",
-            duration_seconds=None,
+            duration_seconds=state.get("duration_seconds"),
+            status=session.status,
         )
 
-    state = _read_recording_chunk_state(session_id)
-    chunks = state.get("chunks") or {}
-    if not chunks:
-        raise HTTPException(status_code=400, detail="No recording chunks have been uploaded")
-    ordered_indices = sorted(int(index) for index in chunks)
-    expected_indices = list(range(len(ordered_indices)))
-    if ordered_indices != expected_indices:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Recording chunks are not contiguous. Expected {expected_indices}, got {ordered_indices}",
+    release_lock_after_complete = False
+    with _recording_session_lock(session_id):
+        session = _read_session(session_id)
+        _assert_session_access(session, request)
+        if _recording_cancelled(session_id):
+            raise HTTPException(status_code=409, detail="Recording session has been cancelled")
+        if session.status in {"transcribing", "stream_ready", "reviewed"} and session.audio_id:
+            state = _read_recording_chunk_state(session_id)
+            return _recording_upload_response(
+                session,
+                audio_id=session.audio_id,
+                filename=session.filename or f"{session.audio_id}.wav",
+                duration_seconds=state.get("duration_seconds"),
+                status=session.status,
+            )
+
+        state = _read_recording_chunk_state(session_id)
+        chunks = state.get("chunks") or {}
+        if not chunks:
+            raise HTTPException(status_code=400, detail="No recording chunks have been uploaded")
+        missing_indices = _recording_missing_indices(chunks)
+        if missing_indices:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "Recording chunks are not contiguous",
+                    "missing_chunk_indices": missing_indices,
+                },
+            )
+        audio_id = state.get("audio_id")
+        if not audio_id:
+            raise HTTPException(status_code=409, detail="Recording must be finalized before transcription")
+        filename = state.get("filename") or session.filename or f"browser-recording-{session_id[:8]}.wav"
+        audio_path = Path(str(state.get("audio_path") or get_upload_dir() / f"{audio_id}.wav"))
+        if not audio_path.exists():
+            raise HTTPException(status_code=404, detail="Finalized recording audio not found")
+        record = AudioRecord(
+            audio_id=str(audio_id),
+            filename=filename,
+            path=str(audio_path),
+            status="uploaded",
+            content_type="audio/wav",
+            size_bytes=audio_path.stat().st_size,
+            created_at=state.get("finalized_at") or _now(),
+            owner_user_id=session.owner_user_id,
         )
+        _write_audio_record(record)
 
-    audio_id = uuid.uuid4().hex
-    upload_dir = get_upload_dir()
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    destination = upload_dir / f"{audio_id}.wav"
-    chunk_paths = [_recording_chunk_path(session_id, index) for index in ordered_indices]
-    duration = _combine_wav_chunks(chunk_paths, destination)
-    if duration is not None and duration > recording_max_seconds():
-        destination.unlink(missing_ok=True)
-        raise HTTPException(status_code=413, detail="Recording duration exceeds the configured maximum")
+        transcribing_session = session.model_copy(
+            update={
+                "status": "transcribing",
+                "audio_id": str(audio_id),
+                "filename": filename,
+                "updated_at": _now(),
+            }
+        )
+        _write_session(transcribing_session)
+        state["status"] = "transcribing"
+        state["completed"] = True
+        state["completed_at"] = _now()
+        _write_recording_chunk_state(session_id, state)
+        if _live_chunk_state(state).get("processed_chunks"):
+            _append_session_event(
+                session_id,
+                session=transcribing_session,
+                event="session.finalizing",
+                data={
+                    "session_id": session_id,
+                    "audio_id": str(audio_id),
+                    "engine": transcribing_session.engine,
+                    "recognition_mode": transcribing_session.recognition_mode,
+                    "status": "finalizing",
+                    "mode": "browser_live_chunk_finalization",
+                    "chunk_count": len(chunks),
+                    "updated_at": _now(),
+                    "recoverable": True,
+                },
+            )
+            _append_session_event(
+                session_id,
+                session=transcribing_session,
+                event="transcribing",
+                data={
+                    "session_id": session_id,
+                    "audio_id": str(audio_id),
+                    "engine": transcribing_session.engine,
+                    "recognition_mode": transcribing_session.recognition_mode,
+                    "status": "transcribing",
+                    "mode": "browser_live_chunk_finalization",
+                },
+            )
+        else:
+            _write_events(session_id, _initial_asr_stream_events(transcribing_session))
+        release_lock_after_complete = True
 
-    filename = f"browser-recording-{session_id[:8]}.wav"
-    record = AudioRecord(
-        audio_id=audio_id,
-        filename=filename,
-        path=str(destination),
-        status="uploaded",
-        content_type="audio/wav",
-        size_bytes=destination.stat().st_size,
-        created_at=_now(),
-        owner_user_id=session.owner_user_id,
-    )
-    _write_audio_record(record)
-
-    transcribing_session = session.model_copy(
-        update={
-            "status": "transcribing",
-            "audio_id": audio_id,
-            "filename": filename,
-            "updated_at": _now(),
-        }
-    )
-    _write_session(transcribing_session)
-    state["completed"] = True
-    state["audio_id"] = audio_id
-    state["duration_seconds"] = duration
-    _write_recording_chunk_state(session_id, state)
-    _write_events(session_id, _initial_asr_stream_events(transcribing_session))
+    if release_lock_after_complete:
+        _release_recording_session_lock(session_id)
     background_tasks.add_task(
         _run_asr_session_transcription,
         session_id,
         record=record,
-        audio_path=destination,
+        audio_path=audio_path,
         pace_realtime=True,
     )
-    return ASRSessionUploadResponse(
-        session_id=session_id,
-        audio_id=audio_id,
-        status=transcribing_session.status,
+    _release_live_chunk_session(session_id)
+    return _recording_upload_response(
+        transcribing_session,
+        audio_id=str(audio_id),
         filename=filename,
-        engine=transcribing_session.engine,
-        events_url=transcribing_session.events_url or f"/api/asr/sessions/{session_id}/events",
-        result_url=transcribing_session.result_url or f"/api/asr/sessions/{session_id}/result",
-        media_url=f"/api/audio/{audio_id}/media",
-        duration_seconds=duration,
+        duration_seconds=state.get("duration_seconds"),
+        status=transcribing_session.status,
     )
+
+
+@router.delete("/{session_id}/recording")
+def cancel_recording_session(session_id: str, request: Request = None) -> dict[str, Any]:
+    session = _read_session(session_id)
+    _assert_session_access(session, request)
+    response: dict[str, Any]
+    with _recording_session_lock(session_id):
+        session = _read_session(session_id)
+        _assert_session_access(session, request)
+        if session.status in {"transcribing", "stream_ready", "reviewed"}:
+            raise HTTPException(status_code=409, detail="Recording is already transcribing and cannot be cancelled")
+
+        state_path = _recording_chunk_state_path(session_id)
+        state = _read_recording_chunk_state(session_id) if state_path.exists() else {
+            "session_id": session_id,
+            "status": "cancelled",
+            "chunks": {},
+        }
+        _delete_recording_audio(str(state.get("audio_id") or session.audio_id or "") or None)
+        shutil.rmtree(_recording_chunks_dir(session_id), ignore_errors=True)
+        state_path.unlink(missing_ok=True)
+        _write_recording_cancelled(session_id)
+        cancelled_session = session.model_copy(
+            update={
+                "status": "cancelled",
+                "audio_id": None,
+                "filename": None,
+                "updated_at": _now(),
+            }
+        )
+        _write_session(cancelled_session)
+        response = {
+            "session_id": session_id,
+            "status": "cancelled",
+            "deleted_chunks": True,
+            "deleted_audio_id": state.get("audio_id") or session.audio_id,
+        }
+    _release_recording_session_lock(session_id)
+    _release_live_chunk_session(session_id)
+    return response
 
 
 def _run_asr_session_transcription(
@@ -1381,6 +2252,7 @@ def _run_asr_session_transcription(
     pace_realtime: bool = False,
 ) -> None:
     session = _read_session(session_id)
+    started_at_wall = _now()
     stop_heartbeat, heartbeat_thread, started_at = _start_transcribing_heartbeat(
         session_id,
         session=session,
@@ -1388,10 +2260,15 @@ def _run_asr_session_transcription(
     )
     try:
         use_chunked, original_duration = _should_use_chunked_session(session.engine, audio_path)
-        use_realtime, realtime_duration = _should_use_realtime_upload_session(
-            session.engine,
-            audio_path,
-            duration=original_duration,
+        follow_mode = session.recognition_mode == "follow"
+        use_realtime, realtime_duration = (
+            _should_use_realtime_upload_session(
+                session.engine,
+                audio_path,
+                duration=original_duration,
+            )
+            if follow_mode
+            else (False, original_duration)
         )
         if use_realtime and session.engine == "funasr":
             stop_heartbeat.set()
@@ -1443,9 +2320,40 @@ def _run_asr_session_transcription(
                 duration=original_duration,
             )
             emit_segments = True
-        _write_transcription_success(session_id, session=session, result=result, emit_segments=emit_segments)
+        processing_duration = max(time.perf_counter() - started_at, 0.0)
+        completed_at_wall = _now()
+        audio_duration = result.duration or realtime_duration or original_duration
+        rtf = round(processing_duration / audio_duration, 4) if audio_duration and audio_duration > 0 else None
+        result = result.model_copy(
+            update={
+                "recognition_mode": session.recognition_mode or "fast",
+                "audio_duration_seconds": audio_duration,
+                "processing_duration_seconds": round(processing_duration, 4),
+                "rtf": rtf,
+                "backend": session.engine,
+                "model": result.engine,
+                "request_id": session_id,
+                "started_at": started_at_wall,
+                "completed_at": completed_at_wall,
+            }
+        )
+        _write_transcription_success(
+            session_id,
+            session=session,
+            result=result,
+            record=record,
+            emit_segments=emit_segments,
+        )
     except Exception as exc:  # noqa: BLE001
         message = _compact_error(exc)
+        _write_audio_record(
+            record.model_copy(
+                update={
+                    "status": "failed",
+                    "recognition_mode": session.recognition_mode or record.recognition_mode,
+                }
+            )
+        )
         failed = session.model_copy(
             update={
                 "status": "failed",
@@ -1517,6 +2425,8 @@ def _transcribe_funasr_streaming_session(
 
     def on_progress(data: dict[str, object]) -> None:
         nonlocal last_progress_audio_seconds, last_progress_elapsed_seconds, last_progress_phase
+        if not isinstance(data, dict):
+            raise RuntimeError("ASR_RESULT_INVALID: FunASR streaming progress event must be a mapping")
         processed = float(data.get("processed_audio_seconds") or 0.0)
         elapsed = float(data.get("elapsed_seconds") or 0.0)
         phase = str(data.get("phase") or "streaming")
@@ -1542,6 +2452,8 @@ def _transcribe_funasr_streaming_session(
         )
 
     def on_segment(event_name: str, segment: ASRSegment, metadata: dict[str, object]) -> None:
+        if not isinstance(metadata, dict):
+            raise RuntimeError("ASR_RESULT_INVALID: FunASR streaming segment metadata must be a mapping")
         duration = metadata.get("audio_duration_seconds") or original_duration
         processed = metadata.get("processed_audio_seconds")
         progress = (
@@ -1659,9 +2571,14 @@ def _reconcile_streaming_result(
             )
             for segment in calibrated.segments
         ]
+        pending_confirmation = (
+            calibrated.role_quality.pending_confirmation
+            if calibrated.role_quality
+            else []
+        )
         mapping_event_name = (
             "speaker_mapping_required"
-            if any(item.requires_confirmation for item in calibrated.speaker_assignments)
+            if pending_confirmation
             else "speaker_mapping_update"
         )
         diarization_events.extend(
@@ -1672,6 +2589,12 @@ def _reconcile_streaming_result(
                     data={
                         "status": "mapping_required" if mapping_event_name.endswith("required") else "mapped",
                         "assignments": [item.model_dump() for item in calibrated.speaker_assignments],
+                        "pending_confirmation": [
+                            item.model_dump(mode="json") for item in pending_confirmation
+                        ],
+                        "role_quality": calibrated.role_quality.model_dump(mode="json")
+                        if calibrated.role_quality
+                        else None,
                     },
                     created_at=_now(),
                 ),
@@ -1758,6 +2681,9 @@ def _fallback_from_streaming_failure(
     original_duration: float | None,
     error: Exception,
 ) -> ASRResult:
+    classified = classify_funasr_error(error)
+    user_message = classified["user_message"]
+    error_code = funasr_error_code(classified["category"])
     _append_session_event(
         session_id,
         session=session,
@@ -1769,10 +2695,17 @@ def _fallback_from_streaming_failure(
             "progress_kind": "indeterminate",
             "processed_audio_seconds": None,
             "audio_duration_seconds": original_duration,
-            "error": _compact_error(error),
+            "error": user_message,
+            "message": user_message,
+            "error_code": error_code,
+            "error_category": classified["category"],
+            "technical_detail": _compact_error(error),
             "retryable": True,
+            "audio_preserved": True,
         },
     )
+    if classified["category"] in {"dns_failure", "model_missing", "model_timeout", "dependency_missing", "result_invalid"}:
+        raise RuntimeError(f"{error_code}: {classified['user_message']}") from error
     offline_engine = create_asr_engine("funasr")
     return _transcribe_chunked_session(
         session_id,
@@ -1843,7 +2776,7 @@ def _transcribe_chunked_session(
             )
             try:
                 chunk_result = engine.transcribe(f"{record.audio_id}_chunk_{chunk.index:03d}", chunk.path)
-                chunk_result = enhance_speaker_diarization(chunk_result)
+                chunk_result = ensure_automatic_speaker_roles(enhance_speaker_diarization(chunk_result))
             except Exception as exc:  # noqa: BLE001
                 error = _compact_error(exc)
                 _append_session_event(
@@ -1922,6 +2855,7 @@ def _transcribe_realtime_upload_session(
             record=record,
             audio_path=audio_path,
             chunk_seconds=chunk_seconds,
+            original_duration=original_duration,
             pace_realtime=pace_realtime,
         )
     return _transcribe_chunked_session(
@@ -1995,117 +2929,20 @@ def _transcribe_mock_realtime_upload_session(
     record: AudioRecord,
     audio_path: Path,
     chunk_seconds: int,
+    original_duration: float | None = None,
     pace_realtime: bool = False,
 ) -> ASRResult:
-    result = engine.transcribe(record.audio_id, audio_path)
-    duration = result.duration or _infer_result_duration(result)
-    chunks = [
-        (index, start_seconds, duration_seconds)
-        for index, (start_seconds, duration_seconds) in enumerate(
-            build_chunk_plan(duration, chunk_seconds),
-            start=1,
-        )
-    ]
-    total_chunks = len(chunks)
-    _append_session_event(
+    return _transcribe_chunked_session(
         session_id,
         session=session,
-        event="chunk_plan",
-        data={
-            "status": "chunk_plan",
-            "mode": "realtime_upload",
-            "chunk_seconds": chunk_seconds,
-            "chunk_count": total_chunks,
-            "total_chunks": total_chunks,
-            "duration": duration,
-            "progress": 0,
-        },
+        engine=engine,
+        record=record,
+        audio_path=audio_path,
+        original_duration=original_duration,
+        chunk_seconds=chunk_seconds,
+        mode="realtime_upload",
+        engine_suffix="realtime",
     )
-
-    transcriptions: list[ChunkTranscription] = []
-    emitted_segments = 0
-    for index, start_seconds, duration_seconds in chunks:
-        started_at = time.perf_counter()
-        common = {
-            "chunk_index": index,
-            "total_chunks": total_chunks,
-            "chunk_start_seconds": start_seconds,
-            "chunk_duration_seconds": duration_seconds,
-            "mode": "realtime_upload",
-        }
-        _append_session_event(
-            session_id,
-            session=session,
-            event="chunk_started",
-            data={
-                **common,
-                "status": "chunk_transcribing",
-                "progress": round((index - 1) / total_chunks, 4) if total_chunks else 0,
-                "retryable": False,
-            },
-        )
-        chunk_segments = _segments_for_realtime_chunk(
-            result.segments,
-            chunk_start_seconds=start_seconds,
-            chunk_duration_seconds=duration_seconds,
-        )
-        chunk_result = ASRResult(
-            audio_id=f"{record.audio_id}_chunk_{index:03d}",
-            engine=result.engine,
-            text="\n".join(segment.text for segment in chunk_segments if segment.text.strip()),
-            conversation_text=_conversation_from_segments(chunk_segments),
-            segments=chunk_segments,
-            duration=duration_seconds,
-            medical_keywords=result.medical_keywords,
-        )
-        transcriptions.append(
-            ChunkTranscription(
-                chunk=AudioChunk(
-                    index=index,
-                    path=audio_path,
-                    start_seconds=start_seconds,
-                    duration_seconds=duration_seconds,
-                ),
-                result=chunk_result,
-            )
-        )
-        _append_session_event(
-            session_id,
-            session=session,
-            event="chunk_completed",
-            data={
-                **common,
-                "status": "chunk_completed",
-                "progress": round(index / total_chunks, 4) if total_chunks else 1,
-                "segments": len(chunk_segments),
-                "text_length": len(chunk_result.text),
-                "elapsed_seconds": round(time.perf_counter() - started_at, 3),
-            },
-        )
-        emitted_segments += _append_partial_segment_events(
-            session_id,
-            session=session,
-            chunk_index=index,
-            total_chunks=total_chunks,
-            chunk_start_seconds=start_seconds,
-            chunk_result=chunk_result,
-            start_index=emitted_segments,
-            mode="realtime_upload",
-        )
-        if chunk_segments and index < total_chunks:
-            _maybe_sleep_mock_realtime(pace_realtime)
-
-    merged = merge_chunk_transcriptions(
-        record.audio_id,
-        transcriptions,
-        original_duration=duration,
-        engine_name=f"{result.engine}-realtime",
-    )
-    merged.medical_keywords = result.medical_keywords
-    merged.warnings = [warning for warning in merged.warnings if warning != CHUNKED_LONG_AUDIO_WARNING]
-    if REALTIME_UPLOAD_WARNING not in merged.warnings:
-        merged.warnings.insert(0, REALTIME_UPLOAD_WARNING)
-    return enhance_speaker_diarization(apply_manifest_role_strategy(merged, _sample_id_from_record(record)))
 
 
 def _infer_result_duration(result: ASRResult) -> float:
@@ -2120,10 +2957,20 @@ def _write_transcription_success(
     *,
     session: ASRSessionRecord,
     result: ASRResult,
+    record: AudioRecord | None = None,
     emit_segments: bool = True,
 ) -> None:
-    result = attach_speaker_role_quality(result)
+    result = ensure_automatic_speaker_roles(result)
     _write_transcript(result)
+    if record is not None:
+        _write_audio_record(
+            record.model_copy(
+                update={
+                    "status": "completed",
+                    "recognition_mode": result.recognition_mode or session.recognition_mode or record.recognition_mode,
+                }
+            )
+        )
     _write_session_result(session_id, result)
     ready_session = session.model_copy(
         update={
@@ -2166,6 +3013,7 @@ def upload_asr_session_audio(
         size_bytes=size_bytes,
         created_at=_now(),
         owner_user_id=session.owner_user_id,
+        recognition_mode=session.recognition_mode or "fast",
     )
     _write_audio_record(record)
 
@@ -2175,6 +3023,7 @@ def upload_asr_session_audio(
             "audio_id": audio_id,
             "filename": record.filename,
             "updated_at": _now(),
+            "recognition_mode": session.recognition_mode or "follow",
         }
     )
     _write_session(transcribing_session)
@@ -2210,6 +3059,98 @@ def upload_asr_session_audio(
         result_url=current_session.result_url or f"/api/asr/sessions/{session_id}/result",
         media_url=f"/api/audio/{audio_id}/media",
         duration_seconds=duration_seconds,
+        recognition_mode=session.recognition_mode,
+    )
+
+
+def start_follow_session_for_audio_record(
+    record: AudioRecord,
+    *,
+    engine: str,
+    owner_user_id: int | None = None,
+    background_tasks: BackgroundTasks | None = None,
+) -> ASRSessionUploadResponse:
+    normalized_engine = _normalize_engine_name(engine)
+    capabilities = backend_capabilities(normalized_engine)
+    if not capabilities.supports_chunked_audio and not capabilities.supports_live_streaming:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error_code": "follow_not_supported_by_backend",
+                "engine": normalized_engine,
+                "message": "Selected ASR backend does not support follow chunk processing.",
+            },
+        )
+
+    audio_path = Path(record.path)
+    duration = _audio_duration_for_chunking(audio_path)
+    use_chunked, chunked_duration = _should_use_chunked_session(normalized_engine, audio_path)
+    use_realtime, realtime_duration = _should_use_realtime_upload_session(
+        normalized_engine,
+        audio_path,
+        duration=chunked_duration if chunked_duration is not None else duration,
+    )
+    if not use_chunked and not use_realtime:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error_code": "follow_not_supported_by_backend",
+                "engine": normalized_engine,
+                "message": "Selected ASR backend cannot process this audio with the follow chunk pipeline.",
+            },
+        )
+
+    session_id = uuid.uuid4().hex
+    now = _now()
+    transcribing_session = ASRSessionRecord(
+        session_id=session_id,
+        engine=normalized_engine,
+        status="transcribing",
+        audio_id=record.audio_id,
+        filename=record.filename,
+        events_url=f"/api/asr/sessions/{session_id}/events",
+        result_url=f"/api/asr/sessions/{session_id}/result",
+        created_at=now,
+        updated_at=now,
+        owner_user_id=owner_user_id if owner_user_id is not None else record.owner_user_id,
+        recognition_mode="follow",
+    )
+    _write_session(transcribing_session)
+    _write_events(session_id, _initial_asr_stream_events(transcribing_session))
+
+    follow_record = record.model_copy(
+        update={
+            "status": "transcribing",
+            "recognition_mode": "follow",
+            "owner_user_id": owner_user_id if owner_user_id is not None else record.owner_user_id,
+        }
+    )
+    _write_audio_record(follow_record)
+
+    if background_tasks is None:
+        _run_asr_session_transcription(session_id, record=follow_record, audio_path=audio_path)
+        current_session = _read_session(session_id)
+    else:
+        background_tasks.add_task(
+            _run_asr_session_transcription,
+            session_id,
+            record=follow_record,
+            audio_path=audio_path,
+            pace_realtime=True,
+        )
+        current_session = transcribing_session
+
+    return ASRSessionUploadResponse(
+        session_id=session_id,
+        audio_id=record.audio_id,
+        status=current_session.status,
+        filename=record.filename,
+        engine=current_session.engine,
+        events_url=current_session.events_url or f"/api/asr/sessions/{session_id}/events",
+        result_url=current_session.result_url or f"/api/asr/sessions/{session_id}/result",
+        media_url=f"/api/audio/{record.audio_id}/media",
+        duration_seconds=realtime_duration if realtime_duration is not None else duration,
+        recognition_mode="follow",
     )
 
 
@@ -2322,6 +3263,82 @@ def merge_asr_session_speakers(
         asr_result=merged_result,
         updated_at=updated_at,
     )
+
+
+@router.get("/{session_id}/live-draft")
+def read_asr_session_live_draft(session_id: str, request: Request = None) -> dict[str, Any]:
+    session = _read_session(session_id)
+    _assert_session_access(session, request)
+    return _read_live_clinical_state(session_id)
+
+
+@router.post("/{session_id}/converge-record")
+def converge_asr_session_record(
+    session_id: str,
+    background_tasks: BackgroundTasks,
+    request: Request = None,
+    encounter_id: int | None = None,
+) -> dict[str, Any]:
+    session = _read_session(session_id)
+    _assert_session_access(session, request)
+    state = _read_live_clinical_state(session_id)
+    formal = _live_formal_record(state)
+    if formal is not None:
+        return {
+            **formal,
+            "session_id": session_id,
+            "audio_id": session.audio_id,
+            "created": False,
+            "formal_record_status": "already_created",
+        }
+
+    if not session.audio_id:
+        raise HTTPException(status_code=409, detail="Live session has no finalized audio")
+    if not _result_path(session_id).exists():
+        raise HTTPException(status_code=409, detail="Live session must be completed before formal record generation")
+    if session.status not in {"stream_ready", "reviewed"}:
+        raise HTTPException(status_code=409, detail=f"Live session is {session.status} and is not ready for formal record generation")
+
+    created = generate_record_from_audio(
+        session.audio_id,
+        background_tasks,
+        request=request,
+        encounter_id=encounter_id,
+    )
+    formal_record = {
+        "task_id": created["task_id"],
+        "status": created["status"],
+        "events_url": created["events_url"],
+        "encounter_id": encounter_id,
+        "created_at": _now(),
+        "source": "live_session_converge",
+    }
+    state["status"] = "formalized"
+    state["formal_record"] = formal_record
+    state["formalized_at"] = formal_record["created_at"]
+    _write_live_clinical_state(session_id, state)
+    _append_session_event(
+        session_id,
+        session=session,
+        event="record.formal_converged",
+        data={
+            "live_session_id": session_id,
+            "session_id": session_id,
+            "audio_id": session.audio_id,
+            "status": "formal_record_created",
+            "task_id": created["task_id"],
+            "encounter_id": encounter_id,
+            "created": True,
+            "recoverable": True,
+        },
+    )
+    return {
+        **formal_record,
+        "session_id": session_id,
+        "audio_id": session.audio_id,
+        "created": True,
+        "formal_record_status": "created",
+    }
 
 
 @router.get("/{session_id}/events")

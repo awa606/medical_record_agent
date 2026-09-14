@@ -1,0 +1,93 @@
+{
+  "schema_version": "knowledge_ingest_report_v1",
+  "package_id": "fever-respiratory-v1",
+  "generated_at": "2026-09-14T12:58:48+08:00",
+  "database": ".artifacts\\knowledge\\knowledge_v1_fts.sqlite3",
+  "source_count": 3,
+  "chunk_count": 30,
+  "sources": [
+    {
+      "source_id": "nhc-influenza-2020",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "content_sha256": "693984e29ed67bdc0366f66c303f33b98847d0bcfcd6f1e87aa5cbbdcd8bfaac",
+      "page_count": 10,
+      "chunk_count": 10,
+      "created": false,
+      "title": "流行性感冒诊疗方案（2020年版）",
+      "pdf_page_count": 18,
+      "selected_pages": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "extraction_method": "rapidocr",
+      "acquisition_note": "国家卫健委主链接在2026-09-14返回502；从保山市人民政府公开附件取得同名扫描件，本地OCR提取。"
+    },
+    {
+      "source_id": "nhc-covid19-trial-v10",
+      "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+      "content_sha256": "66d5ae641499c722b974a483748e9817cbfe55b6b83a9a08f366d1f0ed3d8440",
+      "page_count": 10,
+      "chunk_count": 10,
+      "created": false,
+      "title": "新型冠状病毒感染诊疗方案（试行第十版）",
+      "pdf_page_count": 30,
+      "selected_pages": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "extraction_method": "pypdf",
+      "acquisition_note": "从国家卫生健康委员会公开PDF直接取得。"
+    },
+    {
+      "source_id": "nhc-child-mpp-2025",
+      "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+      "content_sha256": "452e1442cbcae7231e1bac8f23031f84085a7e75aef347fac6d9a04162575b32",
+      "page_count": 10,
+      "chunk_count": 10,
+      "created": false,
+      "title": "儿童肺炎支原体肺炎诊疗指南（2025年版）",
+      "pdf_page_count": 32,
+      "selected_pages": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "extraction_method": "pypdf",
+      "acquisition_note": "国家卫健委主链接在2026-09-14返回502；从白银区人民政府公开附件取得同名PDF。"
+    }
+  ],
+  "embedding": {
+    "model_id": "BAAI/bge-small-zh-v1.5",
+    "chunk_count": 30,
+    "dimensions": 512
+  },
+  "embedding_error": null,
+  "gate": "PASS",
+  "disclaimer": "发热与呼吸道症状的医生人工参考证据；不得自动批准诊断或治疗。"
+}

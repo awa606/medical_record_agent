@@ -60,8 +60,10 @@ class FunASREngine:
             generate_kwargs["hotword"] = " ".join(self.hotwords)
 
         raw_result = self.model.generate(**generate_kwargs)
+        self._validate_raw_result(raw_result)
         text = self._extract_text(raw_result)
         segments = self._extract_segments(audio_id, raw_result, text)
+        self._validate_recognized_content(text, segments)
         conversation_text = self._build_conversation_text(segments, text)
         keywords = ASREvaluator().keyword_metrics(self.hotwords, text)
 
@@ -88,6 +90,24 @@ class FunASREngine:
         if not path.exists():
             return []
         return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    def _validate_raw_result(self, raw_result: Any) -> None:
+        if raw_result is None:
+            raise RuntimeError("ASR_RESULT_INVALID: FunASR returned no result payload")
+        if isinstance(raw_result, list) and not raw_result:
+            raise RuntimeError("ASR_RESULT_INVALID: FunASR returned an empty result list")
+        if not isinstance(raw_result, (dict, list, str)):
+            raise RuntimeError(
+                "ASR_RESULT_INVALID: FunASR result format is "
+                f"{type(raw_result).__name__}, expected object, list, or text"
+            )
+
+    def _validate_recognized_content(self, text: str, segments: list[ASRSegment]) -> None:
+        if text.strip():
+            return
+        if any(segment.text.strip() for segment in segments):
+            return
+        raise RuntimeError("ASR_RESULT_INVALID: FunASR result did not contain recognized text")
 
     def _extract_text(self, raw_result: Any) -> str:
         items = raw_result if isinstance(raw_result, list) else [raw_result]

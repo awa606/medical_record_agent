@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-UserRole = Literal["admin", "doctor"]
+UserRole = Literal["admin", "doctor", "frontdesk", "intake", "intake_admin"]
 
 
 class AuthenticatedUser(BaseModel):
@@ -13,6 +13,7 @@ class AuthenticatedUser(BaseModel):
     username: str
     display_name: str
     role: UserRole
+    department_id: str | None = None
     is_active: bool = True
 
 
@@ -31,6 +32,7 @@ class CreateUserRequest(BaseModel):
     password: str = Field(min_length=8, max_length=256)
     display_name: str = Field(min_length=1, max_length=80)
     role: UserRole = "doctor"
+    department_id: str | None = None
 
 
 class UserPublic(BaseModel):
@@ -38,6 +40,7 @@ class UserPublic(BaseModel):
     username: str
     display_name: str
     role: UserRole
+    department_id: str | None = None
     is_active: bool
     created_at: str
     updated_at: str

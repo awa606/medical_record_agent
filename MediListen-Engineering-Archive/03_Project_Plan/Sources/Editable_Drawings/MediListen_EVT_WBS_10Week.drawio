@@ -1,0 +1,764 @@
+<mxfile host="Electron" agent="Codex drawio skill" version="29.0.3" compressed="false">
+  <diagram id="evt-wbs-10-week" name="EVT WBS 10-Week">
+    <mxGraphModel dx="2560" dy="1440" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2560" pageHeight="1440" math="0" shadow="0" adaptiveColors="auto" background="#F5F7FA">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" value="Background" parent="0"/>
+        <mxCell id="2" value="WBS Hierarchy" parent="0"/>
+        <mxCell id="3" value="Stage Deliverables" parent="0"/>
+        <mxCell id="4" value="Work Packages" parent="0"/>
+        <mxCell id="5" value="Labels &amp; Gates" parent="0"/>
+        <mxCell id="canvas" value="" style="rounded=0;html=1;fillColor=#F5F7FA;strokeColor=none;locked=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="2560" height="1440" as="geometry"/>
+        </mxCell>
+        <mxCell id="title" value="AI生成式电子病历辅助系统 · EVT WBS" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=38;fontColor=#0B2238;fontStyle=1;spacing=0;" vertex="1" parent="5">
+          <mxGeometry x="64" y="37" width="1500" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="10周交付物导向工作分解结构｜4个阶段 · 16个工作包 · 32个可执行任务" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=16.5;fontColor=#607589;fontStyle=0;spacing=0;" vertex="1" parent="5">
+          <mxGeometry x="66" y="92" width="1250" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="kicker" value="WORK BREAKDOWN STRUCTURE  ·  BASELINE V1.0" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=right;verticalAlign=middle;fontFamily=Arial;fontSize=11.5;fontColor=#6C8093;fontStyle=1;spacing=0;" vertex="1" parent="5">
+          <mxGeometry x="1830" y="53" width="666" height="23" as="geometry"/>
+        </mxCell>
+        <mxCell id="scope" value="EVT SCOPE  /  10 WEEKS" style="rounded=1;arcSize=30;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#EAF1F6;strokeColor=none;fontFamily=Arial;fontSize=10.5;fontStyle=1;fontColor=#50687C;" vertex="1" parent="5">
+          <mxGeometry x="2266" y="91" width="230" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="top_rule" value="" style="rounded=0;html=1;fillColor=#D8E2EB;strokeColor=none;" vertex="1" parent="5">
+          <mxGeometry x="64" y="135" width="2432" height="1.5" as="geometry"/>
+        </mxCell>
+        <mxCell id="root_group" value="" style="group;container=1;pointerEvents=0;" vertex="1" connectable="0" parent="3">
+          <mxGeometry x="520" y="155" width="1520" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="root_shadow" value="" style="rounded=1;arcSize=12;html=1;fillColor=#071725;opacity=9;strokeColor=none;" vertex="1" parent="root_group">
+          <mxGeometry x="0" y="7" width="1520" height="98" as="geometry"/>
+        </mxCell>
+        <mxCell id="root_card" value="" style="rounded=1;arcSize=12;html=1;fillColor=#0F3048;strokeColor=#173F5B;strokeWidth=1;" vertex="1" parent="root_group">
+          <mxGeometry x="0" y="0" width="1520" height="98" as="geometry"/>
+        </mxCell>
+        <mxCell id="root_accent" value="" style="rounded=1;arcSize=30;html=1;fillColor=#188A7A;strokeColor=none;" vertex="1" parent="root_group">
+          <mxGeometry x="0" y="0" width="1520" height="6" as="geometry"/>
+        </mxCell>
+        <mxCell id="root_level" value="0.0  ·  LEVEL 0  ·  PROJECT DELIVERABLE" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=10.5;fontColor=#8BC9C0;fontStyle=1;spacing=0;" vertex="1" parent="root_group">
+          <mxGeometry x="25" y="16" width="520" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="root_title" value="AI生成式电子病历辅助系统 · EVT 交付基线" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=24;fontColor=#FFFFFF;fontStyle=1;spacing=0;" vertex="1" parent="root_group">
+          <mxGeometry x="25" y="38" width="800" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="root_goal" value="目标：交付通过 EVT Gate 的 Beta 候选版本" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=13.5;fontColor=#C9D8E3;fontStyle=0;spacing=0;" vertex="1" parent="root_group">
+          <mxGeometry x="25" y="71" width="700" height="21" as="geometry"/>
+        </mxCell>
+        <mxCell id="root_count" value="4 STAGES  ·  16 WORK PACKAGES  ·  32 TASKS" style="rounded=1;arcSize=24;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#173F5B;strokeColor=#315B75;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#DCEAF3;" vertex="1" parent="root_group">
+          <mxGeometry x="1000" y="21" width="490" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="root_time" value="W01–W10  ·  10 周" style="rounded=1;arcSize=24;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#E7F5F2;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12;fontStyle=1;fontColor=#126C62;" vertex="1" parent="root_group">
+          <mxGeometry x="1220" y="57" width="270" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="root_out" value="" style="ellipse;aspect=fixed;html=1;fillColor=#188A7A;strokeColor=#FFFFFF;strokeWidth=2;" vertex="1" parent="root_group">
+          <mxGeometry x="754" y="92" width="12" height="12" as="geometry"/>
+        </mxCell>
+        <mxCell id="wbs_hub" value="" style="ellipse;aspect=fixed;html=1;fillColor=#188A7A;strokeColor=#F5F7FA;strokeWidth=3;" vertex="1" parent="2">
+          <mxGeometry x="1273" y="289" width="14" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_root_hub" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#7E9AAD;strokeWidth=2.2;endArrow=none;endFill=0;jettySize=auto;orthogonalLoop=1;" edge="1" parent="2" source="root_out" target="wbs_hub">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_group" value="" style="group;container=1;pointerEvents=0;" vertex="1" connectable="0" parent="3">
+          <mxGeometry x="64" y="330" width="590" height="1000" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_lane_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="0" y="6" width="590" height="994" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_lane" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FBFCFD;strokeColor=#C8D8E4;strokeWidth=1.2;" vertex="1" parent="poc_group">
+          <mxGeometry x="0" y="0" width="590" height="994" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_header" value="" style="rounded=1;arcSize=8;html=1;fillColor=#EEF4F8;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="0" y="0" width="590" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_header_accent" value="" style="rounded=1;arcSize=28;html=1;fillColor=#7897B3;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="0" y="0" width="590" height="6" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_stage_code" value="1.0" style="ellipse;aspect=fixed;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#C8D8E4;strokeWidth=1;fontFamily=Arial;fontSize=12;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="19" y="19" width="52" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_stage_name" value="POC 验证版" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=25;fontColor=#0B2238;fontStyle=1;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="88" y="13" width="310" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_stage_focus" value="技术可行性验证" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#456B87;fontStyle=1;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="89" y="51" width="310" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_weeks" value="W01–W02 · 2周" style="rounded=1;arcSize=24;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#C8D8E4;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=11.5;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="431" y="21" width="139" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_deliverable" value="&lt;b&gt;阶段交付物&lt;/b&gt;　可审核电子病历端到端演示包" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=12.5;fontColor=#425B6E;fontStyle=0;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="20" y="82" width="550" height="23" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_input" value="" style="ellipse;aspect=fixed;html=1;fillColor=#7897B3;strokeColor=#F5F7FA;strokeWidth=3;" vertex="1" parent="poc_group">
+          <mxGeometry x="288" y="-7" width="14" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_hub_poc" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8CA4B6;strokeWidth=1.9;endArrow=none;endFill=0;jettySize=auto;orthogonalLoop=1;" edge="1" parent="2" source="wbs_hub" target="poc_input">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_1_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="142" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_1_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#C8D8E4;strokeWidth=1;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="138" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_1_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#7897B3;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="138" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_1_code" value="1.1" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=#C8D8E4;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="151" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_1_title" value="问诊采集与 ASR 转写" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="94" y="147" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_1_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;1.1.1&lt;/b&gt; 文本 / 音频问诊入口&lt;br&gt;&lt;b&gt;1.1.2&lt;/b&gt; ASR 转写与结果回传&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="182" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_1_owner" value="负责人  音频负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=#C8D8E4;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="229" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_1_time" value="周期  W01 · 3d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="poc_group">
+          <mxGeometry x="200" y="229" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_1_dep" value="前置  项目启动" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="poc_group">
+          <mxGeometry x="332" y="229" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_1_out" value="&lt;b&gt;交付物&lt;/b&gt;　输入 / 转写演示" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#456B87;spacingLeft=11;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="263" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_2_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="321" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_2_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#C8D8E4;strokeWidth=1;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="317" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_2_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#7897B3;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="317" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_2_code" value="1.2" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=#C8D8E4;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="330" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_2_title" value="角色区分与医学结构化" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="94" y="326" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_2_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;1.2.1&lt;/b&gt; 医患角色区分&lt;br&gt;&lt;b&gt;1.2.2&lt;/b&gt; 医学字段抽取与映射&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="361" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_2_owner" value="负责人  AI负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=#C8D8E4;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="408" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_2_time" value="周期  W01–W02 · 4d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="poc_group">
+          <mxGeometry x="200" y="408" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_2_dep" value="前置  1.1" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="poc_group">
+          <mxGeometry x="332" y="408" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_2_out" value="&lt;b&gt;交付物&lt;/b&gt;　结构化 JSON 与字段映射" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#456B87;spacingLeft=11;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="442" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_3_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="500" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_3_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#C8D8E4;strokeWidth=1;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="496" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_3_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#7897B3;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="496" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_3_code" value="1.3" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=#C8D8E4;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="509" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_3_title" value="病历草稿与安全校验" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="94" y="505" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_3_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;1.3.1&lt;/b&gt; 电子病历草稿生成&lt;br&gt;&lt;b&gt;1.3.2&lt;/b&gt; 依据检查与安全规则&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="540" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_3_owner" value="负责人  医学安全负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=#C8D8E4;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="587" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_3_time" value="周期  W02 · 3d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="poc_group">
+          <mxGeometry x="200" y="587" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_3_dep" value="前置  1.2" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="poc_group">
+          <mxGeometry x="332" y="587" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_3_out" value="&lt;b&gt;交付物&lt;/b&gt;　可审核病历草稿" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#456B87;spacingLeft=11;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="621" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_4_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="679" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_4_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#C8D8E4;strokeWidth=1;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="675" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_4_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#7897B3;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="675" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_4_code" value="1.4" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=#C8D8E4;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="688" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_4_title" value="审核导出与 POC 验收" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="94" y="684" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_4_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;1.4.1&lt;/b&gt; 医生编辑 / 审核 / 导出&lt;br&gt;&lt;b&gt;1.4.2&lt;/b&gt; 端到端演示与阻断问题关闭&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="719" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_4_owner" value="负责人  QA负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=#C8D8E4;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="766" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_4_time" value="周期  W02 · 2d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="poc_group">
+          <mxGeometry x="200" y="766" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_4_dep" value="前置  1.3" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="poc_group">
+          <mxGeometry x="332" y="766" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_wp_1_4_out" value="&lt;b&gt;交付物&lt;/b&gt;　演示包与 POC 验收记录" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#EEF4F8;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#456B87;spacingLeft=11;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="800" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_gate" value="" style="rounded=1;arcSize=9;html=1;fillColor=#EEF4F8;strokeColor=#C8D8E4;strokeWidth=1;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="858" width="554" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_gate_accent" value="" style="rounded=1;arcSize=24;html=1;fillColor=#7897B3;strokeColor=none;" vertex="1" parent="poc_group">
+          <mxGeometry x="18" y="858" width="554" height="5" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_gate_title" value="G1 / W02  ·  POC EXIT" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=12;fontColor=#456B87;fontStyle=1;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="872" width="260" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_gate_status" value="PASS TO NEXT" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#C8D8E4;strokeWidth=1;fontFamily=Arial;fontSize=9.5;fontStyle=1;fontColor=#456B87;" vertex="1" parent="poc_group">
+          <mxGeometry x="408" y="871" width="144" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="poc_gate_text" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;主链路跑通 · “问诊 → 可审核病历”完整演示通过&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13;fontColor=#456B87;fontStyle=1;spacing=0;" vertex="1" parent="poc_group">
+          <mxGeometry x="35" y="907" width="517" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_group" value="" style="group;container=1;pointerEvents=0;" vertex="1" connectable="0" parent="3">
+          <mxGeometry x="678" y="330" width="590" height="1000" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_lane_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="0" y="6" width="590" height="994" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_lane" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FBFCFD;strokeColor=#BAD3E4;strokeWidth=1.2;" vertex="1" parent="alpha_group">
+          <mxGeometry x="0" y="0" width="590" height="994" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_header" value="" style="rounded=1;arcSize=8;html=1;fillColor=#EAF3F9;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="0" y="0" width="590" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_header_accent" value="" style="rounded=1;arcSize=28;html=1;fillColor=#3975A5;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="0" y="0" width="590" height="6" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_stage_code" value="2.0" style="ellipse;aspect=fixed;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#BAD3E4;strokeWidth=1;fontFamily=Arial;fontSize=12;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="19" y="19" width="52" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_stage_name" value="Alpha 工程版" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=25;fontColor=#0B2238;fontStyle=1;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="88" y="13" width="310" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_stage_focus" value="系统工程化集成" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#2C638F;fontStyle=1;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="89" y="51" width="310" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_weeks" value="W03–W05 · 3周" style="rounded=1;arcSize=24;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#BAD3E4;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=11.5;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="431" y="21" width="139" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_deliverable" value="&lt;b&gt;阶段交付物&lt;/b&gt;　本地独立运行系统与部署包" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=12.5;fontColor=#425B6E;fontStyle=0;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="20" y="82" width="550" height="23" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_input" value="" style="ellipse;aspect=fixed;html=1;fillColor=#3975A5;strokeColor=#F5F7FA;strokeWidth=3;" vertex="1" parent="alpha_group">
+          <mxGeometry x="288" y="-7" width="14" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_hub_alpha" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8CA4B6;strokeWidth=1.9;endArrow=none;endFill=0;jettySize=auto;orthogonalLoop=1;" edge="1" parent="2" source="wbs_hub" target="alpha_input">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_1_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="142" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_1_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#BAD3E4;strokeWidth=1;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="138" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_1_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#3975A5;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="138" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_1_code" value="2.1" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=#BAD3E4;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="151" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_1_title" value="本地推理服务集成" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="94" y="147" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_1_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;2.1.1&lt;/b&gt; 本地 ASR 服务化&lt;br&gt;&lt;b&gt;2.1.2&lt;/b&gt; 本地 AI 模型接入&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="182" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_1_owner" value="负责人  AI负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=#BAD3E4;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="229" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_1_time" value="周期  W03 · 5d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="alpha_group">
+          <mxGeometry x="200" y="229" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_1_dep" value="前置  1.4 / POC Gate" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="alpha_group">
+          <mxGeometry x="332" y="229" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_1_out" value="&lt;b&gt;交付物&lt;/b&gt;　本地推理服务" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#2C638F;spacingLeft=11;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="263" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_2_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="321" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_2_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#BAD3E4;strokeWidth=1;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="317" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_2_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#3975A5;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="317" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_2_code" value="2.2" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=#BAD3E4;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="330" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_2_title" value="浏览器录音与医生工作台" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="94" y="326" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_2_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;2.2.1&lt;/b&gt; 浏览器录音与上传&lt;br&gt;&lt;b&gt;2.2.2&lt;/b&gt; 工作台主链路集成&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="361" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_2_owner" value="负责人  前端负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=#BAD3E4;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="408" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_2_time" value="周期  W03–W04 · 7d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="alpha_group">
+          <mxGeometry x="200" y="408" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_2_dep" value="前置  2.1 API" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="alpha_group">
+          <mxGeometry x="332" y="408" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_2_out" value="&lt;b&gt;交付物&lt;/b&gt;　可操作医生工作台" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#2C638F;spacingLeft=11;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="442" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_3_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="500" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_3_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#BAD3E4;strokeWidth=1;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="496" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_3_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#3975A5;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="496" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_3_code" value="2.3" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=#BAD3E4;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="509" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_3_title" value="角色门禁与数据存储" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="94" y="505" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_3_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;2.3.1&lt;/b&gt; 医生角色门禁&lt;br&gt;&lt;b&gt;2.3.2&lt;/b&gt; 任务 / 病历 / 审核状态持久化&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="540" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_3_owner" value="负责人  后端负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=#BAD3E4;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="587" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_3_time" value="周期  W04 · 5d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="alpha_group">
+          <mxGeometry x="200" y="587" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_3_dep" value="前置  2.1" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="alpha_group">
+          <mxGeometry x="332" y="587" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_3_out" value="&lt;b&gt;交付物&lt;/b&gt;　权限与数据模块" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#2C638F;spacingLeft=11;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="621" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_4_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="679" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_4_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#BAD3E4;strokeWidth=1;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="675" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_4_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#3975A5;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="675" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_4_code" value="2.4" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=#BAD3E4;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="688" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_4_title" value="本地部署与集成验收" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="94" y="684" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_4_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;2.4.1&lt;/b&gt; 安装包与部署脚本&lt;br&gt;&lt;b&gt;2.4.2&lt;/b&gt; 断网 / 连续任务测试&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="719" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_4_owner" value="负责人  测试负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=#BAD3E4;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="766" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_4_time" value="周期  W05 · 5d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="alpha_group">
+          <mxGeometry x="200" y="766" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_4_dep" value="前置  2.2 + 2.3" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="alpha_group">
+          <mxGeometry x="332" y="766" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_wp_2_4_out" value="&lt;b&gt;交付物&lt;/b&gt;　部署包、测试报告与评测集计划" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#EAF3F9;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#2C638F;spacingLeft=11;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="800" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_gate" value="" style="rounded=1;arcSize=9;html=1;fillColor=#EAF3F9;strokeColor=#BAD3E4;strokeWidth=1;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="858" width="554" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_gate_accent" value="" style="rounded=1;arcSize=24;html=1;fillColor=#3975A5;strokeColor=none;" vertex="1" parent="alpha_group">
+          <mxGeometry x="18" y="858" width="554" height="5" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_gate_title" value="G2 / W05  ·  ALPHA EXIT" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=12;fontColor=#2C638F;fontStyle=1;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="872" width="260" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_gate_status" value="PASS TO NEXT" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#BAD3E4;strokeWidth=1;fontFamily=Arial;fontSize=9.5;fontStyle=1;fontColor=#2C638F;" vertex="1" parent="alpha_group">
+          <mxGeometry x="408" y="871" width="144" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="alpha_gate_text" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;单套方案 ≤ 3,000 元 · 断网可运行 · 连续 5 次完整任务成功&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13;fontColor=#2C638F;fontStyle=1;spacing=0;" vertex="1" parent="alpha_group">
+          <mxGeometry x="35" y="907" width="517" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_group" value="" style="group;container=1;pointerEvents=0;" vertex="1" connectable="0" parent="3">
+          <mxGeometry x="1292" y="330" width="590" height="1000" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_lane_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="0" y="6" width="590" height="994" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_lane" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FBFCFD;strokeColor=#A6D8CF;strokeWidth=1.2;" vertex="1" parent="plus_group">
+          <mxGeometry x="0" y="0" width="590" height="994" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_header" value="" style="rounded=1;arcSize=8;html=1;fillColor=#E8F6F3;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="0" y="0" width="590" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_header_accent" value="" style="rounded=1;arcSize=28;html=1;fillColor=#188A7A;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="0" y="0" width="590" height="6" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_stage_code" value="3.0" style="ellipse;aspect=fixed;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#A6D8CF;strokeWidth=1;fontFamily=Arial;fontSize=12;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="19" y="19" width="52" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_stage_name" value="Alpha+ 迭代版" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=25;fontColor=#0B2238;fontStyle=1;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="88" y="13" width="310" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_stage_focus" value="长时运行与异常恢复" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#176F65;fontStyle=1;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="89" y="51" width="310" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_weeks" value="W06–W07 · 2周" style="rounded=1;arcSize=24;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#A6D8CF;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=11.5;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="431" y="21" width="139" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_deliverable" value="&lt;b&gt;阶段交付物&lt;/b&gt;　长录音与异常恢复验证包" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=12.5;fontColor=#425B6E;fontStyle=0;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="20" y="82" width="550" height="23" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_input" value="" style="ellipse;aspect=fixed;html=1;fillColor=#188A7A;strokeColor=#F5F7FA;strokeWidth=3;" vertex="1" parent="plus_group">
+          <mxGeometry x="288" y="-7" width="14" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_hub_plus" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8CA4B6;strokeWidth=1.9;endArrow=none;endFill=0;jettySize=auto;orthogonalLoop=1;" edge="1" parent="2" source="wbs_hub" target="plus_input">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_1_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="142" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_1_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#A6D8CF;strokeWidth=1;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="138" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_1_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#188A7A;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="138" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_1_code" value="3.1" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=#A6D8CF;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="151" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_1_title" value="长录音与分块上传" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="94" y="147" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_1_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;3.1.1&lt;/b&gt; 5–10 分钟稳定录音&lt;br&gt;&lt;b&gt;3.1.2&lt;/b&gt; 音频分块与续传&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="182" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_1_owner" value="负责人  音频负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=#A6D8CF;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="229" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_1_time" value="周期  W06 · 4d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="plus_group">
+          <mxGeometry x="200" y="229" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_1_dep" value="前置  2.4 / Alpha Gate" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="plus_group">
+          <mxGeometry x="332" y="229" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_1_out" value="&lt;b&gt;交付物&lt;/b&gt;　长录音与分块模块" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#176F65;spacingLeft=11;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="263" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_2_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="321" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_2_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#A6D8CF;strokeWidth=1;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="317" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_2_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#188A7A;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="317" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_2_code" value="3.2" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=#A6D8CF;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="330" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_2_title" value="断线重连与失败重试" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="94" y="326" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_2_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;3.2.1&lt;/b&gt; SSE 断线重连&lt;br&gt;&lt;b&gt;3.2.2&lt;/b&gt; ASR 失败重试策略&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="361" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_2_owner" value="负责人  后端负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=#A6D8CF;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="408" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_2_time" value="周期  W06 · 3d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="plus_group">
+          <mxGeometry x="200" y="408" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_2_dep" value="前置  3.1 接口" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="plus_group">
+          <mxGeometry x="332" y="408" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_2_out" value="&lt;b&gt;交付物&lt;/b&gt;　重连与重试机制" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#176F65;spacingLeft=11;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="442" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_3_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="500" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_3_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#A6D8CF;strokeWidth=1;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="496" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_3_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#188A7A;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="496" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_3_code" value="3.3" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=#A6D8CF;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="509" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_3_title" value="刷新 / 重启任务恢复" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="94" y="505" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_3_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;3.3.1&lt;/b&gt; 页面刷新状态恢复&lt;br&gt;&lt;b&gt;3.3.2&lt;/b&gt; 服务重启任务恢复&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="540" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_3_owner" value="负责人  平台负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=#A6D8CF;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="587" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_3_time" value="周期  W07 · 4d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="plus_group">
+          <mxGeometry x="200" y="587" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_3_dep" value="前置  3.1 + 3.2" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="plus_group">
+          <mxGeometry x="332" y="587" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_3_out" value="&lt;b&gt;交付物&lt;/b&gt;　任务状态恢复机制" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#176F65;spacingLeft=11;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="621" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_4_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="679" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_4_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#A6D8CF;strokeWidth=1;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="675" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_4_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#188A7A;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="675" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_4_code" value="3.4" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=#A6D8CF;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="688" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_4_title" value="幂等保护与恢复验收" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="94" y="684" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_4_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;3.4.1&lt;/b&gt; 任务幂等与重复病历拦截&lt;br&gt;&lt;b&gt;3.4.2&lt;/b&gt; 故障回归与 EVT 验收集锁定&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="719" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_4_owner" value="负责人  后端负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=#A6D8CF;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="766" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_4_time" value="周期  W07 · 3d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="plus_group">
+          <mxGeometry x="200" y="766" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_4_dep" value="前置  3.2 + 3.3" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="plus_group">
+          <mxGeometry x="332" y="766" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_wp_3_4_out" value="&lt;b&gt;交付物&lt;/b&gt;　可靠性报告与锁定验收集" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#E8F6F3;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#176F65;spacingLeft=11;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="800" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_gate" value="" style="rounded=1;arcSize=9;html=1;fillColor=#E8F6F3;strokeColor=#A6D8CF;strokeWidth=1;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="858" width="554" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_gate_accent" value="" style="rounded=1;arcSize=24;html=1;fillColor=#188A7A;strokeColor=none;" vertex="1" parent="plus_group">
+          <mxGeometry x="18" y="858" width="554" height="5" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_gate_title" value="G3 / W07  ·  RELIABILITY EXIT" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=12;fontColor=#176F65;fontStyle=1;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="872" width="260" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_gate_status" value="PASS TO NEXT" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#A6D8CF;strokeWidth=1;fontFamily=Arial;fontSize=9.5;fontStyle=1;fontColor=#176F65;" vertex="1" parent="plus_group">
+          <mxGeometry x="408" y="871" width="144" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="plus_gate_text" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;5–10 分钟录音 · 中断后任务可恢复 · 病历不丢失、不重复&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13;fontColor=#176F65;fontStyle=1;spacing=0;" vertex="1" parent="plus_group">
+          <mxGeometry x="35" y="907" width="517" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_group" value="" style="group;container=1;pointerEvents=0;" vertex="1" connectable="0" parent="3">
+          <mxGeometry x="1906" y="330" width="590" height="1000" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_lane_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="0" y="6" width="590" height="994" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_lane" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FBFCFD;strokeColor=#F0BD7C;strokeWidth=1.2;" vertex="1" parent="beta_group">
+          <mxGeometry x="0" y="0" width="590" height="994" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_header" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFF4E7;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="0" y="0" width="590" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_header_accent" value="" style="rounded=1;arcSize=28;html=1;fillColor=#F0A34A;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="0" y="0" width="590" height="6" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_stage_code" value="4.0" style="ellipse;aspect=fixed;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#F0BD7C;strokeWidth=1;fontFamily=Arial;fontSize=12;fontStyle=1;fontColor=#8A5A22;" vertex="1" parent="beta_group">
+          <mxGeometry x="19" y="19" width="52" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_stage_name" value="Beta 优化版" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=25;fontColor=#0B2238;fontStyle=1;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="88" y="13" width="310" height="38" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_stage_focus" value="质量量化与 EVT 验收" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=14;fontColor=#8A5A22;fontStyle=1;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="89" y="51" width="310" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_weeks" value="W08–W10 · 3周" style="rounded=1;arcSize=24;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#F0BD7C;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=11.5;fontStyle=1;fontColor=#8A5A22;" vertex="1" parent="beta_group">
+          <mxGeometry x="431" y="21" width="139" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_deliverable" value="&lt;b&gt;阶段交付物&lt;/b&gt;　评测、回归与 EVT 验收签核包" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=12.5;fontColor=#425B6E;fontStyle=0;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="20" y="82" width="550" height="23" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_input" value="" style="ellipse;aspect=fixed;html=1;fillColor=#F0A34A;strokeColor=#F5F7FA;strokeWidth=3;" vertex="1" parent="beta_group">
+          <mxGeometry x="288" y="-7" width="14" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge_hub_beta" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8CA4B6;strokeWidth=1.9;endArrow=none;endFill=0;jettySize=auto;orthogonalLoop=1;" edge="1" parent="2" source="wbs_hub" target="beta_input">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_1_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="142" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_1_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#F0BD7C;strokeWidth=1;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="138" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_1_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#F0A34A;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="138" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_1_code" value="4.1" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=#F0BD7C;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#8A5A22;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="151" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_1_title" value="固定测试集与评测基线" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="94" y="147" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_1_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;4.1.1&lt;/b&gt; 冻结 60–100 例脱敏验收集&lt;br&gt;&lt;b&gt;4.1.2&lt;/b&gt; 字段 / 结构 / 安全指标脚本&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="182" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_1_owner" value="负责人  测试负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=#F0BD7C;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#8A5A22;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="229" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_1_time" value="周期  W08 · 5d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="beta_group">
+          <mxGeometry x="200" y="229" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_1_dep" value="前置  3.4 / Reliability Gate" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="beta_group">
+          <mxGeometry x="332" y="229" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_1_out" value="&lt;b&gt;交付物&lt;/b&gt;　测试集、脚本与基线报告" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#8A5A22;spacingLeft=11;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="263" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_2_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="321" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_2_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#F0BD7C;strokeWidth=1;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="317" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_2_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#F0A34A;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="317" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_2_code" value="4.2" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=#F0BD7C;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#8A5A22;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="330" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_2_title" value="角色与诊断证据优化" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="94" y="326" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_2_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;4.2.1&lt;/b&gt; 角色判断专项优化&lt;br&gt;&lt;b&gt;4.2.2&lt;/b&gt; 已有诊断依据追溯 / 无依据抑制&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="361" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_2_owner" value="负责人  AI负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=#F0BD7C;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#8A5A22;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="408" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_2_time" value="周期  W08–W09 · 7d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="beta_group">
+          <mxGeometry x="200" y="408" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_2_dep" value="前置  4.1 基线" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="beta_group">
+          <mxGeometry x="332" y="408" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_2_out" value="&lt;b&gt;交付物&lt;/b&gt;　冻结候选版本与评测对比" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#8A5A22;spacingLeft=11;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="442" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_3_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="500" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_3_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#F0BD7C;strokeWidth=1;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="496" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_3_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#F0A34A;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="496" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_3_code" value="4.3" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=#F0BD7C;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#8A5A22;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="509" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_3_title" value="状态提示与新手可用性" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="94" y="505" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_3_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;4.3.1&lt;/b&gt; 任务状态与错误提示&lt;br&gt;&lt;b&gt;4.3.2&lt;/b&gt; 10 分钟新手测试 / W09 预 Gate&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="540" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_3_owner" value="负责人  产品负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=#F0BD7C;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#8A5A22;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="587" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_3_time" value="周期  W09 · 4d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="beta_group">
+          <mxGeometry x="200" y="587" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_3_dep" value="前置  3.4 稳定版" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="beta_group">
+          <mxGeometry x="332" y="587" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_3_out" value="&lt;b&gt;交付物&lt;/b&gt;　可用性记录与预 Gate 清单" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#8A5A22;spacingLeft=11;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="621" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_4_shadow" value="" style="rounded=1;arcSize=8;html=1;fillColor=#0B2238;opacity=4;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="679" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_4_card" value="" style="rounded=1;arcSize=8;html=1;fillColor=#FFFFFF;strokeColor=#F0BD7C;strokeWidth=1;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="675" width="554" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_4_accent" value="" style="rounded=1;arcSize=25;html=1;fillColor=#F0A34A;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="675" width="5" height="165" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_4_code" value="4.4" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=#F0BD7C;strokeWidth=1;fontFamily=Arial;fontSize=11;fontStyle=1;fontColor=#8A5A22;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="688" width="48" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_4_title" value="最终回归与 EVT Gate" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=17;fontColor=#183247;fontStyle=1;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="94" y="684" width="456" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_4_tasks" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;&lt;b&gt;4.4.1&lt;/b&gt; 独立全量回归 / 安全检查&lt;br&gt;&lt;b&gt;4.4.2&lt;/b&gt; P0 清零与 Gate 评审&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=13.2;fontColor=#40586C;fontStyle=0;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="719" width="515" height="42" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_4_owner" value="负责人  测试负责人" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=#F0BD7C;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontStyle=1;fontColor=#8A5A22;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="766" width="158" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_4_time" value="周期  W10 · 5d" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="beta_group">
+          <mxGeometry x="200" y="766" width="125" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_4_dep" value="前置  4.2 + 4.3 / 冻结" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;overflow=hidden;align=center;verticalAlign=middle;fillColor=#F7F9FB;strokeColor=#D8E2EB;strokeWidth=0.8;fontFamily=Microsoft YaHei;fontSize=11.2;fontColor=#536A7D;" vertex="1" parent="beta_group">
+          <mxGeometry x="332" y="766" width="218" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_wp_4_4_out" value="&lt;b&gt;交付物&lt;/b&gt;　EVT 验收包与签核记录" style="rounded=1;arcSize=18;html=1;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fillColor=#FFF4E7;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=12.2;fontColor=#8A5A22;spacingLeft=11;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="800" width="515" height="27" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_gate" value="" style="rounded=1;arcSize=9;html=1;fillColor=#0F3048;strokeColor=#F0A34A;strokeWidth=1.4;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="858" width="554" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_gate_accent" value="" style="rounded=1;arcSize=24;html=1;fillColor=#F0A34A;strokeColor=none;" vertex="1" parent="beta_group">
+          <mxGeometry x="18" y="858" width="554" height="5" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_gate_title" value="G4 / W10  ·  EVT EXIT GATE" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=12;fontColor=#FFFFFF;fontStyle=1;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="872" width="260" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_gate_status" value="READY FOR DVT" style="rounded=1;arcSize=22;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#F0A34A;strokeColor=#F0BD7C;strokeWidth=1;fontFamily=Arial;fontSize=9.5;fontStyle=1;fontColor=#0B2238;" vertex="1" parent="beta_group">
+          <mxGeometry x="408" y="871" width="144" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="beta_gate_text" value="&lt;div style=&quot;line-height:1.45;&quot;&gt;Field Accuracy ≥ 80% · Structure Completeness ≥ 90%&lt;br&gt;Severe Safety Error = 0 · P0 Defect = 0&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=top;fontFamily=Microsoft YaHei;fontSize=12.3;fontColor=#FFFFFF;fontStyle=1;spacing=0;" vertex="1" parent="beta_group">
+          <mxGeometry x="35" y="907" width="517" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="footer_rule" value="" style="rounded=0;html=1;fillColor=#D8E2EB;strokeColor=none;" vertex="1" parent="5">
+          <mxGeometry x="64" y="1353" width="2432" height="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="footer_label" value="WBS 口径" style="rounded=1;arcSize=20;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#EAF1F6;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=10.5;fontStyle=1;fontColor=#50687C;" vertex="1" parent="5">
+          <mxGeometry x="64" y="1370" width="82" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="footer_text" value="每个工作包均含：负责人｜周期｜前置依赖｜交付物　·　d = 工作日　·　不同责任角色的任务允许并行" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=left;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=11.5;fontColor=#607589;fontStyle=0;spacing=0;" vertex="1" parent="5">
+          <mxGeometry x="160" y="1368" width="1240" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="footer_note" value="W10 仅用于最终回归与 EVT Gate；DVT 不计入本 WBS" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;overflow=hidden;align=right;verticalAlign=middle;fontFamily=Microsoft YaHei;fontSize=11.5;fontColor=#8A5A22;fontStyle=1;spacing=0;" vertex="1" parent="5">
+          <mxGeometry x="1520" y="1368" width="976" height="28" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,1422 @@
+{
+  "schema_version": "knowledge_retrieval_report_v1",
+  "generated_at": "2026-09-14T12:59:41+08:00",
+  "git_sha": "71f3f46d0650aa6307cb19da97a5c1d5a249db51",
+  "dataset_id": "fever-respiratory-query-mvp-v1",
+  "dataset_sha256": "d7eb972bfe8349ef51e104e0fd8af405fa5d1b533fe192bf82ee5f703a7e5fc8",
+  "metrics": {
+    "query_count": 20,
+    "recall_at_5": 0.95,
+    "relevant_hit_count": 19,
+    "citation_result_count": 100,
+    "citation_complete_count": 100,
+    "citation_completeness": 1.0,
+    "source_less_citation_count": 0,
+    "retrieval_modes": [
+      "hybrid_v1"
+    ],
+    "cases": [
+      {
+        "query_id": "KQ01",
+        "query": "流行性感冒常见的临床表现有哪些？",
+        "relevant_source_ids": [
+          "nhc-influenza-2020"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p007-c005",
+            "page": 7,
+            "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+            "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+            "lexical_score": 1.0,
+            "dense_score": 0.579585,
+            "score": 0.768772
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p004-c003",
+            "page": 4,
+            "section": "1.流感病毒可侵犯下呼吸道，引起原发性病毒性肺炎",
+            "content_sha256": "684b5377ce18fc063f846ac3002480694fca41d34daa88399ff410e3436e58d1",
+            "lexical_score": 0.831747,
+            "dense_score": 0.69267,
+            "score": 0.755255
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+            "page": 8,
+            "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+            "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+            "lexical_score": 0.716966,
+            "dense_score": 0.704005,
+            "score": 0.709837
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p002-c001",
+            "page": 2,
+            "section": "二、流行病学 （一）传染源",
+            "content_sha256": "5fdb41f2ef1fbabd8b498a83835bb93a4f5224153e282e83a1fdd6d77d4a19c6",
+            "lexical_score": 0.521525,
+            "dense_score": 0.648566,
+            "score": 0.591398
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p006-c005",
+            "page": 6,
+            "section": "五、诊断 主要结合流行病学史、临床表现和病原学检查进行诊断",
+            "content_sha256": "e148cfbb263c3448e87659c2e5a019d734c4f9e2f51f8e19dfeb0e8561ab5432",
+            "lexical_score": 0.445453,
+            "dense_score": 0.633882,
+            "score": 0.549089
+          }
+        ]
+      },
+      {
+        "query_id": "KQ02",
+        "query": "哪些人属于流感重症高危人群？",
+        "relevant_source_ids": [
+          "nhc-influenza-2020"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p011-c010",
+            "page": 11,
+            "section": "2.对重症高危人群应进行生命体征监测，特别是静息和 活动后的指氧饱和度等",
+            "content_sha256": "3538004d4a961dddd8a2ed7488e371fb3ece3208119c66f6e010ba5953dbfdb7",
+            "lexical_score": 1.0,
+            "dense_score": 0.507688,
+            "score": 0.729228
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p006-c005",
+            "page": 6,
+            "section": "五、诊断 主要结合流行病学史、临床表现和病原学检查进行诊断",
+            "content_sha256": "e148cfbb263c3448e87659c2e5a019d734c4f9e2f51f8e19dfeb0e8561ab5432",
+            "lexical_score": 0.843732,
+            "dense_score": 0.570733,
+            "score": 0.693582
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p009-c008",
+            "page": 9,
+            "section": "3.非住院患者居家隔离，保持房间通风，佩戴口罩",
+            "content_sha256": "f414ba5fc91a6c00e4783d1678219ac011ee6c4ced97d36f7e34aa4735bf9fde",
+            "lexical_score": 0.45894,
+            "dense_score": 0.699641,
+            "score": 0.591325
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p002-c001",
+            "page": 2,
+            "section": "二、流行病学 （一）传染源",
+            "content_sha256": "5fdb41f2ef1fbabd8b498a83835bb93a4f5224153e282e83a1fdd6d77d4a19c6",
+            "lexical_score": 0.458252,
+            "dense_score": 0.675004,
+            "score": 0.577466
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p011-c009",
+            "page": 11,
+            "section": "4.皮肤黏膜损害 包括荨麻疹、过敏性紫癜、多形红斑、 Stevens-Johnson syndrome、",
+            "content_sha256": "017bb609958e63a643f67329ca3537378d1cc67d5371a5e8462e72191001dce5",
+            "lexical_score": 0.461349,
+            "dense_score": 0.598148,
+            "score": 0.536589
+          }
+        ]
+      },
+      {
+        "query_id": "KQ03",
+        "query": "流感诊断需要哪些病原学检查？",
+        "relevant_source_ids": [
+          "nhc-influenza-2020"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p009-c008",
+            "page": 9,
+            "section": "3.非住院患者居家隔离，保持房间通风，佩戴口罩",
+            "content_sha256": "f414ba5fc91a6c00e4783d1678219ac011ee6c4ced97d36f7e34aa4735bf9fde",
+            "lexical_score": 1.0,
+            "dense_score": 0.719267,
+            "score": 0.845597
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+            "page": 8,
+            "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+            "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+            "lexical_score": 0.824955,
+            "dense_score": 0.750462,
+            "score": 0.783984
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p006-c005",
+            "page": 6,
+            "section": "五、诊断 主要结合流行病学史、临床表现和病原学检查进行诊断",
+            "content_sha256": "e148cfbb263c3448e87659c2e5a019d734c4f9e2f51f8e19dfeb0e8561ab5432",
+            "lexical_score": 0.55503,
+            "dense_score": 0.745476,
+            "score": 0.659775
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p007-c005",
+            "page": 7,
+            "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+            "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+            "lexical_score": 0.589996,
+            "dense_score": 0.681261,
+            "score": 0.640192
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p008-c006",
+            "page": 8,
+            "section": "十四、常见肺内外并发症的早期识别和诊断 （一）肺内并发症 1.塑形性支气管炎（PB） PB 是引起 SMP",
+            "content_sha256": "bbef25b4bfd15d776ebc81d2cdc05dd3da405fbc871cde76f9e4c5cc636bbf11",
+            "lexical_score": 0.724419,
+            "dense_score": 0.563798,
+            "score": 0.636078
+          }
+        ]
+      },
+      {
+        "query_id": "KQ04",
+        "query": "流感患者出现哪些情况需要警惕重症？",
+        "relevant_source_ids": [
+          "nhc-influenza-2020"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p007-c005",
+            "page": 7,
+            "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+            "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+            "lexical_score": 1.0,
+            "dense_score": 0.606838,
+            "score": 0.783761
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p006-c005",
+            "page": 6,
+            "section": "五、诊断 主要结合流行病学史、临床表现和病原学检查进行诊断",
+            "content_sha256": "e148cfbb263c3448e87659c2e5a019d734c4f9e2f51f8e19dfeb0e8561ab5432",
+            "lexical_score": 0.74854,
+            "dense_score": 0.663787,
+            "score": 0.701926
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p004-c003",
+            "page": 4,
+            "section": "1.流感病毒可侵犯下呼吸道，引起原发性病毒性肺炎",
+            "content_sha256": "684b5377ce18fc063f846ac3002480694fca41d34daa88399ff410e3436e58d1",
+            "lexical_score": 0.605155,
+            "dense_score": 0.726222,
+            "score": 0.671742
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p011-c010",
+            "page": 11,
+            "section": "1.对于重症流感患者，抗病毒治疗疗程尚不明确，有条件的医 院可根据核酸检测结果适当延长抗病毒治疗时间",
+            "content_sha256": "5940d378eeb2f722578f868c7ae460ed422130eb141dd2f2bccfe3341f721101",
+            "lexical_score": 0.609169,
+            "dense_score": 0.706401,
+            "score": 0.662647
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p007-c006",
+            "page": 7,
+            "section": "1.流感病毒核酸检测阳性",
+            "content_sha256": "649597b485891d3d42fab01d47d68a8bdf516b241fa1455218087951dc3a932b",
+            "lexical_score": 0.20657,
+            "dense_score": 0.794009,
+            "score": 0.529661
+          }
+        ]
+      },
+      {
+        "query_id": "KQ05",
+        "query": "流感发热咳嗽头痛肌肉酸痛的表现",
+        "relevant_source_ids": [
+          "nhc-influenza-2020"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p004-c003",
+            "page": 4,
+            "section": "四、临床特点 （一）临床表现",
+            "content_sha256": "d7516ea547d2e3a6ef3c1e5dcec1ec963b39e93532f8a9c11c60f208b0e60ea9",
+            "lexical_score": 1.0,
+            "dense_score": 0.554664,
+            "score": 0.755065
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p004-c003",
+            "page": 4,
+            "section": "1.流感病毒可侵犯下呼吸道，引起原发性病毒性肺炎",
+            "content_sha256": "684b5377ce18fc063f846ac3002480694fca41d34daa88399ff410e3436e58d1",
+            "lexical_score": 0.56959,
+            "dense_score": 0.711323,
+            "score": 0.647543
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p003-c002",
+            "page": 3,
+            "section": "5.妊娠及围产期妇女",
+            "content_sha256": "0d625d13a09c3242994e0ae22614e362e0cbbce23e4a0b939f14bcd2afce33ee",
+            "lexical_score": 0.430353,
+            "dense_score": 0.613475,
+            "score": 0.53107
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p007-c005",
+            "page": 7,
+            "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+            "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+            "lexical_score": 0.406566,
+            "dense_score": 0.587685,
+            "score": 0.506182
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p003-c001",
+            "page": 3,
+            "section": "五、病理表现 成人文献显示轻症患者肺泡腔内有中性粒细胞浸润，重症 患者肺泡腔和肺泡壁还伴有淋巴细胞、浆细",
+            "content_sha256": "049f3a046b326c1515777de280dbd39f69087c021ecac94ceb37158a3c9cdd8c",
+            "lexical_score": 0.250235,
+            "dense_score": 0.63157,
+            "score": 0.459969
+          }
+        ]
+      },
+      {
+        "query_id": "KQ06",
+        "query": "流感与普通感冒的鉴别要点",
+        "relevant_source_ids": [
+          "nhc-influenza-2020"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+            "page": 8,
+            "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+            "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+            "lexical_score": 1.0,
+            "dense_score": 0.772119,
+            "score": 0.874666
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p010-c009",
+            "page": 10,
+            "section": "6.AST、ALT、CK 明显增高",
+            "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+            "lexical_score": 0.091478,
+            "dense_score": 0.638249,
+            "score": 0.392202
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p002-c001",
+            "page": 2,
+            "section": "二、流行病学 （一）传染源",
+            "content_sha256": "5fdb41f2ef1fbabd8b498a83835bb93a4f5224153e282e83a1fdd6d77d4a19c6",
+            "lexical_score": 0.010805,
+            "dense_score": 0.689006,
+            "score": 0.383815
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p007-c005",
+            "page": 7,
+            "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+            "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+            "lexical_score": 0.08785,
+            "dense_score": 0.601893,
+            "score": 0.370573
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p009-c008",
+            "page": 9,
+            "section": "3.非住院患者居家隔离，保持房间通风，佩戴口罩",
+            "content_sha256": "f414ba5fc91a6c00e4783d1678219ac011ee6c4ced97d36f7e34aa4735bf9fde",
+            "lexical_score": 0.010821,
+            "dense_score": 0.661019,
+            "score": 0.36843
+          }
+        ]
+      },
+      {
+        "query_id": "KQ07",
+        "query": "流感抗病毒治疗的适用人群",
+        "relevant_source_ids": [
+          "nhc-influenza-2020"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p011-c010",
+            "page": 11,
+            "section": "2.对重症高危人群应进行生命体征监测，特别是静息和 活动后的指氧饱和度等",
+            "content_sha256": "3538004d4a961dddd8a2ed7488e371fb3ece3208119c66f6e010ba5953dbfdb7",
+            "lexical_score": 1.0,
+            "dense_score": 0.584248,
+            "score": 0.771337
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p007-c006",
+            "page": 7,
+            "section": "1.流感病毒核酸检测阳性",
+            "content_sha256": "649597b485891d3d42fab01d47d68a8bdf516b241fa1455218087951dc3a932b",
+            "lexical_score": 0.658891,
+            "dense_score": 0.684277,
+            "score": 0.672853
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p009-c008",
+            "page": 9,
+            "section": "3.非住院患者居家隔离，保持房间通风，佩戴口罩",
+            "content_sha256": "f414ba5fc91a6c00e4783d1678219ac011ee6c4ced97d36f7e34aa4735bf9fde",
+            "lexical_score": 0.507085,
+            "dense_score": 0.750069,
+            "score": 0.640727
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p011-c010",
+            "page": 11,
+            "section": "1.对于重症流感患者，抗病毒治疗疗程尚不明确，有条件的医 院可根据核酸检测结果适当延长抗病毒治疗时间",
+            "content_sha256": "5940d378eeb2f722578f868c7ae460ed422130eb141dd2f2bccfe3341f721101",
+            "lexical_score": 0.454402,
+            "dense_score": 0.73179,
+            "score": 0.606965
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p002-c001",
+            "page": 2,
+            "section": "二、流行病学 （一）传染源",
+            "content_sha256": "5fdb41f2ef1fbabd8b498a83835bb93a4f5224153e282e83a1fdd6d77d4a19c6",
+            "lexical_score": 0.224042,
+            "dense_score": 0.796074,
+            "score": 0.53866
+          }
+        ]
+      },
+      {
+        "query_id": "KQ08",
+        "query": "新型冠状病毒感染常见临床表现",
+        "relevant_source_ids": [
+          "nhc-covid19-trial-v10"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p007-c005",
+            "page": 7,
+            "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+            "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+            "lexical_score": 1.0,
+            "dense_score": 0.682987,
+            "score": 0.825643
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p002-c001",
+            "page": 2,
+            "section": "新型冠状病毒感染诊疗方案（试行第十版） · 第2页",
+            "content_sha256": "57bc0b9622ae987893222cadb3cd91cddf25587b091f7d23b26ba497bf570812",
+            "lexical_score": 0.969562,
+            "dense_score": 0.619926,
+            "score": 0.777262
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p007-c006",
+            "page": 7,
+            "section": "1.具有新冠病毒感染的相关临床表现",
+            "content_sha256": "70123ea023f944b9c15d4c147259f59dc77b94f4f82999933c4f4140f2eb1a5f",
+            "lexical_score": 0.201857,
+            "dense_score": 0.820675,
+            "score": 0.542207
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p010-c009",
+            "page": 10,
+            "section": "6.AST、ALT、CK 明显增高",
+            "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+            "lexical_score": 0.122693,
+            "dense_score": 0.789939,
+            "score": 0.489678
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p003-c002",
+            "page": 3,
+            "section": "二、流行病学特点 （一）传染源",
+            "content_sha256": "e45d5ebff95511836e1bbdf9e3844ca66ebfdbb15db2b71f529a6dfa5a3b11a7",
+            "lexical_score": 0.168612,
+            "dense_score": 0.727882,
+            "score": 0.47621
+          }
+        ]
+      },
+      {
+        "query_id": "KQ09",
+        "query": "新冠感染重症高风险因素有哪些？",
+        "relevant_source_ids": [
+          "nhc-covid19-trial-v10"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p011-c010",
+            "page": 11,
+            "section": "2.对重症高危人群应进行生命体征监测，特别是静息和 活动后的指氧饱和度等",
+            "content_sha256": "3538004d4a961dddd8a2ed7488e371fb3ece3208119c66f6e010ba5953dbfdb7",
+            "lexical_score": 1.0,
+            "dense_score": 0.502448,
+            "score": 0.726347
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p007-c006",
+            "page": 7,
+            "section": "1.具有新冠病毒感染的相关临床表现",
+            "content_sha256": "70123ea023f944b9c15d4c147259f59dc77b94f4f82999933c4f4140f2eb1a5f",
+            "lexical_score": 0.043303,
+            "dense_score": 0.722258,
+            "score": 0.416728
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p010-c009",
+            "page": 10,
+            "section": "6.AST、ALT、CK 明显增高",
+            "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+            "lexical_score": 0.038955,
+            "dense_score": 0.703717,
+            "score": 0.404574
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p003-c002",
+            "page": 3,
+            "section": "二、流行病学特点 （一）传染源",
+            "content_sha256": "e45d5ebff95511836e1bbdf9e3844ca66ebfdbb15db2b71f529a6dfa5a3b11a7",
+            "lexical_score": 0.102055,
+            "dense_score": 0.652078,
+            "score": 0.404568
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p006-c004",
+            "page": 6,
+            "section": "十一、MP 的耐药性检测和临床意义 确定 MP 耐药的金标准方法是使用固体培养阳性的菌落进 行抗菌药物最低",
+            "content_sha256": "589d583f8bfe26bca76280502cacb46ba51b298d6a56eafd8bd48fd7c8311d8d",
+            "lexical_score": 0.249382,
+            "dense_score": 0.509028,
+            "score": 0.392187
+          }
+        ]
+      },
+      {
+        "query_id": "KQ10",
+        "query": "新冠核酸检测和抗原检测的意义",
+        "relevant_source_ids": [
+          "nhc-covid19-trial-v10"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p006-c005",
+            "page": 6,
+            "section": "五、诊断 （一）诊断原则",
+            "content_sha256": "f71f2afbcee422aeaaa5f538089b4c49cf37b7714798325353f8048dc57a13f7",
+            "lexical_score": 0.980665,
+            "dense_score": 0.689261,
+            "score": 0.820393
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p007-c006",
+            "page": 7,
+            "section": "1.具有新冠病毒感染的相关临床表现",
+            "content_sha256": "70123ea023f944b9c15d4c147259f59dc77b94f4f82999933c4f4140f2eb1a5f",
+            "lexical_score": 0.946827,
+            "dense_score": 0.650365,
+            "score": 0.783773
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p005-c004",
+            "page": 5,
+            "section": "4.肌炎和横纹肌溶解主要表现为肌痛、肌无力、血清肌酸激 酶、肌红蛋白升高，严重者可导致急性肾损伤等",
+            "content_sha256": "fea080ef66470d269fdd110250f755be58315da78103b91288a17f86ee3f9735",
+            "lexical_score": 1.0,
+            "dense_score": 0.536523,
+            "score": 0.745088
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p007-c006",
+            "page": 7,
+            "section": "1.流感病毒核酸检测阳性",
+            "content_sha256": "649597b485891d3d42fab01d47d68a8bdf516b241fa1455218087951dc3a932b",
+            "lexical_score": 0.853808,
+            "dense_score": 0.484652,
+            "score": 0.650772
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p006-c004",
+            "page": 6,
+            "section": "十一、MP 的耐药性检测和临床意义 确定 MP 耐药的金标准方法是使用固体培养阳性的菌落进 行抗菌药物最低",
+            "content_sha256": "589d583f8bfe26bca76280502cacb46ba51b298d6a56eafd8bd48fd7c8311d8d",
+            "lexical_score": 0.722126,
+            "dense_score": 0.532746,
+            "score": 0.617967
+          }
+        ]
+      },
+      {
+        "query_id": "KQ11",
+        "query": "新冠重型和危重型诊断标准",
+        "relevant_source_ids": [
+          "nhc-covid19-trial-v10"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p006-c005",
+            "page": 6,
+            "section": "五、诊断 （一）诊断原则",
+            "content_sha256": "f71f2afbcee422aeaaa5f538089b4c49cf37b7714798325353f8048dc57a13f7",
+            "lexical_score": 1.0,
+            "dense_score": 0.680311,
+            "score": 0.824171
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p009-c008",
+            "page": 9,
+            "section": "3.非住院患者居家隔离，保持房间通风，佩戴口罩",
+            "content_sha256": "f414ba5fc91a6c00e4783d1678219ac011ee6c4ced97d36f7e34aa4735bf9fde",
+            "lexical_score": 0.88074,
+            "dense_score": 0.494834,
+            "score": 0.668492
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+            "page": 8,
+            "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+            "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+            "lexical_score": 0.629113,
+            "dense_score": 0.586883,
+            "score": 0.605886
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p008-c007",
+            "page": 8,
+            "section": "4.临床症状进行性加重，肺部影像学显示 24～48 小时 内病灶明显进展＞50%",
+            "content_sha256": "55c0a1e0d84ac5ae4b54e99832d7ca8b6202b27636349e3afeb712a9790e9e21",
+            "lexical_score": 0.491737,
+            "dense_score": 0.61165,
+            "score": 0.557689
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p011-c010",
+            "page": 11,
+            "section": "1.对于重症流感患者，抗病毒治疗疗程尚不明确，有条件的医 院可根据核酸检测结果适当延长抗病毒治疗时间",
+            "content_sha256": "5940d378eeb2f722578f868c7ae460ed422130eb141dd2f2bccfe3341f721101",
+            "lexical_score": 0.579115,
+            "dense_score": 0.519743,
+            "score": 0.54646
+          }
+        ]
+      },
+      {
+        "query_id": "KQ12",
+        "query": "儿童感染新冠可能有哪些症状？",
+        "relevant_source_ids": [
+          "nhc-covid19-trial-v10"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p005-c004",
+            "page": 5,
+            "section": "1.一般检查",
+            "content_sha256": "8dbfa10fc8fea046f3b94e340afacd6a430faaaea4a4c4010176456b2141fc20",
+            "lexical_score": 1.0,
+            "dense_score": 0.738159,
+            "score": 0.855988
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p010-c009",
+            "page": 10,
+            "section": "6.AST、ALT、CK 明显增高",
+            "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+            "lexical_score": 0.177373,
+            "dense_score": 0.729293,
+            "score": 0.480929
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p008-c007",
+            "page": 8,
+            "section": "4.临床症状进行性加重，肺部影像学显示 24～48 小时 内病灶明显进展＞50%",
+            "content_sha256": "55c0a1e0d84ac5ae4b54e99832d7ca8b6202b27636349e3afeb712a9790e9e21",
+            "lexical_score": 0.278902,
+            "dense_score": 0.638318,
+            "score": 0.476581
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p004-c003",
+            "page": 4,
+            "section": "1.流感病毒可侵犯下呼吸道，引起原发性病毒性肺炎",
+            "content_sha256": "684b5377ce18fc063f846ac3002480694fca41d34daa88399ff410e3436e58d1",
+            "lexical_score": 0.145062,
+            "dense_score": 0.742911,
+            "score": 0.473879
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p007-c006",
+            "page": 7,
+            "section": "1.具有新冠病毒感染的相关临床表现",
+            "content_sha256": "70123ea023f944b9c15d4c147259f59dc77b94f4f82999933c4f4140f2eb1a5f",
+            "lexical_score": 0.116859,
+            "dense_score": 0.724385,
+            "score": 0.450998
+          }
+        ]
+      },
+      {
+        "query_id": "KQ13",
+        "query": "新冠患者呼吸困难和低氧血症风险",
+        "relevant_source_ids": [
+          "nhc-covid19-trial-v10"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p004-c003",
+            "page": 4,
+            "section": "四、临床特点 （一）临床表现",
+            "content_sha256": "d7516ea547d2e3a6ef3c1e5dcec1ec963b39e93532f8a9c11c60f208b0e60ea9",
+            "lexical_score": 1.0,
+            "dense_score": 0.589282,
+            "score": 0.774105
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p009-c007",
+            "page": 9,
+            "section": "2.肺栓塞（PE） 可独立发生肺内和肺外血栓栓塞性疾病如 肺动脉栓塞、肺静脉栓塞，还可同时并发心脏血栓、",
+            "content_sha256": "886d3b481af13b4e43f621a08ff02cdf9c58016daac2977a9d91ffec4a1fe35a",
+            "lexical_score": 0.884694,
+            "dense_score": 0.593682,
+            "score": 0.724638
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p009-c008",
+            "page": 9,
+            "section": "八、重型/危重型早期预警指标 （一）成人",
+            "content_sha256": "4a22283788f8f129d93fc71f0bc5adf645371ae457faebc543a5d569555a11fc",
+            "lexical_score": 0.699065,
+            "dense_score": 0.606697,
+            "score": 0.648263
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p004-c002",
+            "page": 4,
+            "section": "七、影像学表现 影像学表现是临床判断病情和评估预后的主要依据之一",
+            "content_sha256": "dc50239b78ceb39cced1d22bb657389a1888bff57c52752afb834a43e1901626",
+            "lexical_score": 0.651994,
+            "dense_score": 0.542276,
+            "score": 0.591649
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p011-c010",
+            "page": 11,
+            "section": "1.对于重症流感患者，抗病毒治疗疗程尚不明确，有条件的医 院可根据核酸检测结果适当延长抗病毒治疗时间",
+            "content_sha256": "5940d378eeb2f722578f868c7ae460ed422130eb141dd2f2bccfe3341f721101",
+            "lexical_score": 0.603226,
+            "dense_score": 0.542635,
+            "score": 0.569901
+          }
+        ]
+      },
+      {
+        "query_id": "KQ14",
+        "query": "新型冠状病毒感染的诊断依据",
+        "relevant_source_ids": [
+          "nhc-covid19-trial-v10"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p007-c005",
+            "page": 7,
+            "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+            "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+            "lexical_score": 1.0,
+            "dense_score": 0.699897,
+            "score": 0.834943
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p002-c001",
+            "page": 2,
+            "section": "新型冠状病毒感染诊疗方案（试行第十版） · 第2页",
+            "content_sha256": "57bc0b9622ae987893222cadb3cd91cddf25587b091f7d23b26ba497bf570812",
+            "lexical_score": 0.957612,
+            "dense_score": 0.613828,
+            "score": 0.76853
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p003-c002",
+            "page": 3,
+            "section": "二、流行病学特点 （一）传染源",
+            "content_sha256": "e45d5ebff95511836e1bbdf9e3844ca66ebfdbb15db2b71f529a6dfa5a3b11a7",
+            "lexical_score": 0.458973,
+            "dense_score": 0.734462,
+            "score": 0.610492
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p007-c006",
+            "page": 7,
+            "section": "1.具有新冠病毒感染的相关临床表现",
+            "content_sha256": "70123ea023f944b9c15d4c147259f59dc77b94f4f82999933c4f4140f2eb1a5f",
+            "lexical_score": 0.305134,
+            "dense_score": 0.813772,
+            "score": 0.584885
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p005-c003",
+            "page": 5,
+            "section": "八、可弯曲支气管镜下表现 可弯曲支气管镜（简称“支气管镜”）下表现与病程以及病情 严重程度有关",
+            "content_sha256": "3107685f6026451364023ca058fc7d1d722bfffc44a179f002f88230424b4ba7",
+            "lexical_score": 0.452296,
+            "dense_score": 0.617505,
+            "score": 0.543161
+          }
+        ]
+      },
+      {
+        "query_id": "KQ15",
+        "query": "儿童肺炎支原体肺炎有哪些临床表现？",
+        "relevant_source_ids": [
+          "nhc-child-mpp-2025"
+        ],
+        "hit_at_5": false,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p010-c009",
+            "page": 10,
+            "section": "6.AST、ALT、CK 明显增高",
+            "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+            "lexical_score": 1.0,
+            "dense_score": 0.674219,
+            "score": 0.82082
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+            "page": 8,
+            "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+            "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+            "lexical_score": 0.459601,
+            "dense_score": 0.683713,
+            "score": 0.582863
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p004-c003",
+            "page": 4,
+            "section": "1.流感病毒可侵犯下呼吸道，引起原发性病毒性肺炎",
+            "content_sha256": "684b5377ce18fc063f846ac3002480694fca41d34daa88399ff410e3436e58d1",
+            "lexical_score": 0.124425,
+            "dense_score": 0.711448,
+            "score": 0.447288
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p006-c005",
+            "page": 6,
+            "section": "五、诊断 主要结合流行病学史、临床表现和病原学检查进行诊断",
+            "content_sha256": "e148cfbb263c3448e87659c2e5a019d734c4f9e2f51f8e19dfeb0e8561ab5432",
+            "lexical_score": 0.152953,
+            "dense_score": 0.661307,
+            "score": 0.432548
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p005-c004",
+            "page": 5,
+            "section": "1.一般检查",
+            "content_sha256": "8dbfa10fc8fea046f3b94e340afacd6a430faaaea4a4c4010176456b2141fc20",
+            "lexical_score": 0.102416,
+            "dense_score": 0.696453,
+            "score": 0.429137
+          }
+        ]
+      },
+      {
+        "query_id": "KQ16",
+        "query": "大环内酯类药物无反应性肺炎支原体肺炎如何定义？",
+        "relevant_source_ids": [
+          "nhc-child-mpp-2025"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p006-c004",
+            "page": 6,
+            "section": "十一、MP 的耐药性检测和临床意义 确定 MP 耐药的金标准方法是使用固体培养阳性的菌落进 行抗菌药物最低",
+            "content_sha256": "589d583f8bfe26bca76280502cacb46ba51b298d6a56eafd8bd48fd7c8311d8d",
+            "lexical_score": 1.0,
+            "dense_score": 0.58196,
+            "score": 0.770078
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p010-c009",
+            "page": 10,
+            "section": "6.AST、ALT、CK 明显增高",
+            "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+            "lexical_score": 0.317143,
+            "dense_score": 0.534967,
+            "score": 0.436946
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p008-c006",
+            "page": 8,
+            "section": "十四、常见肺内外并发症的早期识别和诊断 （一）肺内并发症 1.塑形性支气管炎（PB） PB 是引起 SMP",
+            "content_sha256": "bbef25b4bfd15d776ebc81d2cdc05dd3da405fbc871cde76f9e4c5cc636bbf11",
+            "lexical_score": 0.048078,
+            "dense_score": 0.605273,
+            "score": 0.354536
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+            "page": 8,
+            "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+            "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+            "lexical_score": 0.11373,
+            "dense_score": 0.549049,
+            "score": 0.353156
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p003-c001",
+            "page": 3,
+            "section": "五、病理表现 成人文献显示轻症患者肺泡腔内有中性粒细胞浸润，重症 患者肺泡腔和肺泡壁还伴有淋巴细胞、浆细",
+            "content_sha256": "049f3a046b326c1515777de280dbd39f69087c021ecac94ceb37158a3c9cdd8c",
+            "lexical_score": 0.045121,
+            "dense_score": 0.581307,
+            "score": 0.340023
+          }
+        ]
+      },
+      {
+        "query_id": "KQ17",
+        "query": "重症肺炎支原体肺炎的早期识别指标",
+        "relevant_source_ids": [
+          "nhc-child-mpp-2025"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p008-c006",
+            "page": 8,
+            "section": "十四、常见肺内外并发症的早期识别和诊断 （一）肺内并发症 1.塑形性支气管炎（PB） PB 是引起 SMP",
+            "content_sha256": "bbef25b4bfd15d776ebc81d2cdc05dd3da405fbc871cde76f9e4c5cc636bbf11",
+            "lexical_score": 1.0,
+            "dense_score": 0.692162,
+            "score": 0.830689
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p010-c009",
+            "page": 10,
+            "section": "6.AST、ALT、CK 明显增高",
+            "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+            "lexical_score": 0.924938,
+            "dense_score": 0.652217,
+            "score": 0.774941
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+            "page": 8,
+            "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+            "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+            "lexical_score": 0.719115,
+            "dense_score": 0.67129,
+            "score": 0.692811
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p009-c007",
+            "page": 9,
+            "section": "2.肺栓塞（PE） 可独立发生肺内和肺外血栓栓塞性疾病如 肺动脉栓塞、肺静脉栓塞，还可同时并发心脏血栓、",
+            "content_sha256": "886d3b481af13b4e43f621a08ff02cdf9c58016daac2977a9d91ffec4a1fe35a",
+            "lexical_score": 0.580402,
+            "dense_score": 0.628135,
+            "score": 0.606655
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p005-c003",
+            "page": 5,
+            "section": "八、可弯曲支气管镜下表现 可弯曲支气管镜（简称“支气管镜”）下表现与病程以及病情 严重程度有关",
+            "content_sha256": "3107685f6026451364023ca058fc7d1d722bfffc44a179f002f88230424b4ba7",
+            "lexical_score": 0.408819,
+            "dense_score": 0.650277,
+            "score": 0.541621
+          }
+        ]
+      },
+      {
+        "query_id": "KQ18",
+        "query": "支原体肺炎咳嗽有什么特征？",
+        "relevant_source_ids": [
+          "nhc-child-mpp-2025"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+            "page": 8,
+            "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+            "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+            "lexical_score": 1.0,
+            "dense_score": 0.6728,
+            "score": 0.82004
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p010-c009",
+            "page": 10,
+            "section": "6.AST、ALT、CK 明显增高",
+            "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+            "lexical_score": 0.790182,
+            "dense_score": 0.639607,
+            "score": 0.707366
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p007-c006",
+            "page": 7,
+            "section": "1.具有新冠病毒感染的相关临床表现",
+            "content_sha256": "70123ea023f944b9c15d4c147259f59dc77b94f4f82999933c4f4140f2eb1a5f",
+            "lexical_score": 0.317247,
+            "dense_score": 0.623827,
+            "score": 0.485866
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p004-c002",
+            "page": 4,
+            "section": "七、影像学表现 影像学表现是临床判断病情和评估预后的主要依据之一",
+            "content_sha256": "dc50239b78ceb39cced1d22bb657389a1888bff57c52752afb834a43e1901626",
+            "lexical_score": 0.203521,
+            "dense_score": 0.685155,
+            "score": 0.46842
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p004-c003",
+            "page": 4,
+            "section": "1.流感病毒可侵犯下呼吸道，引起原发性病毒性肺炎",
+            "content_sha256": "684b5377ce18fc063f846ac3002480694fca41d34daa88399ff410e3436e58d1",
+            "lexical_score": 0.20254,
+            "dense_score": 0.644605,
+            "score": 0.445676
+          }
+        ]
+      },
+      {
+        "query_id": "KQ19",
+        "query": "儿童肺炎支原体肺炎的诊断标准",
+        "relevant_source_ids": [
+          "nhc-child-mpp-2025"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p010-c009",
+            "page": 10,
+            "section": "6.AST、ALT、CK 明显增高",
+            "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+            "lexical_score": 1.0,
+            "dense_score": 0.667049,
+            "score": 0.816877
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p006-c005",
+            "page": 6,
+            "section": "五、诊断 （一）诊断原则",
+            "content_sha256": "f71f2afbcee422aeaaa5f538089b4c49cf37b7714798325353f8048dc57a13f7",
+            "lexical_score": 0.554144,
+            "dense_score": 0.663372,
+            "score": 0.614219
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+            "page": 8,
+            "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+            "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+            "lexical_score": 0.489115,
+            "dense_score": 0.686786,
+            "score": 0.597834
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p009-c008",
+            "page": 9,
+            "section": "3.非住院患者居家隔离，保持房间通风，佩戴口罩",
+            "content_sha256": "f414ba5fc91a6c00e4783d1678219ac011ee6c4ced97d36f7e34aa4735bf9fde",
+            "lexical_score": 0.556075,
+            "dense_score": 0.577638,
+            "score": 0.567935
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p012-c010",
+            "page": 12,
+            "section": "3.出现肺外器官并发症，但未达到危重症标准",
+            "content_sha256": "653c244768f6b412a06a348324f97675a1bd60cde39a9fccaa0fc7e5f45f81a3",
+            "lexical_score": 0.291305,
+            "dense_score": 0.685416,
+            "score": 0.508066
+          }
+        ]
+      },
+      {
+        "query_id": "KQ20",
+        "query": "肺炎支原体病原学和抗体检测",
+        "relevant_source_ids": [
+          "nhc-child-mpp-2025"
+        ],
+        "hit_at_5": true,
+        "retrieved": [
+          {
+            "rank": 1,
+            "source_id": "nhc-covid19-trial-v10",
+            "document_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499",
+            "chunk_id": "nhc-covid19-trial-v10-u-c3c2224cdbd2-66d5ae641499-p010-c009",
+            "page": 10,
+            "section": "6.AST、ALT、CK 明显增高",
+            "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+            "lexical_score": 1.0,
+            "dense_score": 0.65214,
+            "score": 0.808677
+          },
+          {
+            "rank": 2,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p006-c005",
+            "page": 6,
+            "section": "五、诊断 主要结合流行病学史、临床表现和病原学检查进行诊断",
+            "content_sha256": "e148cfbb263c3448e87659c2e5a019d734c4f9e2f51f8e19dfeb0e8561ab5432",
+            "lexical_score": 0.790474,
+            "dense_score": 0.681895,
+            "score": 0.730755
+          },
+          {
+            "rank": 3,
+            "source_id": "nhc-influenza-2020",
+            "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+            "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+            "page": 8,
+            "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+            "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+            "lexical_score": 0.530297,
+            "dense_score": 0.660371,
+            "score": 0.601838
+          },
+          {
+            "rank": 4,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p007-c005",
+            "page": 7,
+            "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+            "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+            "lexical_score": 0.338138,
+            "dense_score": 0.681547,
+            "score": 0.527013
+          },
+          {
+            "rank": 5,
+            "source_id": "nhc-child-mpp-2025",
+            "document_id": "nhc-child-mpp-2025-2025-452e1442cbca",
+            "chunk_id": "nhc-child-mpp-2025-2025-452e1442cbca-p005-c003",
+            "page": 5,
+            "section": "八、可弯曲支气管镜下表现 可弯曲支气管镜（简称“支气管镜”）下表现与病程以及病情 严重程度有关",
+            "content_sha256": "3107685f6026451364023ca058fc7d1d722bfffc44a179f002f88230424b4ba7",
+            "lexical_score": 0.254052,
+            "dense_score": 0.629362,
+            "score": 0.460472
+          }
+        ]
+      }
+    ]
+  },
+  "gate": "PASS"
+}

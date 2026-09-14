@@ -325,3 +325,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 - [`versions/`](versions/)
 - [`docs/dev_logs/`](docs/dev_logs/)
 - [`docs/scoring/`](docs/scoring/)
+
+## Alpha边缘端候选资料
+
+[Jetson边缘端BOM、零件选型与Codex任务颗粒度](docs/alpha_edge_candidate/README.md)：2026-09-14展示修订；候选待实机验证，未改变正式任务状态。

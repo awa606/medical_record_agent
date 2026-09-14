@@ -1,0 +1,19 @@
+{
+  "queried_on": "2026-09-13",
+  "exported_on": "2026-09-14",
+  "currency": "CNY",
+  "kit_reference_price": 2070,
+  "price_type": "manufacturer_reference_not_landed_supplier_quote",
+  "source": "https://www.nvidia.cn/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit/",
+  "known_reference_price_rows": 1,
+  "supplier_quote_rows": 0,
+  "missing_price_rows": [
+    "P02",
+    "P03",
+    "P04",
+    "P05",
+    "P06"
+  ],
+  "budget_confirmed": false,
+  "candidate_validated": false
+}

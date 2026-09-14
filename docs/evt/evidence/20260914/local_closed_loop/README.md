@@ -55,3 +55,9 @@ PR [#99](https://github.com/awa606/medical_record_agent/pull/99) 已按授权合
 ## 下一步
 
 继续既有1.2运行基线及2.3实施清单：对真实音频的说话人片段建立人工复核真值，沿现有ASR会话复核界面确认角色，再运行完整音频审核导出；同时处理容器P95与流式内存限制。正式状态不因代码或协议测试完成自动变为DONE。
+
+## Obsidian同步核对
+
+本轮通过实时工程API为11项Task追加证据链接。写后再次读取共享快照：15任务、87h、19技术依赖、6资源依赖、4里程碑、11风险、8Verification保全；全部Task非Evidence属性、正式日期、状态、工时、依赖和验收定义保持不变，违规数0。
+
+V01/V02/V05/V06/V08按缺失前提从NOT TESTED标为BLOCKED；V03/V04记录部分协议结果，保留NOT TESTED，V07未改。未新增产品PASS；R02/R03/R10补充OOM、角色与真实音频失败记录。精确保护校验见 [pm-sync-verification.json](pm-sync-verification.json)。报告与本地PM日志均注明自动化核验者为Codex，不代填医生或Owner确认。

@@ -1,0 +1,14 @@
+{
+  "tasks": 15,
+  "hours": 87,
+  "technical_dependencies": 19,
+  "resource_dependencies": 6,
+  "milestones": 4,
+  "risks": 11,
+  "verification": 8,
+  "valid_done": 1,
+  "violations": [],
+  "protected_fields_unchanged": true,
+  "controlled_evidence_appends": 11,
+  "verification_new_pass": 0
+}

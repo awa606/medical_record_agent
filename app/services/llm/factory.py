@@ -134,7 +134,7 @@ def get_llm_status(*, check_reachable: bool = False) -> dict[str, Any]:
         "configured": False,
         "reachable": False,
         "checked": check_reachable,
-        "fallback_provider": FALLBACK_PROVIDER,
+        "fallback_provider": FALLBACK_PROVIDER if fallback_allowed else None,
         "fallback": fallback_allowed,
         "fallback_reason": None,
     }

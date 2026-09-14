@@ -1,0 +1,250 @@
+{
+  "schema_version": "alpha12_runtime_continuation_v1",
+  "recorded_at": "2026-09-14T19:32:44.4767527+08:00",
+  "task_id": "MRA-ALPHA-1.2",
+  "environment": "Development PC / Docker Desktop linux-amd64 / RTX 5070 Laptop GPU; not Jetson",
+  "scope": "Current-branch container build, local Ollama qwen3:4b readiness, FunASR upload-profile readiness, runtime status semantics",
+  "branch": "codex/alpha-local-closed-loop-safety",
+  "source_commit": "403dc6121a27bbf38e0e2ffd24d447b7bb39f952",
+  "source_tree_status": [
+    " M AGENTS.md"
+  ],
+  "docker": {
+    "client": "29.6.1",
+    "server": "29.6.1",
+    "compose": "5.1.4",
+    "app_image": "sha256:b4d2969770a9aad2223e9ca5a3a1189f96e2b112da15bd8474fb8c7fd99c1f5e",
+    "ollama_image": "sha256:684d8674b4315fa18f4f0e973a118ec2652ed96f67563277839985175858e0ba",
+    "app_status": "running",
+    "app_health": "healthy",
+    "stats": [
+      {
+        "BlockIO": "368MB / 9.26MB",
+        "CPUPerc": "0.17%",
+        "Container": "mra-alpha12-current-app-1",
+        "ID": "db92e6aebbb6",
+        "MemPerc": "29.13%",
+        "MemUsage": "4.467GiB / 15.34GiB",
+        "Name": "mra-alpha12-current-app-1",
+        "NetIO": "480kB / 89kB",
+        "PIDs": "55"
+      },
+      {
+        "BlockIO": "778MB / 58.9MB",
+        "CPUPerc": "0.16%",
+        "Container": "mra-alpha12-current-ollama-1",
+        "ID": "610825696d70",
+        "MemPerc": "7.30%",
+        "MemUsage": "1.119GiB / 15.34GiB",
+        "Name": "mra-alpha12-current-ollama-1",
+        "NetIO": "118kB / 1.38MB",
+        "PIDs": "73"
+      }
+    ]
+  },
+  "endpoints": [
+    {
+      "name": "health",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 416,
+      "bytes": 16,
+      "body": {
+        "status": "ok"
+      }
+    },
+    {
+      "name": "ready",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 4016,
+      "bytes": 1401,
+      "body": {
+        "status": "ready",
+        "checks": {
+          "sqlite": {
+            "ok": true,
+            "path": "/app/runtime/record.sqlite3",
+            "journal_mode": "wal",
+            "quick_check": "ok",
+            "error": null
+          },
+          "uploads": {
+            "ok": true,
+            "path": "/app/runtime/uploads",
+            "free_bytes": 108891508736,
+            "error": null
+          },
+          "outputs": {
+            "ok": true,
+            "path": "/app/runtime/outputs",
+            "free_bytes": 108891508736,
+            "error": null
+          },
+          "speaker_profiles": {
+            "ok": true,
+            "path": "/app/runtime/speaker_profiles",
+            "free_bytes": 108891508736,
+            "error": null
+          },
+          "provider": {
+            "ok": true,
+            "status": {
+              "provider": "ollama",
+              "model": "qwen3:4b",
+              "mode": "edge",
+              "fallback_allowed": false,
+              "configured": true,
+              "reachable": true,
+              "checked": true,
+              "fallback_provider": null,
+              "fallback": false,
+              "fallback_reason": null,
+              "runtime_probe": {
+                "ok": true,
+                "error": null,
+                "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+                "inference_age_seconds": 181.152
+              }
+            },
+            "error": null
+          },
+          "asr_models": {
+            "ok": true,
+            "status": "ready",
+            "profile": "upload",
+            "error_category": null,
+            "retryable": false,
+            "components": [
+              "paraformer-zh",
+              "fsmn-vad",
+              "ct-punc",
+              "cam++"
+            ],
+            "model_cache": {
+              "ok": true,
+              "has_cached_files": true,
+              "caches": {
+                "modelscope": {
+                  "path": "/app/model_cache/modelscope",
+                  "exists": true,
+                  "file_count": 98
+                },
+                "hf": {
+                  "path": "/app/model_cache/hf",
+                  "exists": true,
+                  "file_count": 82
+                },
+                "torch": {
+                  "path": "/app/model_cache/torch",
+                  "exists": false,
+                  "file_count": 0
+                }
+              }
+            },
+            "error": null
+          }
+        }
+      }
+    },
+    {
+      "name": "doctor_page",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 82,
+      "bytes": 28524,
+      "body": null
+    },
+    {
+      "name": "llm_status",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 119,
+      "bytes": 262,
+      "body": {
+        "provider": "ollama",
+        "model": "qwen3:4b",
+        "mode": "edge",
+        "fallback_allowed": false,
+        "configured": true,
+        "reachable": false,
+        "checked": false,
+        "fallback_provider": null,
+        "fallback": false,
+        "fallback_reason": "Reachability not checked. Use POST /api/llm/test."
+      }
+    },
+    {
+      "name": "llm_test",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 10655,
+      "bytes": 213,
+      "body": {
+        "provider": "ollama",
+        "model": "qwen3:4b",
+        "mode": "edge",
+        "fallback_allowed": false,
+        "configured": true,
+        "reachable": true,
+        "checked": true,
+        "fallback_provider": null,
+        "fallback": false,
+        "fallback_reason": null
+      }
+    }
+  ],
+  "tests": {
+    "command": "python -m pytest -q tests/test_llm_status_api.py tests/test_runtime_hardening.py tests/test_llm_adapter.py --basetemp=.artifacts/test-tmp/alpha12-status-fix-20260914",
+    "passed": 23,
+    "failed": 0
+  },
+  "file_hashes": [
+    {
+      "path": "compose.local-loop.yml",
+      "sha256": "f41fce37a28a76093edb421978e788844a7dbfc5322f6be75ba45a6064074c34",
+      "bytes": 2390
+    },
+    {
+      "path": "Dockerfile",
+      "sha256": "1f0e8f6f09e71e48ad30338a754c387c9982cbdb77955289a981d69b720584a4",
+      "bytes": 1531
+    },
+    {
+      "path": "requirements-local-loop.txt",
+      "sha256": "59594119d303ada413fa9e108227c13b1d96616945ff94021dc62c6bfa52c291",
+      "bytes": 167
+    },
+    {
+      "path": "docs/engineering/local_closed_loop_runbook.md",
+      "sha256": "bf3008cb3b403ca84e56a902701af8e8a64fdd8ab0a3425f6320551a6d17e8fd",
+      "bytes": 4164
+    },
+    {
+      "path": "app/services/llm/factory.py",
+      "sha256": "2a2a31170860ce304dc33a4810dd88ca56c94ff4e7001d6f7331b2fbf8b16b13",
+      "bytes": 8297
+    },
+    {
+      "path": "tests/test_llm_status_api.py",
+      "sha256": "2a8e21358dadb607f333e578228ddc8dc86fa59dbb38f59c0d1093ab6a3de3cb",
+      "bytes": 4734
+    }
+  ],
+  "result": "PARTIAL",
+  "verified": [
+    "Fresh current-branch image built",
+    "health=200",
+    "ready=200",
+    "qwen3:4b digest verified",
+    "mock fallback disabled and fallback_provider null",
+    "FunASR upload profile ready",
+    "doctor page=200"
+  ],
+  "not_verified": [
+    "Jetson ARM/CUDA target environment",
+    "8GB shared-memory target behavior",
+    "streaming five-component microphone profile",
+    "target-device sustained operation"
+  ]
+}

@@ -19,6 +19,7 @@ from app.api import (
     tasks_router,
 )
 from app.db import init_db
+from app.services.privacy import AnonymousResponses, install_anonymous_logging
 from app.services.asr.prewarm import is_prewarm_enabled, start_funasr_prewarm
 
 
@@ -35,6 +36,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Medical Record Agent", lifespan=lifespan)
+install_anonymous_logging()
+app.add_middleware(AnonymousResponses)
 app.include_router(auth_router, prefix="/api")
 app.include_router(encounters_router, prefix="/api")
 app.include_router(knowledge_router, prefix="/api")

@@ -12,6 +12,9 @@ from app.services.llm.base import LLMProvider, LLMProviderUnavailableError
 from app.services.llm.json_repair import parse_json_object
 from app.services.llm.mock_provider import MockLLMProvider
 from app.services.mock_llm import MockLLM
+from app.services.record_rules import render_draft, check_draft_safety
+from app.services.field_grounding import ground_fields
+from app.services.privacy import anonymize_text
 
 
 FIELD_KEYS = [
@@ -71,8 +74,11 @@ class LLMRecordGenerator:
         self.max_retries = max(0, _env_int("LLM_MAX_RETRIES", 2))
         self.operation_traces: dict[str, dict[str, Any]] = {}
         self.last_trace = self._default_trace()
+        self.source_segments: list[dict] | None = None
+        self.field_validation: dict[str, Any] | None = None
 
     def extract_fields(self, conversation: str) -> MedicalRecordFields:
+        conversation = anonymize_text(conversation)
         if self.init_fallback_reason:
             return self._fallback_extract(conversation, self.init_fallback_reason)
 
@@ -101,8 +107,11 @@ class LLMRecordGenerator:
                 fields = validate_field_evidence(
                     self._fields_from_response(response.content),
                     conversation,
-                    strict_text_match=False,
+                    strict_text_match=True,
                 )
+                fields = ground_fields(fields, conversation, self.source_segments)
+                self.field_validation = {key: {"status": getattr(fields, key).status, "reason": getattr(fields, key).hint,
+                    "source_segment_ids": [s.segment_id for s in getattr(fields, key).source_spans]} for key in FIELD_KEYS}
                 self._set_trace(
                     operation="field_extraction",
                     provider=response.provider,
@@ -124,8 +133,8 @@ class LLMRecordGenerator:
 
     def generate_draft(self, fields: MedicalRecordFields | dict) -> str:
         start = time.perf_counter()
-        draft = self.mock_llm.generate_draft(fields)
-        uses_mock_builder = self.provider.name != "mock"
+        draft = render_draft(fields)
+        uses_mock_builder = False
         self._set_trace(
             operation="draft_generation",
             provider=self.requested_provider,
@@ -133,7 +142,7 @@ class LLMRecordGenerator:
             latency_ms=int((time.perf_counter() - start) * 1000),
             fallback=uses_mock_builder,
             fallback_reason="draft_generation_uses_mock_record_builder" if uses_mock_builder else None,
-            actual_provider="mock" if uses_mock_builder else self.provider.name,
+            actual_provider="deterministic_renderer_v1",
         )
         return draft
 
@@ -145,8 +154,8 @@ class LLMRecordGenerator:
         allow_export: bool = False,
     ) -> SafetyCheckResult:
         start = time.perf_counter()
-        safety = self.mock_llm.safety_check(draft_text, fields, allow_export=allow_export)
-        uses_mock_checker = self.provider.name != "mock"
+        safety = check_draft_safety(draft_text, fields, allow_export=allow_export)
+        uses_mock_checker = False
         self._set_trace(
             operation="safety_check",
             provider=self.requested_provider,
@@ -154,13 +163,19 @@ class LLMRecordGenerator:
             latency_ms=int((time.perf_counter() - start) * 1000),
             fallback=uses_mock_checker,
             fallback_reason="safety_check_uses_deterministic_rules" if uses_mock_checker else None,
-            actual_provider="mock" if uses_mock_checker else self.provider.name,
+            actual_provider="deterministic_safety_v1",
         )
         return safety
 
     def get_trace(self) -> dict[str, Any]:
         trace = dict(self.last_trace)
         trace["operations"] = {key: dict(value) for key, value in self.operation_traces.items()}
+        extraction = self.operation_traces.get("field_extraction", {})
+        if extraction:
+            trace["actual_provider"] = extraction.get("actual_provider")
+            trace["fallback"] = any(item.get("fallback", False) for item in self.operation_traces.values())
+        trace["model_digest"] = getattr(self.provider, "model_digest", None)
+        trace["field_validation"] = self.field_validation
         return trace
 
     def _fields_from_response(self, raw_text: str) -> MedicalRecordFields:
@@ -201,7 +216,7 @@ class LLMRecordGenerator:
                 "source_spans": self._normalize_spans(value.get("source_spans")),
                 "missing_elements": self._normalize_string_list(value.get("missing_elements")),
                 "fact_ids": self._normalize_string_list(value.get("fact_ids")),
-                "confirmed_by_doctor": bool(value.get("confirmed_by_doctor", False)),
+                "confirmed_by_doctor": False,
             }
 
         diagnoses = payload["candidate_diagnoses"]
@@ -228,6 +243,7 @@ class LLMRecordGenerator:
                 {
                     "text": span["text"],
                     "index": span.get("index"),
+                    "segment_id": span.get("segment_id"),
                     "start_time": span.get("start_time"),
                     "end_time": span.get("end_time"),
                 }
@@ -251,7 +267,7 @@ class LLMRecordGenerator:
             "medication_notes": self._normalize_string_list(item.get("medication_notes")),
             "risk_warnings": self._normalize_string_list(item.get("risk_warnings")),
             "follow_up_questions": self._normalize_string_list(item.get("follow_up_questions")),
-            "confirmed_by_doctor": bool(item.get("confirmed_by_doctor", False)),
+            "confirmed_by_doctor": False,
         }
 
     def _normalize_string_list(self, value: Any) -> list[str]:

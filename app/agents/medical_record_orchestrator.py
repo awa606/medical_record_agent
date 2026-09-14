@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import os
 from typing import Any, Callable, TypeVar
 
 from app.db import (
@@ -17,6 +18,7 @@ from app.db import (
 from app.schemas import MedicalRecordFields, SafetyCheckResult
 from app.services import create_llm_record_generator
 from app.services.record_quality import build_record_quality_report
+from app.services.privacy import anonymize_text, anonymize_payload
 
 
 T = TypeVar("T")
@@ -47,6 +49,7 @@ class MedicalRecordOrchestrator:
         self.conversation_text: str | None = None
         self.degraded = False
         self.degraded_messages: list[str] = []
+        self.asr_source: dict | None = None
 
     def create_text_task(self, conversation_text: str | None = None) -> int:
         self._reset()
@@ -69,15 +72,20 @@ class MedicalRecordOrchestrator:
         task_id = self.create_text_task(conversation_text)
         return self.run_existing_text_task(task_id, conversation_text)
 
-    def run_existing_text_task(self, task_id: int, conversation_text: str) -> dict[str, Any]:
+    def run_existing_text_task(self, task_id: int, conversation_text: str, asr_source: dict | None = None) -> dict[str, Any]:
         self._reset()
         self.task_id = task_id
         self.conversation_text = conversation_text
+        self.asr_source = anonymize_payload(asr_source)
+        if hasattr(self.llm, 'source_segments'):
+            self.llm.source_segments = (self.asr_source or {}).get('segments')
         task = get_task(task_id)
         if task is None:
             raise ValueError(f"Task {task_id} does not exist")
         if not task.get("input_text"):
             update_task(task_id, input_text=conversation_text)
+        conversation_text = anonymize_text(conversation_text)
+        self.conversation_text = conversation_text
         self.status = task["status"]
 
         try:
@@ -129,7 +137,7 @@ class MedicalRecordOrchestrator:
             )
             return self._result()
         except Exception as exc:
-            self.error_message = str(exc)
+            self.error_message = anonymize_text(str(exc))
             self._set_status(self.STATUS_FAILED, "failed")
             if self.task_id is not None:
                 update_task(
@@ -155,6 +163,7 @@ class MedicalRecordOrchestrator:
         self.conversation_text = None
         self.degraded = False
         self.degraded_messages = []
+        self.asr_source = None
 
     def _set_status(self, status: str, current_stage: str | None = None) -> None:
         previous_status = self.status
@@ -209,7 +218,7 @@ class MedicalRecordOrchestrator:
                 step_name,
                 "RUNNING",
                 attempt_no=attempt,
-                input_snapshot=input_snapshot,
+                input_snapshot=anonymize_payload(input_snapshot),
             )
             try:
                 result = operation()
@@ -221,7 +230,7 @@ class MedicalRecordOrchestrator:
                 self._log_step(step_name, "succeeded")
                 return result
             except Exception as exc:
-                error_message = str(exc)
+                error_message = anonymize_text(str(exc))
                 retry_count = increment_task_retry_count(self._require_task_id())
                 create_audit_log(
                     self._require_task_id(),
@@ -242,6 +251,9 @@ class MedicalRecordOrchestrator:
                     )
                     continue
 
+                if os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"} or getattr(self.llm, "allow_mock_fallback", True) is False:
+                    finish_task_step(step_id, status="FAILED", error_message=error_message)
+                    raise RuntimeError(f"{step_name} failed; strict mode forbids fallback") from exc
                 self.degraded = True
                 self.degraded_messages.append(f"{step_name} failed after retries: {error_message}")
                 self._set_status(self.STATUS_DEGRADED, f"{step_name}_degraded")
@@ -356,6 +368,7 @@ class MedicalRecordOrchestrator:
     def _result_payload(self) -> dict[str, Any]:
         return {
             "conversation_text": self.conversation_text,
+            "asr_source": self.asr_source,
             "fields": self.fields.model_dump() if self.fields else None,
             "draft": self.draft,
             "safety_check": self.safety_check.model_dump() if self.safety_check else None,

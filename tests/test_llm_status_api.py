@@ -108,7 +108,25 @@ class LLMStatusApiTests(unittest.TestCase):
         self.assertFalse(status["fallback_allowed"])
         self.assertFalse(status["configured"])
         self.assertFalse(status["fallback"])
+        self.assertIsNone(status["fallback_provider"])
         self.assertIn("live/edge requires online or ollama", status["fallback_reason"])
+
+    def test_edge_mode_status_never_advertises_mock_fallback(self):
+        os.environ.update(
+            {
+                "RECORD_PROVIDER_MODE": "edge",
+                "LLM_PROVIDER": "ollama",
+                "OLLAMA_BASE_URL": "http://ollama:11434",
+                "OLLAMA_MODEL": "qwen3:4b",
+            }
+        )
+
+        status = read_llm_status()
+
+        self.assertTrue(status["configured"])
+        self.assertFalse(status["fallback_allowed"])
+        self.assertFalse(status["fallback"])
+        self.assertIsNone(status["fallback_provider"])
 
 
 if __name__ == "__main__":

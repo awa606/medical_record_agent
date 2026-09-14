@@ -39,8 +39,12 @@ def _provider_name(provider_name: str | None = None) -> str:
     return provider
 
 
-def create_llm_provider(provider_name: str | None = None) -> LLMProvider:
+def create_llm_provider(provider_name: str | None = None, *, mode: str | None = None) -> LLMProvider:
     provider = _provider_name(provider_name)
+    if _record_provider_mode(mode) == "edge":
+        from urllib.parse import urlparse
+        if provider != "ollama" or urlparse(os.environ.get("OLLAMA_BASE_URL", "")).hostname not in {"127.0.0.1", "localhost", "::1", "ollama", "host.docker.internal"}:
+            raise LLMProviderUnavailableError("Edge mode only permits the configured local Ollama service")
     if provider == "mock":
         return MockLLMProvider()
     if provider == "online":
@@ -86,7 +90,7 @@ def create_llm_record_generator(
     if not allow_mock_fallback and requested_provider == "mock":
         raise LLMProviderUnavailableError("RECORD_PROVIDER_MODE live/edge requires online or ollama provider")
     try:
-        provider = create_llm_provider(requested_provider)
+        provider = create_llm_provider(requested_provider, mode=selected_mode)
     except Exception as exc:  # noqa: BLE001 - provider config failures must fallback.
         if not allow_mock_fallback:
             raise LLMProviderUnavailableError(str(exc)) from exc
@@ -130,7 +134,7 @@ def get_llm_status(*, check_reachable: bool = False) -> dict[str, Any]:
         "configured": False,
         "reachable": False,
         "checked": check_reachable,
-        "fallback_provider": FALLBACK_PROVIDER,
+        "fallback_provider": FALLBACK_PROVIDER if fallback_allowed else None,
         "fallback": fallback_allowed,
         "fallback_reason": None,
     }

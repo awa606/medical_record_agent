@@ -18,12 +18,12 @@ RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.l
         libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt requirements-asr.txt ./
+COPY requirements.txt requirements-asr.txt requirements-local-loop.txt ./
 
 RUN python -m pip install --upgrade pip setuptools wheel \
     && python -m pip install -r requirements.txt \
-    && python -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu \
-    && python -m pip install -r requirements-asr.txt
+    && python -m pip install torch torchaudio -c requirements-local-loop.txt --index-url https://download.pytorch.org/whl/cpu \
+    && python -m pip install -r requirements-asr.txt -c requirements-local-loop.txt
 
 COPY . .
 

@@ -1944,7 +1944,7 @@ function renderPatientBar() {
     appState.currentEncounter?.patient_display_name,
     appState.currentEncounter?.patient_deidentified_id || "模拟患者",
   );
-  $("patientProfile").textContent = "女 / 32岁";
+  $("patientProfile").textContent = "年龄、性别未登记";
   $("sessionId").textContent = appState.currentTaskId
     ? `T-${appState.currentTaskId}`
     : appState.currentAsrSessionId
@@ -2120,7 +2120,7 @@ function fieldStatus(field, key) {
   if (field.status === "conflicting") return { key: "conflicting", label: "证据冲突" };
   if (field.confirmed_by_doctor) return { key: "confirmed", label: "已确认" };
   if (typeof field.confidence === "number" && field.confidence < 0.7) return { key: "low", label: "低置信度" };
-  return { key: "confirmed", label: "已确认" };
+  return { key: "neutral", label: "待医生审核" };
 }
 
 function fieldValue(fields, key) {
@@ -2457,7 +2457,8 @@ function highRiskReviewItems(fields) {
       items.push({
         key: `field:${key}`,
         label: `${title}证据冲突`,
-        confirmed: Boolean(field.high_risk_confirmed_by_doctor),
+        confirmed: false,
+        requiresCorrection: true,
       });
     }
   });
@@ -2490,7 +2491,7 @@ function pendingApprovalCount(fields) {
     if (!diagnosisReviewComplete(diagnosis) && !appState.approvalDiagnosisDecisions[index]) pending += 1;
   });
   highRiskReviewItems(fields).forEach((item) => {
-    if (!item.confirmed && !appState.approvalHighRiskConfirmations[item.key]) pending += 1;
+    if (item.requiresCorrection || (!item.confirmed && !appState.approvalHighRiskConfirmations[item.key])) pending += 1;
   });
   return pending;
 }
@@ -2547,16 +2548,16 @@ function renderApprovalChecklist(fields) {
     `;
   }).join("");
   const riskRows = risks.map((item) => {
-    const selected = item.confirmed || appState.approvalHighRiskConfirmations[item.key];
+    const selected = !item.requiresCorrection && (item.confirmed || appState.approvalHighRiskConfirmations[item.key]);
     return `
       <div class="approval-item high-risk" data-approval-item="${escapeHtml(item.key)}">
         <div>
           <strong>${escapeHtml(item.label)}</strong>
-          <span>高风险或证据冲突项必须逐项单独确认。</span>
+          <span>${item.requiresCorrection ? "请核对原文，修正字段后保存修改；勾选确认不能消除证据冲突。" : "高风险提示必须逐项单独确认。"}</span>
         </div>
         ${approvalStatusPill(Boolean(selected))}
         <div class="approval-item-actions">
-          <button type="button" class="${selected ? "active" : ""}" data-approval-risk-key="${escapeHtml(item.key)}">已单独确认</button>
+          ${item.requiresCorrection ? '<span>需修正内容和证据</span>' : `<button type="button" class="${selected ? "active" : ""}" data-approval-risk-key="${escapeHtml(item.key)}">已单独确认</button>`}
         </div>
       </div>
     `;

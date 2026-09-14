@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from threading import RLock
 
 from app.schemas.asr import ASRResult, ASRSegment
 from app.services.asr.evaluator import ASREvaluator
 from app.services.asr.speaker_diarization import SPEAKER_UNASSIGNED
+from app.services.asr.local_models import resolve_model, offline
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -25,6 +27,7 @@ class FunASREngine:
         enable_speaker_diarization: bool = False,
         model_instance: Any | None = None,
     ) -> None:
+        self._inference_lock = RLock()
         self.hotwords = self._load_hotwords(hotword_path)
         self.speaker_diarization_enabled = enable_speaker_diarization
         model_kwargs: dict[str, Any] = {"model": model, "device": device}
@@ -37,6 +40,11 @@ class FunASREngine:
         if model_instance is not None:
             self.model = model_instance
             return
+        for key in ('model', 'vad_model', 'punc_model', 'spk_model'):
+            if key in model_kwargs:
+                model_kwargs[key] = resolve_model(model_kwargs[key])
+        if offline():
+            model_kwargs['disable_update'] = True
         try:
             from funasr import AutoModel
         except ImportError as exc:
@@ -49,6 +57,11 @@ class FunASREngine:
         self.model = AutoModel(**model_kwargs)
 
     def transcribe(self, audio_id: str, audio_path: Path) -> ASRResult:
+        # FunASR's mutable inference caches are shared by upload and session paths.
+        with self._inference_lock:
+            return self._transcribe(audio_id, audio_path)
+
+    def _transcribe(self, audio_id: str, audio_path: Path) -> ASRResult:
         if not audio_path.exists():
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 

@@ -89,6 +89,24 @@ def _login(page, base_url: str) -> None:
     expect(page.locator("#authUserLabel")).to_contain_text("admin")
 
 
+def test_unreviewed_fields_and_missing_demographics_are_not_confirmed():
+    server=RunningServer()
+    try:
+        with sync_playwright() as p:
+            browser=p.chromium.launch()
+            page=browser.new_page()
+            _login(page,server.base_url)
+            page.evaluate("createRecordTask('患者发热3天，体温39℃。')")
+            page.wait_for_function('Boolean(window.__MRA_APP_STATE__?.currentRecordFields)',timeout=30000)
+            page.evaluate('setProductView("encounter"); renderAll()')
+            expect(page.locator('#patientProfile')).to_have_text('年龄、性别未登记')
+            expect(page.locator('[data-field="chief_complaint"]')).to_contain_text('待医生审核')
+            assert page.evaluate('window.__MRA_APP_STATE__.currentRecordFields.chief_complaint.confirmed_by_doctor') is False
+            browser.close()
+    finally:
+        server.close()
+
+
 def _prepare_review_fixture(page) -> int:
     page.evaluate("createRecordTask('患者发热39度，胸闷气促，青霉素过敏。')")
     page.wait_for_function("window.__MRA_APP_STATE__?.currentRecordFields", timeout=30000)
@@ -228,6 +246,26 @@ def test_itemized_approval_invalidates_after_edit_and_downloads_docx() -> None:
             )
             assert empty_status in {400, 422}
 
+            _select_all_review_items(page)
+            expect(page.locator('[data-approval-item="field:physical_exam"]')).to_contain_text("需修正内容和证据")
+            blocked = page.evaluate("""async () => {
+              // Deliberately tamper with UI state: the server must still reject.
+              window.__MRA_APP_STATE__.approvalHighRiskConfirmations['field:physical_exam'] = true;
+              const payload = await buildTaskApprovalPayload();
+              payload.high_risk_conflicts.push({key: 'field:physical_exam', confirmed: true});
+              payload.fields.push({key: 'physical_exam', action: 'confirm_content'});
+              return (await fetch(`/api/tasks/${window.__MRA_APP_STATE__.currentTaskId}/approve`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+              })).status;
+            }""")
+            assert blocked == 409
+            page.evaluate("""async () => {
+              // Patient symptoms are not a clinician's physical examination.
+              const field = window.__MRA_APP_STATE__.currentRecordFields.physical_exam;
+              field.value = null; field.missing = true; field.status = 'missing';
+              field.source_spans = []; field.fact_ids = []; field.hint = '查体未采集';
+              await saveDraftReview(); await refreshExportReadiness();
+            }""")
             _select_all_review_items(page)
             stale_payload = page.evaluate("buildTaskApprovalPayload()")
             page.evaluate("confirmFields()")

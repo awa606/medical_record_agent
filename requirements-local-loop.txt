@@ -1,0 +1,6 @@
+# Development x86 CPU ASR stack; Jetson requires a separately validated stack.
+torch==2.11.0
+torchaudio==2.11.0
+funasr==1.3.29
+modelscope==1.38.1
+transformers==5.14.1

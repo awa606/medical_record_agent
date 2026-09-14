@@ -196,13 +196,16 @@ class FunASRStreamingEngine:
         return FunASRLiveChunkSession(engine=self, audio_id=audio_id)
 
     def _load_model(self) -> Any:
+        from app.services.asr.local_models import resolve_model, offline
         try:
             from funasr import AutoModel
         except ImportError as exc:
             raise RuntimeError(
                 "FunASR streaming import failed. Install requirements-asr.txt before using engine=funasr."
             ) from exc
-        kwargs: dict[str, Any] = {"model": self.model_id, "device": self.device}
+        kwargs: dict[str, Any] = {"model": resolve_model(self.model_id), "device": self.device}
+        if offline():
+            kwargs['disable_update'] = True
         hub = os.environ.get("FUNASR_HUB")
         if hub:
             kwargs["hub"] = hub

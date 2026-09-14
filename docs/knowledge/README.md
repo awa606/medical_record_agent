@@ -27,7 +27,7 @@ python scripts/evaluate_knowledge_retrieval.py `
   --output-markdown .artifacts/knowledge/retrieval_fts5.md
 ```
 
-加入 `--build-embeddings` 后，导入脚本会使用 `BAAI/bge-small-zh-v1.5` 建立可重建的向量派生索引；API 在向量存在时返回 `hybrid_v1`，否则返回 `fts5_v1`。
+首次准备模型时显式加入 `--build-embeddings --allow-model-download`。模型进入本机缓存后，只使用 `--build-embeddings` 即可离线重建向量派生索引；API 运行时只读取本地模型缓存，在向量和模型均可用时返回 `hybrid_v1`，否则安全回退为 `fts5_v1`。
 
 ## 当前工程门禁
 

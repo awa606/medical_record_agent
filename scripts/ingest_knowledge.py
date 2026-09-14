@@ -91,6 +91,11 @@ def main() -> int:
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--build-embeddings", action="store_true")
     parser.add_argument("--embedding-model", default="BAAI/bge-small-zh-v1.5")
+    parser.add_argument(
+        "--allow-model-download",
+        action="store_true",
+        help="Allow the embedding build to fetch a missing model. Runtime retrieval always uses the local cache.",
+    )
     args = parser.parse_args()
 
     os.environ["MEDICAL_RECORD_AGENT_DB"] = str(args.db.resolve())
@@ -152,7 +157,10 @@ def main() -> int:
     embedding_error = None
     if args.build_embeddings:
         try:
-            embedding_result = build_embeddings(args.embedding_model)
+            embedding_result = build_embeddings(
+                args.embedding_model,
+                allow_model_download=args.allow_model_download,
+            )
         except Exception as exc:
             embedding_error = f"{type(exc).__name__}: {exc}"
 

@@ -323,14 +323,19 @@ def _cosine(left: list[float], right: list[float]) -> float:
     return numerator / (left_norm * right_norm)
 
 
-@lru_cache(maxsize=2)
-def _embedding_model(model_id: str):
+@lru_cache(maxsize=4)
+def _embedding_model(model_id: str, local_files_only: bool = True):
     from sentence_transformers import SentenceTransformer
 
-    return SentenceTransformer(model_id)
+    return SentenceTransformer(model_id, local_files_only=local_files_only)
 
 
-def build_embeddings(model_id: str = DEFAULT_EMBEDDING_MODEL, connection: sqlite3.Connection | None = None) -> dict[str, Any]:
+def build_embeddings(
+    model_id: str = DEFAULT_EMBEDDING_MODEL,
+    connection: sqlite3.Connection | None = None,
+    *,
+    allow_model_download: bool = False,
+) -> dict[str, Any]:
     owns = connection is None
     conn = connection or get_connection()
     init_knowledge_schema(conn)
@@ -346,7 +351,7 @@ def build_embeddings(model_id: str = DEFAULT_EMBEDDING_MODEL, connection: sqlite
         ).fetchall()
         if not rows:
             raise ValueError("knowledge index has no chunks")
-        model = _embedding_model(model_id)
+        model = _embedding_model(model_id, not allow_model_download)
         vectors = model.encode([row["content"] for row in rows], normalize_embeddings=True, show_progress_bar=False)
         now = utc_now()
         for row, vector in zip(rows, vectors):
@@ -415,9 +420,17 @@ def retrieve_knowledge(
         query_vector: list[float] | None = None
         mode = "fts5_v1"
         if embeddings:
-            model = _embedding_model(model_id)
-            query_vector = [float(value) for value in model.encode([query], normalize_embeddings=True, show_progress_bar=False)[0]]
-            mode = "hybrid_v1"
+            try:
+                model = _embedding_model(model_id, True)
+                query_vector = [
+                    float(value)
+                    for value in model.encode([query], normalize_embeddings=True, show_progress_bar=False)[0]
+                ]
+                mode = "hybrid_v1"
+            except (OSError, RuntimeError, ValueError):
+                # The lexical index remains usable when a copied database does not
+                # have the embedding model in the local offline cache.
+                query_vector = None
         results: list[dict[str, Any]] = []
         for row, lexical_raw in zip(rows, lexical_values):
             lexical_score = lexical_raw / lexical_max

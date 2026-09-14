@@ -1,0 +1,52 @@
+{
+  "schema_version": "knowledge_ingest_manifest_v1",
+  "package_id": "fever-respiratory-v1",
+  "scope": "发热与呼吸道症状的医生人工参考证据；不得自动批准诊断或治疗。",
+  "sources": [
+    {
+      "source_id": "nhc-influenza-2020",
+      "title": "流行性感冒诊疗方案（2020年版）",
+      "publisher": "国家卫生健康委办公厅、国家中医药局办公室",
+      "version": "2020年版",
+      "published_at": "2020-10-27",
+      "source_url": "https://www.nhc.gov.cn/ylyjs/zcwj/202011/472e0ad873014c168dbe22e19d605e20/files/1733999727528_18271.pdf",
+      "download_url": "https://www.baoshan.gov.cn/info/5711/3839084.htm",
+      "file_name": "nhc_influenza_2020.pdf",
+      "expected_sha256": "693984e29ed67bdc0366f66c303f33b98847d0bcfcd6f1e87aa5cbbdcd8bfaac",
+      "usage_scope": "临床表现、重症高危因素、鉴别和就医风险提示。",
+      "page_ranges": [[2, 11]],
+      "max_chunks": 10,
+      "acquisition_note": "国家卫健委主链接在2026-09-14返回502；从保山市人民政府公开附件取得同名扫描件，本地OCR提取。"
+    },
+    {
+      "source_id": "nhc-covid19-trial-v10",
+      "title": "新型冠状病毒感染诊疗方案（试行第十版）",
+      "publisher": "国家卫生健康委员会、国家中医药管理局",
+      "version": "试行第十版",
+      "published_at": "2023-01-06",
+      "source_url": "https://www.nhc.gov.cn/cms-search/downFiles/460b0e7b19bd42f3bba00c1efb9b6811.pdf",
+      "download_url": "https://www.nhc.gov.cn/cms-search/downFiles/460b0e7b19bd42f3bba00c1efb9b6811.pdf",
+      "file_name": "nhc_covid19_v10.pdf",
+      "expected_sha256": "66d5ae641499c722b974a483748e9817cbfe55b6b83a9a08f366d1f0ed3d8440",
+      "usage_scope": "临床表现、诊断、分型和重症风险提示。",
+      "page_ranges": [[2, 11]],
+      "max_chunks": 10,
+      "acquisition_note": "从国家卫生健康委员会公开PDF直接取得。"
+    },
+    {
+      "source_id": "nhc-child-mpp-2025",
+      "title": "儿童肺炎支原体肺炎诊疗指南（2025年版）",
+      "publisher": "国家卫生健康委办公厅、国家中医药局综合司",
+      "version": "2025年版",
+      "published_at": "2025-09-09",
+      "source_url": "https://www.nhc.gov.cn/yzygj/c100068/202509/19e7145436b049a68d4ba8c2060dfa56/files/%E5%84%BF%E7%AB%A5%E8%82%BA%E7%82%8E%E6%94%AF%E5%8E%9F%E4%BD%93%E8%82%BA%E7%82%8E%E8%AF%8A%E7%96%97%E6%8C%87%E5%8D%97%EF%BC%882025%E5%B9%B4%E7%89%88%EF%BC%89.pdf",
+      "download_url": "https://www.baiyinqu.gov.cn/XZJDBMDW/bmdw/byqwsjkj/fdzdgknr/ylws/art/2025/art_267dc3d84c914e19a8d97514853168cb.html",
+      "file_name": "nhc_child_mpp_2025.pdf",
+      "expected_sha256": "452e1442cbcae7231e1bac8f23031f84085a7e75aef347fac6d9a04162575b32",
+      "usage_scope": "儿童MPP定义、临床表现、诊断、重症和危重风险提示。",
+      "page_ranges": [[3, 15]],
+      "max_chunks": 10,
+      "acquisition_note": "国家卫健委主链接在2026-09-14返回502；从白银区人民政府公开附件取得同名PDF。"
+    }
+  ]
+}

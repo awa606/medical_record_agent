@@ -125,6 +125,10 @@ def build_matrix(
     clinical: dict[str, Any],
     dependencies: dict[str, Any],
     checks: dict[str, dict[str, Any]],
+    *,
+    asr_audit: dict[str, Any] | None = None,
+    knowledge_report: dict[str, Any] | None = None,
+    semantic_report: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     final = _final_check_metrics(clinical)
     modules = dependencies.get("modules", {})
@@ -140,6 +144,7 @@ def build_matrix(
     role_ok = checks["role_gate"]["status"] == "PASS"
     recovery_ok = checks["recovery"]["status"] == "PASS"
     knowledge_demo_ok = checks["knowledge_demo"]["status"] == "PASS"
+    semantic_lora = ((semantic_report or {}).get("frozen_test") or {}).get("lora") or {}
 
     def item(test_id: str, category: str, name: str, standard: str, status: str, measured: dict[str, Any], gap: str, veto: bool = False) -> dict[str, Any]:
         return {
@@ -154,21 +159,60 @@ def build_matrix(
         }
 
     no_unsupported = all((final.get(key) or 0) == 0 for key in ("unsupported_content_count", "forbidden_candidate_count", "confirmed_diagnosis_phrase_count"))
-    return [
-        item("T01", "功能", "病历生成完整性", "20例必需结构字段存在率100%", "PARTIAL" if final["required_field_schema_rate"] == 1 else "FAIL", final, "结构Schema已验证；仍需真实ASR与真实本地LLM生成20例。"),
-        item("T02", "AI质量", "AI幻觉检测", "虚构事实0、输入矛盾0", "PARTIAL" if no_unsupported else "FAIL", {k: final[k] for k in ("unsupported_content_count", "forbidden_candidate_count", "confirmed_diagnosis_phrase_count", "provider_mode")}, "当前是确定性Mock文本基线，不能替代真实本地模型验收。", True),
+    tests = [
+        item("T01", "功能", "病历生成完整性", "20例必需结构字段存在率100%", "PARTIAL" if final["required_field_schema_rate"] == 1 else "FAIL", {**final, "semantic_lora_schema_complete_rate": semantic_lora.get("schema_complete_rate")}, "结构Schema已验证；LoRA仅为候选实验，仍需真实ASR与被安全门禁接受的本地LLM生成20例。"),
+        item("T02", "AI质量", "AI幻觉检测", "虚构事实0、输入矛盾0", "PARTIAL" if no_unsupported else "FAIL", {**{k: final[k] for k in ("unsupported_content_count", "forbidden_candidate_count", "confirmed_diagnosis_phrase_count", "provider_mode")}, "rejected_lora_unsupported_fact_count": semantic_lora.get("unsupported_fact_count")}, "确定性基线无无依据内容；LoRA候选仍产生无依据事实，已拒绝接入，真实本地模型尚未通过。", True),
         item("T03", "功能", "医学术语规范", "20个固定样本错误数0", "NOT TESTED", {}, "尚未冻结20个术语样本和人工真值。"),
         item("T04", "功能", "编辑与人工确认", "10种场景全部可编辑，未确认提交/归档成功数0", "PARTIAL" if workflow_ok else "FAIL", {"workflow_gate": checks["workflow_gate"]["status"]}, "自动化接口/事务门禁已通过；仍需10种浏览器场景逐项留证。"),
         item("T05", "安全", "脱敏与合规", "姓名、ID、联系方式脱敏率100%，非授权外发0", "NOT TESTED", {}, "尚未建立带人工真值的脱敏样本和外发检查。", True),
         item("T06", "安全", "操作留痕", "生成、修改、审核、导出10种操作可追溯率100%", "PARTIAL" if workflow_ok else "FAIL", {"workflow_gate": checks["workflow_gate"]["status"]}, "审计链路测试通过；尚未形成10种操作的课程证据清单。"),
         item("T07", "性能", "生成时延", "最终转写完成到结构化病历就绪P95≤15秒", "BLOCKED", {"real_asr_runtime_available": real_asr_ready}, "真实ASR/LLM运行时未冻结，无法测P95。"),
         item("T08", "一致性", "双环境一致性", "20例结构化字段一致率100%", "HARDWARE BLOCKED", {"development_device": dependencies.get("cuda", {}), "jetson_available": False}, "Jetson未到货，当前只有开发机证据。"),
-        item("T09", "AI质量", "ASR质量", "CER≤15%，医学关键词召回≥90%，RTF≤1", "BLOCKED", {"real_asr_runtime_available": real_asr_ready, "modules": asr_module_summary}, "真实ASR依赖未就绪，课程音频尚未完成冻结人工标注。"),
+        item("T09", "AI质量", "ASR质量", "CER≤15%，医学关键词召回≥90%，RTF≤1", "BLOCKED", {"real_asr_runtime_available": real_asr_ready, "modules": asr_module_summary}, "当前环境的真实ASR包未就绪；如提供ASR审计，将按实际历史实测判定。"),
         item("T10", "AI质量", "角色判断", "准确率≥95%，高置信度跨角色写入0，低置信度必须阻断", "PARTIAL" if role_ok else "FAIL", {"role_gate": checks["role_gate"]["status"]}, "策略与低置信度门禁测试通过；仍需真实音频人工标注集计算准确率。"),
-        item("T11", "AI质量", "知识检索", "Recall@5≥90%，引用完整率100%，无来源引用0", "NOT TESTED", {"demo_knowledge_checks": checks["knowledge_demo"]["status"] if knowledge_demo_ok else "FAIL"}, "当前仅有演示知识源；官方文档索引和40条冻结查询尚未完成。"),
+        item("T11", "AI质量", "知识检索", "Recall@5≥90%，引用完整率100%，无来源引用0", "NOT TESTED", {"demo_knowledge_checks": checks["knowledge_demo"]["status"] if knowledge_demo_ok else "FAIL"}, "官方知识索引或开发查询报告未提供。"),
         item("T12", "功能", "离线E2E", "断网后连续5次全流程PASS，Mock回退0", "BLOCKED", {"real_asr_runtime_available": real_asr_ready}, "真实ASR和真实本地LLM未就绪。"),
         item("T13", "可靠性", "异常恢复", "10个刷新、重启、失败重试场景恢复10/10，数据丢失和重复病历0", "PARTIAL" if recovery_ok else "FAIL", {"recovery": checks["recovery"]["status"]}, "自动化恢复测试通过；仍需按课程10场景进行真实运行和留证。"),
     ]
+    by_id = {entry["id"]: entry for entry in tests}
+    if asr_audit:
+        engines = asr_audit.get("benchmarks") or []
+        any_pass = any(engine.get("t09_gate") == "PASS" for engine in engines)
+        by_id["T09"].update(
+            {
+                "status": "PASS" if any_pass else "FAIL",
+                "measured": {
+                    "audio_minutes": asr_audit.get("unique_duration_minutes"),
+                    "engines": [
+                        {
+                            "engine": engine.get("engine"),
+                            "macro_cer": engine.get("macro_cer"),
+                            "macro_keyword_recall": engine.get("macro_keyword_recall"),
+                            "max_rtf": engine.get("max_rtf"),
+                            "gate": engine.get("t09_gate"),
+                        }
+                        for engine in engines
+                    ],
+                },
+                "remaining_gap": "三模型均满足RTF≤1，但尚无模型同时达到CER和关键词召回阈值；训练数据也不足60分钟。" if not any_pass else "开发机T09达到阈值，仍需Jetson复测。",
+            }
+        )
+    if knowledge_report:
+        metrics = knowledge_report.get("metrics") or {}
+        by_id["T11"].update(
+            {
+                "status": "PARTIAL",
+                "measured": {
+                    "query_count": metrics.get("query_count"),
+                    "recall_at_5": metrics.get("recall_at_5"),
+                    "citation_completeness": metrics.get("citation_completeness"),
+                    "source_less_citation_count": metrics.get("source_less_citation_count"),
+                    "retrieval_modes": metrics.get("retrieval_modes"),
+                },
+                "remaining_gap": "20条开发查询已跑通；最终仍需120条复核查询及40条冻结测试集的片段级标签。",
+            }
+        )
+    return tests
 
 
 def _render_markdown(report: dict[str, Any]) -> str:
@@ -204,7 +248,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
         "",
         f"- PASS：{report['summary']['PASS']}；PARTIAL：{report['summary']['PARTIAL']}；NOT TESTED：{report['summary']['NOT TESTED']}；BLOCKED：{report['summary']['BLOCKED']}；HARDWARE BLOCKED：{report['summary']['HARDWARE BLOCKED']}；FAIL：{report['summary']['FAIL']}。",
         "- 一票否决项尚无最终PASS，因此本次检查点不能宣称产品通过。",
-        "- 下一验证：先导入三份官方发热/呼吸文档并建立FTS5查询基线，再处理真实音频与本地模型运行时。",
+        "- 下一验证：扩展至120条知识查询冻结集，并针对课程音频进行规范化、分段、热词和模型误差改进。",
         "",
     ]
     return "\n".join(lines)
@@ -214,6 +258,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run the reproducible EVT checkpoint baseline.")
     parser.add_argument("--clinical-report", type=Path, required=True)
     parser.add_argument("--dependency-report", type=Path, required=True)
+    parser.add_argument("--asr-audit", type=Path)
+    parser.add_argument("--knowledge-report", type=Path)
+    parser.add_argument("--semantic-report", type=Path)
     parser.add_argument("--output-json", type=Path, required=True)
     parser.add_argument("--output-markdown", type=Path, required=True)
     args = parser.parse_args()
@@ -221,7 +268,17 @@ def main() -> int:
     clinical = _load_json(args.clinical_report)
     dependencies = _load_json(args.dependency_report)
     checks = {name: _run_check_group(name, paths) for name, paths in CHECK_GROUPS.items()}
-    tests = build_matrix(clinical, dependencies, checks)
+    asr_audit = _load_json(args.asr_audit) if args.asr_audit else None
+    knowledge_report = _load_json(args.knowledge_report) if args.knowledge_report else None
+    semantic_report = _load_json(args.semantic_report) if args.semantic_report else None
+    tests = build_matrix(
+        clinical,
+        dependencies,
+        checks,
+        asr_audit=asr_audit,
+        knowledge_report=knowledge_report,
+        semantic_report=semantic_report,
+    )
     summary = {status: sum(item["status"] == status for item in tests) for status in ("PASS", "PARTIAL", "NOT TESTED", "BLOCKED", "HARDWARE BLOCKED", "FAIL")}
     report = {
         "schema_version": "evt_checkpoint_v1",
@@ -231,6 +288,9 @@ def main() -> int:
         "inputs": {
             "clinical_report": {"path": str(args.clinical_report), "sha256": _sha256(args.clinical_report)},
             "dependency_report": {"path": str(args.dependency_report), "sha256": _sha256(args.dependency_report)},
+            "asr_audit": {"path": str(args.asr_audit), "sha256": _sha256(args.asr_audit)} if args.asr_audit else None,
+            "knowledge_report": {"path": str(args.knowledge_report), "sha256": _sha256(args.knowledge_report)} if args.knowledge_report else None,
+            "semantic_report": {"path": str(args.semantic_report), "sha256": _sha256(args.semantic_report)} if args.semantic_report else None,
         },
         "engineering_checks": checks,
         "tests": tests,

@@ -58,5 +58,3 @@ def score_output(case_id: str, target: dict[str, Any], generated: str) -> dict[s
         "field_status_accuracy": round(status_accuracy, 6),
         "unsupported_fact_count": len(actual_facts - expected_facts),
     }
-
-

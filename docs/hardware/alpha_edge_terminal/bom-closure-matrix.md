@@ -1,4 +1,7 @@
-# BOM Closure Matrix 与 Cost Sheet
+# Alpha 最小采购 BOM 与报价闭环
+
+> 采样时间：2026-09-15 16:00 +08:00
+> 价格口径：公开下单页。准确型号、价格、税费、库存或交期、运费/包邮五项缺一即为 `REFERENCE ONLY`。价格会变化，交易前必须重新核验。
 
 ## 成本口径
 
@@ -6,72 +9,53 @@
 Required 含税运费小计 + 10% Contingency = Total New Purchase Cost
 ```
 
-Existing Asset Value、Optional Cost 和 Development Tool 单列。缺价不是 0 元；任一 Required 能力未由已核实资产或采购项关闭时，不计算完整总价，也不宣称 `≤3000`。
+现有电脑、网络设备和已有采音设备不计入 3000 元新增边缘终端采购预算。缺价不是 0 元，也不以 NVIDIA 建议价代替成交价。
 
-## Required BOM
+## BOM-A · 推荐组合（国内渠道优先）
 
-| ID | Function | Exact Specification | Interface / Power | Mechanical / Software | Included / External | Price CNY | Source | Alternative / Trade-off | Verification | Closure |
-|---|---|---|---|---|---|---:|---|---|---|---|
-| R01 | 边缘计算 | NVIDIA Jetson Orin Nano Super Developer Kit 8GB，SKU 到货核对 | 19 V 原装电源；GbE/USB/DP/M.2 | 完整包络约 103×90.5×34.77 mm；JetPack | 独立采购；模组/载板/散热/电源只计一次 | 2070* | NVIDIA 中国参考价，2026-09-15 | 更大内存平台降低 OOM 风险，但大概率超预算 | SKU、包装、序列号、内存、接口 | PARTIAL |
-| R02 | 运行存储 | 512 GB，M.2 2280，PCIe NVMe；具体型号待定 | M.2 Key-M，PCIe 3.0 x4；板载供电 | 底部安装、厚度/温度/螺钉待核对；Jetson Linux | External |  | 规格来自 NVIDIA；报价待取 | microSD 成本低但容量、耐久和性能需重评 | 型号、SMART、容量、温度、≥100 GB 余量 | OPEN |
-| R03 | 安全固定 | 非导电或绝缘支柱底板；兼容完整套件和 NVMe | 无电气连接 | 不遮挡底部 NVMe、风扇和接口；允许拆装 | External 或候选外壳内含 |  | 候选待定 | 开口底板防护较少；完整外壳风险较高 | 尺寸图、孔位、绝缘、稳固、服务性 | OPEN |
-| R04 | 局域网 | 已有 Cat5e/Cat6 + 路由器，长度和端口待核实 | RJ45 GbE | 医生电脑↔Jetson | Existing Asset candidate |  | 实物待核 | 新购成品线可降低资产不确定性 | 型号/长度、1 Gbps link、ping/API | OPEN |
-| R05 | 音频输入 | 已有六麦阵列，准确型号/UAC待核实 | USB，接医生电脑；总线供电 | Windows + Chrome/Edge | Existing Asset candidate |  | 实物待核 | 普通 USB 会议麦或阵列采购；需 A/B 而非按品牌决定 | 枚举、权限、双人样本、ASR/角色指标 | OPEN |
+| ID | 类别 | 准确型号 / 规格 | 数量 | 单价 | 税费 | 运费 | 库存 / 交期 | 证据状态 | 来源与验证 |
+|---|---|---|---:|---:|---|---|---|---|---|
+| A01 | Required | NVIDIA Jetson Orin Nano Super Developer Kit 8GB；中国区料号应核对 `945-13766-0000-000` | 1 | ¥3,199.00 | 页面称含税并支持发票 | 未披露 | 现货 0；订货库存 100；预计 12–14 周 | REFERENCE ONLY | [iCEasy 下单页](https://www.iceasy.com/product/JETSON_ORIN_NANO_SUPER_DEVELOPER_KIT)未同时显示制造商料号与运费；到货须核对 SKU、8GB、原装电源和散热 |
+| A02 | Required | Lenovo KTN8 512GB，M.2 2280 NVMe PCIe 3.0 | 1 | ¥568.99 | 页面片段未闭合 | 未披露 | 未闭合 | REFERENCE ONLY | 公开零售搜索结果；必须复核单面颗粒、下单页库存、税费和运费 |
+| A03 | Required | Waveshare `JETSON-ORIN-CASE-A`，SKU 25334 | 1 | ¥79.21 | 未披露 | 未披露 | 现货 0；订货库存 100；约 7 个工作日 | REFERENCE ONLY | [厂商页](https://www.waveshare.com/product/jetson-orin-case-a.htm) / [iCEasy](https://www.iceasy.com/product/1958426344982781954)；兼容声明成立，底部 2280 NVMe 净空仍需实物确认 |
+| A04 | Development Tool | ≥16GB USB 安装盘 | 1 | 待核实物 | — | — | Existing Asset candidate | PENDING | 缺失时才采购；不作为终端运行部件 |
+| A05 | Required capability | Cat5e/Cat6 网线与现有路由器 | 1 | Existing Asset | — | — | 待实物核对 | COMPATIBILITY PENDING | 1Gbps Link、ping 和 API 访问实测 |
+| A06 | Required capability | 现有六麦阵列，接医生电脑 | 1 | Existing Asset | — | — | 型号未提供 | COMPATIBILITY PENDING | 不阻塞计算盒借机；后续核对 USB/UAC、浏览器识别和双人拾音 |
 
-\* 2070 元是 NVIDIA 中国页面参考价，不是完整含税运费采购报价。
+已知参考小计（A01+A02+A03）为 `¥3,847.20`，加 10% 为 `¥4,231.92`。由于 A01–A03 均缺至少一项有效报价字段，该数值仅用于说明当前公开价格风险，不是完整可下单总价。
 
-## Kit Inclusion
+## BOM-B · 独立渠道与退路组合
 
-| Component | Function | Included in R01 | Separate Purchase? | Evidence / Check |
-|---|---|---:|---:|---|
-| Orin Nano 8GB 计算模组 | CPU/GPU/共享内存 | Yes | No | 到货核对 P/N 和 8GB |
-| 参考载板 | USB/GbE/DP/M.2/供电 | Yes | No | 到货核对板卡版本 |
-| 主动散热 | 连续推理热管理 | Yes | No | 风扇、散热器、线缆检查 |
-| 无线模块 | 可选网络 | Yes | No | 不替代首选有线链路 |
-| 19 V 电源 | 主电源 | Yes | No | 铭牌、插头、极性 |
-| NVMe / microSD | 运行存储 | No | Yes | 本项目选择 512GB NVMe |
+| ID | 类别 | 准确型号 / 规格 | 数量 | 单价 | 税费 | 运费 | 库存 / 交期 | 证据状态 | 来源与验证 |
+|---|---|---|---:|---:|---|---|---|---|---|
+| B01 | Required | NVIDIA `945-13766-0005-000` Jetson Orin Nano Super Developer Kit 8GB | 1 | ¥5,930.68 | 含税 ¥6,701.67 | 需下单确认 | 有库存；885 件从其他地点发货，具体交期待地址 | REFERENCE ONLY | [RS 中国](https://www.rsonline.cn/web/p/processor-development-tools/2647384)；型号、税额和库存明确，运费/交期未闭合 |
+| B02 | Required | Colorful CN600 512GB，M.2 2280 NVMe PCIe 3.0 x4 | 1 | ¥539.00 | 页面片段未闭合 | 未披露 | 未闭合 | REFERENCE ONLY | 公开零售搜索结果；须核单面、温度、下单页库存、税费和运费 |
+| B03 | Required | 开源 Jetson Orin Nano Super Desktop Case（STEP） | 1 | 待本地加工报价 | — | — | 未报价 | PARTIAL | [GitHub 源文件](https://github.com/crussella0129/Jetson-Orin-Nano-Super-Case)；可编辑、有风道与 NVMe 空间，材料/打印/五金成本未知 |
+| B04 | Development Tool | ≥16GB USB 安装盘 | 1 | 待核实物 | — | — | Existing Asset candidate | PENDING | 与 A04 相同，不重复采购 |
+| B05 | Required capability | Cat5e/Cat6 网线与现有路由器 | 1 | Existing Asset | — | — | 待实物核对 | COMPATIBILITY PENDING | 与 A05 相同 |
+| B06 | Required capability | 现有六麦阵列，接医生电脑 | 1 | Existing Asset | — | — | 型号未提供 | COMPATIBILITY PENDING | 与 A06 相同 |
 
-## Existing Assets
+## 套件包含关系
 
-| Asset | Intended Use | Exact Model | Physical Check | Replacement Value | Status |
-|---|---|---|---|---:|---|
-| MRA-ALPHA-DEV-01 电脑 | 浏览器、开发、回归 | 已登记 Lenovo 开发机；本轮不重新计价 | 已有开发证据 | 单列，不计3000 | VERIFIED FOR DEV ONLY |
-| 路由器/交换机 | 局域网 |  | 待核端口/速率 |  | OPEN |
-| 显示器 | 首次安装/UEFI |  | 待核 DP 或转接 |  | OPEN |
-| 键盘/鼠标 | 首次安装 |  | 待核 |  | OPEN |
-| 网线 | LAN |  | 待核类别、长度、完好 |  | OPEN |
-| 六麦阵列 | 浏览器采音 |  | 待核型号、USB/UAC、线缆 |  | OPEN |
+| 组件 | 是否包含在 Jetson 套件 | 是否另行计价 | 核验 |
+|---|---:|---:|---|
+| Orin Nano 8GB 计算模组 | 是 | 否 | 到货核对料号与 8GB 共享内存 |
+| 官方参考载板 | 是 | 否 | 核对 USB、GbE、DP、M.2 |
+| 原装主动散热 | 是 | 否 | 风扇、散热器和线缆检查 |
+| 19V 电源 | 是 | 否 | 铭牌、插头和极性核对 |
+| 无线模块 | 是 | 否 | 不替代首选有线链路 |
+| NVMe / microSD | 否 | 是 | 本项目采用 512GB 单面 M.2 2280 NVMe |
 
-## Development Tools
+## 报价判定
 
-| Tool | Requirement | Existing? | Price | Note |
-|---|---|---|---:|---|
-| 安装U盘 | JetPack 7.2.1 路线要求 16GB 以上 | 待核 |  | 不属于终端运行硬件；无法复用时作为新增工具成本披露 |
-| DisplayPort链路 | 显示器或 DP→HDMI 转接 | 待核 |  | USB-C 不输出显示 |
-| 串口调试工具 | Headless 固件/启动诊断备用 | 待核 |  | 非默认 Required；无显示链路时启用 |
+- NVIDIA 中国 `¥2,070`是建议价/价格信号，不是同时具备税费、库存、交期和运费的公开可成交报价。
+- iCEasy `¥3,199`和 RS 含税 `¥6,701.67`必须保留；它们说明当前可见渠道价格明显高于建议价。
+- 两套组合都没有取得满足五项字段的完整公开报价，按项目规则预算分类为 **MARGINAL**，不能声明 `≤¥3,000`。
+- 在有效低价渠道出现前，不执行采购；优先借用 Jetson 做 48 小时分层验证。
 
-## Optional
+## Required / Existing / Optional / Tool
 
-| Item | Why Optional | Trigger to Reconsider |
-|---|---|---|
-| 完整美观外壳 | 开口绝缘支架已能支撑 Alpha 功能 | 搬运/展示风险或教师要求 |
-| 摄像头、扬声器 | 不参与当前录音→病历主链路 | 新范围经 Gate 批准 |
-| 电池/UPS | 桌面原型可接市电 | 明确移动/断电要求 |
-| 触摸屏、机械按键 | 医生使用现有电脑网页 | 独立一体机范围进入 Alpha+/DVT |
-
-## Quote Comparison
-
-| Quote | Vendor | Required Scope Complete | Tax | Shipping | Total | Captured | Result |
-|---|---|---:|---|---|---:|---|---|
-| Reference | NVIDIA 中国 | No，仅开发套件参考价 | 未形成交易报价 | 未知 | 2070 | 2026-09-15 | 不能关闭预算 |
-| Q-A | RS 中国 | No，仅开发套件 | 页面显示含税 6701.67 | 送货条件需下单确认 | ≥6701.67 | 2026-09-15 | 单项已超预算，Reject as budget source |
-| Q-B |  | No |  |  |  |  | 待取得完整含税运费报价 |
-| Q-C |  | No |  |  |  |  | 待取得完整含税运费报价 |
-
-## Cost Calculation
-
-- 已知 Required 参考小计：`2070 CNY`。
-- 对已知小计计算的 10%：`207 CNY`，已知最低含预留为 `2277 CNY`。
-- 若总预算为 3000 元，则在 10% Contingency 口径下，其他 Required 含税运费小计最多约 `657.27 CNY`。
-- 由于 R02–R05 未形成完整报价或实物闭环，`Required 含税运费小计`、`Total New Purchase Cost` 和 `Budget Remaining` 均为 `UNKNOWN`。
-- **Budget Gate：NEEDS MORE EVIDENCE**。
+- **Required**：Jetson 套件、512GB 单面 M.2 2280 NVMe、安全安装结构、LAN 能力、音频输入能力。
+- **Existing Asset**：开发电脑、路由器、显示器、键鼠、已有网线和六麦阵列；六麦为 `COMPATIBILITY PENDING`。
+- **Optional**：摄像头、扬声器、电池、触摸屏、机械按键和最终工业外观。
+- **Development Tool**：安装 U 盘、临时 DisplayPort 链路和必要时使用的串口工具。

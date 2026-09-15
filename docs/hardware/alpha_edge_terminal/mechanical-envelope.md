@@ -26,14 +26,14 @@
 |---|---|---|---|
 | Top fan intake | 风扇正上方无遮挡，顶部净空和开孔面积待热测试确认 | 原装主动散热 + 概念20mm净空 | PARTIAL |
 | Exhaust | 至少一个侧/后排风路径，不让热风短路回进风 | 方案要求 | OPEN |
-| Bottom NVMe | 2280全长、螺钉、可能的薄型散热片和拆装空间 | 官方底部M.2位置 | PARTIAL |
-| DC jack | 直插头与应力释放，插拔不压迫壳体 | 官方位置/尺寸 | OPEN |
-| RJ45 | 水晶头卡扣可按压，线缆弯曲不顶壳 | 官方位置 | OPEN |
-| USB-A stacks | 四口全部可插拔；相邻大尺寸接头不冲突 | 官方位置 | OPEN |
-| DisplayPort | 首装调试可接；不由USB-C替代 | 官方位置 | OPEN |
-| USB-C recovery | 可接安装/恢复线 | 官方位置 | OPEN |
-| Mounting holes | 支柱、孔位、螺钉长度与绝缘垫片匹配 | 官方机械图存在；未完成候选壳坐标叠合 | OPEN |
-| Service clearance | 拆盖后可换SSD、清风扇，不先拆载板 | 设计要求 | OPEN |
+| Bottom NVMe | 仅使用单面2280、螺钉、可能的薄型热垫和拆装空间 | 官方底部J11位置及单面M.2限制；CASE-A底壳支柱装配 | PARTIAL · 实物关闭 |
+| DC jack | 直插头与应力释放，插拔不压迫壳体 | 官方位置；CASE-A精确开口声明 | PASS FOR DESIGN |
+| RJ45 | 水晶头卡扣可按压，线缆弯曲不顶壳 | 官方位置；CASE-A对应官方载板面板 | PASS FOR DESIGN |
+| USB-A stacks | 四口全部可插拔；相邻大尺寸接头不冲突 | 官方位置；CASE-A对应官方载板面板 | PASS FOR DESIGN |
+| DisplayPort | 首装调试可接；不由USB-C替代 | 官方位置；CASE-A对应官方载板面板 | PASS FOR DESIGN |
+| USB-C recovery | 可接安装/恢复线 | 官方位置；CASE-A对应官方载板面板 | PASS FOR DESIGN |
+| Mounting holes | 支柱、孔位、螺钉长度与绝缘垫片匹配 | CASE-A装配说明直接用M2.5螺钉固定官方套件 | PASS FOR DESIGN |
+| Service clearance | 拆盖后可换SSD、清风扇，不先拆载板 | 可逆分步装配已证明；SSD更换动作待实物 | PARTIAL |
 
 ## Internal Layout
 

@@ -20,17 +20,17 @@
   "checks": [
     {"id": "F01", "item": "complete_devkit_envelope", "result": "pass", "evidence": "official dimensions"},
     {"id": "F02", "item": "bottom_2280_nvme_zone", "result": "partial", "evidence": "official slot location; exact SSD model and heatsink unknown"},
-    {"id": "F03", "item": "top_fan_clearance", "result": "partial", "evidence": "20mm design allowance; no candidate enclosure measurement"},
-    {"id": "F04", "item": "mounting_hole_overlay", "result": "needs_more_evidence", "evidence": "official drawing exists; candidate CAD/drawing not measured"},
-    {"id": "F05", "item": "connector_openings", "result": "needs_more_evidence", "evidence": "connector locations known; candidate openings not measured"},
+    {"id": "F03", "item": "top_fan_clearance", "result": "pass_for_design", "evidence": "Waveshare documents a dedicated top opening for the original fan and three-sided ventilation"},
+    {"id": "F04", "item": "mounting_hole_overlay", "result": "pass_for_design", "evidence": "Waveshare assembly guide directly fixes the official developer kit to the bottom case using M2.5 screws"},
+    {"id": "F05", "item": "connector_openings", "result": "pass_for_design", "evidence": "Waveshare declares CASE-A compatible with the official carrier and documents matching panel cutouts"},
     {"id": "F06", "item": "cable_bend_space", "result": "needs_more_evidence", "evidence": "actual plug and cable dimensions unavailable"},
-    {"id": "F07", "item": "serviceability", "result": "needs_more_evidence", "evidence": "concept requirement defined; no physical or CAD assembly test"}
+    {"id": "F07", "item": "serviceability", "result": "pass_for_design", "evidence": "vendor provides reversible step-by-step assembly; physical verification remains outstanding"}
   ],
-  "result": "needs_more_evidence",
-  "decision": null,
+  "result": "partial",
+  "decision": "borrow-first",
   "limitations": [
     "The derived envelope is a concept minimum, not a verified enclosure internal dimension.",
     "No physical hardware, enclosure, SSD, cable or microphone was tested.",
-    "No REUSE, ADAPT or BUILD decision is justified by this result alone."
+    "CASE-A is selected for borrowed-hardware validation, but is not marked FIT until J11 NVMe clearance is measured."
   ]
 }

@@ -18,6 +18,8 @@ Project OS继续使用六态`backlog / ready / in_progress / blocked / verify / 
 PM的正式任务删除、Phase迁移、Gate标准修改、大规模WBS调整、同一请求累计超过5个不同任务日期调整、阶段范围/Roadmap变化、Evidence删除，须先给具体前后变更摘要并等待确认；不拆批规避，已批准具体摘要不重复询问。日常增量维护必须保留现有人工更新；写入门禁和阈值细则读取PM Skill及操作参考。
 
 信息不足先查现有资料，记录编号Assumption并继续独立工作；仅真正阻塞或重大不可逆选择才询问。Skill缺失先查其他位置，仍缺失则说明，不能假装已加载。不因“长期助手”创建未请求的后台自动化。
+
+本项目有事实变化时，收尾顺序固定为：验证同轮Project Planner快照 → 同步Obsidian → 运行`C:\Users\AWA007\.agents\skills\obsidian-project-manager\scripts\export_current_status.py` → 分别提交实质交付与状态镜像 → 推送并更新PR。镜像的`repo_sha`填写实质交付提交；纯只读、无事实变化或来源哈希未变化时不写文件。
 <!-- project-engineering-design-review:end -->
 
 <!-- medical-record-agent-project-os:start -->

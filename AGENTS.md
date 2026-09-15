@@ -28,7 +28,7 @@ PM的正式任务删除、Phase迁移、Gate标准修改、大规模WBS调整、
 - [项目首页](C:/Users/AWA007/Desktop/Data/开题报告/PAMI_ProjectLab/obsidian/PAMI_Project_Vault/Projects/Medical_Record_Agent/00_Project_Home.md)
 - 任务事实目录：`C:\Users\AWA007\Desktop\Data\开题报告\PAMI_ProjectLab\obsidian\PAMI_Project_Vault\Projects\Medical_Record_Agent\Tasks`
 
-当前批准追赶基线是15个正式叶子任务、87h、2026-09-07至2026-10-01（课程周次从W03连续计算）、单人工作日每天最多6h；负责人李国毅。M1–M4日期依次为2026-09-17、09-21、09-25、10-01。正式日期、任务状态、依赖及实际证据以该目录的最新Markdown为准，更新前检查下游及容量。本段用于识别迁移后的基线，不能覆盖后续经授权的计划调整。
+当前批准基线是16个正式叶子任务、99h、2026-09-07至2026-10-07（课程周次从W03连续计算）、单人工作日每天最多6h；负责人李国毅。新增1.4负责Edge AI终端硬件集成与结构设计；当前依赖为1.1→1.4→1.2→1.3。M1–M4日期依次为2026-09-23、09-25、10-01、10-07。该日期是不含采购、物流和设备借用等待的最早容量预测。正式日期、任务状态、依赖及实际证据以该目录的最新Markdown为准，更新前检查下游及容量。本段用于识别迁移后的基线，不能覆盖后续经授权的计划调整。
 
-仓库 `docs/project_plan/alpha`、历史Canonical中的120h或旧5.5缓冲仅作为历史比较，不得用于覆盖当前15任务计划或增加可用容量。仓库当前工作树、Git历史和真实测试用于核实实现事实；代码存在不代表任务验收通过。评审应引用当前Vault任务并说明与历史计划或代码基线的差异，避免另建一套独立WBS。
+仓库 `docs/project_plan/alpha`、历史Canonical中的87h/15项、120h或旧5.5缓冲仅作为历史比较，不得用于覆盖当前16任务计划或增加可用容量。仓库当前工作树、Git历史和真实测试用于核实实现事实；代码存在不代表任务验收通过。评审应引用当前Vault任务并说明与历史计划或代码基线的差异，避免另建一套独立WBS。
 <!-- medical-record-agent-project-os:end -->

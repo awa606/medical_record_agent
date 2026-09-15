@@ -115,4 +115,3 @@ docker rm -f mra-alpha13-asr mra-alpha13-ollama 2>/dev/null || true
 ```
 
 保留运行目录、证据和缓存，只撤回本次测试容器。恢复已记录的镜像及模型摘要后，重新执行失败层；禁止清空模型缓存或删除历史证据。
-

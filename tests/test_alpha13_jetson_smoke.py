@@ -28,4 +28,3 @@ def test_dry_run_refuses_non_jetson_without_claiming_pass():
         "alpha_pass": False,
     }
     assert "funasr_isolated_smoke" in payload["planned_stages"]
-

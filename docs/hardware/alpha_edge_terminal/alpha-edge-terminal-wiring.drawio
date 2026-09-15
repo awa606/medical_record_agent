@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" modified="2026-09-15T07:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="page-1" name="Page-1">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="layer-bg" value="背景" parent="0" />
+        <mxCell id="layer-edges" value="连接" parent="0" />
+        <mxCell id="layer-nodes" value="组件" parent="0" />
+        <mxCell id="layer-notes" value="注释" parent="0" />
+        <mxCell id="page-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F6F8FB;strokeColor=none;" vertex="1" parent="layer-bg">
+          <mxGeometry x="0" y="0" width="1600" height="900" as="geometry" />
+        </mxCell>
+        <mxCell id="title" value="Alpha Edge AI 终端 · Wiring Diagram" style="text;html=1;align=left;verticalAlign=middle;fontSize=26;fontStyle=1;fontColor=#12304A;" vertex="1" parent="layer-notes">
+          <mxGeometry x="40" y="28" width="1520" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="编号连接顺序与接口边界；内部/扩展部件在断电状态安装" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=#527089;" vertex="1" parent="layer-notes">
+          <mxGeometry x="40" y="72" width="1520" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="pc" value="医生电脑&lt;br&gt;Chrome / Edge" style="rounded=1;whiteSpace=wrap;html=1;fontSize=18;fontStyle=1;fillColor=#E8F2FF;strokeColor=#2F80ED;strokeWidth=2;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="70" y="190" width="250" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="mic" value="六麦阵列 / USB麦克风&lt;br&gt;型号待核" style="rounded=1;whiteSpace=wrap;html=1;fontSize=17;fillColor=#FFF7E8;strokeColor=#F4A340;strokeWidth=2;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="70" y="410" width="250" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="router" value="既有路由器 / 交换机&lt;br&gt;端口待核" style="rounded=1;whiteSpace=wrap;html=1;fontSize=18;fontStyle=1;fillColor=#DDF7F2;strokeColor=#16A085;strokeWidth=2;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="535" y="265" width="260" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jetson" value="Jetson Developer Kit&lt;br&gt;GbE · USB-A · DP · USB-C · DC" style="rounded=1;whiteSpace=wrap;html=1;fontSize=19;fontStyle=1;fillColor=#EAF9F6;strokeColor=#16A085;strokeWidth=3;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="1010" y="190" width="420" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="nvme" value="512GB M.2 2280 NVMe&lt;br&gt;底部 Key-M x4" style="rounded=1;whiteSpace=wrap;html=1;fontSize=17;fillColor=#FFFFFF;strokeColor=#16A085;strokeWidth=2;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="1010" y="420" width="420" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="psu" value="原装19V电源&lt;br&gt;5.5×2.5mm / 中心正" style="rounded=1;whiteSpace=wrap;html=1;fontSize=17;fillColor=#FFECEF;strokeColor=#E84A5F;strokeWidth=2;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="1010" y="640" width="420" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="display" value="临时DP显示 / 串口工具&lt;br&gt;仅Bring-up" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#F3EEFF;strokeColor=#8E6AC8;strokeWidth=2;dashed=1;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="535" y="545" width="260" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="w1" value="① USB / UAC" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#55758C;" edge="1" parent="layer-edges" source="mic" target="pc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w2" value="② LAN" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#55758C;" edge="1" parent="layer-edges" source="pc" target="router">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w3" value="③ RJ45 GbE" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#55758C;" edge="1" parent="layer-edges" source="router" target="jetson">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w4" value="④ M.2 Key-M" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#16A085;" edge="1" parent="layer-edges" source="nvme" target="jetson">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w5" value="⑤ DP / USB-C recovery" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#8E6AC8;dashed=1;" edge="1" parent="layer-edges" source="display" target="jetson">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w6" value="⑥ 最后上电" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=3;strokeColor=#E84A5F;" edge="1" parent="layer-edges" source="psu" target="jetson">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note" value="安全顺序：先断电安装NVMe与固定件 → 连接LAN/调试线 → 最后连接19V电源。USB-C不输出显示。" style="rounded=1;whiteSpace=wrap;html=1;fontSize=17;fontStyle=1;fillColor=#FFF7E8;strokeColor=#F4A340;" vertex="1" parent="layer-notes">
+          <mxGeometry x="180" y="760" width="1240" height="65" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,94 @@
+{
+  "schema_version": "mra-alpha12-resource-checkpoint-v1",
+  "recorded_at": "2026-09-15T11:31:54.8215659+08:00",
+  "scope": "development PC x86_64 CPU resource screening; not Jetson evidence",
+  "source_revision": "db4f5f809377963c4a5a842fbc79eeaaf8932544",
+  "branch": "codex/alpha12-jetson-runtime",
+  "images": {
+    "application": "sha256:b4d2969770a9aad2223e9ca5a3a1189f96e2b112da15bd8474fb8c7fd99c1f5e",
+    "ollama": "sha256:684d8674b4315fa18f4f0e973a118ec2652ed96f67563277839985175858e0ba"
+  },
+  "resource_budget": {
+    "service_memory_bytes": 6979321856,
+    "reserved_for_target_os_bytes": 1610612736,
+    "additional_swap_enabled": false
+  },
+  "phases": [
+    {
+      "id": "A",
+      "name": "current_resident",
+      "configuration": "FastAPI/FunASR 4864 MiB plus Ollama 1792 MiB",
+      "result": "fail",
+      "reason": "ASR prewarm container OOMKilled with exit 137 before LLM load",
+      "oom_killed": true,
+      "source_sha256": "02c0a82054c16540f0e2f9f18509a7d9b80bad78685867fe18cf22f5a2036cdf"
+    },
+    {
+      "id": "B",
+      "name": "isolated_asr",
+      "configuration": "FastAPI/FunASR upload profile in 6656 MiB, no additional swap",
+      "result": "pass_development_pc_resource_screening",
+      "model_ready_seconds": 84.9,
+      "audio_count": 3,
+      "success_count": 3,
+      "max_rtf": 0.1514,
+      "cgroup_peak_bytes": 6629724160,
+      "swap_peak_bytes": 0,
+      "oom_kill_count": 0,
+      "source_sha256": {
+        "api_result": "d553e80d63e6ae3d02436a30fdee83e15abd5708acdb49ac328745af288f1bb4",
+        "container_metrics": "04cebb92b92c7679e2cc109e4c0cb95209014c33976759e05a3592b74c9d985c"
+      }
+    },
+    {
+      "id": "C4",
+      "name": "isolated_llm_qwen3_4b",
+      "configuration": "Ollama 5888 MiB plus runner 640 MiB; num_ctx 2048; num_predict 512; keep_alive 0; CPU only",
+      "model": "qwen3:4b",
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "result": "fail_timeout",
+      "case_count": 1,
+      "schema_valid_count": 0,
+      "timeout_seconds": 300.028,
+      "ollama_cgroup_peak_bytes": 3116969984,
+      "swap_peak_bytes": 0,
+      "oom_kill_count": 0,
+      "unloaded_within_30_seconds": true,
+      "unload_seconds": 0.995,
+      "source_sha256": {
+        "result": "3722c85f740f4c0805ae3ab9252c80baaa1b0c0e1aeb3268961dd6d2108c5f3b",
+        "container_metrics": "19b9f4f9a8fd8c9cd8a0ff67c62ea38d544c3915553de4825942d7864f1d1780"
+      }
+    },
+    {
+      "id": "C17",
+      "name": "isolated_llm_qwen3_1_7b",
+      "configuration": "Ollama 5888 MiB plus runner 640 MiB; num_ctx 2048; num_predict 512; keep_alive 0; CPU only; internal Docker network after pull",
+      "model": "qwen3:1.7b",
+      "model_digest": "8f68893c685c",
+      "result": "fail_timeout",
+      "case_count": 1,
+      "schema_valid_count": 0,
+      "timeout_seconds": 300.11,
+      "ollama_cgroup_peak_bytes": 1921376256,
+      "swap_peak_bytes": 0,
+      "oom_kill_count": 0,
+      "unloaded_within_30_seconds": true,
+      "unload_seconds": 0.912,
+      "source_sha256": {
+        "result": "9506d9ffe660f11ce73a306a27c38271516d03da0b0db7ba099c62b8f5630252",
+        "container_metrics": "570adde649bbf7d6ecdc45f72c0ed680de44a9d7269eb99276a6412536f50490"
+      }
+    }
+  ],
+  "gate": {
+    "research": "needs_more_evidence",
+    "target_environment": "more_evidence_required",
+    "reason": "ASR fits only with narrow development-PC memory margin; both LLM candidates timed out without valid schema, Jetson ARM64/CUDA remains untested, and two complete delivered BOM quotes are missing"
+  },
+  "raw_artifacts": {
+    "location": ".artifacts/target-env-spike-20260914 and .artifacts/target-env-spike-20260915",
+    "tracked_in_git": false,
+    "contains_model_or_transcript_content": true
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "mra-alpha-hardware-digital-fit-v1",
+  "executed_at": "2026-09-15T14:45:00+08:00",
+  "hypothesis": "官方开发套件、底部2280 NVMe、原装主动散热和所有必需接口可以定义在一个可维护的Alpha概念包络内",
+  "source_dimensions_mm": {
+    "carrier_board": {"width": 100.0, "depth": 79.0},
+    "complete_devkit": {"width": 103.0, "depth": 90.5, "height": 34.77}
+  },
+  "explicit_design_allowances_mm": {
+    "side_each": 5.0,
+    "front_back_each": 5.0,
+    "top_airflow": 20.0,
+    "bottom_nvme_insulation_service": 8.0
+  },
+  "derived_minimum_internal_envelope_mm": {
+    "width": 113.0,
+    "depth": 100.5,
+    "height": 62.77
+  },
+  "checks": [
+    {"id": "F01", "item": "complete_devkit_envelope", "result": "pass", "evidence": "official dimensions"},
+    {"id": "F02", "item": "bottom_2280_nvme_zone", "result": "partial", "evidence": "official slot location; exact SSD model and heatsink unknown"},
+    {"id": "F03", "item": "top_fan_clearance", "result": "pass_for_design", "evidence": "Waveshare documents a dedicated top opening for the original fan and three-sided ventilation"},
+    {"id": "F04", "item": "mounting_hole_overlay", "result": "pass_for_design", "evidence": "Waveshare assembly guide directly fixes the official developer kit to the bottom case using M2.5 screws"},
+    {"id": "F05", "item": "connector_openings", "result": "pass_for_design", "evidence": "Waveshare declares CASE-A compatible with the official carrier and documents matching panel cutouts"},
+    {"id": "F06", "item": "cable_bend_space", "result": "needs_more_evidence", "evidence": "actual plug and cable dimensions unavailable"},
+    {"id": "F07", "item": "serviceability", "result": "pass_for_design", "evidence": "vendor provides reversible step-by-step assembly; physical verification remains outstanding"}
+  ],
+  "result": "partial",
+  "decision": "borrow-first",
+  "limitations": [
+    "The derived envelope is a concept minimum, not a verified enclosure internal dimension.",
+    "No physical hardware, enclosure, SSD, cable or microphone was tested.",
+    "CASE-A is selected for borrowed-hardware validation, but is not marked FIT until J11 NVMe clearance is measured."
+  ]
+}

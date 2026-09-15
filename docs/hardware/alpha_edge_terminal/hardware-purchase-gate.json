@@ -1,0 +1,33 @@
+{
+  "schema_version": "mra-hardware-purchase-gate-v1",
+  "evaluated_at": "2026-09-15T16:00:00+08:00",
+  "task_id": "MRA-ALPHA-1.4",
+  "gates": {
+    "G1_architecture": {"status": "PASS", "classification": "closed"},
+    "G2_bom_completeness": {"status": "PASS", "classification": "closed"},
+    "G3_cost": {"status": "VERIFY", "classification": "MARGINAL"},
+    "G4_mechanical_fit": {"status": "VERIFY", "classification": "PARTIAL"},
+    "G5_technical_risk": {"status": "PASS", "classification": "needs_real_hardware"}
+  },
+  "purchase_decision": "BORROW-FIRST",
+  "budget": {
+    "classification": "MARGINAL",
+    "nvidia_china_reference_cny": 2070.0,
+    "iceasy_kit_reference_cny": 3199.0,
+    "rs_kit_tax_inclusive_reference_cny": 6701.67,
+    "complete_valid_public_quotes": 0,
+    "claim_under_3000": false
+  },
+  "enclosures": {
+    "primary": {"model": "Waveshare JETSON-ORIN-CASE-A", "result": "PARTIAL"},
+    "backup": {"model": "Jetson Orin Nano Super Desktop Case (open-source STEP)", "result": "PARTIAL"}
+  },
+  "known_fatal_blocker": false,
+  "next_validation": "Borrow a Jetson Orin Nano Super 8GB and perform a 48-hour layered validation",
+  "limitations": [
+    "No purchase was made.",
+    "No Jetson hardware was tested.",
+    "Public quote fields were incomplete, so the budget was not marked PASS.",
+    "J11 NVMe physical clearance requires real hardware validation."
+  ]
+}

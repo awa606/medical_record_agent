@@ -1,0 +1,69 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" modified="2026-09-15T07:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="page-1" name="Page-1">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="layer-bg" value="背景" parent="0" />
+        <mxCell id="layer-edges" value="连接" parent="0" />
+        <mxCell id="layer-nodes" value="组件" parent="0" />
+        <mxCell id="layer-notes" value="注释" parent="0" />
+        <mxCell id="page-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F6F8FB;strokeColor=none;" vertex="1" parent="layer-bg">
+          <mxGeometry x="0" y="0" width="1600" height="900" as="geometry" />
+        </mxCell>
+        <mxCell id="title" value="Alpha Edge AI 终端 · Assembly Drawing" style="text;html=1;align=left;verticalAlign=middle;fontSize=26;fontStyle=1;fontColor=#12304A;" vertex="1" parent="layer-notes">
+          <mxGeometry x="40" y="28" width="1520" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="概念爆炸图：明确装配层与服务空间；不是最终工业外观CAD" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=#527089;" vertex="1" parent="layer-notes">
+          <mxGeometry x="40" y="72" width="1520" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="cover" value="可拆上盖 / 风道件（候选）&lt;br&gt;顶部风扇净空 ≥20mm" style="rounded=1;whiteSpace=wrap;html=1;fontSize=19;fontStyle=1;fillColor=#E8F2FF;strokeColor=#2F80ED;strokeWidth=2;dashed=1;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="470" y="130" width="660" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="air" value="↓ 进风&lt;br&gt;原装主动散热&lt;br&gt;→ 侧/后排风" style="rounded=1;whiteSpace=wrap;html=1;fontSize=18;fontStyle=1;fillColor=#DDF7F2;strokeColor=#16A085;strokeWidth=2;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="610" y="270" width="380" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="devkit" value="完整 Jetson 开发套件&lt;br&gt;103 × 90.5 × 34.77 mm" style="rounded=1;whiteSpace=wrap;html=1;fontSize=21;fontStyle=1;fillColor=#EAF9F6;strokeColor=#16A085;strokeWidth=3;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="430" y="410" width="740" height="105" as="geometry" />
+        </mxCell>
+        <mxCell id="nvme" value="底部 512GB M.2 2280 NVMe&lt;br&gt;散热 / 绝缘 / 维护净空 ≥8mm" style="rounded=1;whiteSpace=wrap;html=1;fontSize=18;fillColor=#FFFFFF;strokeColor=#16A085;strokeWidth=2;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="500" y="570" width="600" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="standoffs" value="绝缘支柱 + 正确螺钉&lt;br&gt;孔位待候选图纸叠合" style="rounded=1;whiteSpace=wrap;html=1;fontSize=17;fillColor=#FFF7E8;strokeColor=#F4A340;strokeWidth=2;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="500" y="705" width="600" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="base" value="防滑绝缘底座 / 开口支架" style="rounded=1;whiteSpace=wrap;html=1;fontSize=18;fontStyle=1;fillColor=#F3EEFF;strokeColor=#8E6AC8;strokeWidth=2;" vertex="1" parent="layer-nodes">
+          <mxGeometry x="430" y="820" width="740" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="a1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#55758C;dashed=1;" edge="1" parent="layer-edges" source="cover" target="air">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#55758C;dashed=1;" edge="1" parent="layer-edges" source="air" target="devkit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#55758C;dashed=1;" edge="1" parent="layer-edges" source="devkit" target="nvme">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#55758C;dashed=1;" edge="1" parent="layer-edges" source="nvme" target="standoffs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#55758C;dashed=1;" edge="1" parent="layer-edges" source="standoffs" target="base">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="leftnote" value="接口侧 keep-out&lt;br&gt;DC / RJ45 / USB / DP / USB-C&lt;br&gt;插拔与线缆弯曲尺寸待实物" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#FFF7E8;strokeColor=#F4A340;dashed=1;" vertex="1" parent="layer-notes">
+          <mxGeometry x="55" y="390" width="290" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="rightnote" value="维护要求&lt;br&gt;• 拆盖可换SSD&lt;br&gt;• 可清理风扇&lt;br&gt;• 不先拆载板&lt;br&gt;• 不遮挡指示灯" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;align=left;spacingLeft=18;fillColor=#FFFFFF;strokeColor=#5B9BEA;" vertex="1" parent="layer-notes">
+          <mxGeometry x="1255" y="390" width="290" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="n1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#55758C;" edge="1" parent="layer-edges" source="leftnote" target="devkit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#55758C;" edge="1" parent="layer-edges" source="rightnote" target="devkit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

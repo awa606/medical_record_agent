@@ -8,13 +8,13 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-16T08:49:32+08:00`
-- Source hash: `e19b1a8fd1600af9b8d27eda83db6a0b5a2ebc4d0ade2458504e03f083c762cf`
+- Updated at: `2026-09-16T09:49:48+08:00`
+- Source hash: `2b9b8819310be4f7ff5df22505ef229e8935e22b7029d830c06c0b4b3b113802`
 - Phase: **Alpha**
-- Repo: `codex/alpha13-jetson-deployment-research@223ea26fc0cc07284a2c082abb12d15a9d4d037d`
-- Base main: `3753c850bd33566d48934cb2e355218e2b37b11b`
-- Active PR: [#102](https://github.com/awa606/medical_record_agent/pull/102) · DRAFT
-- Last merged PR: [#101](https://github.com/awa606/medical_record_agent/pull/101) · MERGED · `3753c850bd33566d48934cb2e355218e2b37b11b`
+- Repo: `codex/alpha13-jetson-provider-design@66b2b545fc73e8ba37fc07a07db440d2029e21e4`
+- Base main: `feb4c7126d63914b7ced8a3a157b8e80f54e7fa5`
+- Active PR: None
+- Last merged PR: [#102](https://github.com/awa606/medical_record_agent/pull/102) · MERGED · `feb4c7126d63914b7ced8a3a157b8e80f54e7fa5`
 - Forecast Alpha Exit: **2026-10-07**
 
 ## Progress
@@ -50,12 +50,12 @@
 
 ## Blockers
 
-- 1.2 Docker / 本地运行环境整合：等待借用Jetson Orin Nano Super 8GB或等效实机，进行48小时分层验证；开发机50%进度与历史证据保留。
+- 1.2 Docker / 本地运行环境整合：等待借用Jetson Orin Nano Super 8GB或等效设备，先执行两小时分层Bring-up Smoke；PASS后再进入4–8小时功能验证，之后才考虑24–48小时稳定性验证。开发机50%进度与历史证据保留。
 
 ## Next
 
-- Single next task: 1.2 目标设备两小时分层Bring-up Smoke（等待借用Jetson）
-- Parallel waiting task: 无；当前等待真实Jetson硬件
+- Single next task: 1.2 真实Jetson两小时分层Bring-up Smoke（等待借用设备）
+- Parallel waiting task: 无；1.3 Research与Design均已完成，等待真实硬件
 
 ## Manual Actions
 

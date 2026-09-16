@@ -8,11 +8,13 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-15T16:14:40.185224+08:00`
-- Source hash: `4c7a9899ad7a54db4530ae314b23f36e5d1c476c34c78da326f6e1e161778023`
+- Updated at: `2026-09-16T08:49:32+08:00`
+- Source hash: `e19b1a8fd1600af9b8d27eda83db6a0b5a2ebc4d0ade2458504e03f083c762cf`
 - Phase: **Alpha**
-- Repo: `codex/alpha12-jetson-runtime@77820b7e75af4103184aad65be6436db329006d0`
-- Active PR: [#101](https://github.com/awa606/medical_record_agent/pull/101) · DRAFT
+- Repo: `codex/alpha13-jetson-deployment-research@223ea26fc0cc07284a2c082abb12d15a9d4d037d`
+- Base main: `3753c850bd33566d48934cb2e355218e2b37b11b`
+- Active PR: [#102](https://github.com/awa606/medical_record_agent/pull/102) · DRAFT
+- Last merged PR: [#101](https://github.com/awa606/medical_record_agent/pull/101) · MERGED · `3753c850bd33566d48934cb2e355218e2b37b11b`
 - Forecast Alpha Exit: **2026-10-07**
 
 ## Progress
@@ -23,7 +25,7 @@
 
 ## Current Task
 
-**1.4 · Edge AI终端硬件集成与结构设计** — `BACKLOG`
+**1.2 · Docker / 本地运行环境整合** — `BLOCKED`
 
 ## Hardware Gate
 
@@ -52,11 +54,11 @@
 
 ## Next
 
-- Single next task: 1.3 Research-only：冻结JetPack、FunASR和Ollama目标设备部署矩阵
-- Parallel waiting task: 等待借用Jetson Orin Nano Super 8GB进行48小时分层验证
+- Single next task: 1.2 目标设备两小时分层Bring-up Smoke（等待借用Jetson）
+- Parallel waiting task: 无；当前等待真实Jetson硬件
 
 ## Manual Actions
 
-- 借用Jetson Orin Nano Super 8GB或等效设备，安排48小时分层验证
+- 借用Jetson Orin Nano Super 8GB或等效设备
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

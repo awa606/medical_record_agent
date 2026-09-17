@@ -24,7 +24,6 @@ from app.services.knowledge_store import (
     get_knowledge_document,
     import_text_document,
     knowledge_health,
-    knowledge_index_available,
     knowledge_index_configured,
     list_knowledge_documents,
     list_knowledge_sources,

@@ -1,0 +1,47 @@
+{
+  "schema_version": "knowledge_v1_verification_v1",
+  "generated_at": "2026-09-17T15:07:44+08:00",
+  "repo_sha": "f89ac95b900353edae868f1ee8d7f7b088f9a0ea",
+  "tests": {
+    "pytest": {
+      "passed": 512,
+      "subtests_passed": 8,
+      "duration_seconds": 220.2,
+      "status": "PASS"
+    },
+    "node_check": {
+      "target": "static/doctor.js",
+      "status": "PASS"
+    },
+    "health_readiness_smoke": {
+      "health": "ok",
+      "ready": "ready",
+      "status": "PASS"
+    }
+  },
+  "knowledge_metrics": {
+    "development_recall_at_5": 1.0,
+    "frozen_recall_at_5": 0.95,
+    "citation_completeness": 1.0,
+    "source_less_citations": 0,
+    "disabled_source_leakage": 0,
+    "doctor_mutation_success": 0,
+    "anonymous_access_success": 0
+  },
+  "source_files": [
+    {
+      "path": "config/knowledge/knowledge_v1.json",
+      "sha256": "c47bc44ea942cb590aef976c0e0810bc3b450247ee3ae2794985756c8a8a16ba"
+    },
+    {
+      "path": "data/knowledge/eval/fever_respiratory_queries_v1.json",
+      "sha256": "d7eb972bfe8349ef51e104e0fd8af405fa5d1b533fe192bf82ee5f703a7e5fc8"
+    },
+    {
+      "path": "data/knowledge/eval/knowledge_v1_frozen_check_v1.json",
+      "sha256": "9a4676c75eae1456b71b4ca13a997f88beda52cf8cb3ed090543e7cb421ea15e"
+    }
+  ],
+  "t11_status": "PARTIAL",
+  "gate": "PASS"
+}

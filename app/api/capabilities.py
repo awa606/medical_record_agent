@@ -14,7 +14,7 @@ def read_capabilities() -> dict[str, Any]:
 
     return {
         "project": "Medical Record Agent",
-        "version": "v1.2",
+        "version": "v1.3",
         "stage": "coursework_productized_api",
         "reusable": True,
         "privacy_boundary": {
@@ -71,6 +71,20 @@ def read_capabilities() -> dict[str, Any]:
                 "method": "GET",
                 "requires_model_dependency": False,
                 "purpose": "Inspect configured LLM provider without returning secrets.",
+            },
+            {
+                "name": "knowledge_retrieval",
+                "path": "/api/knowledge/retrieve",
+                "method": "POST",
+                "requires_model_dependency": False,
+                "purpose": "Retrieve active local reference chunks with source, version, section, page, and content hash.",
+            },
+            {
+                "name": "knowledge_management",
+                "path": "/api/knowledge/admin/documents",
+                "method": "GET/POST/PATCH",
+                "requires_model_dependency": False,
+                "purpose": "Admin-only versioned TXT/Markdown import, metadata maintenance, activation, health, and test search.",
             },
         ],
         "migration_notes": {

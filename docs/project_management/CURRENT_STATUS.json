@@ -6,26 +6,26 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.0",
-  "updated_at": "2026-09-16T08:49:32+08:00",
-  "source_hash": "e19b1a8fd1600af9b8d27eda83db6a0b5a2ebc4d0ade2458504e03f083c762cf",
+  "updated_at": "2026-09-16T09:49:48+08:00",
+  "source_hash": "02fef17379abec86232a1685f337c544a729a4e1750c79da282f013a0c996d6b",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "223ea26fc0cc07284a2c082abb12d15a9d4d037d",
-  "base_main_sha": "3753c850bd33566d48934cb2e355218e2b37b11b",
-  "branch": "codex/alpha13-jetson-deployment-research",
+  "repo_sha": "66b2b545fc73e8ba37fc07a07db440d2029e21e4",
+  "base_main_sha": "feb4c7126d63914b7ced8a3a157b8e80f54e7fa5",
+  "branch": "codex/alpha13-jetson-provider-design",
   "active_pr": {
-    "number": 102,
+    "number": 103,
     "state": "DRAFT",
-    "url": "https://github.com/awa606/medical_record_agent/pull/102",
-    "branch": "codex/alpha13-jetson-deployment-research"
+    "url": "https://github.com/awa606/medical_record_agent/pull/103",
+    "branch": "codex/alpha13-jetson-provider-design"
   },
   "last_merged_pr": {
-    "number": 101,
+    "number": 102,
     "state": "MERGED",
-    "url": "https://github.com/awa606/medical_record_agent/pull/101",
-    "branch": "codex/alpha12-jetson-runtime",
-    "merge_sha": "3753c850bd33566d48934cb2e355218e2b37b11b"
+    "url": "https://github.com/awa606/medical_record_agent/pull/102",
+    "branch": "codex/alpha13-jetson-deployment-research",
+    "merge_sha": "feb4c7126d63914b7ced8a3a157b8e80f54e7fa5"
   },
   "task_counts": {
     "backlog": 14,
@@ -67,7 +67,7 @@
     {
       "wbs": "1.2",
       "title": "Docker / 本地运行环境整合",
-      "reason": "等待借用Jetson Orin Nano Super 8GB或等效实机，进行48小时分层验证；开发机50%进度与历史证据保留。"
+      "reason": "等待借用Jetson Orin Nano Super 8GB或等效设备，先执行两小时分层Bring-up Smoke；PASS后再进入4–8小时功能验证，之后才考虑24–48小时稳定性验证。开发机50%进度与历史证据保留。"
     }
   ],
   "hardware_gates": {
@@ -93,8 +93,8 @@
     }
   },
   "purchase_decision": "BORROW-FIRST",
-  "next_task": "1.2 目标设备两小时分层Bring-up Smoke（等待借用Jetson）",
-  "parallel_waiting_task": "无；当前等待真实Jetson硬件",
+  "next_task": "1.2 真实Jetson两小时分层Bring-up Smoke（等待借用设备）",
+  "parallel_waiting_task": "无；1.3 Research与Design均已完成，等待真实硬件",
   "manual_actions": [
     "借用Jetson Orin Nano Super 8GB或等效设备"
   ],
@@ -158,9 +158,10 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-14_本地闭环实测与PR合并.md": "23211d2a2f7cae489b1d8ada329a3eeef1f5444b096413179714d11649401fda",
     "Projects/Medical_Record_Agent/Reviews/2026-09-15_1.4_Minimal_Hardware_Purchase_Design_Review.md": "e4baf384c23f3caf1090dd9c9de2d055b21038897bd6e8163bedf866bb9a8608",
     "Projects/Medical_Record_Agent/Reviews/2026-09-15_Hardware_Design_Gate.md": "68dce9f940111f9b427c472e2abb51b7a1df5c5d4aaa456d5abb1f8191a55a38",
+    "Projects/Medical_Record_Agent/Reviews/2026-09-16_1.3_Jetson_Provider_Design_Review.md": "c29cf3dff2b9bde03101b59cc49e11b69a9a0e15ab0fb8baaebb35544706696e",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "19884060c8976ca9bf99002f8ded8cbf59627aef98b3a2f58ec1e3da7f9f09ea",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "406bfd8fad32ca65219b2d69d1a68e664bc92dcc6eba6ee24bbc1c2dab0a352f",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "365ecc4528aa829b2221980eb24bd77a65ea1fc7d9fa00d4c91cfcbd557b884a",
@@ -177,8 +178,8 @@
     "Projects/Medical_Record_Agent/Risks/R12 接口外壳或散热不兼容导致无法装配.md": "8dfbe6cd178ff467934dbe850b16acbd993472fcaf57c35454fff3a925ce6450",
     "Projects/Medical_Record_Agent/Roadmap.md": "77042df0811c8899ecfc21bd931c0e0fb17ce184696af16d2b7535250d2dbce5",
     "Projects/Medical_Record_Agent/Tasks/1.1 目标硬件与BOM基线.md": "7e97de058bc116406f0d6448b1aa5599a27d977dfef77ee598214cd42f5b0971",
-    "Projects/Medical_Record_Agent/Tasks/1.2 Docker _ 本地运行环境整合.md": "d99805172f6e5362193b7895a7d686af6d222bd7739646fc0609bab7c0224fe2",
-    "Projects/Medical_Record_Agent/Tasks/1.3 本地ASR _ LLM Provider核对与整合.md": "0a908aef190bf509d14a9f5af6c339bae91583dd35e400e4e34908ccbea95146",
+    "Projects/Medical_Record_Agent/Tasks/1.2 Docker _ 本地运行环境整合.md": "b6155fa64439d5e377ff9605e727b97e000d8f0cf2e4fe806ede697382a10a53",
+    "Projects/Medical_Record_Agent/Tasks/1.3 本地ASR _ LLM Provider核对与整合.md": "ef0066dbb14ad76ac3683732ddafeb5974803794d8a18e5fd614abdf60987379",
     "Projects/Medical_Record_Agent/Tasks/1.4 Edge AI终端硬件集成与结构设计.md": "a0949a38e5319312032bd23c8dd1137bf3ab8b04a4ae5eed7ebfbd8b9cc3d2bc",
     "Projects/Medical_Record_Agent/Tasks/2.1 浏览器真实录音基础链路整合.md": "6bb3067f324c9ba1acf206d57a90f03e018ff3794225a3bd3f7b5943401137c1",
     "Projects/Medical_Record_Agent/Tasks/2.2 真实本地ASR转写.md": "76226aa8ba39b39f8fb4522d3f3e3617adf40667612725aae4f2a99e7d9c39ed",
@@ -231,13 +232,14 @@
     "Projects/Medical_Record_Agent/Work_Packages/Beta/4.4 最终回归与EVT Gate.md": "a1147d48183c3b7bc176339f072777e3967efae61b1705ba8c77a20fce445509"
   },
   "extra_source_files": {
-    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\病历\\medical_record_agent_alpha13_research\\docs\\hardware\\alpha_edge_terminal\\hardware-purchase-gate.json": "10da882774460c50b11dbe959b0dd1418aa9487e36293eaaf4d2b77af3ec7173",
-    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\病历\\medical_record_agent_alpha13_research\\docs\\research\\R-1.3-Jetson-Provider-Deployment.md": "d61bcb569a3014f73fe1dce6cb70f1703fb9fea32bf8107b729454212f100c4b",
-    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\病历\\medical_record_agent_alpha13_research\\docs\\engineering\\alpha13_jetson_provider_bringup.md": "33dca32ec7c033c0b5ac941838deafcbc3a89acc212cf81360d14eb6fc5749f3"
+    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\病历\\medical_record_agent_alpha13_design\\docs\\hardware\\alpha_edge_terminal\\hardware-purchase-gate.json": "10da882774460c50b11dbe959b0dd1418aa9487e36293eaaf4d2b77af3ec7173",
+    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\病历\\medical_record_agent_alpha13_design\\docs\\design_reviews\\20260916_alpha13_jetson_provider_deployment.md": "debc7d8e8fa31604eb572b6c9b42c8b240b3389398f06c4735b3ba1fd6f0e0eb",
+    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\病历\\medical_record_agent_alpha13_design\\docs\\research\\R-1.3-Jetson-Provider-Deployment.md": "d61bcb569a3014f73fe1dce6cb70f1703fb9fea32bf8107b729454212f100c4b",
+    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\病历\\medical_record_agent_alpha13_design\\docs\\engineering\\alpha13_jetson_provider_bringup.md": "33dca32ec7c033c0b5ac941838deafcbc3a89acc212cf81360d14eb6fc5749f3"
   },
   "snapshot_verification": {
     "result": "PASS",
-    "checked": 156,
+    "checked": 157,
     "mismatch": 0
   }
 }

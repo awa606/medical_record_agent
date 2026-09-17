@@ -95,17 +95,19 @@ def evaluate(dataset: dict[str, Any], *, limit: int = 5) -> dict[str, Any]:
 
 def _markdown(report: dict[str, Any]) -> str:
     metric = report["metrics"]
+    split = report.get("split", "unspecified")
+    split_label = "冻结检查集" if split == "frozen_check" else "开发查询"
     lines = [
         "# 发热/呼吸知识库检索基线",
         "",
         f"- 生成时间：{report['generated_at']}",
         f"- Git SHA：`{report['git_sha']}`",
-        f"- 数据集：`{report['dataset_id']}`（{metric['query_count']}条开发查询）",
+        f"- 数据集：`{report['dataset_id']}`（{metric['query_count']}条{split_label}）",
         f"- 模式：`{', '.join(metric['retrieval_modes'])}`",
         f"- Recall@5：**{metric['recall_at_5']:.1%}**（{metric['relevant_hit_count']}/{metric['query_count']}）",
         f"- 引用完整率：**{metric['citation_completeness']:.1%}**（{metric['citation_complete_count']}/{metric['citation_result_count']}）",
         f"- 无来源引用：**{metric['source_less_citation_count']}**",
-        "- 边界：这是20条开发MVP的来源级标签；尚未达到最终120条、40条冻结测试集要求。",
+        "- 边界：这是20条Knowledge V1工程检查集的来源级标签；尚未达到最终T11的120条复核查询与40条片段级冻结测试要求。",
         "",
         "| 查询 | 相关来源 | Top-5命中 | 前三结果（来源/页码） |",
         "|---|---|---:|---|",
@@ -132,6 +134,7 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
         "git_sha": _git_sha(),
         "dataset_id": dataset["dataset_id"],
+        "split": dataset.get("split", "unspecified"),
         "dataset_sha256": _sha256(args.dataset),
         "metrics": metrics,
         "gate": "PASS" if metrics["recall_at_5"] >= 0.9 and metrics["citation_completeness"] == 1 and metrics["source_less_citation_count"] == 0 else "NEEDS VALIDATION",

@@ -7,14 +7,19 @@
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.0",
   "updated_at": "2026-09-18T20:49:56.020537+08:00",
-  "source_hash": "bccc95d006389d72506d8dc889c4e4fb26ba13885f65fa3ee011b94c6b678982",
+  "source_hash": "7dee1b2d1618619703ae9c52c99738c4dc12887e1b1c96693b491f1245bd7e74",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
   "repo_sha": "3be85835005b707b132c7727c123345eb7978a54",
   "base_main_sha": "613d3889a425eeda4abb9e86fb6ab05ae6da70c0",
   "branch": "codex/alpha21-browser-recording-verification",
-  "active_pr": null,
+  "active_pr": {
+    "number": 105,
+    "state": "DRAFT",
+    "url": "https://github.com/awa606/medical_record_agent/pull/105",
+    "branch": "codex/alpha21-browser-recording-verification"
+  },
   "last_merged_pr": {
     "number": 104,
     "state": "MERGED",

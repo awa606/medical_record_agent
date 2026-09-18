@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-18T20:49:56.020537+08:00`
-- Source hash: `c2fbca6648c43279272b6ecb156ff29285ed7cf290498cf2ec027511cf2f1b2e`
+- Updated at: `2026-09-18T21:28:11.221214+08:00`
+- Source hash: `b9925c0ad5005abdd7efafb3a662d5a6cbb96ab4b0d0035974b6ffa5f5403fbc`
 - Phase: **Alpha**
-- Repo: `codex/alpha21-browser-recording-verification@b12b46b1e219d2ca711a18b37fe4019a79753237`
+- Repo: `codex/alpha21-browser-recording-verification@d01d6b881acb6fa7826e2caacaf2fd78411eb6ac`
 - Base main: `613d3889a425eeda4abb9e86fb6ab05ae6da70c0`
 - Active PR: [#105](https://github.com/awa606/medical_record_agent/pull/105) · DRAFT
 - Last merged PR: [#104](https://github.com/awa606/medical_record_agent/pull/104) · MERGED · `613d3889a425eeda4abb9e86fb6ab05ae6da70c0`
@@ -21,11 +21,11 @@
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 12 | 0 | 0 | 1 | 2 | 1 | 99 |
+| 11 | 0 | 0 | 1 | 2 | 2 | 99 |
 
 ## Current Task
 
-**2.1 · 浏览器真实录音基础链路整合** — `BACKLOG / RESEARCH NEEDS MORE EVIDENCE`
+**2.2 · 真实本地ASR转写** — `BACKLOG / RESEARCH NEEDS MORE EVIDENCE`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 2.1：在Edge允许localhost麦克风权限，重跑5–15秒真实录音、试听、提交和取消Spike
+- Single next task: 2.2：使用2.1真实麦克风WAV执行FunASR Research Spike，记录CER、关键词召回、RTF和峰值内存
 - Parallel waiting task: Hardware Lane：DEFERRED / HARDWARE BLOCKED
 
 ## Manual Actions
 
-- 在Edge为127.0.0.1:8765允许麦克风权限，然后录制一段不含身份信息的5–15秒测试语句
+- 无
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

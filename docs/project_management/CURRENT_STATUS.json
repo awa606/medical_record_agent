@@ -7,11 +7,11 @@
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.0",
   "updated_at": "2026-09-18T20:49:56.020537+08:00",
-  "source_hash": "7dee1b2d1618619703ae9c52c99738c4dc12887e1b1c96693b491f1245bd7e74",
+  "source_hash": "c2fbca6648c43279272b6ecb156ff29285ed7cf290498cf2ec027511cf2f1b2e",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "3be85835005b707b132c7727c123345eb7978a54",
+  "repo_sha": "b12b46b1e219d2ca711a18b37fe4019a79753237",
   "base_main_sha": "613d3889a425eeda4abb9e86fb6ab05ae6da70c0",
   "branch": "codex/alpha21-browser-recording-verification",
   "active_pr": {
@@ -239,7 +239,7 @@
   },
   "extra_source_files": {
     "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\PAMI_ProjectLab\\evaluation\\knowledge_v1_20260917\\20260917_143151\\hardware_gates_deferred.json": "b59e48fe2f8380bbcd80edcdd77da6c60b3da755c679b8445adc564c0c1cb2a5",
-    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\病历\\medical_record_agent_alpha_knowledge_v1\\docs\\research\\R-2.1-Browser-Recording-MVP.md": "d68cd9b09556198de2630ba8da1d46e0e7202ec1ef322fd0f484f00833b3010a"
+    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\病历\\medical_record_agent_alpha_knowledge_v1\\docs\\research\\R-2.1-Browser-Recording-MVP.md": "b0bd3ea06effa253f8c1a0c8587489bcdc3692b37f67d2f8668525e433b36d08"
   },
   "snapshot_verification": {
     "result": "PASS",

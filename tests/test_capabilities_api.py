@@ -14,13 +14,15 @@ class CapabilitiesApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload["version"], "v1.2")
+        self.assertEqual(payload["version"], "v1.3")
         self.assertTrue(payload["reusable"])
         self.assertFalse(payload["privacy_boundary"]["returns_api_keys"])
         paths = {item["path"] for item in payload["capabilities"]}
         self.assertIn("/api/records/extract-fields", paths)
         self.assertIn("/api/records/build-draft", paths)
         self.assertIn("/api/records/quality", paths)
+        self.assertIn("/api/knowledge/retrieve", paths)
+        self.assertIn("/api/knowledge/admin/documents", paths)
 
 
 if __name__ == "__main__":

@@ -414,6 +414,37 @@
             </div>
             <div id="adminRuntimePanel" class="admin-list" aria-live="polite"></div>
           </section>
+          <section class="dashboard-panel admin-knowledge-panel">
+            <div class="panel-header">
+              <div>
+                <h2>知识库管理</h2>
+                <p>导入资料默认停用；完成测试搜索后再显式启用。停用不会删除历史版本和引用。</p>
+              </div>
+              <span id="adminKnowledgeHealthBadge" class="status-badge neutral">未检查</span>
+            </div>
+            <form id="knowledgeImportForm" class="knowledge-admin-form">
+              <label>来源ID<input id="knowledgeSourceId" required pattern="[A-Za-z0-9._-]+" placeholder="nhc-record-standard"></label>
+              <label>标题<input id="knowledgeTitle" required placeholder="病历书写基本规范"></label>
+              <label>发布机构<input id="knowledgePublisher" required placeholder="国家卫生健康委员会"></label>
+              <label>版本<input id="knowledgeVersion" required placeholder="卫医政发〔2010〕11号"></label>
+              <label>资料类型<input id="knowledgeDocumentType" value="clinical-reference" required></label>
+              <label>适用范围<input id="knowledgeDiseaseScope" placeholder="发热/呼吸或通用病历书写"></label>
+              <label class="span-2">来源URL<input id="knowledgeSourceUrl" type="url" required placeholder="https://..."></label>
+              <label class="span-2">使用边界<input id="knowledgeUsageScope" required value="仅供医生人工参考，不参与自动批准、诊断或处方。"></label>
+              <label class="span-2">TXT / Markdown文件<input id="knowledgeFileInput" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" required></label>
+              <div class="span-2 knowledge-admin-actions">
+                <button type="submit" class="primary-action">导入为停用版本</button>
+                <small>UTF-8，最大2 MiB；内容变更必须导入新版本。</small>
+              </div>
+            </form>
+            <form id="knowledgeTestSearchForm" class="knowledge-test-search">
+              <input id="knowledgeTestQuery" required placeholder="输入测试检索问题">
+              <select id="knowledgeTestDocument"><option value="">全部版本（含停用）</option></select>
+              <button type="submit">测试搜索</button>
+            </form>
+            <div id="adminKnowledgeSearchResult" class="admin-list" aria-live="polite"></div>
+            <div id="adminKnowledgePanel" class="admin-list" aria-live="polite"></div>
+          </section>
         </div>
       </section>
       </main>
@@ -582,6 +613,6 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=2026072901"></script>
+    <script src="./doctor.js?v=2026091701"></script>
   </body>
 </html>

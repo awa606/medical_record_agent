@@ -1,0 +1,149 @@
+{
+  "schema_version": "knowledge_query_eval_v1",
+  "dataset_id": "knowledge-v1-frozen-check-v1",
+  "split": "frozen_check",
+  "frozen_at": "2026-09-17",
+  "label_scope": "source-level relevance; frozen after author review; not used for tuning",
+  "queries": [
+    {
+      "query_id": "KF01",
+      "query": "流感潜伏期一般多长？",
+      "relevant_source_ids": [
+        "nhc-influenza-2020"
+      ]
+    },
+    {
+      "query_id": "KF02",
+      "query": "流感的传染源和传播途径是什么？",
+      "relevant_source_ids": [
+        "nhc-influenza-2020"
+      ]
+    },
+    {
+      "query_id": "KF03",
+      "query": "流感患者常见全身症状有哪些？",
+      "relevant_source_ids": [
+        "nhc-influenza-2020"
+      ]
+    },
+    {
+      "query_id": "KF04",
+      "query": "流感重症病例可能出现哪些并发症？",
+      "relevant_source_ids": [
+        "nhc-influenza-2020"
+      ]
+    },
+    {
+      "query_id": "KF05",
+      "query": "流感病毒核酸检测阳性有什么诊断意义？",
+      "relevant_source_ids": [
+        "nhc-influenza-2020"
+      ]
+    },
+    {
+      "query_id": "KF06",
+      "query": "新型冠状病毒感染的潜伏期与传染性特点",
+      "relevant_source_ids": [
+        "nhc-covid19-trial-v10"
+      ]
+    },
+    {
+      "query_id": "KF07",
+      "query": "新冠感染如何进行临床分型？",
+      "relevant_source_ids": [
+        "nhc-covid19-trial-v10"
+      ]
+    },
+    {
+      "query_id": "KF08",
+      "query": "新冠感染患者出现低氧时应关注哪些指标？",
+      "relevant_source_ids": [
+        "nhc-covid19-trial-v10"
+      ]
+    },
+    {
+      "query_id": "KF09",
+      "query": "新冠感染诊断可参考哪些病原学证据？",
+      "relevant_source_ids": [
+        "nhc-covid19-trial-v10"
+      ]
+    },
+    {
+      "query_id": "KF10",
+      "query": "新冠重症患者有哪些高危因素？",
+      "relevant_source_ids": [
+        "nhc-covid19-trial-v10"
+      ]
+    },
+    {
+      "query_id": "KF11",
+      "query": "儿童肺炎支原体肺炎的主要症状和体征",
+      "relevant_source_ids": [
+        "nhc-child-mpp-2025"
+      ]
+    },
+    {
+      "query_id": "KF12",
+      "query": "肺炎支原体核酸检测标本如何选择？",
+      "relevant_source_ids": [
+        "nhc-child-mpp-2025"
+      ]
+    },
+    {
+      "query_id": "KF13",
+      "query": "儿童重症支原体肺炎如何早期识别？",
+      "relevant_source_ids": [
+        "nhc-child-mpp-2025"
+      ]
+    },
+    {
+      "query_id": "KF14",
+      "query": "难治性肺炎支原体肺炎的判断依据",
+      "relevant_source_ids": [
+        "nhc-child-mpp-2025"
+      ]
+    },
+    {
+      "query_id": "KF15",
+      "query": "肺炎支原体肺炎影像学常见表现",
+      "relevant_source_ids": [
+        "nhc-child-mpp-2025"
+      ]
+    },
+    {
+      "query_id": "KF16",
+      "query": "病历书写的六项基本要求是什么？",
+      "relevant_source_ids": [
+        "nhc-record-standard-2010"
+      ]
+    },
+    {
+      "query_id": "KF17",
+      "query": "门急诊初诊病历应记录哪些内容？",
+      "relevant_source_ids": [
+        "nhc-record-standard-2010"
+      ]
+    },
+    {
+      "query_id": "KF18",
+      "query": "病历出现错字时应如何修改并留痕？",
+      "relevant_source_ids": [
+        "nhc-record-standard-2010"
+      ]
+    },
+    {
+      "query_id": "KF19",
+      "query": "病历日期和时间应采用什么格式？",
+      "relevant_source_ids": [
+        "nhc-record-standard-2010"
+      ]
+    },
+    {
+      "query_id": "KF20",
+      "query": "打印病历完成签名后是否可以修改？",
+      "relevant_source_ids": [
+        "nhc-record-standard-2010"
+      ]
+    }
+  ]
+}

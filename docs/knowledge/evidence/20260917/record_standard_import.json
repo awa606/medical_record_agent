@@ -1,0 +1,29 @@
+{
+  "import": {
+    "source_id": "nhc-record-standard-2010",
+    "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+    "content_sha256": "7558c6eac6a348a664e889f701a36bd994c48e9d2037b8233261ed1e40306f54",
+    "page_count": 1,
+    "chunk_count": 9,
+    "is_active": false,
+    "is_current": true,
+    "created": true
+  },
+  "enabled": {
+    "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+    "is_active": true,
+    "is_current": true
+  },
+  "health": {
+    "source_count": 4,
+    "document_count": 4,
+    "active_document_count": 4,
+    "chunk_count": 39,
+    "embedding_count": 0,
+    "audit_count": 2,
+    "index_available": true,
+    "embedding_model": "BAAI/bge-small-zh-v1.5"
+  },
+  "source_doc_sha256": "95e43e8a0ca740defe6f9aaf0a378ca28875c809a09947c723e9344ea8580888",
+  "extracted_text_sha256": "d9fd1de3f801d37d9317a0b67daa4e859f6348112265511018318c15fc4b3b27"
+}

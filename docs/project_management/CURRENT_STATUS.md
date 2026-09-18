@@ -8,36 +8,36 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-16T09:49:48+08:00`
-- Source hash: `02fef17379abec86232a1685f337c544a729a4e1750c79da282f013a0c996d6b`
+- Updated at: `2026-09-17T15:16:46.709154+08:00`
+- Source hash: `316b15141f94481899cb0614bd7ae9e290d6047a862392be4a45a6ee2828fffc`
 - Phase: **Alpha**
-- Repo: `codex/alpha13-jetson-provider-design@66b2b545fc73e8ba37fc07a07db440d2029e21e4`
-- Base main: `feb4c7126d63914b7ced8a3a157b8e80f54e7fa5`
-- Active PR: [#103](https://github.com/awa606/medical_record_agent/pull/103) · DRAFT
-- Last merged PR: [#102](https://github.com/awa606/medical_record_agent/pull/102) · MERGED · `feb4c7126d63914b7ced8a3a157b8e80f54e7fa5`
-- Forecast Alpha Exit: **2026-10-07**
+- Repo: `codex/alpha-software-knowledge-v1@192e0bd8d08d536068637504df9671b3a299e365`
+- Base main: `62c722856843f9fd0367d86d239c1e6e47e79a96`
+- Active PR: [#104](https://github.com/awa606/medical_record_agent/pull/104) · DRAFT
+- Last merged PR: [#103](https://github.com/awa606/medical_record_agent/pull/103) · MERGED · `62c722856843f9fd0367d86d239c1e6e47e79a96`
+- Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 14 | 0 | 0 | 1 | 1 | 0 | 99 |
+| 12 | 0 | 0 | 1 | 3 | 0 | 99 |
 
 ## Current Task
 
-**1.2 · Docker / 本地运行环境整合** — `BLOCKED`
+**4.1 · Knowledge Base V1 Completion** — `VERIFY`
 
 ## Hardware Gate
 
 | Gate | Status | Classification |
 |---|---|---|
-| G1_architecture | PASS | closed |
-| G2_bom_completeness | PASS | closed |
-| G3_cost | VERIFY | MARGINAL |
-| G4_mechanical_fit | VERIFY | PARTIAL |
-| G5_technical_risk | PASS | needs_real_hardware |
+| G5_technical_risk | BLOCKED | HARDWARE_DEFERRED |
+| G4_mechanical_fit | VERIFY | REAL_HARDWARE_REQUIRED |
+| G1_architecture | PASS | baseline_complete |
+| G3_cost | VERIFY | REFERENCE_ESTIMATE_ONLY |
+| G2_bom_completeness | PASS | reference_baseline |
 
-**Purchase Decision: BORROW-FIRST**
+**Purchase Decision: DEFERRED**
 
 ## Milestones
 
@@ -50,15 +50,15 @@
 
 ## Blockers
 
-- 1.2 Docker / 本地运行环境整合：等待借用Jetson Orin Nano Super 8GB或等效设备，先执行两小时分层Bring-up Smoke；PASS后再进入4–8小时功能验证，之后才考虑24–48小时稳定性验证。开发机50%进度与历史证据保留。
+- 1.2 Docker / 本地运行环境整合：目标硬件支线已DEFERRED；开发机50%进度与历史证据保留。恢复后先借用或取得Jetson Orin Nano Super 8GB或等效设备，再执行两小时分层Bring-up Smoke。
 
 ## Next
 
-- Single next task: 1.2 真实Jetson两小时分层Bring-up Smoke（等待借用设备）
-- Parallel waiting task: 无；1.3 Research与Design均已完成，等待真实硬件
+- Single next task: 4.1：核验Encounter/Transcript/Draft/Approval与V09证据，决定是否DONE
+- Parallel waiting task: Hardware Lane：DEFERRED / HARDWARE BLOCKED；不阻塞软件支线
 
 ## Manual Actions
 
-- 借用Jetson Orin Nano Super 8GB或等效设备
+- 无
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

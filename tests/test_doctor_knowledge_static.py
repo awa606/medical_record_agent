@@ -32,3 +32,17 @@ def test_doctor_knowledge_reference_styles_are_isolated() -> None:
     assert ".knowledge-reference-list" in css
     assert ".knowledge-reference-item" in css
     assert "overflow-wrap: anywhere" in css
+
+
+def test_admin_knowledge_ui_uses_real_api_and_safe_utf8_rendering() -> None:
+    html = (ROOT / "static" / "doctor.html").read_text(encoding="utf-8")
+    doctor_js = (ROOT / "static" / "doctor.js").read_text(encoding="utf-8")
+
+    assert 'id="knowledgeImportForm"' in html
+    assert 'id="knowledgeTestSearchForm"' in html
+    assert 'id="adminKnowledgePanel"' in html
+    assert "/api/knowledge/admin/import" in doctor_js
+    assert "/api/knowledge/admin/test-search" in doctor_js
+    assert "/api/knowledge/admin/documents/${encodeURIComponent(documentId)}" in doctor_js
+    assert 'new TextDecoder("utf-8", { fatal: true })' in doctor_js
+    assert "escapeHtml(document.title)" in doctor_js

@@ -1,0 +1,98 @@
+{
+  "schema_version": "knowledge_ingest_manifest_v2",
+  "package_id": "knowledge-v1",
+  "scope": "发热/呼吸与病历书写的医生人工参考证据；不得成为患者事实、自动诊断、治疗建议或批准依据。",
+  "sources": [
+    {
+      "source_id": "nhc-influenza-2020",
+      "title": "流行性感冒诊疗方案（2020年版）",
+      "publisher": "国家卫生健康委办公厅、国家中医药局办公室",
+      "version": "2020年版",
+      "published_at": "2020-10-27",
+      "source_url": "https://www.nhc.gov.cn/ylyjs/zcwj/202011/472e0ad873014c168dbe22e19d605e20/files/1733999727528_18271.pdf",
+      "download_url": "https://www.baoshan.gov.cn/info/5711/3839084.htm",
+      "file_name": "nhc_influenza_2020.pdf",
+      "expected_sha256": "693984e29ed67bdc0366f66c303f33b98847d0bcfcd6f1e87aa5cbbdcd8bfaac",
+      "usage_scope": "临床表现、重症高危因素、鉴别和就医风险提示。",
+      "page_ranges": [
+        [
+          2,
+          11
+        ]
+      ],
+      "max_chunks": 10,
+      "acquisition_note": "国家卫健委主链接在2026-09-14返回502；从保山市人民政府公开附件取得同名扫描件，本地OCR提取。",
+      "document_type": "clinical-reference",
+      "disease_scope": "流感",
+      "content_format": "pdf",
+      "default_active": true
+    },
+    {
+      "source_id": "nhc-covid19-trial-v10",
+      "title": "新型冠状病毒感染诊疗方案（试行第十版）",
+      "publisher": "国家卫生健康委员会、国家中医药管理局",
+      "version": "试行第十版",
+      "published_at": "2023-01-06",
+      "source_url": "https://www.nhc.gov.cn/cms-search/downFiles/460b0e7b19bd42f3bba00c1efb9b6811.pdf",
+      "download_url": "https://www.nhc.gov.cn/cms-search/downFiles/460b0e7b19bd42f3bba00c1efb9b6811.pdf",
+      "file_name": "nhc_covid19_v10.pdf",
+      "expected_sha256": "66d5ae641499c722b974a483748e9817cbfe55b6b83a9a08f366d1f0ed3d8440",
+      "usage_scope": "临床表现、诊断、分型和重症风险提示。",
+      "page_ranges": [
+        [
+          2,
+          11
+        ]
+      ],
+      "max_chunks": 10,
+      "acquisition_note": "从国家卫生健康委员会公开PDF直接取得。",
+      "document_type": "clinical-reference",
+      "disease_scope": "新型冠状病毒感染",
+      "content_format": "pdf",
+      "default_active": true
+    },
+    {
+      "source_id": "nhc-child-mpp-2025",
+      "title": "儿童肺炎支原体肺炎诊疗指南（2025年版）",
+      "publisher": "国家卫生健康委办公厅、国家中医药局综合司",
+      "version": "2025年版",
+      "published_at": "2025-09-09",
+      "source_url": "https://www.nhc.gov.cn/yzygj/c100068/202509/19e7145436b049a68d4ba8c2060dfa56/files/%E5%84%BF%E7%AB%A5%E8%82%BA%E7%82%8E%E6%94%AF%E5%8E%9F%E4%BD%93%E8%82%BA%E7%82%8E%E8%AF%8A%E7%96%97%E6%8C%87%E5%8D%97%EF%BC%882025%E5%B9%B4%E7%89%88%EF%BC%89.pdf",
+      "download_url": "https://www.baiyinqu.gov.cn/XZJDBMDW/bmdw/byqwsjkj/fdzdgknr/ylws/art/2025/art_267dc3d84c914e19a8d97514853168cb.html",
+      "file_name": "nhc_child_mpp_2025.pdf",
+      "expected_sha256": "452e1442cbcae7231e1bac8f23031f84085a7e75aef347fac6d9a04162575b32",
+      "usage_scope": "儿童MPP定义、临床表现、诊断、重症和危重风险提示。",
+      "page_ranges": [
+        [
+          3,
+          15
+        ]
+      ],
+      "max_chunks": 10,
+      "acquisition_note": "国家卫健委主链接在2026-09-14返回502；从白银区人民政府公开附件取得同名PDF。",
+      "document_type": "clinical-reference",
+      "disease_scope": "儿童肺炎支原体肺炎",
+      "content_format": "pdf",
+      "default_active": true
+    },
+    {
+      "source_id": "nhc-record-standard-2010",
+      "title": "病历书写基本规范",
+      "publisher": "中华人民共和国卫生部",
+      "version": "卫医政发〔2010〕11号",
+      "published_at": "2010-02-04",
+      "effective_date": "2010-03-01",
+      "source_url": "https://www.nhc.gov.cn/wjw/gfxwj/201002/79d42b9c8b3f47ee91000d31de116784.shtml",
+      "download_url": "https://www.nhc.gov.cn/wjw/gfxwj/201002/79d42b9c8b3f47ee91000d31de116784/files/1733384361932_86985.doc",
+      "file_name": "nhc_record_standard_2010.doc",
+      "expected_sha256": "95e43e8a0ca740defe6f9aaf0a378ca28875c809a09947c723e9344ea8580888",
+      "extracted_content_sha256": "d9fd1de3f801d37d9317a0b67daa4e859f6348112265511018318c15fc4b3b27",
+      "usage_scope": "病历书写与人工审核参考；不得自动批准诊断或治疗。",
+      "document_type": "record-standard",
+      "disease_scope": "通用病历书写",
+      "content_format": "markdown",
+      "default_active": false,
+      "acquisition_note": "国家卫生健康委员会公开页面附件；本地由LibreOffice转换为UTF-8文本，管理员测试后显式启用。"
+    }
+  ]
+}

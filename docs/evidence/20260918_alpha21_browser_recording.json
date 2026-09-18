@@ -1,0 +1,47 @@
+{
+  "schema_version": "mra-alpha21-browser-recording-evidence-v1",
+  "recorded_at": "2026-09-18T21:09:08+08:00",
+  "environment": "MRA-ALPHA-DEV-01",
+  "browser": "Microsoft Edge",
+  "microphone": "麦克风阵列（2- Realtek(R) Audio）",
+  "provider_boundary": {
+    "record_provider_mode": "demo",
+    "asr_provider": "mock",
+    "llm_provider": "mock",
+    "real_asr_claimed": false
+  },
+  "submitted": {
+    "session_id": "4f96542a510d42e484dea83f0fb6563c",
+    "audio_id": "2d1063dd3afb4eec9c6c518c569694c6",
+    "format": "audio/wav; codec=PCM; channels=1; sample_rate=48000; sample_width_bytes=2",
+    "duration_seconds": 13.397333,
+    "size_bytes": 1286188,
+    "sha256": "c58c6ff5b5437a2152a2472d2cd8e10be64b42dc213bb3157611ee4333fa732c",
+    "pcm_rms": 1720.72,
+    "preview_playback_verified": true,
+    "recorded_chunks": 1,
+    "uploaded_chunks": 1,
+    "pending_chunks": 0
+  },
+  "cancelled": {
+    "session_id": "99e68000c57c4d9880c11e33222056a8",
+    "status": "cancelled",
+    "audio_id": null,
+    "received_chunks_before_cancel": 5,
+    "retained_chunk_files": 0,
+    "retained_final_audio_files": 0,
+    "created_agent_tasks": 0,
+    "created_record_revisions": 0
+  },
+  "verification": {
+    "targeted_tests": "60 passed in 60.28s",
+    "full_tests": "512 passed, 8 subtests passed in 229.89s",
+    "frontend_syntax": "PASS",
+    "health": 200,
+    "ready": 200,
+    "ready_scope": "mock-isolated-spike-only",
+    "git_diff_check": "PASS",
+    "sensitive_file_scan": "PASS"
+  },
+  "result": "PASS"
+}

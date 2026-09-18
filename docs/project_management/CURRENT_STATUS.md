@@ -8,24 +8,24 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-17T15:16:46.709154+08:00`
-- Source hash: `316b15141f94481899cb0614bd7ae9e290d6047a862392be4a45a6ee2828fffc`
+- Updated at: `2026-09-18T20:49:56.020537+08:00`
+- Source hash: `bccc95d006389d72506d8dc889c4e4fb26ba13885f65fa3ee011b94c6b678982`
 - Phase: **Alpha**
-- Repo: `codex/alpha-software-knowledge-v1@192e0bd8d08d536068637504df9671b3a299e365`
-- Base main: `62c722856843f9fd0367d86d239c1e6e47e79a96`
-- Active PR: [#104](https://github.com/awa606/medical_record_agent/pull/104) · DRAFT
-- Last merged PR: [#103](https://github.com/awa606/medical_record_agent/pull/103) · MERGED · `62c722856843f9fd0367d86d239c1e6e47e79a96`
+- Repo: `codex/alpha21-browser-recording-verification@3be85835005b707b132c7727c123345eb7978a54`
+- Base main: `613d3889a425eeda4abb9e86fb6ab05ae6da70c0`
+- Active PR: None
+- Last merged PR: [#104](https://github.com/awa606/medical_record_agent/pull/104) · MERGED · `613d3889a425eeda4abb9e86fb6ab05ae6da70c0`
 - Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 12 | 0 | 0 | 1 | 3 | 0 | 99 |
+| 12 | 0 | 0 | 1 | 2 | 1 | 99 |
 
 ## Current Task
 
-**4.1 · Knowledge Base V1 Completion** — `VERIFY`
+**2.1 · 浏览器真实录音基础链路整合** — `BACKLOG / RESEARCH NEEDS MORE EVIDENCE`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 4.1：核验Encounter/Transcript/Draft/Approval与V09证据，决定是否DONE
-- Parallel waiting task: Hardware Lane：DEFERRED / HARDWARE BLOCKED；不阻塞软件支线
+- Single next task: 2.1：在Edge允许localhost麦克风权限，重跑5–15秒真实录音、试听、提交和取消Spike
+- Parallel waiting task: Hardware Lane：DEFERRED / HARDWARE BLOCKED
 
 ## Manual Actions
 
-- 无
+- 在Edge为127.0.0.1:8765允许麦克风权限，然后录制一段不含身份信息的5–15秒测试语句
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

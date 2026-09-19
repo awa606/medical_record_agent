@@ -7,14 +7,19 @@
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
   "updated_at": "2026-09-19T15:16:27.110295+08:00",
-  "source_hash": "9c93a58b2c2eee7c3613caac5f781fe7c54a56bfe4f0ca280c4d4c65859bf430",
+  "source_hash": "5919d35437c29f404a1cdf0982ccf009e09d2576426d9122ffd5b3cd39400492",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
   "repo_sha": "1b837732952b4b7510f2e08e00e98aecb4862e10",
   "base_main_sha": "bfcd367af163905dec9aad787c814692a830d424",
   "branch": "codex/alpha23-role-gate-validation",
-  "active_pr": null,
+  "active_pr": {
+    "number": 108,
+    "state": "DRAFT",
+    "url": "https://github.com/awa606/medical_record_agent/pull/108",
+    "branch": "codex/alpha23-role-gate-validation"
+  },
   "last_merged_pr": {
     "number": 106,
     "state": "MERGED",

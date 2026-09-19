@@ -1816,6 +1816,20 @@ function nextActionState() {
     };
   }
 
+  if (appState.currentAsrResult && roleReviewRequired() && appState.viewMode !== "debug") {
+    const pendingCount = roleReviewPendingCount();
+    const pendingText = pendingCount
+      ? `仍有 ${pendingCount} 位说话人需要确认。`
+      : (roleQualityReasonText() || "说话人角色质量门禁未通过。");
+    return {
+      tone: "warning",
+      title: "说话人身份需要确认",
+      detail: `${pendingText}确认后系统会重新检查角色质量，未通过前不会生成病历。`,
+      stages: true,
+      actions: singlePrimaryAction({ key: "open-role-review", label: "确认说话人身份" }),
+    };
+  }
+
   if (appState.lastActionError) {
     const action = appState.currentAudioId
       ? { key: "retry-transcription", label: "重试转写" }
@@ -3079,6 +3093,7 @@ function pendingSpeakerAssignments() {
   const pendingBySpeaker = new Map(pending.map((item) => [item.speaker_id, item]));
   const quality = appState.currentAsrResult?.role_quality || {};
   [
+    ...(quality.pending_confirmation || []),
     ...(quality.unresolved_assignments || []),
     ...(quality.low_confidence_clinical_roles || []),
     ...(quality.unmapped_speakers || []),
@@ -3700,7 +3715,7 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
   const canGenerateFromTranscript = Boolean(asr && !appState.currentTaskId && !appState.currentRecordFields);
   const actionButton = asr
     ? roleReviewRequired()
-      ? `<button type="button" class="secondary-action" data-save-role-review ${appState.roleReviewSaving ? "disabled" : ""}>保存身份确认</button>`
+      ? `<button type="button" class="secondary-action" data-open-role-review>确认说话人身份</button>`
       : canGenerateFromTranscript
         ? `<button type="button" class="primary-action" data-generate-from-transcript>用校正文本生成病历</button>`
         : ""
@@ -5789,18 +5804,27 @@ function transcriptSpeakerGroups(rows = transcriptRows()) {
 }
 
 function roleReviewRequired() {
-  return false;
+  if (!appState.currentAsrResult) return false;
+  return roleQualityNeedsIdentityReview(appState.currentAsrResult)
+    || pendingSpeakerAssignments().length > 0;
 }
 
 function roleReviewPendingCount() {
-  return 0;
+  const pendingIds = new Set(
+    pendingSpeakerAssignments()
+      .map((item) => item?.speaker_id)
+      .filter(Boolean),
+  );
+  if (pendingIds.size) return pendingIds.size;
+  if (!roleQualityNeedsIdentityReview(appState.currentAsrResult)) return 0;
+  return transcriptSpeakerGroups().filter((group) => !isClinicalRole(group.role)).length;
 }
 
 function focusNextActionPanel() {
   const panel = $("nextActionPanel");
   if (!panel) return;
   panel.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
-  panel.querySelector("[data-workflow-action='finalize-live-demo'], [data-workflow-action='generate-record'], [data-workflow-action='save-role-review']")?.focus?.();
+  panel.querySelector("[data-workflow-action='finalize-live-demo'], [data-workflow-action='generate-record'], [data-workflow-action='open-role-review'], [data-workflow-action='save-role-review']")?.focus?.();
 }
 
 function speakerRolesForReviewSave() {
@@ -5841,6 +5865,7 @@ async function saveRoleReview({ silent = false } = {}) {
   renderAll();
   let savedResult = appState.currentAsrResult;
   let pendingCount = 0;
+  let qualityPassed = false;
   let shouldAutoGenerate = false;
   try {
     const segments = appState.currentAsrResult.segments.map((segment, index) => ({
@@ -5871,11 +5896,13 @@ async function saveRoleReview({ silent = false } = {}) {
     appState.speakerRoleCorrections = {};
     savedResult = response.asr_result;
     pendingCount = roleReviewPendingCount();
-    if (!pendingCount) scheduleRecordPreview({ force: true });
+    qualityPassed = roleQualityPassed(savedResult);
+    if (!pendingCount && qualityPassed) scheduleRecordPreview({ force: true });
     shouldAutoGenerate = Boolean(
       !silent
         && appState.pendingGenerateAfterRoleReview
         && !pendingCount
+        && qualityPassed
         && !appState.currentTaskId
         && !appState.currentRecordFields,
     );
@@ -5884,8 +5911,11 @@ async function saveRoleReview({ silent = false } = {}) {
     renderAll();
   }
   if (silent) return savedResult;
-  if (pendingCount) {
-    showToast(`身份确认已保存，仍有 ${pendingCount} 位说话人需要确认`);
+  if (pendingCount || !qualityPassed) {
+    const message = pendingCount
+      ? `身份确认已保存，仍有 ${pendingCount} 位说话人需要确认`
+      : (roleQualityReasonText(savedResult) || "身份确认已保存，但角色质量门禁仍未通过");
+    showToast(message);
     focusNextActionPanel();
     return savedResult;
   }
@@ -6349,6 +6379,10 @@ async function handleWorkflowAction(action) {
   }
   if (action === "save-role-review") {
     await saveRoleReview();
+    return;
+  }
+  if (action === "open-role-review") {
+    openRoleReview();
     return;
   }
   if (action === "retry-transcription") {
@@ -8121,6 +8155,11 @@ function bindEvents() {
     const transcriptRow = event.target.closest(".transcript-table-row[data-segment-start]");
     if (transcriptRow) {
       seekConsultationAudio(Number(transcriptRow.dataset.segmentStart), { autoplay: true });
+      return;
+    }
+    const roleReviewButton = event.target.closest("[data-open-role-review]");
+    if (roleReviewButton) {
+      openRoleReview();
       return;
     }
     const generateButton = event.target.closest("[data-generate-from-transcript]");

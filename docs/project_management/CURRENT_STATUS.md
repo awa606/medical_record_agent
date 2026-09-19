@@ -8,24 +8,24 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-18T21:28:11.221214+08:00`
-- Source hash: `b9925c0ad5005abdd7efafb3a662d5a6cbb96ab4b0d0035974b6ffa5f5403fbc`
+- Updated at: `2026-09-19T13:09:29.889542+08:00`
+- Source hash: `dd35f9a64dc07138123cb0289fbce64fedf78162f17c095862099c0adf07a82f`
 - Phase: **Alpha**
-- Repo: `codex/alpha21-browser-recording-verification@d01d6b881acb6fa7826e2caacaf2fd78411eb6ac`
-- Base main: `613d3889a425eeda4abb9e86fb6ab05ae6da70c0`
-- Active PR: [#105](https://github.com/awa606/medical_record_agent/pull/105) · DRAFT
-- Last merged PR: [#104](https://github.com/awa606/medical_record_agent/pull/104) · MERGED · `613d3889a425eeda4abb9e86fb6ab05ae6da70c0`
+- Repo: `codex/alpha22-real-funasr-spike@ff85d16736828358a665f70af1469ad65074e032`
+- Base main: `76d20cd61d13380ed98d8e973adffaa6e91507c9`
+- Active PR: [#106](https://github.com/awa606/medical_record_agent/pull/106) · DRAFT
+- Last merged PR: [#105](https://github.com/awa606/medical_record_agent/pull/105) · MERGED · `76d20cd61d13380ed98d8e973adffaa6e91507c9`
 - Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 11 | 0 | 0 | 1 | 2 | 2 | 99 |
+| 10 | 0 | 0 | 1 | 2 | 3 | 99 |
 
 ## Current Task
 
-**2.2 · 真实本地ASR转写** — `BACKLOG / RESEARCH NEEDS MORE EVIDENCE`
+**2.3 · 医患角色判断与质量门禁** — `BACKLOG / RESEARCH`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 2.2：使用2.1真实麦克风WAV执行FunASR Research Spike，记录CER、关键词召回、RTF和峰值内存
+- Single next task: WBS 2.3 医患角色判断与质量门禁 Research
 - Parallel waiting task: Hardware Lane：DEFERRED / HARDWARE BLOCKED
 
 ## Manual Actions

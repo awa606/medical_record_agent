@@ -1,0 +1,243 @@
+{
+  "schema_version": "mra-alpha23-role-gate-evidence-v1",
+  "executed_at": "2026-09-19T14:46:34+08:00",
+  "base_main_sha": "bfcd367af163905dec9aad787c814692a830d424",
+  "branch": "codex/alpha23-role-gate-validation",
+  "environment": {
+    "name": "MRA-ALPHA-DEV-01",
+    "platform": "windows",
+    "device": "cpu",
+    "offline": true
+  },
+  "providers": {
+    "asr": "funasr",
+    "diarization": "funasr_campp",
+    "role_policy": "speaker-role-policy-v1",
+    "mock_or_cloud_fallback": false,
+    "queued_generation_provider": "ollama_local",
+    "background_llm_executed": false
+  },
+  "inputs": [
+    {
+      "sample": "fever-dual",
+      "kind": "dual_speaker_positive",
+      "audio_sha256": "e0d16a3192b99ee99c74fc730facd22338cd4da2a3bb28da980d6d99375f74a4",
+      "reference_rttm_sha256": "3cb3a3cc9c9634b9b74e75a3abff039d944d11c92023ac9c4e8c6eecc0c057b",
+      "asr_result_sha256": "d7425b09008d846fc892c8bac9210d4122c4b71af8c25b83f65bc69a2fb9c271"
+    },
+    {
+      "sample": "chest-dual",
+      "kind": "dual_speaker_difficult_positive",
+      "audio_sha256": "1d781c47fc4967cc85a734567f0d6fe81cbeff671b20968889c2fe2c9557edc91",
+      "reference_rttm_sha256": "c71698723c9e71e2e51d43b3a6b8aad3d8b8832ca453cfb02eac09efb03102fd",
+      "asr_result_sha256": "4482382a25533a56826905a43a4a8cacbe4992bf5d15e7e57d99e7cbb2b9fad0"
+    },
+    {
+      "sample": "single-counterexample",
+      "kind": "single_speaker_negative",
+      "audio_sha256": "c58c6ff5b5437a2152a2472d2cd8e10be64b42dc213bb3157611ee4333fa732c",
+      "asr_result_sha256": "66341cf2ace631f24fcf276deb18b6c68f7eef7ef2eaae698c7927e83f0fa75c"
+    }
+  ],
+  "model_runtime": {
+    "fever-dual": {
+      "speaker_count": 2,
+      "segment_count": 21,
+      "turn_count": 21,
+      "model_load_seconds": 66.516,
+      "inference_seconds": 20.113,
+      "rtf": 0.339,
+      "peak_rss_mib": 3499.69
+    },
+    "chest-dual": {
+      "speaker_count": 2,
+      "segment_count": 16,
+      "turn_count": 16,
+      "model_load_seconds": 55.507,
+      "inference_seconds": 14.362,
+      "rtf": 0.2394,
+      "peak_rss_mib": 4628.13
+    },
+    "single-counterexample": {
+      "speaker_count": 1,
+      "segment_count": 1,
+      "turn_count": 1,
+      "model_load_seconds": 53.862,
+      "inference_seconds": 1.812,
+      "rtf": 0.1462,
+      "peak_rss_mib": 4414.1
+    }
+  },
+  "diarization": {
+    "fever-dual": {
+      "speaker_count_error": 0,
+      "boundary_f1": 0.5294,
+      "mixed_utterance_rate": 0.2857,
+      "role_consistency": 0.8838,
+      "der": null,
+      "jer": null,
+      "report_sha256": "8c34dca153c83eef705b499977d78aab62a46d6cc46410795b2e22e5b17b5cd8"
+    },
+    "chest-dual": {
+      "speaker_count_error": 0,
+      "boundary_f1": 0.3846,
+      "mixed_utterance_rate": 0.375,
+      "role_consistency": 0.878,
+      "der": null,
+      "jer": null,
+      "report_sha256": "ca41600016e3f3274918f7ffea173970b379ff44480ad523cbffa06663a9bbbc"
+    }
+  },
+  "role_proposals": {
+    "fever-dual": [
+      {
+        "speaker": "spk0",
+        "role": "patient",
+        "confidence": 0.86,
+        "raw_confidence": null,
+        "calibrated_confidence": null,
+        "source": "global_two_party_constraint"
+      },
+      {
+        "speaker": "spk1",
+        "role": "doctor",
+        "confidence": 0.8654,
+        "raw_confidence": null,
+        "calibrated_confidence": null,
+        "source": "speaker_context_rules"
+      }
+    ],
+    "chest-dual": [
+      {
+        "speaker": "spk0",
+        "role": "doctor",
+        "confidence": 0.8443,
+        "raw_confidence": null,
+        "calibrated_confidence": null,
+        "source": "speaker_context_rules"
+      },
+      {
+        "speaker": "spk1",
+        "role": "patient",
+        "confidence": 0.86,
+        "raw_confidence": null,
+        "calibrated_confidence": null,
+        "source": "global_two_party_constraint"
+      }
+    ],
+    "single-counterexample": [
+      {
+        "speaker": "spk0",
+        "role": null,
+        "confidence": 0.0,
+        "raw_confidence": null,
+        "calibrated_confidence": null,
+        "source": "single_speaker"
+      }
+    ],
+    "confidence_schema_note": "Current ASRResult exposes one role confidence; separate raw and calibrated confidence fields are absent and were not invented."
+  },
+  "role_gate": {
+    "fever-dual": {
+      "pre_review_status": "needs_review",
+      "pre_review_pending_count": 2,
+      "pre_review_reported_role_accuracy": 1.0,
+      "pre_review_auto_accept_coverage": 0.0,
+      "pre_review_auto_accept_accuracy": null,
+      "pre_review_high_confidence_error_count": 0,
+      "direct_generate_http_statuses": [409, 409],
+      "patch_http_status": 200,
+      "post_review_status": "passed",
+      "post_review_pending_count": 0,
+      "post_review_reported_role_accuracy": 1.0,
+      "post_review_reported_accept_coverage": 1.0,
+      "post_review_reported_accept_accuracy": 1.0,
+      "manual_mapping_only": true,
+      "reviewed_confidence": 0.99,
+      "role_reviewed_event_count": 1,
+      "generation_task_accepted": true,
+      "generation_task_status": "CREATED",
+      "background_task_count": 1,
+      "background_llm_executed": false
+    },
+    "chest-dual": {
+      "pre_review_status": "needs_review",
+      "pre_review_pending_count": 2,
+      "pre_review_reported_role_accuracy": 1.0,
+      "pre_review_auto_accept_coverage": 0.0,
+      "pre_review_auto_accept_accuracy": null,
+      "pre_review_high_confidence_error_count": 0,
+      "direct_generate_http_statuses": [409, 409],
+      "patch_http_status": 200,
+      "post_review_status": "passed",
+      "post_review_pending_count": 0,
+      "post_review_reported_role_accuracy": 1.0,
+      "post_review_reported_accept_coverage": 1.0,
+      "post_review_reported_accept_accuracy": 1.0,
+      "manual_mapping_only": true,
+      "reviewed_confidence": 0.99,
+      "role_reviewed_event_count": 1,
+      "generation_task_accepted": true,
+      "generation_task_status": "CREATED",
+      "background_task_count": 1,
+      "background_llm_executed": false
+    },
+    "single-counterexample": {
+      "pre_review_status": "blocked",
+      "pre_review_pending_count": 1,
+      "pre_review_reported_role_accuracy": null,
+      "pre_review_auto_accept_coverage": 0.0,
+      "pre_review_auto_accept_accuracy": null,
+      "pre_review_high_confidence_error_count": 0,
+      "reason_codes": ["single_speaker_counterexample"],
+      "direct_generate_http_statuses": [409, 409],
+      "generation_task_accepted": false
+    }
+  },
+  "reports": {
+    "role_gate_api_spike_sha256": "7eee941121235e6ff4af27f0d9215c5cfefafaad42dd752f473d6f1237e481ef",
+    "fever_diarization_sha256": "8c34dca153c83eef705b499977d78aab62a46d6cc46410795b2e22e5b17b5cd8",
+    "chest_diarization_sha256": "ca41600016e3f3274918f7ffea173970b379ff44480ad523cbffa06663a9bbbc"
+  },
+  "verification": {
+    "verified_at": "2026-09-19T15:08:18+08:00",
+    "targeted_tests": "109 passed, 4 subtests passed in 31.03s",
+    "browser_recovery_tests": "2 passed in 12.16s",
+    "full_pytest": "514 passed, 8 subtests passed in 231.38s",
+    "full_pytest_warning": "One pre-existing Windows subprocess reader emitted a UTF-8 decode warning; no test failed.",
+    "frontend_syntax": [
+      "static/doctor.js PASS",
+      "static/main.js PASS"
+    ],
+    "health_smoke": "200 ok",
+    "readiness_smoke": "200 ready in isolated mock regression environment; not used as real ASR or LLM evidence",
+    "git_diff_check": "PASS",
+    "sensitive_binary_scan": "PASS: 0 forbidden binaries and 0 secret-pattern hits"
+  },
+  "decision": {
+    "research_gate": "PASS",
+    "reuse_decision": "ADAPT",
+    "design_review_gate": "PASS",
+    "alpha_role_gate_closure": "PASS",
+    "v02_scope": "ALPHA_ROLE_GATE_ONLY",
+    "issue_41": "OPEN"
+  },
+  "implementation_boundary": {
+    "allowed": [
+      "derive doctor UI recovery from real role_quality and pending speakers",
+      "reuse existing session PATCH",
+      "continue only when pending is zero and role quality passed"
+    ],
+    "unchanged": [
+      "public API",
+      "database schema",
+      "provider selection",
+      "diarization model",
+      "role thresholds",
+      "five-step workflow"
+    ]
+  },
+  "raw_artifacts_committed": false,
+  "contains_raw_transcript": false,
+  "contains_raw_session_or_audio_ids": false
+}

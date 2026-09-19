@@ -24,20 +24,29 @@ def test_workflow_uses_five_steps_without_role_review_step() -> None:
     assert 'TRANSCRIBED: "AI_PROCESS"' in script
 
 
-def test_role_quality_no_longer_blocks_doctor_workflow() -> None:
+def test_role_quality_blocks_generation_until_identity_review_passes() -> None:
     script = read_script()
 
     assert "function roleReviewRequired()" in script
-    assert "function roleReviewRequired() {\n  return false;" in script
+    assert "roleQualityNeedsIdentityReview(appState.currentAsrResult)" in script
+    assert "pendingSpeakerAssignments().length > 0" in script
+    assert "function roleReviewPendingCount()" in script
+    assert "quality.pending_confirmation" in script
+    assert "qualityPassed = roleQualityPassed(savedResult)" in script
+    assert "!pendingCount\n        && qualityPassed" in script
+    assert "if (pendingCount || !qualityPassed)" in script
     assert "系统自动推定" in script
     assert "startRecordGenerationFromAudio(transcribed.audio_id)" in script
     assert "await startRecordGenerationFromAudio(appState.currentAudioId)" in script
 
 
-def test_identity_review_has_no_doctor_workflow_entry() -> None:
+def test_identity_review_is_conditional_recovery_action_not_a_sixth_step() -> None:
     script = read_script()
 
-    assert '"open-role-review"' not in script
+    assert 'key: "open-role-review", label: "确认说话人身份"' in script
+    assert 'if (action === "open-role-review")' in script
+    assert "openRoleReview();" in script
+    assert 'appState.currentAsrResult && roleReviewRequired() && appState.viewMode !== "debug"' in script
     assert 'appState.currentAsrResult && appState.roleReviewDirty && appState.viewMode === "debug"' in script
     assert "保存调试更正" in script
     assert "全局角色映射" not in script

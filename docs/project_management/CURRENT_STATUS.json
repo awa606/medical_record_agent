@@ -5,9 +5,9 @@
     "DO NOT EDIT MANUALLY"
   ],
   "schema_version": "mra-current-status-v1.1",
-  "generator_version": "1.1.0",
+  "generator_version": "1.1.1",
   "updated_at": "2026-09-19T13:09:29.889542+08:00",
-  "source_hash": "dd35f9a64dc07138123cb0289fbce64fedf78162f17c095862099c0adf07a82f",
+  "source_hash": "35f9d685cb91d1ccfd1192720a49cbd572c174e736757cb15fd566a920eddb45",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
@@ -239,8 +239,8 @@
     "Projects/Medical_Record_Agent/Work_Packages/Beta/4.4 最终回归与EVT Gate.md": "a1147d48183c3b7bc176339f072777e3967efae61b1705ba8c77a20fce445509"
   },
   "extra_source_files": {
-    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\PAMI_ProjectLab\\evaluation\\knowledge_v1_20260917\\20260917_143151\\hardware_gates_deferred.json": "b59e48fe2f8380bbcd80edcdd77da6c60b3da755c679b8445adc564c0c1cb2a5",
-    "C:\\Users\\AWA007\\Desktop\\Data\\开题报告\\病历\\medical_record_agent_alpha22_real_funasr\\docs\\evidence\\20260919_alpha22_real_funasr.json": "6772144e8347909a342615932185e7efd1d8d4d3bdf565d6624d52ae929bbac6"
+    "docs/evidence/20260919_alpha22_real_funasr.json": "6772144e8347909a342615932185e7efd1d8d4d3bdf565d6624d52ae929bbac6",
+    "external/hardware_gates_deferred.json": "b59e48fe2f8380bbcd80edcdd77da6c60b3da755c679b8445adc564c0c1cb2a5"
   },
   "snapshot_verification": {
     "result": "PASS",

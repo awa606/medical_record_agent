@@ -261,6 +261,91 @@ const STATUS_LABELS = {
   exported: "已导出",
 };
 
+const WORKFLOW_STATE_BY_BACKEND_TOKEN = {
+  created: "generating",
+  transcribing: "transcribing",
+  transcribed: "transcribed",
+  extracting_fields: "generating",
+  extract_fields: "generating",
+  generating_draft: "generating",
+  safety_checking: "generating",
+  degraded: "generating",
+  doctor_review: "draft_generated",
+  waiting_doctor_review: "pending_review",
+  pending_review: "pending_review",
+  reviewed: "pending_review",
+  approved: "approved",
+  exported: "exported",
+  failed: "failed",
+};
+
+function normalizeWorkflowToken(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+}
+
+function workflowStateForBackendToken(value) {
+  return WORKFLOW_STATE_BY_BACKEND_TOKEN[normalizeWorkflowToken(value)] || "";
+}
+
+function derivePersistedWorkflowState({
+  encounterStatus = "",
+  taskStatus = "",
+  currentStage = "",
+  hasTask = false,
+  hasFields = false,
+} = {}) {
+  const encounterToken = normalizeWorkflowToken(encounterStatus);
+  const taskToken = normalizeWorkflowToken(taskStatus);
+  const stageToken = normalizeWorkflowToken(currentStage);
+  const stageState = workflowStateForBackendToken(stageToken);
+  const taskState = workflowStateForBackendToken(taskToken);
+
+  if (stageState === "failed" || taskState === "failed" || encounterToken === "failed") return "failed";
+  if (stageState === "exported" || taskState === "exported" || encounterToken === "exported") return "exported";
+  if (stageState === "approved" || encounterToken === "approved") return "approved";
+
+  // doctor_review means a generated draft is ready to edit. The encounter may
+  // already be pending_review, but it has not reached the explicit review stage.
+  if (stageToken === "doctor_review") return "draft_generated";
+  if (stageState === "pending_review") return "pending_review";
+  if (stageState) return stageState;
+  if (taskState === "pending_review") return "pending_review";
+  if (taskState) return taskState;
+
+  if (hasFields) {
+    return ["pending_review", "reviewed"].includes(encounterToken)
+      ? "pending_review"
+      : "draft_generated";
+  }
+  if (hasTask) return "generating";
+  return "capture_input";
+}
+
+function currentWorkflowState() {
+  if (appState.asrLastError || appState.asrChunkLastError) return "failed";
+  const persisted = derivePersistedWorkflowState({
+    encounterStatus: appState.currentEncounter?.status,
+    taskStatus: appState.currentTask?.status || appState.taskStatus,
+    currentStage: appState.currentTask?.current_stage || appState.taskStatus,
+    hasTask: Boolean(appState.currentTaskId),
+    hasFields: Boolean(appState.currentRecordFields),
+  });
+  if (["failed", "exported", "approved", "draft_generated", "pending_review"].includes(persisted)) {
+    return persisted;
+  }
+  if (["requesting", "recording", "paused", "finalizing"].includes(appState.browserRecordingStatus)) {
+    return "recording";
+  }
+  if (appState.currentAsrResult && roleReviewRequired()) return "role_review";
+  if (appState.currentAsrResult && !appState.currentTaskId) return "transcribed";
+  if (appState.currentAsrSessionId && !appState.currentAsrResult) return "transcribing";
+  if (!encounterReadyForInput() && !hasActiveSession()) return "select_encounter";
+  return persisted;
+}
+
 const ENGINE_LABELS = {
   funasr: "FunASR",
   sensevoice: "SenseVoice Small",
@@ -620,11 +705,17 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
     const active = appState.currentEncounter?.id === item.id;
     const patient = patientDisplayName(item.patient_display_name, item.patient_deidentified_id || `Encounter ${item.id}`);
     const encounterNo = item.patient_deidentified_id || `E-${item.id}`;
+    const workflowState = derivePersistedWorkflowState({
+      encounterStatus: item.status,
+      taskStatus: item.task_status,
+      currentStage: item.task_current_stage,
+      hasTask: Boolean(item.task_id),
+    });
     const phase = encounterPhaseLabel(item);
     const status = encounterStatusLabel(item.status || item.task_current_stage);
     const checkInStatus = encounterCheckInStatusLabel(item.check_in_status || "checked_in");
     return `
-      <article class="encounter-worklist-item ${active ? "active" : ""}">
+      <article class="encounter-worklist-item ${active ? "active" : ""}" data-workflow-state="${escapeHtml(workflowState)}">
         <div class="encounter-worklist-primary">
           <strong>${escapeHtml(patient)}</strong>
           <span>${escapeHtml(encounterNo)}</span>
@@ -666,14 +757,26 @@ function encounterInputMethodLabel(item = {}) {
 }
 
 function encounterPhaseLabel(item = {}) {
-  const status = String(item.status || item.task_current_stage || item.task_status || "").toLowerCase();
-  if (status.includes("fail")) return "异常待处理";
-  if (status === "draft" || !item.task_id) return "待录入";
-  if (status === "pending_review" || status === "reviewed") return "等待医生审核";
-  if (status === "approved") return "病历已审核";
-  if (status === "exported") return "已导出";
-  if (status.includes("transcrib")) return "智能转写";
-  return encounterStatusLabel(item.status || item.task_current_stage || item.task_status);
+  const state = derivePersistedWorkflowState({
+    encounterStatus: item.status,
+    taskStatus: item.task_status,
+    currentStage: item.task_current_stage,
+    hasTask: Boolean(item.task_id),
+  });
+  const labels = {
+    capture_input: "待录入",
+    recording: "正在录音",
+    transcribing: "智能转写",
+    transcribed: "转写已完成",
+    generating: "生成病历",
+    role_review: "身份待确认",
+    draft_generated: "草稿已生成",
+    pending_review: "等待医生审核",
+    approved: "病历已审核",
+    exported: "已导出",
+    failed: "异常待处理",
+  };
+  return labels[state] || encounterStatusLabel(item.status || item.task_current_stage || item.task_status);
 }
 
 function encounterStatusLabel(status) {
@@ -1577,22 +1680,23 @@ function renderStartGuide() {
 function renderStepPrompt() {
   const risk = riskSummary();
   const prompt = $("stepPrompt");
+  const workflowState = currentWorkflowState();
   let text = "请上传问诊音频或粘贴问诊文本开始。";
   let tone = "";
 
-  if (doctorDisplayState().key === "transcription_failed") {
+  if (workflowState === "failed") {
     text = "转写服务暂时不可用，请先重新转写或改用文本输入。";
     tone = "danger";
-  } else if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") {
+  } else if (workflowState === "exported") {
     text = "病历已导出，可归档或开始下一次任务。";
   } else if (hasActiveSession() && risk.hasRisk) {
     text = "请优先处理红色/黄色提示。";
     tone = risk.hasError ? "danger" : "risk";
-  } else if (appState.taskStatus === "WAITING_DOCTOR_REVIEW" || appState.taskStatus === "reviewed" || appState.taskStatus === "approved") {
+  } else if (["pending_review", "approved"].includes(workflowState)) {
     text = "请核对病历内容及鉴别诊断参考，完成医生审核后方可导出。";
-  } else if (appState.currentDraft || appState.taskStatus === "GENERATING_DRAFT" || appState.taskStatus === "SAFETY_CHECKING") {
+  } else if (workflowState === "draft_generated") {
     text = "病历草稿已生成，请审核病历内容。";
-  } else if (appState.taskStatus === "TRANSCRIBED" || appState.currentAsrResult) {
+  } else if (["transcribed", "role_review"].includes(workflowState)) {
     text = roleReviewRequired() ? "说话人身份需要确认后才能生成病历。" : "对话已转写，说话人角色已自动识别。";
   }
 
@@ -1601,23 +1705,12 @@ function renderStepPrompt() {
 }
 
 function workflowStepKey() {
-  const displayState = doctorDisplayState().key;
-  if (!encounterReadyForInput() && !hasActiveSession()) return "SELECT_ENCOUNTER";
-  if (displayState === "transcription_failed") return "AI_PROCESS";
-  if (displayState === "draft_generated") return "DOCTOR_REVIEW";
-  if (displayState === "pending_review") return "DOCTOR_REVIEW";
-  if (displayState === "approved" || displayState === "exported") return "EXPORT";
-  if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") return "EXPORT";
-  if (isApprovedForExport()) return "EXPORT";
-  if (appState.currentRecordFields || appState.currentDraft) return "DOCTOR_REVIEW";
-  if (appState.currentTaskId) return "AI_PROCESS";
-  if (appState.currentAsrResult) {
-    return "AI_PROCESS";
-  }
-  if (appState.taskStatus === "TRANSCRIBING" || appState.currentAsrSessionId || appState.liveTranscriptSegments.length) {
-    return "AI_PROCESS";
-  }
-  return STATUS_TO_STEP[appState.taskStatus] || "CAPTURE_INPUT";
+  const state = currentWorkflowState();
+  if (state === "select_encounter") return "SELECT_ENCOUNTER";
+  if (["capture_input", "recording"].includes(state)) return "CAPTURE_INPUT";
+  if (["draft_generated", "pending_review"].includes(state)) return "DOCTOR_REVIEW";
+  if (["approved", "exported"].includes(state)) return "EXPORT";
+  return "AI_PROCESS";
 }
 
 function workflowAction({ key, label, tone = "secondary", disabled = false, reason = "" }) {
@@ -1635,7 +1728,8 @@ function currentInputInProgress() {
 
 function processingStageStatuses() {
   const statuses = Object.fromEntries(PROCESSING_STAGES.map((stage) => [stage.key, "pending"]));
-  const failed = doctorDisplayState().key === "transcription_failed";
+  const workflowState = currentWorkflowState();
+  const failed = workflowState === "failed";
   if (appState.currentAudioId || appState.uploadedFilename || appState.currentAsrSessionId || appState.browserRecordingFinalized?.audio_id) {
     statuses.audio = "done";
   }
@@ -1646,16 +1740,16 @@ function processingStageStatuses() {
     statuses.audio = "done";
     statuses.asr = "active";
   }
-  if (appState.taskStatus === "TRANSCRIBING" || appState.currentAsrSessionId) {
+  if (workflowState === "transcribing" || appState.currentAsrSessionId) {
     statuses.audio = "done";
     statuses.asr = "active";
   }
-  if (appState.currentAsrResult || appState.liveTranscriptSegments.length || appState.taskStatus === "TRANSCRIBED") {
+  if (appState.currentAsrResult || appState.liveTranscriptSegments.length || workflowState === "transcribed") {
     statuses.audio = "done";
     statuses.asr = "done";
     statuses.role = "done";
   }
-  if (appState.currentTaskId || ["EXTRACTING_FIELDS", "GENERATING_DRAFT", "SAFETY_CHECKING"].includes(appState.taskStatus)) {
+  if (workflowState === "generating" || appState.currentTaskId) {
     statuses.audio = statuses.audio === "pending" ? "done" : statuses.audio;
     statuses.asr = statuses.asr === "pending" ? "done" : statuses.asr;
     statuses.role = statuses.role === "pending" ? "done" : statuses.role;
@@ -1715,14 +1809,11 @@ function singlePrimaryAction(action) {
 }
 
 function doctorDisplayState() {
-  const flowFailed = appState.taskStatus === "FAILED" || Boolean(appState.asrLastError || appState.asrChunkLastError);
-  const exported = appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported";
-  const approved = isApprovedForExport();
-  const hasFields = Boolean(appState.currentRecordFields);
+  const state = currentWorkflowState();
   const inputStatus = appState.currentAudioId ? "音频上传" : appState.currentInputText ? "文本导入" : "未上传";
-  if (flowFailed) {
+  if (state === "failed") {
     return {
-      key: "transcription_failed",
+      key: "failed",
       title: "智能转写失败",
       taskHint: "任务失败 · 音频上传",
       reviewLabel: "智能转写失败",
@@ -1730,7 +1821,7 @@ function doctorDisplayState() {
       inputStatus: "音频上传",
     };
   }
-  if (exported) {
+  if (state === "exported") {
     return {
       key: "exported",
       title: "导出已完成",
@@ -1740,7 +1831,7 @@ function doctorDisplayState() {
       inputStatus,
     };
   }
-  if (approved) {
+  if (state === "approved") {
     return {
       key: "approved",
       title: "病历审核已完成",
@@ -1750,7 +1841,7 @@ function doctorDisplayState() {
       inputStatus,
     };
   }
-  if (hasFields && appState.taskStatus === "reviewed") {
+  if (state === "pending_review") {
     return {
       key: "pending_review",
       title: "等待医生审核",
@@ -1760,7 +1851,7 @@ function doctorDisplayState() {
       inputStatus,
     };
   }
-  if (hasFields) {
+  if (state === "draft_generated") {
     return {
       key: "draft_generated",
       title: "病历草稿已生成，可编辑",
@@ -1770,13 +1861,22 @@ function doctorDisplayState() {
       inputStatus,
     };
   }
+  const labels = {
+    select_encounter: "选择今日就诊",
+    capture_input: "等待输入",
+    recording: "正在录音",
+    transcribing: "智能转写中",
+    transcribed: "转写已完成",
+    generating: "病历生成中",
+    role_review: "说话人身份需要确认",
+  };
   return {
-    key: "input",
-    title: STATUS_LABELS[appState.taskStatus] || "等待输入",
+    key: state,
+    title: labels[state] || STATUS_LABELS[appState.taskStatus] || "等待输入",
     taskHint: appState.currentTaskId
-      ? `${STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "任务已创建"} · ${appState.currentAudioId ? "音频生成" : "文本生成"}`
-      : "等待输入",
-    reviewLabel: STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入",
+      ? `${labels[state] || STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "任务已创建"} · ${appState.currentAudioId ? "音频生成" : "文本生成"}`
+      : (labels[state] || "等待输入"),
+    reviewLabel: labels[state] || STATUS_LABELS[appState.taskStatus] || appState.taskStatus || "等待输入",
     dataStatus: appState.currentAsrResult ? "转写已完成" : "等待输入",
     inputStatus: appState.uploadedFilename
       ? "音频上传"
@@ -1845,7 +1945,7 @@ function nextActionState() {
     };
   }
 
-  if (displayState.key === "transcription_failed") {
+  if (displayState.key === "failed") {
     return {
       tone: "danger",
       title: "流程中断",
@@ -1893,13 +1993,13 @@ function nextActionState() {
     };
   }
 
-  if (appState.taskStatus === "TRANSCRIBING" && !appState.currentAsrResult) {
+  if (displayState.key === "transcribing" && !appState.currentAsrResult) {
     const chunkText = appState.asrChunkTotal
       ? `当前切片 ${appState.asrChunkCurrent || 0}/${appState.asrChunkTotal}`
       : "短音频直接转写";
     return {
       tone: "active",
-      title: "AI处理中",
+      title: "智能转写中",
       detail: `${chunkText}，系统正在完成转写、角色推定、字段抽取和草稿生成。`,
       stages: true,
       actions: [],
@@ -1939,17 +2039,17 @@ function nextActionState() {
     };
   }
 
-  if (appState.currentTaskId && !appState.currentRecordFields) {
+  if (displayState.key === "generating" && appState.currentTaskId && !appState.currentRecordFields) {
     return {
       tone: "active",
-      title: "AI处理中",
+      title: "病历生成中",
       detail: "字段抽取、草稿生成和安全校验会依次完成。",
       stages: true,
       actions: [],
     };
   }
 
-  if (appState.taskStatus === "EXPORTED" || appState.taskStatus === "exported") {
+  if (displayState.key === "exported") {
     return {
       tone: "ready",
       title: "导出已完成",
@@ -1958,7 +2058,7 @@ function nextActionState() {
     };
   }
 
-  if (isApprovedForExport()) {
+  if (displayState.key === "approved") {
     return {
       tone: "ready",
       title: "病历审核已完成，可以导出",
@@ -2046,7 +2146,7 @@ function focusRecordWorkspace() {
 function renderTranscriptionFailurePanel() {
   const panel = $("transcriptionFailurePanel");
   if (!panel) return;
-  const failed = doctorDisplayState().key === "transcription_failed";
+  const failed = doctorDisplayState().key === "failed";
   panel.hidden = !failed;
   if (!failed) return;
   const message = $("transcriptionFailureMessage");
@@ -4886,7 +4986,7 @@ function renderFooter() {
   const footerHints = {
     draft_generated: "病历草稿已生成，可先保存修改；保存后进入医生审核。",
     pending_review: "等待医生审核；完成医生审核后方可导出。",
-    transcription_failed: "流程中断；请先重新转写或改用文本输入。",
+    failed: "流程中断；请先重新转写或改用文本输入。",
     approved: "病历审核已完成；可以导出已审核病历。",
     exported: "病历已导出；可以再次下载已审核病历。",
   };
@@ -4895,7 +4995,7 @@ function renderFooter() {
   actionBar?.classList.toggle("draft-generated", displayState.key === "draft_generated");
   actionBar?.classList.toggle("pending-review", displayState.key === "pending_review");
   actionBar?.classList.toggle("export-ready", ["approved", "exported"].includes(displayState.key));
-  actionBar?.classList.toggle("flow-failed", displayState.key === "transcription_failed");
+  actionBar?.classList.toggle("flow-failed", displayState.key === "failed");
 
   regenerateButton.hidden = false;
   saveButton.hidden = false;
@@ -4932,7 +5032,7 @@ function renderFooter() {
     exportButton.classList.remove("blocked-action");
     exportButton.setAttribute("aria-disabled", exportButton.disabled ? "true" : "false");
     exportButton.dataset.disabledReason = exportButton.disabled ? "暂无可导出的病历任务" : "";
-  } else if (displayState.key === "transcription_failed") {
+  } else if (displayState.key === "failed") {
     regenerateButton.disabled = true;
     saveButton.disabled = true;
     confirmButton.disabled = true;

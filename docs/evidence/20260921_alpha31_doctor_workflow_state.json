@@ -1,0 +1,72 @@
+{
+  "evidence_id": "MRA-ALPHA-3.1-20260921",
+  "wbs": "3.1",
+  "captured_at": "2026-09-21T00:00:00+08:00",
+  "base_main_sha": "fac6de6e1ae84993cbb6ca7eae08fa34345eee4a",
+  "branch": "codex/alpha31-doctor-workflow-state",
+  "research_decision": "adapt",
+  "research_gate": "pass",
+  "design_review_gate": "pass",
+  "before_spike": {
+    "result": "failed",
+    "case": {
+      "task_status": "TRANSCRIBING",
+      "current_stage": "transcribing",
+      "encounter_status": "draft"
+    },
+    "observed": {
+      "display_state": "input",
+      "worklist_state": "",
+      "phase": "待录入",
+      "next_action": "AI处理中"
+    }
+  },
+  "after_contract": {
+    "result": "pass",
+    "states": [
+      "transcribing",
+      "generating",
+      "draft_generated",
+      "pending_review",
+      "approved",
+      "failed"
+    ],
+    "surfaces": [
+      "worklist",
+      "main_state",
+      "five_step_progress",
+      "next_action"
+    ],
+    "public_api_changed": false,
+    "database_schema_changed": false
+  },
+  "verification": {
+    "state_contract": {
+      "passed": 1,
+      "failed": 0
+    },
+    "targeted_regression": {
+      "passed": 34,
+      "failed": 0
+    },
+    "full_pytest": {
+      "passed": 515,
+      "failed": 0,
+      "subtests_passed": 8,
+      "warnings": 1
+    },
+    "frontend_syntax": "pass",
+    "health_ready_smoke": {
+      "health": "ok",
+      "ready": "ready",
+      "profile": "demo/mock regression only"
+    },
+    "diff_check": "pass"
+  },
+  "privacy": {
+    "encounter": "SIM-WORKFLOW-STATE",
+    "contains_real_patient_data": false,
+    "committed_audio_or_database": false
+  },
+  "scope_boundary": "3.1 stops at approved-state integration; full edit/review/export acceptance remains WBS 3.3 and cross-refresh recovery remains Alpha+."
+}

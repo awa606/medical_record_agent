@@ -8,34 +8,34 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-19T15:16:27.110295+08:00`
-- Source hash: `5919d35437c29f404a1cdf0982ccf009e09d2576426d9122ffd5b3cd39400492`
+- Updated at: `2026-09-21T10:53:13.896973+08:00`
+- Source hash: `92483ab1bd442d97e2732191d59d312934e06685b43383a225342e22839090b5`
 - Phase: **Alpha**
-- Repo: `codex/alpha23-role-gate-validation@1b837732952b4b7510f2e08e00e98aecb4862e10`
-- Base main: `bfcd367af163905dec9aad787c814692a830d424`
-- Active PR: [#108](https://github.com/awa606/medical_record_agent/pull/108) · DRAFT
-- Last merged PR: [#106](https://github.com/awa606/medical_record_agent/pull/106) · MERGED · `bfcd367af163905dec9aad787c814692a830d424`
+- Repo: `codex/alpha31-doctor-workflow-state@b114430ffb3419522d60e81f94882d4dbb9342c9`
+- Base main: `fac6de6e1ae84993cbb6ca7eae08fa34345eee4a`
+- Active PR: [#109](https://github.com/awa606/medical_record_agent/pull/109) · DRAFT
+- Last merged PR: [#108](https://github.com/awa606/medical_record_agent/pull/108) · MERGED · `fac6de6e1ae84993cbb6ca7eae08fa34345eee4a`
 - Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 9 | 0 | 0 | 1 | 2 | 4 | 99 |
+| 8 | 0 | 0 | 1 | 2 | 5 | 99 |
 
 ## Current Task
 
-**3.1 · 医生工作台状态流整合 Research** — `BACKLOG / RESEARCH`
+**3.2 · 医学字段、候选诊断与病历草稿整合 Research** — `BACKLOG / RESEARCH`
 
 ## Hardware Gate
 
 | Gate | Status | Classification |
 |---|---|---|
-| G5_technical_risk | BLOCKED | HARDWARE_DEFERRED |
-| G4_mechanical_fit | VERIFY | REAL_HARDWARE_REQUIRED |
 | G1_architecture | PASS | baseline_complete |
-| G3_cost | VERIFY | REFERENCE_ESTIMATE_ONLY |
 | G2_bom_completeness | PASS | reference_baseline |
+| G3_cost | VERIFY | REFERENCE_ESTIMATE_ONLY |
+| G4_mechanical_fit | VERIFY | REAL_HARDWARE_REQUIRED |
+| G5_technical_risk | BLOCKED | HARDWARE_DEFERRED |
 
 **Purchase Decision: DEFERRED**
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: WBS 3.1 医生工作台状态流整合 Research
+- Single next task: WBS 3.2 医学字段、候选诊断与病历草稿整合 Research
 - Parallel waiting task: Hardware Lane：DEFERRED / HARDWARE BLOCKED
 
 ## Manual Actions

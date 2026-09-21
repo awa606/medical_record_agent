@@ -8,24 +8,24 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-19T13:09:29.889542+08:00`
-- Source hash: `35f9d685cb91d1ccfd1192720a49cbd572c174e736757cb15fd566a920eddb45`
+- Updated at: `2026-09-19T15:16:27.110295+08:00`
+- Source hash: `5919d35437c29f404a1cdf0982ccf009e09d2576426d9122ffd5b3cd39400492`
 - Phase: **Alpha**
-- Repo: `codex/alpha22-real-funasr-spike@ff85d16736828358a665f70af1469ad65074e032`
-- Base main: `76d20cd61d13380ed98d8e973adffaa6e91507c9`
-- Active PR: [#106](https://github.com/awa606/medical_record_agent/pull/106) · DRAFT
-- Last merged PR: [#105](https://github.com/awa606/medical_record_agent/pull/105) · MERGED · `76d20cd61d13380ed98d8e973adffaa6e91507c9`
+- Repo: `codex/alpha23-role-gate-validation@1b837732952b4b7510f2e08e00e98aecb4862e10`
+- Base main: `bfcd367af163905dec9aad787c814692a830d424`
+- Active PR: [#108](https://github.com/awa606/medical_record_agent/pull/108) · DRAFT
+- Last merged PR: [#106](https://github.com/awa606/medical_record_agent/pull/106) · MERGED · `bfcd367af163905dec9aad787c814692a830d424`
 - Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 10 | 0 | 0 | 1 | 2 | 3 | 99 |
+| 9 | 0 | 0 | 1 | 2 | 4 | 99 |
 
 ## Current Task
 
-**2.3 · 医患角色判断与质量门禁** — `BACKLOG / RESEARCH`
+**3.1 · 医生工作台状态流整合 Research** — `BACKLOG / RESEARCH`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: WBS 2.3 医患角色判断与质量门禁 Research
+- Single next task: WBS 3.1 医生工作台状态流整合 Research
 - Parallel waiting task: Hardware Lane：DEFERRED / HARDWARE BLOCKED
 
 ## Manual Actions

@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-21T12:27:50+08:00`
-- Source hash: `a5f33cc01f2d2ae2dc0f031df7ece2c9c189017f409e53deaf53433076946699`
+- Updated at: `2026-09-21T15:06:01+08:00`
+- Source hash: `eba39b11aaab4d4c97f3af23749cfe436298910b69c2fc04a4f0b925ff5bb355`
 - Phase: **Alpha**
-- Repo: `codex/alpha32-clinical-semantics@70560b8f14b893b2393b9a9be7eec07968cd7dd0`
+- Repo: `codex/alpha32-clinical-semantics@630bb6712d81919fb9642633426380f0456cbe7c`
 - Base main: `be63a45a5ef952af3f6e8eeb0c7a243225dbf2df`
 - Active PR: [#110](https://github.com/awa606/medical_record_agent/pull/110) · DRAFT
 - Last merged PR: [#109](https://github.com/awa606/medical_record_agent/pull/109) · MERGED · `be63a45a5ef952af3f6e8eeb0c7a243225dbf2df`
-- Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
+- Forecast Alpha Exit: **Software Lane 2026-10-07 (at risk); Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**3.2 · 医学字段、候选诊断与病历草稿整合** — `VERIFY / ALPHA SEMANTIC NEEDS MORE EVIDENCE`
+**3.2 · 医学字段、候选诊断与病历草稿整合** — `VERIFY / REAL DUAL ASR FIELD GROUNDING FAILED`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 完成3.2：用一份通过角色门禁的双人真实ASR输入清除剩余字段冲突
+- Single next task: 修复3.2：真实双人转写上的本地Qwen字段Schema与现病史原文证据对齐
 - Parallel waiting task: Hardware Lane：DEFERRED / HARDWARE BLOCKED
 
 ## Manual Actions

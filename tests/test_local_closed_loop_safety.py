@@ -150,6 +150,61 @@ def test_quoted_question_negation_and_subject_cannot_be_trimmed_away():
         assert ground_fields(fields,source).chief_complaint.status=='conflicting'
 
 
+def test_allergy_polarity_and_certainty_cannot_be_dropped():
+    absent = MedicalRecordFields(
+        allergy_history=MedicalField(
+            value="花生过敏",
+            source_spans=[SourceSpan(text="我没有花生过敏", index=0)],
+        )
+    )
+    uncertain = MedicalRecordFields(
+        allergy_history=MedicalField(
+            value="花生过敏",
+            source_spans=[SourceSpan(text="我不确定是不是花生过敏", index=0)],
+        )
+    )
+
+    assert ground_fields(absent, "我没有花生过敏。").allergy_history.status == "conflicting"
+    assert ground_fields(uncertain, "我不确定是不是花生过敏。").allergy_history.status == "conflicting"
+
+
+def test_real_provider_fields_receive_only_fact_backed_disease_pack_candidates(monkeypatch):
+    from app.services.llm.base import LLMProviderResponse
+    from app.services.llm.llm_record_generator import LLMRecordGenerator
+
+    class Provider:
+        name = "local-test"
+        model = "qwen-test"
+
+        def generate_fields_json(self, conversation_text, *, timeout_seconds):
+            fields = MedicalRecordFields(
+                chief_complaint=MedicalField(
+                    value="发热38.2℃",
+                    source_spans=[SourceSpan(text="发热38.2℃", index=0)],
+                ),
+                present_illness=MedicalField(
+                    value="发热38.2℃，伴咳嗽",
+                    source_spans=[SourceSpan(text="发热38.2℃，伴咳嗽", index=0)],
+                ),
+                candidate_diagnoses=[],
+            )
+            return LLMProviderResponse(
+                provider=self.name,
+                model=self.model,
+                content=fields.model_dump_json(),
+                latency_ms=1,
+            )
+
+    generator = LLMRecordGenerator(provider=Provider(), allow_mock_fallback=False)
+    fields = generator.extract_fields("发热38.2℃，伴咳嗽。")
+
+    assert [item.rule_id for item in fields.candidate_diagnoses] == [
+        "FEVER_RESP_V1_FEVER_WORKUP",
+        "FEVER_RESP_V1_PULMONARY_INFECTION",
+    ]
+    assert all(item.evidence and item.references for item in fields.candidate_diagnoses)
+
+
 def test_live_snapshot_uses_only_fact_segments_and_preserves_negation():
     from app.services.live_clinical import build_live_clinical_snapshot
     result=build_live_clinical_snapshot(session_id='test',stable_segments=[

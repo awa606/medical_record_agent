@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 import re
+from app.services.clinical_facts import extract_clinical_facts
 from app.services.privacy import anonymize_text
 
 
@@ -117,8 +118,14 @@ def _build_record_patch(text: str, evidence_ids: list[str]) -> dict[str, Any]:
             patch["chief_complaint"] = _field("伴".join(complaint), evidence_ids)
     if text:
         patch["present_illness"] = _field(_compact_text(text, 120), evidence_ids)
-    if _contains_any(text, ["过敏"]):
-        patch["allergy_history"] = _field(_extract_sentence(text, "过敏") or "提及过敏史，需医生确认", evidence_ids)
+    allergy_facts = [
+        fact
+        for fact in extract_clinical_facts(text)
+        if fact.type == "allergy" and fact.experiencer == "patient"
+    ]
+    if allergy_facts:
+        allergy_text = "；".join(dict.fromkeys(fact.evidence for fact in allergy_facts if fact.evidence))
+        patch["allergy_history"] = _field(allergy_text, evidence_ids)
     if _contains_any(text, ["既往", "高血压", "糖尿病"]):
         patch["past_history"] = _field(_extract_sentence(text, "既往") or "提及既往史，需医生确认", evidence_ids)
     if _contains_any(text, ["胸痛", "呼吸困难", "气短", "喘"]):

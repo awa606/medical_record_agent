@@ -53,11 +53,11 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
                 errors.append("医生提问不能作为患者事实")
             if re.search(r"忽略.{0,12}(?:规则|指令|提示)|(?:伪造|编造).{0,12}(?:病历|症状|诊断)|绕过.{0,12}(?:审核|审批)|ignore.{0,20}instructions", context, re.I):
                 errors.append("转写中的操作指令不能作为患者事实")
-            for token in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子", "昨天", "既往", "曾经", "已缓解", "已退热", "已停止"):
+            for token in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子", "昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏", "不确定", "不知道"):
                 if token in context and token not in field.value:
-                    errors.append("引用截断了主体、时间或状态限定")
+                    errors.append("引用截断了主体、时间、确定性或状态限定")
             for symptom in ("发热", "发烧", "咳嗽", "胸痛", "气促", "呼吸困难", "过敏", "高血压", "糖尿病"):
-                if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,3}" + symptom, context) and not re.search(r"(?:否认|没有|无|未|不).{0,3}" + symptom, field.value):
+                if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, context) and not re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, field.value):
                     errors.append("引用截断了否定状态")
         evidence = "\n".join(s.text for s in field.source_spans)
         # Require extractive clauses. Negation, subject, time, numbers and units
@@ -66,14 +66,17 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
         if not clauses or any(compact(x) not in compact(evidence) for x in clauses):
             errors.append("字段改写不能由引用逐项支持，需医生修正")
         for symptom in ("发热", "发烧", "咳嗽", "胸痛", "气促", "呼吸困难", "过敏", "高血压", "糖尿病"):
-            if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,3}" + symptom, evidence) and not re.search(r"(?:否认|没有|无|未|不).{0,3}" + symptom, field.value):
+            if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, evidence) and not re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, field.value):
                 errors.append("否定状态与证据矛盾")
         for subject in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子"):
             if subject in evidence and subject not in field.value:
                 errors.append("主体归属丢失，不能写成患者本人事实")
-        for timing in ("昨天", "既往", "曾经", "已缓解", "已退热", "已停止"):
+        for timing in ("昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏"):
             if timing in evidence and timing not in field.value:
                 errors.append("时间或状态限定丢失")
+        for uncertainty in ("不确定", "不知道", "说不清", "可能", "疑似"):
+            if uncertainty in evidence and uncertainty not in field.value:
+                errors.append("确定性限定丢失")
         if errors:
             field.status = "conflicting"
             field.hint = "；".join(dict.fromkeys(errors))

@@ -1,0 +1,140 @@
+{
+  "evidence_id": "MRA-ALPHA-3.2-SEMANTIC-SAFETY-20260921",
+  "measured_at": "2026-09-21T12:05:00+08:00",
+  "base_main_sha": "be63a45a5ef952af3f6e8eeb0c7a243225dbf2df",
+  "dataset": {
+    "path": "data/semantic_safety/clinical_assertion_v1.jsonl",
+    "sha256": "7740b320f06b2f7df801052d6be5522eb4451c7463e79f33863d822c3fdfa82e",
+    "cases": 240,
+    "synthetic": true,
+    "clinical_validation": false
+  },
+  "before": {
+    "dataset": "data\\semantic_safety\\clinical_assertion_v1.jsonl",
+    "case_count": 240,
+    "expected_fact_count": 206,
+    "matched_fact_count": 0,
+    "exact_case_count": 24,
+    "exact_case_rate": 0.1,
+    "dangerous_polarity_flips": 0,
+    "unsupported_fact_count": 30,
+    "missing_fact_count": 160,
+    "question_leakage_count": 26,
+    "experiencer_errors": 46,
+    "temporality_errors": 46,
+    "certainty_errors": 46,
+    "value_unit_errors": 0,
+    "category_counts": {
+      "allergy_absent": 20,
+      "allergy_double_negative": 20,
+      "allergy_family": 20,
+      "allergy_present": 20,
+      "allergy_question": 20,
+      "allergy_question_answer_absent": 20,
+      "allergy_resolved": 20,
+      "allergy_uncertain": 20,
+      "symptom_absent": 10,
+      "symptom_family": 10,
+      "symptom_present": 10,
+      "symptom_question": 10,
+      "symptom_resolved": 10,
+      "symptom_uncertain": 10,
+      "temperature_question": 10,
+      "temperature_value": 10
+    },
+    "failure_counts": {
+      "assertion_error": 12,
+      "certainty_error": 40,
+      "experiencer_error": 40,
+      "missing_fact": 160,
+      "question_leakage": 16,
+      "temporality_error": 40,
+      "unsupported_fact": 20
+    },
+    "safety_gate_pass": false
+  },
+  "after": {
+    "dataset": "data\\semantic_safety\\clinical_assertion_v1.jsonl",
+    "case_count": 240,
+    "expected_fact_count": 206,
+    "matched_fact_count": 206,
+    "exact_case_count": 240,
+    "exact_case_rate": 1.0,
+    "dangerous_polarity_flips": 0,
+    "unsupported_fact_count": 0,
+    "missing_fact_count": 0,
+    "question_leakage_count": 0,
+    "experiencer_errors": 0,
+    "temporality_errors": 0,
+    "certainty_errors": 0,
+    "value_unit_errors": 0,
+    "category_counts": {
+      "allergy_absent": 20,
+      "allergy_double_negative": 20,
+      "allergy_family": 20,
+      "allergy_present": 20,
+      "allergy_question": 20,
+      "allergy_question_answer_absent": 20,
+      "allergy_resolved": 20,
+      "allergy_uncertain": 20,
+      "symptom_absent": 10,
+      "symptom_family": 10,
+      "symptom_present": 10,
+      "symptom_question": 10,
+      "symptom_resolved": 10,
+      "symptom_uncertain": 10,
+      "temperature_question": 10,
+      "temperature_value": 10
+    },
+    "failure_counts": {},
+    "safety_gate_pass": true
+  },
+  "local_llm": {
+    "status": "completed",
+    "provider": "ollama",
+    "model": "qwen3:4b",
+    "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+    "input_sha256": "214ac7f07d47c7a9770684e1f2b910737a94c85b8a7009e388164ca0b83976aa",
+    "elapsed_seconds": 7.187,
+    "mock_fallback": false,
+    "cloud_fallback": false,
+    "allergy_history_value": "没有药物过敏史",
+    "allergy_history_status": "complete",
+    "candidate_diagnosis_rule_ids": [
+      "FEVER_RESP_V1_FEVER_WORKUP",
+      "FEVER_RESP_V1_PULMONARY_INFECTION"
+    ],
+    "candidate_references_complete": true,
+    "field_statuses": {
+      "chief_complaint": "conflicting",
+      "present_illness": "complete",
+      "previous_treatment": "missing",
+      "accompanying_symptoms": "conflicting",
+      "past_history": "missing",
+      "allergy_history": "complete",
+      "physical_exam": "missing"
+    }
+  },
+  "gates": {
+    "semantic_rule_spike": "PASS",
+    "provider_integration": "PASS",
+    "alpha_semantic_gate": "NEEDS_MORE_EVIDENCE",
+    "reason": "Two non-allergy fields remained conflicting and no role-gated multi-speaker frozen set was executed."
+  },
+  "verification": {
+    "dataset_regeneration_sha_match": true,
+    "targeted_tests": "90 passed, 4 subtests passed",
+    "full_tests": "522 passed, 8 subtests passed",
+    "python_compile": "PASS",
+    "frontend_syntax": "PASS",
+    "health_readiness_smoke": "PASS_IN_CI_DEMO_MODE",
+    "git_diff_check": "PASS",
+    "sensitive_file_scan": "PASS"
+  },
+  "boundaries": [
+    "No patient data",
+    "No training",
+    "No treatment or prescription output",
+    "Not enterprise clinical evidence"
+  ]
+}

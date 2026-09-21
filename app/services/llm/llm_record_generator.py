@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from app.schemas import MedicalRecordFields, SafetyCheckResult
-from app.services.clinical_facts import validate_field_evidence
+from app.services.clinical_facts import build_fields_from_clinical_facts, validate_field_evidence
 from app.services.llm.base import LLMProvider, LLMProviderUnavailableError
 from app.services.llm.json_repair import parse_json_object
 from app.services.llm.mock_provider import MockLLMProvider
@@ -110,6 +110,13 @@ class LLMRecordGenerator:
                     strict_text_match=True,
                 )
                 fields = ground_fields(fields, conversation, self.source_segments)
+                # The language model extracts patient fields only. Candidate diagnoses
+                # remain deterministic, disease-pack scoped, evidence backed, and linked
+                # to reviewed clinical references instead of being invented by the model.
+                fact_fields = build_fields_from_clinical_facts(conversation)
+                fields.candidate_diagnoses = (
+                    fact_fields.candidate_diagnoses if fact_fields is not None else []
+                )
                 self.field_validation = {key: {"status": getattr(fields, key).status, "reason": getattr(fields, key).hint,
                     "source_segment_ids": [s.segment_id for s in getattr(fields, key).source_spans]} for key in FIELD_KEYS}
                 self._set_trace(

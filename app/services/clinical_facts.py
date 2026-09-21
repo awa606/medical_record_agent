@@ -8,8 +8,12 @@ from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, S
 from app.services.fever_respiratory_pack import infer_fever_respiratory_candidates
 
 
-FactType = Literal["symptom", "measurement", "duration", "treatment"]
+FactType = Literal["symptom", "measurement", "duration", "treatment", "allergy"]
 Assertion = Literal["present", "absent", "resolved", "uncertain"]
+Experiencer = Literal["patient", "family", "other", "unknown"]
+Temporality = Literal["current", "historical", "resolved", "unknown"]
+Certainty = Literal["confirmed", "uncertain"]
+ReviewStatus = Literal["pending", "confirmed", "rejected"]
 
 
 @dataclass(frozen=True)
@@ -18,9 +22,14 @@ class ClinicalFact:
     type: FactType
     name: str
     assertion: Assertion = "present"
+    experiencer: Experiencer = "patient"
+    temporality: Temporality = "current"
+    certainty: Certainty = "confirmed"
     value: str | None = None
     unit: str | None = None
     evidence: str = ""
+    evidence_span_id: str | None = None
+    review_status: ReviewStatus = "pending"
     source_span: SourceSpan = field(default_factory=lambda: SourceSpan(text=""))
 
 
@@ -51,13 +60,37 @@ _CHINESE_TEMPERATURES = {
 }
 
 _NEGATION_WORDS = ("没有", "没", "无", "不", "否认", "未")
+_UNCERTAINTY_WORDS = ("不确定", "不知道", "说不清", "可能", "疑似", "不清楚")
+_FAMILY_WORDS = ("父亲", "母亲", "家属", "孩子", "儿子", "女儿", "丈夫", "妻子", "爷爷", "奶奶")
+_HISTORICAL_WORDS = ("既往", "曾经", "以前", "过去", "小时候")
+_RESOLVED_WORDS = ("已缓解", "已经好了", "现在好了", "已退热", "已经退了", "已经脱敏", "现在已经脱敏", "不再")
 _COUGH_SYNONYMS = ("咳嗽", "有点咳", "一直咳", "咳了")
-_RESPIRATORY_DANGER_SYMPTOMS = {
+_RESPIRATORY_SYMPTOMS = {
+    "发热": ("发热", "发烧"),
+    "咳嗽": _COUGH_SYNONYMS,
+    "头痛": ("头很痛", "头痛", "头疼", "脑袋疼", "脑袋痛"),
     "胸闷": ("胸闷", "胸口闷", "胸部发闷"),
     "胸痛": ("胸痛", "胸口痛", "胸部疼痛"),
     "气促": ("气促", "气短", "喘不上气", "喘不过气"),
     "呼吸困难": ("呼吸困难", "呼吸费力"),
+    "咽痛": ("咽痛", "嗓子痛", "喉咙痛"),
+    "咳痰": ("咳痰", "有痰"),
+    "寒战": ("寒战", "打寒颤", "发冷发抖"),
+    "乏力": ("乏力", "没力气", "浑身无力"),
 }
+
+_ALLERGY_CONCEPTS = tuple(
+    sorted(
+        {
+            "碘造影剂过敏", "阿司匹林过敏", "磺胺类过敏", "青霉素过敏", "头孢过敏",
+            "食物过敏", "药物过敏", "花生过敏", "海鲜过敏", "鸡蛋过敏", "牛奶过敏",
+            "芒果过敏", "酒精过敏", "乳胶过敏", "尘螨过敏", "花粉过敏", "猫毛过敏",
+            "大豆过敏", "小麦过敏", "芝麻过敏", "核桃过敏", "鱼类过敏", "过敏",
+        },
+        key=len,
+        reverse=True,
+    )
+)
 
 
 def split_clinical_segments(text: str) -> list[str]:
@@ -79,6 +112,9 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
         type_: FactType,
         name: str,
         assertion: Assertion = "present",
+        experiencer: Experiencer = "patient",
+        temporality: Temporality = "current",
+        certainty: Certainty = "confirmed",
         value: str | None = None,
         unit: str | None = None,
         evidence: str,
@@ -91,27 +127,48 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
                 type=type_,
                 name=name,
                 assertion=assertion,
+                experiencer=experiencer,
+                temporality=temporality,
+                certainty=certainty,
                 value=value,
                 unit=unit,
                 evidence=evidence,
-                source_span=SourceSpan(index=index, text=evidence),
+                evidence_span_id=f"transcript-segment-{index + 1}" if index is not None else None,
+                source_span=SourceSpan(
+                    index=index,
+                    text=evidence,
+                ),
             )
         )
         next_id += 1
 
-    if _QUESTION_NEGATIVE_FEVER_RE.search(text):
-        add(type_="symptom", name="发热", assertion="absent", evidence=_QUESTION_NEGATIVE_FEVER_RE.search(text).group(0), index=0)
+    question_negative_fever = _QUESTION_NEGATIVE_FEVER_RE.search(text)
+    if question_negative_fever:
+        add(type_="symptom", name="发热", assertion="absent", evidence=question_negative_fever.group(0), index=0)
+
+    for fact_type, name, match in _answered_question_facts(text):
+        if fact_type == "symptom" and name == "发热" and question_negative_fever:
+            continue
+        add(type_=fact_type, name=name, assertion="absent", evidence=match, index=0)
 
     for index, segment in enumerate(segments):
         normalized = _normalize_text(segment)
         if not normalized:
             continue
 
+        if _is_unanswered_question(normalized):
+            continue
+
+        segment_experiencer = _experiencer(normalized)
+        segment_temporality = _temporality(normalized)
+
         temp = _extract_temperature(normalized)
         if temp:
             add(
                 type_="measurement",
                 name="体温",
+                experiencer=segment_experiencer,
+                temporality=segment_temporality,
                 value=temp,
                 unit="℃",
                 evidence=segment,
@@ -120,30 +177,64 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
 
         duration = _extract_duration(normalized)
         if duration:
-            add(type_="duration", name="病程", value=duration, evidence=segment, index=index)
+            add(type_="duration", name="病程", experiencer=segment_experiencer, temporality=segment_temporality, value=duration, evidence=segment, index=index)
 
         if _contains_treatment(normalized):
-            add(type_="treatment", name="既往处理", value=_treatment_value(normalized), evidence=segment, index=index)
+            add(type_="treatment", name="既往处理", experiencer=segment_experiencer, temporality=segment_temporality, value=_treatment_value(normalized), evidence=segment, index=index)
 
-        question_negative_fever = bool(_QUESTION_NEGATIVE_FEVER_RE.search(normalized))
-        if question_negative_fever or _NEGATIVE_FEVER_RE.search(normalized):
-            add(type_="symptom", name="发热", assertion="absent", evidence=segment, index=index)
-        elif _RESOLVED_FEVER_RE.search(normalized):
-            add(type_="symptom", name="发热", assertion="resolved", evidence=segment, index=index)
-        elif "发热" in normalized or "发烧" in normalized or temp:
-            add(type_="symptom", name="发热", assertion="present", evidence=segment, index=index)
+        for allergy in _allergy_mentions(normalized):
+            assertion, certainty = _semantic_assertion(normalized, allergy)
+            add(
+                type_="allergy",
+                name=allergy,
+                assertion=assertion,
+                experiencer=segment_experiencer,
+                temporality="resolved" if assertion == "resolved" else segment_temporality,
+                certainty=certainty,
+                evidence=segment,
+                index=index,
+            )
 
-        if any(keyword in normalized for keyword in ["头很痛", "头痛", "头疼", "脑袋疼", "脑袋痛"]):
-            add(type_="symptom", name="头痛", assertion="present", evidence=segment, index=index)
+        for symptom_name, keywords in _RESPIRATORY_SYMPTOMS.items():
+            matched_keyword = next((keyword for keyword in keywords if keyword in normalized), None)
+            if not matched_keyword:
+                continue
+            assertion, certainty = _semantic_assertion(normalized, matched_keyword)
+            add(
+                type_="symptom",
+                name=symptom_name,
+                assertion=assertion,
+                experiencer=segment_experiencer,
+                temporality="resolved" if assertion == "resolved" else segment_temporality,
+                certainty=certainty,
+                evidence=segment,
+                index=index,
+            )
 
-        cough_assertion = _symptom_assertion(normalized, _COUGH_SYNONYMS)
-        if cough_assertion:
-            add(type_="symptom", name="咳嗽", assertion=cough_assertion, evidence=segment, index=index)
+        if _RESOLVED_FEVER_RE.search(normalized) and not any(
+            fact.type == "symptom" and fact.name == "发热" and fact.source_span.index == index for fact in facts
+        ):
+            add(
+                type_="symptom",
+                name="发热",
+                assertion="resolved",
+                experiencer=segment_experiencer,
+                temporality="resolved",
+                evidence=segment,
+                index=index,
+            )
 
-        for symptom_name, keywords in _RESPIRATORY_DANGER_SYMPTOMS.items():
-            assertion = _symptom_assertion(normalized, keywords)
-            if assertion:
-                add(type_="symptom", name=symptom_name, assertion=assertion, evidence=segment, index=index)
+        if temp and _temperature_number(temp) >= 37.3 and not any(
+            fact.type == "symptom" and fact.name == "发热" and fact.source_span.index == index for fact in facts
+        ):
+            add(
+                type_="symptom",
+                name="发热",
+                experiencer=segment_experiencer,
+                temporality=segment_temporality,
+                evidence=segment,
+                index=index,
+            )
 
     return _dedupe_facts(facts)
 
@@ -153,12 +244,14 @@ def build_fields_from_clinical_facts(text: str) -> MedicalRecordFields | None:
     if not facts:
         return None
 
-    positive_symptoms = [fact for fact in facts if fact.type == "symptom" and fact.assertion == "present"]
-    absent_symptoms = [fact for fact in facts if fact.type == "symptom" and fact.assertion == "absent"]
-    resolved_symptoms = [fact for fact in facts if fact.type == "symptom" and fact.assertion == "resolved"]
-    measurements = [fact for fact in facts if fact.type == "measurement"]
-    durations = [fact for fact in facts if fact.type == "duration"]
-    treatments = [fact for fact in facts if fact.type == "treatment"]
+    patient_facts = [fact for fact in facts if fact.experiencer == "patient"]
+    positive_symptoms = [fact for fact in patient_facts if fact.type == "symptom" and fact.assertion == "present"]
+    absent_symptoms = [fact for fact in patient_facts if fact.type == "symptom" and fact.assertion == "absent"]
+    resolved_symptoms = [fact for fact in patient_facts if fact.type == "symptom" and fact.assertion == "resolved"]
+    measurements = [fact for fact in patient_facts if fact.type == "measurement"]
+    durations = [fact for fact in patient_facts if fact.type == "duration"]
+    treatments = [fact for fact in patient_facts if fact.type == "treatment"]
+    allergies = [fact for fact in patient_facts if fact.type == "allergy"]
 
     chief = _build_chief_complaint(positive_symptoms, resolved_symptoms, measurements, durations)
     present = _build_present_illness(positive_symptoms, absent_symptoms, resolved_symptoms, measurements, durations, treatments)
@@ -171,9 +264,9 @@ def build_fields_from_clinical_facts(text: str) -> MedicalRecordFields | None:
         previous_treatment=previous_treatment,
         accompanying_symptoms=accompanying,
         past_history=MedicalField.missing_field("既往史尚未提及"),
-        allergy_history=MedicalField.missing_field("过敏史尚未提及"),
+        allergy_history=_build_allergy_history(allergies, facts),
         physical_exam=MedicalField.missing_field("待医生查体补充"),
-        candidate_diagnoses=infer_fever_respiratory_candidates(facts),
+        candidate_diagnoses=infer_fever_respiratory_candidates(patient_facts),
     )
 
 
@@ -228,6 +321,84 @@ def _format_temperature_value(value: str) -> str:
     return value
 
 
+def _temperature_number(value: str) -> float:
+    match = re.search(r"\d+(?:\.\d+)?", value)
+    return float(match.group(0)) if match else 0.0
+
+
+def _is_unanswered_question(text: str) -> bool:
+    question = bool(re.search(r"(?:医生|医师|doctor|问).*(?:有没有|是否|是不是|吗|么|[?？])", text, re.I))
+    patient_answer = bool(
+        re.search(r"(?:患者|病人)(?:回答|说|称)[：:,，\s]*(?:有|没有|没|无|否认|不确定|不知道)", text)
+        or re.search(r"(?:患者|病人)[：:]\s*(?:有|没有|没|无|否认|不确定|不知道)", text)
+    )
+    return question and not patient_answer
+
+
+def _experiencer(text: str) -> Experiencer:
+    if any(word in text for word in _FAMILY_WORDS):
+        return "family"
+    if re.search(r"(?:患者|病人|我|本人)", text):
+        return "patient"
+    return "patient"
+
+
+def _temporality(text: str) -> Temporality:
+    if any(word in text for word in _RESOLVED_WORDS):
+        return "resolved"
+    if any(word in text for word in _HISTORICAL_WORDS) or "昨天" in text:
+        return "historical"
+    return "current"
+
+
+def _semantic_assertion(text: str, keyword: str) -> tuple[Assertion, Certainty]:
+    mention = text.find(keyword)
+    prefix = text[max(0, mention - 12) : mention] if mention >= 0 else text
+    local_prefix = re.split(r"[，,；;]", prefix)[-1]
+    if "不是没有" in local_prefix or "并非没有" in local_prefix:
+        return "present", "confirmed"
+    if any(word in text for word in _UNCERTAINTY_WORDS):
+        return "uncertain", "uncertain"
+    if any(word in text for word in _RESOLVED_WORDS):
+        return "resolved", "confirmed"
+    if any(word in local_prefix for word in _NEGATION_WORDS):
+        return "absent", "confirmed"
+    if re.search(r"(?:患者|病人)(?:回答|说|称)?[：:,，\s]*(?:没有|没|无|否认)(?:。|$)", text):
+        return "absent", "confirmed"
+    return "present", "confirmed"
+
+
+def _allergy_mentions(text: str) -> list[str]:
+    mentions: list[str] = []
+    for concept in _ALLERGY_CONCEPTS:
+        if concept not in text:
+            continue
+        if concept == "过敏" and any(item in text for item in mentions):
+            continue
+        mentions.append(concept)
+    return mentions[:1]
+
+
+def _answered_question_facts(text: str) -> list[tuple[FactType, str, str]]:
+    results: list[tuple[FactType, str, str]] = []
+    concepts: list[tuple[FactType, str, tuple[str, ...]]] = [
+        ("allergy", item, (item,)) for item in _ALLERGY_CONCEPTS if item != "过敏"
+    ]
+    concepts.extend(("symptom", name, aliases) for name, aliases in _RESPIRATORY_SYMPTOMS.items())
+    for fact_type, name, aliases in concepts:
+        for alias in aliases:
+            pattern = re.compile(
+                rf"(?:医生|医师|doctor|问).{{0,18}}(?:有没有|是否).{{0,8}}{re.escape(alias)}"
+                rf".{{0,24}}(?:患者|病人)(?:回答|说|称)?[：:,，\s]*(?:没有|没|无|否认)",
+                re.I,
+            )
+            match = pattern.search(text)
+            if match:
+                results.append((fact_type, name, match.group(0)))
+                break
+    return results
+
+
 def _symptom_assertion(text: str, keywords: tuple[str, ...]) -> Assertion | None:
     found_absent = False
     for keyword in keywords:
@@ -265,14 +436,62 @@ def _treatment_value(text: str) -> str:
 
 def _dedupe_facts(facts: list[ClinicalFact]) -> list[ClinicalFact]:
     deduped: list[ClinicalFact] = []
-    seen: set[tuple[str, str, str, str | None]] = set()
+    seen: set[tuple[str, str, str, str, str, str, str | None]] = set()
     for fact in facts:
-        key = (fact.type, fact.name, fact.assertion, fact.value)
+        key = (
+            fact.type,
+            fact.name,
+            fact.assertion,
+            fact.experiencer,
+            fact.temporality,
+            fact.certainty,
+            fact.value,
+        )
         if key in seen:
             continue
         seen.add(key)
         deduped.append(fact)
     return deduped
+
+
+def _build_allergy_history(
+    allergies: list[ClinicalFact],
+    all_facts: list[ClinicalFact],
+) -> MedicalField:
+    if not allergies:
+        if any(fact.type == "allergy" and fact.experiencer == "family" for fact in all_facts):
+            return MedicalField.missing_field("仅提及家族过敏信息，患者本人过敏史尚未确认")
+        return MedicalField.missing_field("过敏史尚未提及")
+
+    exact_evidence = "；".join(_unique([fact.evidence for fact in allergies if fact.evidence]))
+    uncertain = [fact for fact in allergies if fact.assertion == "uncertain"]
+    resolved = [fact for fact in allergies if fact.assertion == "resolved"]
+    if uncertain:
+        return _field_from_facts(
+            exact_evidence,
+            allergies,
+            confidence=0.55,
+            status="partial",
+            missing_elements=["当前过敏状态"],
+            hint="过敏状态不确定，需医生核实后确认。",
+        )
+    if resolved:
+        return _field_from_facts(
+            exact_evidence,
+            allergies,
+            confidence=0.72,
+            status="partial",
+            missing_elements=["当前过敏风险"],
+            hint="既往过敏或脱敏状态需医生复核。",
+        )
+    return _field_from_facts(
+        exact_evidence,
+        allergies,
+        confidence=0.86,
+        status="complete",
+        missing_elements=[],
+        hint=None,
+    )
 
 
 def _build_chief_complaint(

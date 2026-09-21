@@ -8,24 +8,24 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-21T10:53:13.896973+08:00`
-- Source hash: `92483ab1bd442d97e2732191d59d312934e06685b43383a225342e22839090b5`
+- Updated at: `2026-09-21T12:27:50+08:00`
+- Source hash: `bfb1d4728e51c4f98fea1132f01b38fb8059616d53984e4a21e3ed7afa1b1ff4`
 - Phase: **Alpha**
-- Repo: `codex/alpha31-doctor-workflow-state@b114430ffb3419522d60e81f94882d4dbb9342c9`
-- Base main: `fac6de6e1ae84993cbb6ca7eae08fa34345eee4a`
-- Active PR: [#109](https://github.com/awa606/medical_record_agent/pull/109) · DRAFT
-- Last merged PR: [#108](https://github.com/awa606/medical_record_agent/pull/108) · MERGED · `fac6de6e1ae84993cbb6ca7eae08fa34345eee4a`
+- Repo: `codex/alpha32-clinical-semantics@70560b8f14b893b2393b9a9be7eec07968cd7dd0`
+- Base main: `be63a45a5ef952af3f6e8eeb0c7a243225dbf2df`
+- Active PR: None
+- Last merged PR: [#109](https://github.com/awa606/medical_record_agent/pull/109) · MERGED · `be63a45a5ef952af3f6e8eeb0c7a243225dbf2df`
 - Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 8 | 0 | 0 | 1 | 2 | 5 | 99 |
+| 7 | 0 | 0 | 1 | 3 | 5 | 99 |
 
 ## Current Task
 
-**3.2 · 医学字段、候选诊断与病历草稿整合 Research** — `BACKLOG / RESEARCH`
+**3.2 · 医学字段、候选诊断与病历草稿整合** — `VERIFY / ALPHA SEMANTIC NEEDS MORE EVIDENCE`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: WBS 3.2 医学字段、候选诊断与病历草稿整合 Research
+- Single next task: 完成3.2：用一份通过角色门禁的双人真实ASR输入清除剩余字段冲突
 - Parallel waiting task: Hardware Lane：DEFERRED / HARDWARE BLOCKED
 
 ## Manual Actions

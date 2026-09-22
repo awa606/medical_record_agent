@@ -8,24 +8,24 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-22T06:43:44.155Z`
-- Source hash: `7b225e60f95aa60e7a91e11f7b8926db1e32127a8eda69b2a55b530d931e51bf`
+- Updated at: `2026-09-22T15:09:09+08:00`
+- Source hash: `f211dd9ee2c5b99d0dbc6cff19d372e1b28c1571d7f5ddcea0f62438836bf7bb`
 - Phase: **Alpha**
-- Repo: `codex/alpha32-clinical-semantics@5088ec4b6b6c71eacb8eaedfa6f1d091bd9f438f`
-- Base main: `be63a45a5ef952af3f6e8eeb0c7a243225dbf2df`
-- Active PR: [#110](https://github.com/awa606/medical_record_agent/pull/110) · DRAFT
-- Last merged PR: [#109](https://github.com/awa606/medical_record_agent/pull/109) · MERGED · `be63a45a5ef952af3f6e8eeb0c7a243225dbf2df`
-- Forecast Alpha Exit: **Software Lane 2026-10-07 (at risk); Full M4 TBD / HARDWARE DEPENDENT**
+- Repo: `codex/alpha42-evidence-revision@3b5ae066ba9e51e3ac050649f251642b658a5ffa`
+- Base main: `318202578ae2771ff67719a6ef34c73740460f5c`
+- Active PR: [#111](https://github.com/awa606/medical_record_agent/pull/111) · DRAFT
+- Last merged PR: [#110](https://github.com/awa606/medical_record_agent/pull/110) · MERGED · `318202578ae2771ff67719a6ef34c73740460f5c`
+- Forecast Alpha Exit: **2026-10-07 software lane; full M4 TBD / hardware dependent**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 7 | 0 | 0 | 1 | 2 | 6 | 99 |
+| 6 | 0 | 0 | 1 | 2 | 7 | 99 |
 
 ## Current Task
 
-**4.2 · 病历证据与Revision版本关联** — `BACKLOG / RESEARCH NEXT`
+**3.3 · 医生修改、审核与导出** — `BACKLOG / RESEARCH`
 
 ## Hardware Gate
 
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: WBS 4.2：审计字段—原文证据—知识引用—Revision关联并完成最小Research/Design Gate
-- Parallel waiting task: Hardware Lane：DEFERRED / HARDWARE BLOCKED
+- Single next task: WBS 3.3 Research and minimal whole-page editor contract spike
+- Parallel waiting task: Hardware lane remains DEFERRED / HARDWARE BLOCKED
 
 ## Manual Actions
 

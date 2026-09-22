@@ -1,0 +1,71 @@
+{
+  "schema_version": "mra-alpha42-evidence-v1",
+  "generated_at": "2026-09-22T15:07:00+08:00",
+  "wbs": "4.2",
+  "branch": "codex/alpha42-evidence-revision",
+  "base_main_sha": "318202578ae2771ff67719a6ef34c73740460f5c",
+  "research_decision": "reuse",
+  "research_gate": "pass",
+  "design_review_gate": "pass",
+  "production_code_changed": false,
+  "spike": {
+    "input": "anonymous synthetic fever encounter",
+    "before_revision_no": 2,
+    "after_revision_no": 3,
+    "same_encounter_and_task": true,
+    "changed_field": "present_illness",
+    "preserved_source_span": {
+      "segment_id": "seg-patient-001",
+      "start_time": 12.3,
+      "end_time": 14.7
+    },
+    "preserved_reference_ids": [
+      "NHC_TEST_GUIDELINE_2025"
+    ],
+    "reloaded_from_sqlite": true
+  },
+  "acceptance": {
+    "before_after_versions_traceable": true,
+    "same_business_object_and_source_span_traceable": true,
+    "association_survives_reload": true
+  },
+  "validation": {
+    "targeted_revision_tests": {
+      "passed": 13,
+      "failed": 0
+    },
+    "full_pytest": {
+      "passed": 528,
+      "failed": 0,
+      "warnings": 1,
+      "duration_seconds": 213.16
+    },
+    "doctor_js_syntax": "pass",
+    "git_diff_check": "pass",
+    "health_2626": {
+      "http_status": 200,
+      "status": "ok"
+    },
+    "ready_2626": {
+      "http_status": 200,
+      "mode": "demo",
+      "provider": "mock",
+      "accepted_as_real_model_evidence": false
+    }
+  },
+  "docker": {
+    "active_2626": "medical-record-agent: running (healthy)",
+    "legacy_2666": "medilisten-poc-freeze-2666: stopped/preserved",
+    "legacy_2600": "medical-record-agent-alpha12-20260911: stopped/preserved"
+  },
+  "source_files": {
+    "tests/test_review_revision_transaction.py": "9ee43981c29be340eb75cad8c864b321b6b87e1dc6f5ac186654fec7a8dd9c78",
+    "docs/research/R-4.2-Evidence-Revision-Lineage.md": "f6b29578b846bc62e885bff9763e3ece6302c6cf0806e95ad49ed3beb5e1ff8b",
+    "docs/design_reviews/20260922_alpha42_evidence_revision.md": "5121907407ae8e6f12274e3c2316e53a83bde9daa73f0350efdddf98a7ef1fe0"
+  },
+  "limitations": [
+    "This evidence validates Alpha revision lineage, not the WBS 3.3 whole-page editor.",
+    "Port 2626 readiness is demo/mock and is not evidence of real FunASR plus Qwen readiness.",
+    "Enterprise-grade non-repudiation and long-term archive controls remain out of scope."
+  ]
+}

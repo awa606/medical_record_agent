@@ -245,7 +245,7 @@ class LLMRecordGenerator:
             normalized[key] = {
                 "value": raw_value,
                 "missing": is_missing,
-                "status": value.get("status") or ("missing" if value.get("missing") else "complete"),
+                "status": value.get("status") or ("missing" if is_missing else "complete"),
                 "hint": value.get("hint"),
                 "confidence": value.get("confidence"),
                 "source_spans": source_spans,

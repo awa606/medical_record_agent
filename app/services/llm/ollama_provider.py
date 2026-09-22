@@ -66,8 +66,15 @@ class OllamaLLMProvider:
         latency_ms = int((time.perf_counter() - start) * 1000)
         data = json.loads(raw)
         content = _content_from_ollama_response(data)
+        parsed_content = json.loads(content)
+        fields_payload = (
+            parsed_content.get("fields", parsed_content)
+            if isinstance(parsed_content, dict)
+            else parsed_content
+        )
+        if not isinstance(fields_payload, dict):
+            raise RuntimeError("ollama LLM response fields payload must be an object")
         from app.services.llm.readiness import record_success
-        MedicalRecordFields.model_validate(json.loads(content).get("fields", json.loads(content)))
         if data.get("done_reason") == "length":
             raise RuntimeError("LLM_OUTPUT_TRUNCATED")
         record_success(self.base_url, self.model, digest)

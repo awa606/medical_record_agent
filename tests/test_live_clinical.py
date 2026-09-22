@@ -62,3 +62,33 @@ def test_older_live_clinical_result_cannot_overwrite_newer_snapshot() -> None:
 
     assert merge_snapshot_if_newer(current, older) is current
     assert merge_snapshot_if_newer(current, newer) is newer
+
+
+def test_live_allergy_patch_preserves_negation_and_ignores_family_fact() -> None:
+    absent = build_live_clinical_snapshot(
+        session_id="S-allergy-absent",
+        stable_segments=[
+            normalize_live_segment(
+                {"segment_id": "seg-patient", "role": "患者", "text": "我没有花生过敏。"},
+                sequence=1,
+            )
+        ],
+        version=1,
+        based_on_sequence=1,
+        updated_at="2026-09-21T10:00:00+08:00",
+    )
+    family = build_live_clinical_snapshot(
+        session_id="S-allergy-family",
+        stable_segments=[
+            normalize_live_segment(
+                {"segment_id": "seg-family", "role": "患者", "text": "我父亲有花生过敏。"},
+                sequence=1,
+            )
+        ],
+        version=1,
+        based_on_sequence=1,
+        updated_at="2026-09-21T10:00:00+08:00",
+    )
+
+    assert absent["record_patch"]["allergy_history"]["value"] == "我没有花生过敏"
+    assert "allergy_history" not in family["record_patch"]

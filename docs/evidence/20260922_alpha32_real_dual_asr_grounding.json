@@ -1,0 +1,80 @@
+{
+  "evidence_id": "MRA-ALPHA-3.2-REAL-DUAL-ASR-GROUNDING-20260922",
+  "schema_version": "alpha32-real-dual-evidence-v2",
+  "runtime_git_sha": "7f6cf2db08653fbfdbf9992fdef903b21ee4b924",
+  "delivery_sha": "5088ec4b6b6c71eacb8eaedfa6f1d091bd9f438f",
+  "asr_rerun": false,
+  "local_only_artifacts": [
+    ".artifacts/alpha32-dual-real-fix-20260922-final/",
+    ".artifacts/alpha32-dual-real-fix-20260922-final-excerpt89/"
+  ],
+  "inputs": {
+    "full_audio_sha256": "93291c6894de5bcb7945af4f456e1ab3402fb8a78f60b5c00bfbc7185c8c414d",
+    "full_asr_sha256": "c3c369967b16d23f2020dc80d9e531a5d6221e42222a81b2581a95c3354db886",
+    "excerpt89_audio_sha256": "f702dc5dc8cf8835df5c2b07489eb582e00f709c25b98d98e9889a0513a8b691",
+    "excerpt89_asr_sha256": "0b831c6810ad4bf37ed63926ee28083f2775438cf926705fe2ebb9bc2980fb4f"
+  },
+  "provider": {
+    "type": "local_ollama",
+    "version": "0.34.2",
+    "model": "qwen3:4b",
+    "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+    "mock_or_cloud_fallback": false
+  },
+  "results": {
+    "full_310s": {
+      "pre_review_http": 409,
+      "post_review_role_quality": "passed",
+      "pending_count": 0,
+      "role_reviewed_events": 1,
+      "generation_http": 200,
+      "task_status": "WAITING_DOCTOR_REVIEW",
+      "draft": true,
+      "safety_blocked": false,
+      "candidate_count": 2,
+      "complete_fields": 3,
+      "partial_fields": 1,
+      "missing_fields": 3,
+      "private_task_sha256": "2dbd6785f0ed47ea84b3485277b33e01ffa3e3abb55680a17d183987f420d324",
+      "private_trace_sha256": "06d12477fad74e769a7a2880ec9e4ff55b19b579d84a0c0c2aa0a92a34427bdb",
+      "gate": "DRAFT_CREATED_NEEDS_ACCEPTANCE_REVIEW"
+    },
+    "excerpt_0_89s": {
+      "pre_review_http": 409,
+      "post_review_role_quality": "passed",
+      "pending_count": 0,
+      "role_reviewed_events": 1,
+      "generation_http": 200,
+      "task_status": "WAITING_DOCTOR_REVIEW",
+      "draft": true,
+      "safety_blocked": false,
+      "candidate_count": 2,
+      "complete_fields": 2,
+      "partial_fields": 2,
+      "missing_fields": 3,
+      "private_task_sha256": "1de3d25eac0c03167a04b86df1ff6100581c4e7768e0d2485c87dfc67b56863c",
+      "private_trace_sha256": "975ee022d8484ba41d926fe3f06b1a892db9b5d33050a49fd290572592084bb8",
+      "gate": "DRAFT_CREATED_NEEDS_ACCEPTANCE_REVIEW"
+    }
+  },
+  "safety_behavior": {
+    "unsupported_paraphrases_promoted_to_patient_facts": 0,
+    "doctor_questions_promoted_to_patient_facts": 0,
+    "ambiguous_spans_promoted_to_patient_facts": 0,
+    "unsupported_fields_are_marked_missing": true,
+    "candidate_diagnoses_require_doctor_review": true
+  },
+  "verification": {
+    "targeted": "73 passed",
+    "full_pytest": "527 passed",
+    "frontend_syntax": "PASS",
+    "health_smoke": "PASS",
+    "readiness_smoke": "PASS",
+    "git_diff_check": "PASS",
+    "new_sensitive_binary_files": 0
+  },
+  "wbs_3_2": "ACCEPTANCE_EVIDENCE_COMPLETE",
+  "v10": "PASS",
+  "t09_unchanged": true,
+  "clinical_validity_claim": false
+}

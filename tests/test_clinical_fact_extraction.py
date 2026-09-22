@@ -139,6 +139,48 @@ class ClinicalFactExtractionTests(unittest.TestCase):
             self.assertTrue(field.source_spans)
             self.assertTrue(field.fact_ids)
 
+    def test_allergy_fact_preserves_assertion_subject_time_and_evidence_identity(self):
+        absent = extract_clinical_facts("患者说我没有花生过敏。")
+        family = extract_clinical_facts("患者说我父亲有花生过敏。")
+        resolved = extract_clinical_facts("患者说我以前有花生过敏，现在已经脱敏了。")
+
+        self.assertTrue(
+            any(
+                fact.type == "allergy"
+                and fact.name == "花生过敏"
+                and fact.assertion == "absent"
+                and fact.experiencer == "patient"
+                and fact.evidence_span_id
+                for fact in absent
+            )
+        )
+        self.assertTrue(any(fact.experiencer == "family" for fact in family))
+        self.assertTrue(
+            any(fact.assertion == "resolved" and fact.temporality == "resolved" for fact in resolved)
+        )
+
+    def test_allergy_question_is_not_patient_fact_and_answered_no_is_absent(self):
+        question = extract_clinical_facts("医生问患者有没有花生过敏？")
+        answered = extract_clinical_facts("医生问是否花生过敏，患者回答没有。")
+
+        self.assertFalse(any(fact.type == "allergy" for fact in question))
+        self.assertTrue(
+            any(fact.type == "allergy" and fact.assertion == "absent" for fact in answered)
+        )
+
+    def test_uncertain_allergy_never_becomes_positive_history(self):
+        fields = MockLLM().extract_fields("患者说我不确定是不是花生过敏。")
+
+        self.assertEqual(fields.allergy_history.status, "partial")
+        self.assertIn("不确定", fields.allergy_history.value)
+        self.assertNotEqual(fields.allergy_history.value, "花生过敏")
+
+    def test_family_allergy_does_not_populate_patient_allergy_history(self):
+        fields = MockLLM().extract_fields("患者说我父亲有花生过敏。")
+
+        self.assertTrue(fields.allergy_history.missing)
+        self.assertIn("患者本人", fields.allergy_history.hint)
+
 
 class ClinicalFactFormalGenerationTests(unittest.TestCase):
     def setUp(self):

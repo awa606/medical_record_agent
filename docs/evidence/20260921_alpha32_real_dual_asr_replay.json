@@ -1,0 +1,39 @@
+{
+  "evidence_id": "MRA-ALPHA-3.2-REAL-DUAL-ASR-REPLAY-20260921",
+  "schema_version": "alpha32-real-dual-evidence-v1",
+  "git_baseline": "984f97dccf6aa30562bf00504b02d0337b437c32",
+  "asr_rerun": false,
+  "local_only_artifacts": ".artifacts/alpha32-dual-real-20260921_143838/",
+  "inputs": {
+    "prior_60s_audio_sha256": "e0d16a3192b99ee99c74fc730facd22338cd4da2a3bb28da980d6d99375f74a4",
+    "prior_60s_asr_sha256": "d7425b09008d846fc892c8bac9210d4122c4b71af8c25b83f65bc69a2fb9c271",
+    "full_audio_sha256": "93291c6894de5bcb7945af4f456e1ab3402fb8a78f60b5c00bfbc7185c8c414d",
+    "full_asr_sha256": "c3c369967b16d23f2020dc80d9e531a5d6221e42222a81b2581a95c3354db886",
+    "excerpt89_audio_sha256": "f702dc5dc8cf8835df5c2b07489eb582e00f709c25b98d98e9889a0513a8b691",
+    "excerpt89_asr_sha256": "0b831c6810ad4bf37ed63926ee28083f2775438cf926705fe2ebb9bc2980fb4f"
+  },
+  "provider": {
+    "type": "local_ollama",
+    "version": "0.34.2",
+    "model": "qwen3:4b",
+    "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+    "mock_or_cloud_fallback": false
+  },
+  "attempts": [
+    {"id": "prior_120_180", "pre_review_http": 409, "post_review_role_quality": "passed", "role_reviewed_events": 1, "task_status": "WAITING_DOCTOR_REVIEW", "draft": true, "complete_fields": 3, "candidate_count": 0, "core_completeness": 0.4, "gate": "PARTIAL_INCOMPLETE"},
+    {"id": "full_310s", "pre_review_http": 409, "post_review_role_quality": "passed", "role_reviewed_events": 1, "task_status": "FAILED", "draft": false, "failure_layer": "LLM_FIELD_SCHEMA", "gate": "FAIL"},
+    {"id": "excerpt_0_89s", "pre_review_http": 409, "post_review_role_quality": "passed", "role_reviewed_events": 1, "task_status": "WAITING_DOCTOR_REVIEW", "draft": true, "candidate_count": 2, "conflicting_fields": ["present_illness"], "safety_blocked": true, "gate": "PARTIAL_FIELD_CONFLICT"},
+    {"id": "excerpt_0_60s", "pre_review_http": 409, "post_review_role_quality": "passed", "role_reviewed_events": 1, "task_status": "WAITING_DOCTOR_REVIEW", "draft": true, "candidate_count": 2, "conflicting_fields": ["present_illness"], "safety_blocked": true, "gate": "PARTIAL_FIELD_CONFLICT"},
+    {"id": "excerpt_0_30s", "pre_review_http": 409, "post_review_role_quality": "blocked", "draft": false, "gate": "ROLE_BLOCKED"}
+  ],
+  "container_cleanup": {
+    "stopped": ["medilisten-poc-freeze-2666", "medical-record-agent-alpha12-20260911"],
+    "preserved_running": ["medical-record-agent:2626"],
+    "deleted_containers_images_volumes_or_evidence": false
+  },
+  "verification": {"targeted": "67 passed, 4 subtests passed", "full_pytest": "522 passed, 8 subtests passed", "frontend_syntax": "PASS", "git_diff_check": "PASS"},
+  "wbs_3_2": "VERIFY",
+  "v10": "NEEDS MORE EVIDENCE",
+  "single_failure_layer": "Longer dual-speaker Qwen field extraction and source grounding",
+  "clinical_validity_claim": false
+}

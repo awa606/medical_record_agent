@@ -2,13 +2,132 @@
 from __future__ import annotations
 
 import re
-from app.schemas import MedicalRecordFields
+from typing import Any
+
+from app.schemas import MedicalRecordFields, SourceSpan
 from app.services.clinical_facts import split_clinical_segments
 
 FIELD_KEYS = ("chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms", "past_history", "allergy_history", "physical_exam")
 
 def compact(text: str) -> str:
     return re.sub(r"[\s，,。；;、：:！？!?]", "", text).replace("发烧", "发热").replace("摄氏度", "℃")
+
+
+def reconcile_extractive_fields(
+    fields: MedicalRecordFields,
+    trusted_segments: list[dict[str, Any]] | None,
+) -> tuple[MedicalRecordFields, dict[str, dict[str, Any]]]:
+    """Replace model paraphrases with uniquely matched, role-safe source quotes.
+
+    The language model is still responsible for selecting the fields and spans.
+    This function only canonicalizes a selected span when it maps to exactly one
+    reviewed source segment. Unsupported spans are removed from the field value
+    instead of being allowed to survive as a paraphrase. The normal grounding
+    gate runs afterwards and remains authoritative.
+    """
+
+    if not trusted_segments:
+        return fields, {}
+
+    repairs: dict[str, dict[str, Any]] = {}
+    for key in FIELD_KEYS:
+        field = getattr(fields, key)
+        if not field.value or not field.source_spans:
+            continue
+
+        canonical: list[SourceSpan] = []
+        rejected: list[str] = []
+        seen: set[tuple[str | None, str]] = set()
+        for span in field.source_spans:
+            span_text = str(span.text or "").strip()
+            if not span_text:
+                rejected.append("empty_span")
+                continue
+
+            matches = [
+                segment
+                for segment in trusted_segments
+                if span_text and compact(span_text) in compact(str(segment.get("text") or ""))
+            ]
+            if span.segment_id:
+                matches = [
+                    segment for segment in matches
+                    if str(segment.get("segment_id") or "") == span.segment_id
+                ]
+            if len(matches) != 1:
+                rejected.append("ambiguous_or_missing_segment")
+                continue
+
+            segment = matches[0]
+            role = str(segment.get("role") or "")
+            text = str(segment.get("text") or "").strip()
+            is_doctor_question = role in {"医生", "doctor"} and bool(
+                re.search(r"吗|么|有没有|是否|[?？]", text)
+            )
+            if role not in {"患者", "patient"} and not (
+                key == "physical_exam" and role in {"医生", "doctor"} and not is_doctor_question
+            ):
+                rejected.append("role_not_allowed")
+                continue
+
+            segment_id = str(segment.get("segment_id") or "") or None
+            dedupe_key = (segment_id, text)
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            canonical.append(
+                SourceSpan(
+                    text=text,
+                    segment_id=segment_id,
+                    index=None,
+                    start_time=segment.get("start_time"),
+                    end_time=segment.get("end_time"),
+                )
+            )
+
+        if not canonical:
+            # No model-selected quote can be tied to one reviewed patient
+            # segment. Treat the field as absent from the trusted extraction
+            # rather than carrying a paraphrase into the medical record. The
+            # original ASR remains available to the doctor for manual review.
+            field.value = None
+            field.source_spans = []
+            field.missing = True
+            field.status = "missing"
+            field.confidence = None
+            field.hint = "模型提取内容缺少唯一、角色可信的原文片段，请医生从转写补录。"
+            if "缺少可信患者原文证据" not in field.missing_elements:
+                field.missing_elements.append("缺少可信患者原文证据")
+            repairs[key] = {
+                "strategy": "discard_unsupported_field",
+                "original_value_changed": True,
+                "accepted_span_count": 0,
+                "rejected_span_count": len(rejected),
+                "rejected_reasons": sorted(set(rejected)),
+            }
+            continue
+
+        original_value = field.value
+        field.value = "；".join(span.text.rstrip("，,。；; ") for span in canonical)
+        field.source_spans = canonical
+        field.missing = False
+        if rejected:
+            field.status = "partial"
+            if "需医生复核被移除的模型改写" not in field.missing_elements:
+                field.missing_elements.append("需医生复核被移除的模型改写")
+            field.hint = "已移除无法唯一定位或角色不允许的模型引用，请医生复核。"
+        elif field.status == "conflicting":
+            field.status = "complete"
+            field.hint = None
+        repairs[key] = {
+            "strategy": "canonical_source_quotes",
+            "original_value_changed": compact(original_value) != compact(field.value),
+            "accepted_span_count": len(canonical),
+            "rejected_span_count": len(rejected),
+            "rejected_reasons": sorted(set(rejected)),
+        }
+
+    return fields, repairs
 
 def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: list[dict] | None = None) -> MedicalRecordFields:
     segments = split_clinical_segments(source)
@@ -53,11 +172,11 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
                 errors.append("医生提问不能作为患者事实")
             if re.search(r"忽略.{0,12}(?:规则|指令|提示)|(?:伪造|编造).{0,12}(?:病历|症状|诊断)|绕过.{0,12}(?:审核|审批)|ignore.{0,20}instructions", context, re.I):
                 errors.append("转写中的操作指令不能作为患者事实")
-            for token in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子", "昨天", "既往", "曾经", "已缓解", "已退热", "已停止"):
+            for token in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子", "昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏", "不确定", "不知道"):
                 if token in context and token not in field.value:
-                    errors.append("引用截断了主体、时间或状态限定")
+                    errors.append("引用截断了主体、时间、确定性或状态限定")
             for symptom in ("发热", "发烧", "咳嗽", "胸痛", "气促", "呼吸困难", "过敏", "高血压", "糖尿病"):
-                if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,3}" + symptom, context) and not re.search(r"(?:否认|没有|无|未|不).{0,3}" + symptom, field.value):
+                if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, context) and not re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, field.value):
                     errors.append("引用截断了否定状态")
         evidence = "\n".join(s.text for s in field.source_spans)
         # Require extractive clauses. Negation, subject, time, numbers and units
@@ -66,14 +185,17 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
         if not clauses or any(compact(x) not in compact(evidence) for x in clauses):
             errors.append("字段改写不能由引用逐项支持，需医生修正")
         for symptom in ("发热", "发烧", "咳嗽", "胸痛", "气促", "呼吸困难", "过敏", "高血压", "糖尿病"):
-            if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,3}" + symptom, evidence) and not re.search(r"(?:否认|没有|无|未|不).{0,3}" + symptom, field.value):
+            if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, evidence) and not re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, field.value):
                 errors.append("否定状态与证据矛盾")
         for subject in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子"):
             if subject in evidence and subject not in field.value:
                 errors.append("主体归属丢失，不能写成患者本人事实")
-        for timing in ("昨天", "既往", "曾经", "已缓解", "已退热", "已停止"):
+        for timing in ("昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏"):
             if timing in evidence and timing not in field.value:
                 errors.append("时间或状态限定丢失")
+        for uncertainty in ("不确定", "不知道", "说不清", "可能", "疑似"):
+            if uncertainty in evidence and uncertainty not in field.value:
+                errors.append("确定性限定丢失")
         if errors:
             field.status = "conflicting"
             field.hint = "；".join(dict.fromkeys(errors))

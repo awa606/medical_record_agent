@@ -135,12 +135,13 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
         field = getattr(fields, key)
         field.confirmed_by_doctor = False
         field.doctor_review_status = "pending"
+        manual_doctor_edit = str(field.doctor_review_note or "").startswith("manual_doctor_edit_v1:")
         if not field.value:
             continue
         errors = []
         if field.missing:
             errors.append("非空字段不能标记为未提及")
-        if not field.source_spans:
+        if not field.source_spans and not manual_doctor_edit:
             errors.append("缺少转写证据")
         for span in field.source_spans:
             matching = [s for s in segments if span.text and compact(span.text) in compact(s)]
@@ -179,6 +180,14 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
                 if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, context) and not re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, field.value):
                     errors.append("引用截断了否定状态")
         evidence = "\n".join(s.text for s in field.source_spans)
+        if manual_doctor_edit:
+            if errors:
+                field.status = "conflicting"
+                field.hint = "；".join(dict.fromkeys(errors))
+            else:
+                field.status = "partial"
+                field.hint = "医生手工修改；原始转写证据仅供对照，需在当前Revision中明确审核。"
+            continue
         # Require extractive clauses. Negation, subject, time, numbers and units
         # therefore survive unchanged; confidence cannot override this gate.
         clauses = [x for x in re.split(r"[，,。；;\n]+", field.value) if x.strip()]

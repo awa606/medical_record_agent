@@ -245,6 +245,8 @@ FIELD_LABELS = {
     "physical_exam": "查体",
 }
 
+MANUAL_DOCTOR_EDIT_NOTE = "manual_doctor_edit_v1: 医生手工修改；原始转写证据仅供对照，不作为该修改的自动证据。"
+
 
 def _field_items(fields: MedicalRecordFields) -> list[tuple[str, str, Any]]:
     return [
@@ -281,6 +283,24 @@ def _reset_review_state(fields: MedicalRecordFields) -> MedicalRecordFields:
         diagnosis.high_risk_confirmed_by_doctor = False
         diagnosis.doctor_review_note = None
     return fields
+
+
+def _mark_manual_doctor_edits(
+    fields: MedicalRecordFields,
+    previous_fields: MedicalRecordFields | None,
+) -> list[str]:
+    if previous_fields is None:
+        return []
+    changed: list[str] = []
+    for key, _label, field in _field_items(fields):
+        previous = getattr(previous_fields, key)
+        current_value = str(field.value or "").strip()
+        previous_value = str(previous.value or "").strip()
+        if current_value == previous_value and bool(field.missing) == bool(previous.missing):
+            continue
+        field.doctor_review_note = MANUAL_DOCTOR_EDIT_NOTE
+        changed.append(key)
+    return changed
 
 
 def _current_revision_or_error(task: dict[str, Any]) -> dict[str, Any]:
@@ -518,7 +538,12 @@ def review_task(
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
 
+    try:
+        previous_fields = MedicalRecordFields.model_validate(result.get("fields") or {})
+    except ValidationError:
+        previous_fields = None
     fields = _reset_review_state(review_payload.fields)
+    manual_edited_fields = _mark_manual_doctor_edits(fields, previous_fields)
     if os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}:
         from app.services.field_grounding import ground_fields
         from app.services.privacy import anonymize_text
@@ -538,6 +563,8 @@ def review_task(
         result["llm_trace"].update(review_trace)
     result["reviewed"] = True
     result["approved"] = False
+    if manual_edited_fields:
+        result["llm_trace"]["manual_edited_fields"] = manual_edited_fields
 
     actor = current_user_from_request(request)
     try:
@@ -552,7 +579,7 @@ def review_task(
             source="doctor_review",
             workflow_status="waiting_review",
             event_type="doctor_review_saved",
-            event_detail={"task_id": task_id, **_actor_detail(request)},
+            event_detail={"task_id": task_id, "manual_edited_fields": manual_edited_fields, **_actor_detail(request)},
         )
     except StaleRecordRevisionError as exc:
         raise HTTPException(

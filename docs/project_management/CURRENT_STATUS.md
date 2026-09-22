@@ -9,7 +9,7 @@
 > **DO NOT EDIT MANUALLY**
 
 - Updated at: `2026-09-22T06:43:44.155Z`
-- Source hash: `27f564c3d93e6ee3a51611eace0a044b393bb5dec42db52d7b3cc5262956eb63`
+- Source hash: `7b225e60f95aa60e7a91e11f7b8926db1e32127a8eda69b2a55b530d931e51bf`
 - Phase: **Alpha**
 - Repo: `codex/alpha32-clinical-semantics@5088ec4b6b6c71eacb8eaedfa6f1d091bd9f438f`
 - Base main: `be63a45a5ef952af3f6e8eeb0c7a243225dbf2df`

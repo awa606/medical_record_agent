@@ -2,13 +2,132 @@
 from __future__ import annotations
 
 import re
-from app.schemas import MedicalRecordFields
+from typing import Any
+
+from app.schemas import MedicalRecordFields, SourceSpan
 from app.services.clinical_facts import split_clinical_segments
 
 FIELD_KEYS = ("chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms", "past_history", "allergy_history", "physical_exam")
 
 def compact(text: str) -> str:
     return re.sub(r"[\s，,。；;、：:！？!?]", "", text).replace("发烧", "发热").replace("摄氏度", "℃")
+
+
+def reconcile_extractive_fields(
+    fields: MedicalRecordFields,
+    trusted_segments: list[dict[str, Any]] | None,
+) -> tuple[MedicalRecordFields, dict[str, dict[str, Any]]]:
+    """Replace model paraphrases with uniquely matched, role-safe source quotes.
+
+    The language model is still responsible for selecting the fields and spans.
+    This function only canonicalizes a selected span when it maps to exactly one
+    reviewed source segment. Unsupported spans are removed from the field value
+    instead of being allowed to survive as a paraphrase. The normal grounding
+    gate runs afterwards and remains authoritative.
+    """
+
+    if not trusted_segments:
+        return fields, {}
+
+    repairs: dict[str, dict[str, Any]] = {}
+    for key in FIELD_KEYS:
+        field = getattr(fields, key)
+        if not field.value or not field.source_spans:
+            continue
+
+        canonical: list[SourceSpan] = []
+        rejected: list[str] = []
+        seen: set[tuple[str | None, str]] = set()
+        for span in field.source_spans:
+            span_text = str(span.text or "").strip()
+            if not span_text:
+                rejected.append("empty_span")
+                continue
+
+            matches = [
+                segment
+                for segment in trusted_segments
+                if span_text and compact(span_text) in compact(str(segment.get("text") or ""))
+            ]
+            if span.segment_id:
+                matches = [
+                    segment for segment in matches
+                    if str(segment.get("segment_id") or "") == span.segment_id
+                ]
+            if len(matches) != 1:
+                rejected.append("ambiguous_or_missing_segment")
+                continue
+
+            segment = matches[0]
+            role = str(segment.get("role") or "")
+            text = str(segment.get("text") or "").strip()
+            is_doctor_question = role in {"医生", "doctor"} and bool(
+                re.search(r"吗|么|有没有|是否|[?？]", text)
+            )
+            if role not in {"患者", "patient"} and not (
+                key == "physical_exam" and role in {"医生", "doctor"} and not is_doctor_question
+            ):
+                rejected.append("role_not_allowed")
+                continue
+
+            segment_id = str(segment.get("segment_id") or "") or None
+            dedupe_key = (segment_id, text)
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            canonical.append(
+                SourceSpan(
+                    text=text,
+                    segment_id=segment_id,
+                    index=None,
+                    start_time=segment.get("start_time"),
+                    end_time=segment.get("end_time"),
+                )
+            )
+
+        if not canonical:
+            # No model-selected quote can be tied to one reviewed patient
+            # segment. Treat the field as absent from the trusted extraction
+            # rather than carrying a paraphrase into the medical record. The
+            # original ASR remains available to the doctor for manual review.
+            field.value = None
+            field.source_spans = []
+            field.missing = True
+            field.status = "missing"
+            field.confidence = None
+            field.hint = "模型提取内容缺少唯一、角色可信的原文片段，请医生从转写补录。"
+            if "缺少可信患者原文证据" not in field.missing_elements:
+                field.missing_elements.append("缺少可信患者原文证据")
+            repairs[key] = {
+                "strategy": "discard_unsupported_field",
+                "original_value_changed": True,
+                "accepted_span_count": 0,
+                "rejected_span_count": len(rejected),
+                "rejected_reasons": sorted(set(rejected)),
+            }
+            continue
+
+        original_value = field.value
+        field.value = "；".join(span.text.rstrip("，,。；; ") for span in canonical)
+        field.source_spans = canonical
+        field.missing = False
+        if rejected:
+            field.status = "partial"
+            if "需医生复核被移除的模型改写" not in field.missing_elements:
+                field.missing_elements.append("需医生复核被移除的模型改写")
+            field.hint = "已移除无法唯一定位或角色不允许的模型引用，请医生复核。"
+        elif field.status == "conflicting":
+            field.status = "complete"
+            field.hint = None
+        repairs[key] = {
+            "strategy": "canonical_source_quotes",
+            "original_value_changed": compact(original_value) != compact(field.value),
+            "accepted_span_count": len(canonical),
+            "rejected_span_count": len(rejected),
+            "rejected_reasons": sorted(set(rejected)),
+        }
+
+    return fields, repairs
 
 def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: list[dict] | None = None) -> MedicalRecordFields:
     segments = split_clinical_segments(source)

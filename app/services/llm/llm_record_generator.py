@@ -13,7 +13,7 @@ from app.services.llm.json_repair import parse_json_object
 from app.services.llm.mock_provider import MockLLMProvider
 from app.services.mock_llm import MockLLM
 from app.services.record_rules import render_draft, check_draft_safety
-from app.services.field_grounding import ground_fields
+from app.services.field_grounding import ground_fields, reconcile_extractive_fields
 from app.services.privacy import anonymize_text
 
 
@@ -76,6 +76,8 @@ class LLMRecordGenerator:
         self.last_trace = self._default_trace()
         self.source_segments: list[dict] | None = None
         self.field_validation: dict[str, Any] | None = None
+        self.field_repairs: dict[str, dict[str, Any]] = {}
+        self.payload_repairs: dict[str, str] = {}
 
     def extract_fields(self, conversation: str) -> MedicalRecordFields:
         conversation = anonymize_text(conversation)
@@ -104,12 +106,21 @@ class LLMRecordGenerator:
                     conversation,
                     timeout_seconds=self.timeout_seconds,
                 )
+                safe_source_segments = [
+                    {**segment, "text": anonymize_text(str(segment.get("text") or ""))}
+                    for segment in (self.source_segments or [])
+                ]
+                parsed = self._fields_from_response(response.content)
+                fields, self.field_repairs = reconcile_extractive_fields(
+                    parsed,
+                    safe_source_segments,
+                )
                 fields = validate_field_evidence(
-                    self._fields_from_response(response.content),
+                    fields,
                     conversation,
                     strict_text_match=True,
                 )
-                fields = ground_fields(fields, conversation, self.source_segments)
+                fields = ground_fields(fields, conversation, safe_source_segments)
                 # The language model extracts patient fields only. Candidate diagnoses
                 # remain deterministic, disease-pack scoped, evidence backed, and linked
                 # to reviewed clinical references instead of being invented by the model.
@@ -183,6 +194,8 @@ class LLMRecordGenerator:
             trace["fallback"] = any(item.get("fallback", False) for item in self.operation_traces.values())
         trace["model_digest"] = getattr(self.provider, "model_digest", None)
         trace["field_validation"] = self.field_validation
+        trace["field_repairs"] = self.field_repairs
+        trace["payload_repairs"] = self.payload_repairs
         return trace
 
     def _fields_from_response(self, raw_text: str) -> MedicalRecordFields:
@@ -205,6 +218,7 @@ class LLMRecordGenerator:
             raise ValueError(f"LLM fields JSON missing required keys: {', '.join(missing_keys)}")
 
         normalized: dict[str, Any] = {"degraded": bool(payload.get("degraded", False))}
+        self.payload_repairs = {}
         for key in FIELD_KEYS:
             value = payload[key]
             if not isinstance(value, dict):
@@ -214,13 +228,27 @@ class LLMRecordGenerator:
                 raise ValueError(
                     f"LLM field {key} missing required attributes: {', '.join(missing_attrs)}"
                 )
+            raw_value = value.get("value")
+            is_missing = bool(value.get("missing"))
+            source_spans = self._normalize_spans(value.get("source_spans"))
+            if is_missing and (raw_value is not None or source_spans):
+                # JSON Schema cannot express the cross-field invariant. Fail
+                # closed by discarding content that the model itself labelled
+                # as missing; never promote it into a patient fact.
+                raw_value = None
+                source_spans = []
+                self.payload_repairs[key] = "discarded_content_marked_missing"
+            elif raw_value is None and not is_missing:
+                is_missing = True
+                source_spans = []
+                self.payload_repairs[key] = "normalized_null_value_to_missing"
             normalized[key] = {
-                "value": value.get("value"),
-                "missing": bool(value.get("missing")),
+                "value": raw_value,
+                "missing": is_missing,
                 "status": value.get("status") or ("missing" if value.get("missing") else "complete"),
                 "hint": value.get("hint"),
                 "confidence": value.get("confidence"),
-                "source_spans": self._normalize_spans(value.get("source_spans")),
+                "source_spans": source_spans,
                 "missing_elements": self._normalize_string_list(value.get("missing_elements")),
                 "fact_ids": self._normalize_string_list(value.get("fact_ids")),
                 "confirmed_by_doctor": False,

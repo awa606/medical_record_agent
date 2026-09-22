@@ -13,13 +13,15 @@ from fastapi import HTTPException
 from app.agents import MedicalRecordOrchestrator
 from app.api.tasks import ReviewRequest, TaskApprovalRequest, approve_task, export_task, review_task
 from app.db import (
+    create_record_revision_for_task,
     get_active_approval_for_task,
     get_audit_logs,
+    get_record_revision,
     get_task,
     list_approvals_for_task,
     list_record_revisions_for_task,
 )
-from app.schemas import MedicalRecordFields
+from app.schemas import CandidateDiagnosis, ClinicalReference, MedicalRecordFields, SourceSpan
 from tests.approval_helpers import approval_payload_for_fields, review_payload_for_fields
 
 
@@ -152,6 +154,94 @@ class ReviewRevisionTransactionTests(unittest.TestCase):
         with self.assertRaises(HTTPException) as blocked:
             export_task(task_id)
         self.assertEqual(blocked.exception.status_code, 400)
+
+    def test_review_revision_preserves_field_evidence_and_knowledge_references_after_reload(self):
+        task_id, fields = self._approved_task()
+        evidence_span = SourceSpan(
+            text="patient has fever for three days",
+            segment_id="seg-patient-001",
+            index=1,
+            start_time=12.3,
+            end_time=14.7,
+        )
+        fields.chief_complaint = fields.chief_complaint.model_copy(
+            update={"source_spans": [evidence_span]}
+        )
+        fields.candidate_diagnoses = [
+            CandidateDiagnosis(
+                name="fever syndrome under review",
+                evidence=[evidence_span],
+                reason="Patient fever evidence requires doctor confirmation.",
+                references=[
+                    ClinicalReference(
+                        reference_id="NHC_TEST_GUIDELINE_2025",
+                        title="Synthetic guideline reference for revision test",
+                        organization="Synthetic test publisher",
+                        source_type="national_guideline",
+                        version="2025-test",
+                        published_at="2025-01-01",
+                        url="https://example.invalid/guideline",
+                        evidence_scope="Test-only traceability fixture.",
+                        verification_status="source_verified",
+                        clinical_review_status="needs_medical_review",
+                        retrieved_at="2026-09-22",
+                    )
+                ],
+            )
+        ]
+
+        seeded_result = json.loads(get_task(task_id)["result_json"])
+        seeded_result["fields"] = fields.model_dump(mode="json")
+        seeded_revision = create_record_revision_for_task(
+            task_id,
+            seeded_result,
+            source="evidence_lineage_spike",
+            workflow_status="pending_review",
+        )
+
+        edited = MedicalRecordFields.model_validate(seeded_result["fields"])
+        edited.present_illness = edited.present_illness.model_copy(
+            update={
+                "value": "Patient fever history reviewed; evolution remains to be completed.",
+                "missing": False,
+                "status": "partial",
+                "missing_elements": ["symptom evolution"],
+            }
+        )
+        review_task(task_id, self._review_request(task_id, edited))
+
+        task_after = get_task(task_id)
+        assert task_after is not None
+        reviewed_revision = get_record_revision(int(task_after["current_record_revision_id"]))
+        assert reviewed_revision is not None
+        before = json.loads(seeded_revision["result_json"])
+        after = json.loads(reviewed_revision["result_json"])
+        revisions = list_record_revisions_for_task(task_id)
+
+        self.assertEqual(reviewed_revision["encounter_id"], seeded_revision["encounter_id"])
+        self.assertEqual(reviewed_revision["task_id"], seeded_revision["task_id"])
+        self.assertEqual(reviewed_revision["revision_no"], seeded_revision["revision_no"] + 1)
+        self.assertEqual([row["revision_no"] for row in revisions], list(range(1, len(revisions) + 1)))
+        self.assertNotEqual(
+            before["fields"]["present_illness"]["value"],
+            after["fields"]["present_illness"]["value"],
+        )
+        self.assertEqual(
+            after["fields"]["chief_complaint"]["source_spans"],
+            before["fields"]["chief_complaint"]["source_spans"],
+        )
+        self.assertEqual(
+            after["fields"]["candidate_diagnoses"][0]["evidence"],
+            before["fields"]["candidate_diagnoses"][0]["evidence"],
+        )
+        self.assertEqual(
+            after["fields"]["candidate_diagnoses"][0]["references"],
+            before["fields"]["candidate_diagnoses"][0]["references"],
+        )
+        persisted_span = after["fields"]["chief_complaint"]["source_spans"][0]
+        self.assertEqual(persisted_span["segment_id"], "seg-patient-001")
+        self.assertEqual(persisted_span["start_time"], 12.3)
+        self.assertEqual(persisted_span["end_time"], 14.7)
 
     def test_review_rejects_stale_revision_id(self):
         task_id, fields = self._approved_task()

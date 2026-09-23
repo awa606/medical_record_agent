@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-22T15:57:12+08:00`
-- Source hash: `655cbfebfe6ece0ef557ef2fac1cdb0c9fb6263eb7304fc5eb895f71ba4d82d8`
+- Updated at: `2026-09-23T16:25:53+08:00`
+- Source hash: `327a9740486a10fb2cc6f3d3afde8485de024ac4b7a5dcda9200884d2fadef3d`
 - Phase: **Alpha**
-- Repo: `codex/alpha33-doctor-edit-review-export@b3374fd50b71e12f9e7a7eb5e3b410b6953455a4`
-- Base main: `b5cc5369ae9503f28910feca6b1d402add408671`
-- Active PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · DRAFT
-- Last merged PR: [#111](https://github.com/awa606/medical_record_agent/pull/111) · MERGED · `b5cc5369ae9503f28910feca6b1d402add408671`
-- Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
+- Repo: `codex/alpha51-demo-visual-e2e@3879664df7bac69ea60a9275c6dfe5c3abae4c71`
+- Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
+- Active PR: None
+- Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
+- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; visual rework impact pending; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 三条主路径E2E Smoke** — `BACKLOG`
+**5.1 · 三条主路径E2E Smoke（前置界面样稿待重做）** — `BACKLOG`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: WBS 5.1：文本、上传音频、浏览器录音三条完整路径E2E Smoke与首个可恢复冻结候选
-- Parallel waiting task: 1.2目标硬件验证继续DEFERRED，不占用当前软件支线
+- Single next task: 根据用户具体反馈重做医生工作区样稿；视觉认可前不接业务、不冻结
+- Parallel waiting task: 1.2目标硬件验证继续DEFERRED；5.1真实三路径待视觉与业务接入
 
 ## Manual Actions
 
-- 无
+- 指出V1样稿最需修改的2–3处或提供认可的参考设计
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

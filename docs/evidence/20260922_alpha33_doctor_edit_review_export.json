@@ -1,0 +1,57 @@
+{
+  "schema_version": "mra-alpha33-evidence-v1",
+  "recorded_at": "2026-09-22T15:30:00+08:00",
+  "branch": "codex/alpha33-doctor-edit-review-export",
+  "base_main_sha": "b5cc5369ae9503f28910feca6b1d402add408671",
+  "input": {
+    "anonymous_synthetic": true,
+    "contains_real_patient_data": false
+  },
+  "revision": {
+    "before": 2,
+    "after": 3,
+    "stale_save_http_status": 409,
+    "local_edit_preserved_on_conflict": true
+  },
+  "export": {
+    "before_approval_http_status": 400,
+    "final_stage": "exported",
+    "docx_size_bytes": 1401,
+    "docx_sha256": "d90914efd4c8a6b951606593035f3f06c89140384303689045e7fe971bb7c001",
+    "edited_text_present": true
+  },
+  "knowledge": {
+    "active_field_query": true,
+    "traceability_fields": [
+      "publisher",
+      "version",
+      "section",
+      "page",
+      "document_id",
+      "chunk_id",
+      "source_url",
+      "content_sha256"
+    ],
+    "writes_patient_fact": false
+  },
+  "tests": {
+    "targeted_passed": 57,
+    "full_pytest_passed": 534,
+    "full_pytest_warning_count": 1,
+    "frontend_syntax": "pass",
+    "python_compile": "pass",
+    "health_smoke": "pass",
+    "diff_check": "pass"
+  },
+  "docker": {
+    "active_2626": "running_healthy_demo_mock_not_release_evidence",
+    "legacy_2666": "stopped_preserved",
+    "legacy_2600": "stopped_preserved"
+  },
+  "gate": "pass",
+  "limitations": [
+    "No hospital HIS or SSO validation",
+    "No clinical effectiveness claim",
+    "Real local-model vertical release remains for WBS 5.1"
+  ]
+}

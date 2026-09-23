@@ -1562,6 +1562,108 @@ body.doctor-mode .field-card .field-value {
   scrollbar-width: thin;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.record-edit-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid #86b7fe;
+  border-radius: 12px;
+  background: #eef6ff;
+  color: #17365d;
+}
+
+.record-edit-notice > div {
+  display: grid;
+  gap: 4px;
+}
+
+.record-edit-notice span {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.record-edit-notice.conflict {
+  border-color: #d97706;
+  background: #fff7ed;
+  color: #7c2d12;
+}
+
+.field-card.editing {
+  border-color: #6ea8fe;
+  box-shadow: 0 0 0 2px rgb(13 110 253 / 8%);
+}
+
+.record-field-editor {
+  display: block;
+}
+
+.record-field-editor textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid #b8c5d6;
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: #172b4d;
+  background: #fff;
+  font: inherit;
+  line-height: 1.65;
+  box-sizing: border-box;
+}
+
+.record-field-editor textarea:focus {
+  outline: 2px solid rgb(13 110 253 / 24%);
+  border-color: #0d6efd;
+}
+
+.field-evidence-detail {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid #dbe4ef;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.field-evidence-detail > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.field-evidence-detail p,
+.field-evidence-detail small {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.hash-value {
+  max-width: 360px;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.knowledge-source-link {
+  display: inline-flex;
+  margin-top: 10px;
+  color: #0b63ce;
+  font-weight: 700;
+}
+
 body.doctor-mode .field-card.is-empty .field-value {
   display: block;
   color: #8b99a8;

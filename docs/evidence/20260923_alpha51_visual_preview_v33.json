@@ -1,0 +1,62 @@
+{
+  "schema_version": "mra-alpha51-preview-evidence-v3.3",
+  "recorded_at": "2026-09-23T17:11:09+08:00",
+  "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
+  "branch": "codex/alpha51-demo-visual-e2e",
+  "previous_version_commit": "00cba9e",
+  "user_feedback": "字太小，不能与其他模块做区分，每个部分的边界不清晰；场景不符合医生点击录音后专心问诊、再查看病历的流程",
+  "visual_review": "AWAITING_USER_REVIEW",
+  "baseline_approved": false,
+  "research_gate": "NEEDS_MORE_EVIDENCE",
+  "design_gate": "NEEDS_VALIDATION",
+  "changes": [
+    "默认待采集，点击开始录音→停止/试听/提交→查看和编辑病历",
+    "场景选择收进折叠的样稿验收工具",
+    "患者名22px、就诊流程16px、栏标题18px，病历17px不变",
+    "加强边框与标题分区，保留三栏比例",
+    "采集前禁用原文证据，不显示虚假音频时长"
+  ],
+  "tests": {
+    "command": "npm test --prefix tests/visual",
+    "stats": {
+      "startTime": "2026-09-23T09:09:04.603Z",
+      "duration": 42004.2,
+      "expected": 72,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "report_sha256": "378ff4076384d6e9a1f149886184b2a780c6e7ba0275c02cfb6ea6d501c38870",
+    "viewports": [
+      [
+        1366,
+        768
+      ],
+      [
+        1440,
+        900
+      ],
+      [
+        1920,
+        1080
+      ],
+      [
+        1000,
+        720
+      ]
+    ]
+  },
+  "source_sha256": {
+    "docs/prototypes/doctor-workspace-v3/index.html": "42956d9175b2d8b8d8fcd84124b14770e7273aa8d96205fe7c95120043a5aa9c",
+    "docs/prototypes/doctor-workspace-v3/README.md": "0ee3b39eab8fb3746c36f0f99cb4fa8849350bb429fc0fe3792a1835d812ccdc",
+    "docs/prototypes/doctor-workspace-v3/workspace.css": "05d887d1dea0522aa3a7aad475d4efab77e7ad1aecfa9a0d6e4e3980d276ff9e",
+    "docs/prototypes/doctor-workspace-v3/workspace.js": "79a78bba77966bfc19f18af6f810b0d835cb600e36e9f2ada023ed0eaf6f3a0d"
+  },
+  "test_source_sha256": "0f4a24c328932e7d1528dc81ed871218bac23429e3a5418aff9a5fec340fcaa2",
+  "visual_inspection": "1440视口待采集截图已查看；Edge已重新加载V3.3并确认默认待采集和折叠验收工具。",
+  "production_files_changed": false,
+  "real_model_e2e": "NOT_TESTED",
+  "offline_restore": "NOT_TESTED",
+  "official_wbs_status": "backlog",
+  "next_task": "用户确认V3.3操作流程、字号和模块边界后，再固定截图并接入业务"
+}

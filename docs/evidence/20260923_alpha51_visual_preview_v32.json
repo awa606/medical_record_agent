@@ -5,7 +5,7 @@
   "branch": "codex/alpha51-demo-visual-e2e",
   "previous_version_commit": "8bf700c",
   "user_feedback": "三栏目前问题不大，三栏上方，模拟患者上下这个部分需要调整",
-  "visual_review": "AWAITING_USER_REVIEW",
+  "visual_review": "NEEDS_ADJUSTMENT",
   "baseline_approved": false,
   "research_gate": "NEEDS_MORE_EVIDENCE",
   "design_gate": "NEEDS_VALIDATION",
@@ -56,5 +56,6 @@
   "real_model_e2e": "NOT_TESTED",
   "offline_restore": "NOT_TESTED",
   "official_wbs_status": "backlog",
-  "next_task": "确认V3.2顶部与整页布局；认可后固定截图并接既有业务"
+  "next_task": "确认V3.2顶部与整页布局；认可后固定截图并接既有业务",
+  "user_feedback_on_v32": "字太小，不能与其他模块做区分，每个部分的边界不清晰；场景不符合医生点击录音后专心问诊、再查看病历的流程"
 }

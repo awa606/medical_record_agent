@@ -1,7 +1,12 @@
 const { test, expect } = require("@playwright/test");
 
+async function selectScenario(page, scenario) {
+  await page.getByText("样稿验收工具", { exact: true }).click();
+  await page.getByLabel("切换演示场景").selectOption(scenario);
+}
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
+  await selectScenario(page, "draft");
 });
 test.afterEach(async ({ page }, info) => {
   await page.screenshot({
@@ -24,7 +29,7 @@ for (const scenario of [
   "long",
 ]) {
   test(`layout ${scenario}`, async ({ page }) => {
-    await page.getByLabel("切换演示场景").selectOption(scenario);
+    await selectScenario(page, scenario);
     const geometry = await page.evaluate(() => {
       const paper = document
         .querySelector("#paper-scroll")
@@ -121,7 +126,7 @@ test("cancel restores values and conflict keeps local edits", async ({
   await expect(page.locator('[data-field="chief_complaint"] p')).toHaveText(
     before,
   );
-  await page.getByLabel("切换演示场景").selectOption("conflict");
+  await selectScenario(page, "conflict");
   await expect(page.locator("#notice")).toContainText("本地修改已保留");
   await expect(
     page.getByRole("textbox", { name: "现病史", exact: true }),
@@ -160,7 +165,7 @@ test("read-only evidence panel and keyboard dismissal", async ({ page }) => {
 test("recording stop then cancel is compact and leaves empty state", async ({
   page,
 }) => {
-  await page.getByLabel("切换演示场景").selectOption("recording");
+  await selectScenario(page, "recording");
   await page.getByRole("button", { name: "停止", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "试听示意", exact: true }),
@@ -186,7 +191,7 @@ test("no API calls or external requests in sample workflow", async ({
     )
       unexpected.push(request.url());
   });
-  await page.getByLabel("切换演示场景").selectOption("role");
+  await selectScenario(page, "role");
   await page.getByRole("button", { name: "确认说话人", exact: true }).click();
   await page.locator("#role-a").selectOption("doctor");
   await page.locator("#role-b").selectOption("patient");
@@ -235,4 +240,25 @@ test("readable three columns keep geometry when evidence opens", async ({
     .evaluate((el) => parseFloat(getComputedStyle(el).columnGap));
   expect(gutter).toBeGreaterThanOrEqual(20);
   await expect(page.locator("#panel-content")).toContainText("absent");
+});
+
+test("doctor starts consultation without selecting test scenarios", async ({
+  page,
+}) => {
+  await page.reload();
+  await expect(page.getByLabel("切换演示场景")).toBeHidden();
+  await expect(page.locator("#paper")).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "原文证据", exact: true }),
+  ).toBeDisabled();
+  await expect(page.locator(".ml-audio-preview")).toBeHidden();
+  await page.getByRole("button", { name: "开始录音", exact: true }).click();
+  await expect(page.locator("#record-label")).toContainText("正在录音");
+  await expect(page.locator("#paper")).toBeHidden();
+  await page.getByRole("button", { name: "停止", exact: true }).click();
+  await expect(page.locator("#record-listen")).toBeEnabled();
+  await page.getByRole("button", { name: "模拟提交", exact: true }).click();
+  await expect(page.locator("#phase-badge")).toHaveText("草稿待处理");
+  await expect(page.locator("#paper")).toBeVisible();
+  await expect(page.getByLabel("切换演示场景")).toBeHidden();
 });

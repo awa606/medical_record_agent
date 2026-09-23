@@ -31,7 +31,10 @@ for (const state of [
 ]) {
   test(`approved layout ${state}`, async ({ page }) => {
     await page.goto("/");
+    await page.getByText("样稿验收工具", { exact: true }).click();
     await page.getByLabel("切换演示场景").selectOption(state);
-    await expect(page).toHaveScreenshot(`${state}.png`);
+    await expect(page).toHaveScreenshot(`${state}.png`, {
+      mask: [page.locator("#record-time")],
+    });
   });
 }

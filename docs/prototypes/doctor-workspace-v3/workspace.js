@@ -50,7 +50,7 @@
     ["患者", "00:39", "我没有花生过敏，也没有药物过敏史。"],
   ];
   const state = {
-    mode: "draft",
+    mode: "empty",
     revision: 1,
     dirty: false,
     panel: null,
@@ -112,14 +112,14 @@
       badge: "待采集",
       primary: "开始录音",
       secondary: "输入文本",
-      hint: "选择输入方式，开始本次就诊记录",
+      hint: "就诊已选定 · 点击开始录音后即可问诊",
     },
     recording: {
       step: 1,
       badge: "正在录音 · 示意",
-      primary: "查看录音",
+      primary: "结束录音",
       secondary: "取消录音",
-      hint: "录音中 · 交互示意",
+      hint: "问诊进行中 · 可专心交流，结束时停止录音（样稿）",
     },
     processing: {
       step: 2,
@@ -195,6 +195,17 @@
     $("secondary-action").hidden = ["draft", "long"].includes(state.mode);
     $("action-hint").textContent = current.hint;
     $("revision-label").textContent = `版本 ${state.revision}`;
+    $("listen-transcript").disabled = ["empty", "recording"].includes(
+      state.mode,
+    );
+    document.querySelector(".ml-audio-preview").hidden = [
+      "empty",
+      "recording",
+    ].includes(state.mode);
+    document.querySelector('[data-panel="evidence"]').disabled = [
+      "empty",
+      "recording",
+    ].includes(state.mode);
     document.querySelectorAll("[data-step]").forEach((el, i) => {
       el.classList.toggle("complete", i < current.step);
       el.classList.toggle("current", i === current.step);
@@ -209,15 +220,15 @@
     $("paper").hidden = empty;
     $("empty-state").hidden = !empty;
     const titles = {
-      empty: "待录入病历",
+      empty: "录音结束后，在这里查看病历",
       recording: "问诊录音中",
       processing: "正在整理病历草稿",
       role: "待确认说话人",
       failed: "病历生成暂未完成",
     };
     const descriptions = {
-      empty: "请在左栏选择录音、上传音频或文本输入。",
-      recording: "录音面板中可停止、试听、取消或提交；此处为交互示意。",
+      empty: "点击“开始录音”，完成问诊后停止、试听并生成草稿。",
+      recording: "请专心问诊。结束时点击停止，再试听或生成病历；无需切换场景。",
       processing: "转写在左侧保留，可直接核对内容。",
       role: "说话人身份尚未确认，当前不能生成或导出病历。",
       failed: "样稿展示失败恢复。不会用固定输出冒充真实模型成功。",
@@ -262,7 +273,15 @@
     $("paper-scroll").scrollTop = 0;
     if (mode === "recording") {
       state.recording = true;
+      state.paused = false;
       openPanel("record");
+      recordingTimer = setInterval(() => {
+        if (!state.recording || state.paused) return;
+        state.seconds++;
+        if ($("record-time"))
+          $("record-time").textContent =
+            `${String(Math.floor(state.seconds / 60)).padStart(2, "0")}:${String(state.seconds % 60).padStart(2, "0")}`;
+      }, 1000);
     }
   }
   function renderTranscript() {
@@ -384,6 +403,14 @@
     $("panel-content").innerHTML =
       `<p class="ml-panel-caption">录音交互示意 · 不访问麦克风，不产生音频</p><div class="ml-rec-card"><div class="ml-rec-time"><span id="record-label">${state.recording ? "正在录音" : "录音已就绪"}</span><strong id="record-time">00:${String(state.seconds).padStart(2, "0")}</strong></div><div class="ml-waveform" aria-hidden="true">${"<span></span>".repeat(36)}</div><div class="ml-rec-controls"><button id="record-toggle">${state.recording ? "暂停" : "重新录制"}</button><button id="record-stop" ${!state.recording ? "disabled" : ""}>停止</button><button id="record-cancel">取消</button></div><progress value="${state.recording ? 40 : 100}" max="100" aria-label="录音进度示意"></progress></div><div class="ml-panel-actions"><button id="record-listen" ${state.recording ? "disabled" : ""}>试听示意</button><button id="generate-preview" class="ml-primary" ${state.recording ? "disabled" : ""}>模拟提交</button></div><div class="ml-safe-note">真实链路将在版式确认后接入。物理麦克风验收与此样稿分开记录。</div>`;
   }
+  function stopRecording() {
+    state.recording = false;
+    state.paused = false;
+    openPanel("record");
+    $("phase-badge").textContent = "录音已停止 · 样稿";
+    $("primary-action").querySelector("span").textContent = "生成病历";
+    $("action-hint").textContent = "可先试听；确认后生成草稿";
+  }
   function generatePreview() {
     closePanel();
     setMode("processing");
@@ -410,6 +437,7 @@
     if (check) $("dialog-confirm").disabled = !check.checked;
   });
   $("scenario").addEventListener("change", (event) => {
+    $("preview-tools").open = false;
     closePanel();
     setMode(event.target.value, false);
   });
@@ -455,7 +483,8 @@
       return;
     }
     if (state.mode === "recording") {
-      openPanel("record");
+      if (state.recording) stopRecording();
+      else generatePreview();
       return;
     }
     if (state.mode === "role") {
@@ -511,12 +540,7 @@
       $("generate-preview").disabled = false;
     }
     if (button.id === "generate-preview") generatePreview();
-    if (button.id === "record-stop") {
-      clearInterval(recordingTimer);
-      state.recording = false;
-      state.paused = false;
-      renderRecorder();
-    }
+    if (button.id === "record-stop") stopRecording();
     if (button.id === "record-toggle") {
       state.recording = true;
       state.paused = !state.paused;
@@ -524,6 +548,10 @@
         ? "已暂停（示意）"
         : "正在录音（示意）";
       button.textContent = state.paused ? "恢复" : "暂停";
+      $("phase-badge").textContent = state.paused
+        ? "录音暂停 · 样稿"
+        : "正在录音 · 示意";
+      $("primary-action").querySelector("span").textContent = "结束录音";
       $("record-stop").disabled = false;
       $("generate-preview").disabled = true;
       $("record-listen").disabled = true;

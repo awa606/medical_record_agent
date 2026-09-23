@@ -1,4 +1,4 @@
-/* V3.2：简洁临床工作区。病历17px、转写16px；三栏；只加载此样式，不追加旧CSS覆盖。 */
+/* V3.3：简洁临床工作区。病历17px、转写16px；三栏；只加载此样式，不追加旧CSS覆盖。 */
 :root {
   color-scheme: light;
   font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
@@ -22,7 +22,7 @@ body {
   overflow: hidden;
 }
 .ml-preview {
-  --line: #d9e3ed;
+  --line: #bbcbdc;
   --muted: #596e81;
   --primary: #2366be;
   display: grid;
@@ -213,9 +213,40 @@ body {
 }
 .ml-visit-context {
   border: 1px solid var(--line);
+  border-top: 3px solid #55799e;
   border-radius: 6px;
   background: #fff;
   margin-bottom: 16px;
+}
+/* 验收工具与医生操作分开，默认收起。 */
+.ml-preview-tools {
+  position: relative;
+}
+.ml-preview-tools summary {
+  cursor: pointer;
+  color: #405d78;
+  padding: 6px 10px;
+  border: 1px solid #bdccdb;
+  border-radius: 5px;
+  background: #f3f6fa;
+}
+.ml-preview-tools[open] > label {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  z-index: 60;
+  width: 245px;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #a8bdd1;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 8px 24px #203f5c24;
+}
+.ml-preview-tools[open] select {
+  width: 100%;
+  max-width: none;
 }
 .ml-encounter {
   display: flex;
@@ -237,17 +268,17 @@ body {
   gap: 4px;
 }
 .ml-patient h1 {
-  font-size: 18px;
+  font-size: 22px;
   margin: 0 22px 0 0;
 }
 .ml-patient h1 span {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 400;
   margin-left: 12px;
   color: #5f7386;
 }
 .ml-patient p {
-  font-size: 14px;
+  font-size: 16px;
   color: #5f7386;
   margin: 0;
 }
@@ -261,7 +292,7 @@ body {
   align-items: flex-end;
 }
 .ml-status {
-  font-size: 14px;
+  font-size: 16px;
   color: #215e9f;
   background: #edf5ff;
   padding: 4px 10px;
@@ -277,9 +308,10 @@ body {
   align-items: center;
   list-style: none;
   margin: 0;
-  padding: 12px 18px;
-  color: #61778c;
-  font-size: 14px;
+  padding: 14px 18px;
+  color: #435d75;
+  font-size: 16px;
+  background: #edf3fa;
 }
 .ml-steps li {
   display: flex;
@@ -354,12 +386,12 @@ body {
   justify-content: space-between;
   gap: 8px;
   flex-shrink: 0;
-  background: #f9fbfe;
+  background: #eaf1f9;
 }
 .ml-column-heading h2,
 .ml-document-toolbar strong,
 .ml-reference h2 {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   margin: 0;
   margin-top: 0;

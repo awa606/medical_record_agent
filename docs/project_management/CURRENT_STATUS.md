@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-23T16:42:17+08:00`
-- Source hash: `360af72df5971e5e0adbb4bd2c234bea02c7faea1b2e7cc713f19d42474856ae`
+- Updated at: `2026-09-23T17:02:37+08:00`
+- Source hash: `383db423808b252798e805b205734c1caec212f204c5efc061ee6326387156cf`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@8762877b18eded3f59b84be5b27c8d143fbc9ab1`
+- Repo: `codex/alpha51-demo-visual-e2e@00cba9eb21c5e0be9ddcd6e6091dd3e441a95168`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 三条主路径E2E Smoke（前置三栏大字样稿V2待微调）** — `BACKLOG`
+**5.1 · 三条主路径E2E Smoke（前置V3.2三栏与就诊信息区待确认）** — `BACKLOG`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 按用户具体意见微调三栏大字V2；方向认可不等于布局批准，未确认前不接业务、不冻结
+- Single next task: 确认V3.2顶部及整页布局；认可后固定截图并接入既有业务，未确认前不冻结
 - Parallel waiting task: 无；保持单一视觉调整主线
 
 ## Manual Actions
 
-- 指出三栏大字样稿仍需调整的具体区域与期望
+- 确认8767的V3.2就诊信息区和整页布局
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

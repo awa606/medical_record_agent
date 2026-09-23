@@ -3,13 +3,16 @@ const { defineConfig } = require("@playwright/test");
 module.exports = defineConfig({
   testDir: __dirname,
   testMatch: "preview.spec.cjs",
-  outputDir: "../../.artifacts/alpha51-preview/playwright",
+  outputDir: "../../.artifacts/alpha51-preview-v2/playwright",
   fullyParallel: true,
   workers: 2,
   retries: 0,
   reporter: [
     ["list"],
-    ["json", { outputFile: "../../.artifacts/alpha51-preview/results.json" }],
+    [
+      "json",
+      { outputFile: "../../.artifacts/alpha51-preview-v2/results.json" },
+    ],
   ],
   use: {
     baseURL: "http://127.0.0.1:8768",
@@ -28,7 +31,7 @@ module.exports = defineConfig({
   ],
   webServer: {
     command:
-      "python -m http.server 8768 --bind 127.0.0.1 --directory ../../docs/prototypes/doctor-workspace-v1",
+      "python -m http.server 8768 --bind 127.0.0.1 --directory ../../docs/prototypes/doctor-workspace-v2",
     cwd: __dirname,
     url: "http://127.0.0.1:8768",
     reuseExistingServer: false,

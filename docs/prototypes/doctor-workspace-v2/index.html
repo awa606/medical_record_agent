@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>MediListen · 医生工作区 V2 · 三栏大字样稿</title>
+    <link rel="stylesheet" href="workspace.css" />
+    <script src="workspace.js" defer></script>
+  </head>
+  <body>
+    <svg class="icons" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <symbol id="i-grid" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1.5" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" />
+          <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        </symbol>
+        <symbol id="i-file" viewBox="0 0 24 24">
+          <path
+            d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h6"
+          />
+        </symbol>
+        <symbol id="i-wave" viewBox="0 0 24 24">
+          <path d="M3 10v4m4-8v12m5-15v18m5-15v12m4-8v4" />
+        </symbol>
+        <symbol id="i-book" viewBox="0 0 24 24">
+          <path
+            d="M12 5v16M12 5C9 3 5 3 3 4v15c3-1 6-1 9 2 3-3 6-3 9-2V4c-2-1-6-1-9 1Z"
+          />
+        </symbol>
+        <symbol id="i-link" viewBox="0 0 24 24">
+          <path
+            d="m10 13 4-4m-5 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m0 10a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1"
+          />
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+          <path d="m5 12 4 4L19 6" />
+        </symbol>
+        <symbol id="i-edit" viewBox="0 0 24 24">
+          <path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14z" />
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+          <path d="m6 6 12 12M18 6 6 18" />
+        </symbol>
+        <symbol id="i-mic" viewBox="0 0 24 24">
+          <rect x="9" y="2" width="6" height="13" rx="3" />
+          <path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8" />
+        </symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24">
+          <path d="M5 12h14m-6-6 6 6-6 6" />
+        </symbol>
+      </defs>
+    </svg>
+    <div class="ml-preview" id="workspace">
+      <header class="ml-topbar">
+        <a class="ml-brand" href="./index.html" aria-label="MediListen 样稿首页"
+          ><span class="ml-brand-mark">ML</span
+          ><span
+            ><strong>MediListen</strong><small>AI 智能病历助手</small></span
+          ></a
+        >
+        <div class="ml-breadcrumb">
+          医生工作台 <span>/</span> <strong>就诊工作区</strong>
+        </div>
+        <div class="ml-profile">
+          <span class="ml-avatar">医</span
+          ><span>演示医生<small>本地演示登记</small></span>
+        </div>
+      </header>
+      <aside class="ml-sidebar" aria-label="工作区导航">
+        <div class="ml-nav-label">临床工作区</div>
+        <button class="ml-nav-item" id="worklist-button">
+          <svg><use href="#i-grid" /></svg><span>工作台</span>
+        </button>
+        <button
+          class="ml-nav-item active"
+          aria-current="page"
+          id="encounter-nav"
+        >
+          <svg><use href="#i-file" /></svg><span>就诊工作区</span><i></i>
+        </button>
+        <button class="ml-nav-item" disabled title="样稿仅演示医生工作区">
+          <svg><use href="#i-book" /></svg><span>管理后台</span>
+        </button>
+        <div class="ml-nav-note">
+          <span class="ml-dot"></span>
+          <div>医生审核后生效<small>AI 内容仅供医生参考</small></div>
+        </div>
+      </aside>
+      <main class="ml-main" id="main-content">
+        <div class="ml-preview-bar">
+          <span
+            ><b>V2 · 三栏大字样稿</b> 匿名固定数据 · 未执行录音或真实模型</span
+          ><label
+            >场景
+            <select id="scenario" aria-label="切换演示场景">
+              <option value="draft">病历草稿</option>
+              <option value="empty">待采集</option>
+              <option value="recording">录音中</option>
+              <option value="processing">生成中</option>
+              <option value="editing">编辑病历</option>
+              <option value="review">等待审核</option>
+              <option value="approved">已审核</option>
+              <option value="role">角色待确认</option>
+              <option value="conflict">版本冲突</option>
+              <option value="failed">生成失败</option>
+              <option value="long">长病历</option>
+            </select></label
+          >
+        </div>
+        <section class="ml-encounter" aria-label="当前就诊">
+          <div class="ml-patient">
+            <span class="ml-patient-avatar">例</span>
+            <div>
+              <h1>模拟患者 <span>SIM-001</span></h1>
+              <p>发热 / 呼吸演示病例 <span>·</span> 就诊编号 DEMO-0923</p>
+            </div>
+          </div>
+          <div class="ml-encounter-status">
+            <span class="ml-status" id="phase-badge">草稿待处理</span
+            ><span class="ml-muted">仅存在于当前页面</span>
+          </div>
+        </section>
+        <ol class="ml-steps" aria-label="问诊五步流程">
+          <li data-step="0"><span>1</span>选择就诊</li>
+          <li data-step="1"><span>2</span>采集问诊</li>
+          <li data-step="2"><span>3</span>AI 处理</li>
+          <li data-step="3"><span>4</span>医生审核</li>
+          <li data-step="4"><span>5</span>完成导出</li>
+        </ol>
+        <section
+          class="ml-workspace"
+          id="workspace-grid"
+          aria-label="转写、病历与临床提示三栏"
+        >
+          <section
+            class="ml-transcript-column"
+            aria-labelledby="transcript-title"
+          >
+            <header class="ml-column-heading">
+              <h2 id="transcript-title">问诊转写与证据</h2>
+              <span class="ml-tag">匿名示例</span>
+            </header>
+            <div class="ml-capture-toolbar" aria-label="问诊输入">
+              <button data-input="record">录音</button
+              ><button data-input="upload">上传音频</button
+              ><button data-input="text">文本输入</button>
+            </div>
+            <div
+              class="ml-transcript-scroll"
+              id="transcript-content"
+              tabindex="0"
+              aria-label="对话原文滚动区域"
+            ></div>
+            <footer class="ml-audio-preview">
+              <button id="listen-transcript" aria-label="转写音频试听示意">
+                ▶ 试听示意</button
+              ><span>00:00 / 00:43</span><small>示例时间轴 · 无真实音频</small>
+            </footer>
+          </section>
+          <div class="ml-document-area">
+            <div class="ml-document-toolbar">
+              <div>
+                <svg><use href="#i-file" /></svg><strong>结构化病历</strong
+                ><span class="ml-revision" id="revision-label">Revision 1</span>
+              </div>
+              <nav aria-label="参考资料">
+                <button data-panel="summary" class="ml-hints-toggle">
+                  临床提示
+                </button>
+                <button data-panel="evidence">
+                  <svg><use href="#i-link" /></svg>原文证据</button
+                ><button data-panel="knowledge">
+                  <svg><use href="#i-book" /></svg>查依据
+                </button>
+              </nav>
+            </div>
+            <div class="ml-notice" id="notice" hidden role="status"></div>
+            <div
+              class="ml-paper-scroll"
+              id="paper-scroll"
+              tabindex="0"
+              aria-label="病历正文滚动区域"
+            >
+              <article class="ml-paper" id="paper">
+                <header class="ml-paper-heading">
+                  <div>
+                    <span class="ml-eyebrow">OUTPATIENT RECORD</span>
+                    <h2>门诊病历</h2>
+                  </div>
+                  <span class="ml-paper-stamp" id="paper-stamp"
+                    >AI 草稿 · 待医生审核</span
+                  >
+                </header>
+                <div id="record-fields"></div>
+                <footer class="ml-paper-foot">
+                  <span>记录来源：匿名演示问诊</span
+                  ><span>此样稿不写入业务数据库</span>
+                </footer>
+              </article>
+              <div class="ml-empty" id="empty-state" hidden>
+                <div class="ml-empty-icon">
+                  <svg><use href="#i-mic" /></svg>
+                </div>
+                <h2 id="empty-title">从这次问诊开始</h2>
+                <p id="empty-description">
+                  录音、上传音频或输入文本，形成可核对的病历草稿。
+                </p>
+                <div id="input-options" class="ml-input-options">
+                  <button data-input="record">
+                    <svg><use href="#i-mic" /></svg><strong>浏览器录音</strong
+                    ><span>边问诊，边记录</span></button
+                  ><button data-input="upload">
+                    <svg><use href="#i-wave" /></svg><strong>上传音频</strong
+                    ><span>使用已有问诊录音</span></button
+                  ><button data-input="text">
+                    <svg><use href="#i-edit" /></svg><strong>文本输入</strong
+                    ><span>粘贴脱敏转写文本</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <aside
+            class="ml-reference"
+            id="reference-panel"
+            aria-labelledby="panel-title"
+          >
+            <header>
+              <div>
+                <span class="ml-eyebrow" id="panel-kicker">REFERENCE</span>
+                <h2 id="panel-title">临床提示</h2>
+              </div>
+              <button
+                class="ml-icon-button"
+                id="close-panel"
+                aria-label="返回临床提示"
+              >
+                <svg><use href="#i-arrow" /></svg>
+              </button>
+            </header>
+            <div class="ml-reference-body" id="panel-content"></div>
+          </aside>
+        </section>
+        <footer class="ml-action-bar">
+          <div>
+            <span class="ml-save-dot"></span
+            ><span id="action-hint">核对病历内容后，进入医生审核</span>
+          </div>
+          <div class="ml-actions">
+            <button id="secondary-action">开始新录音</button
+            ><button class="ml-primary" id="primary-action">
+              <span>编辑病历</span><svg><use href="#i-arrow" /></svg>
+            </button>
+          </div>
+        </footer>
+      </main>
+    </div>
+    <dialog class="ml-dialog" id="dialog" aria-labelledby="dialog-title">
+      <form method="dialog">
+        <header>
+          <h2 id="dialog-title"></h2>
+          <button class="ml-icon-button" value="cancel" aria-label="关闭对话框">
+            <svg><use href="#i-close" /></svg>
+          </button>
+        </header>
+        <div id="dialog-content"></div>
+        <footer>
+          <button value="cancel">取消</button
+          ><button class="ml-primary" id="dialog-confirm" value="confirm">
+            确认
+          </button>
+        </footer>
+      </form>
+    </dialog>
+    <div class="ml-toast" id="toast" hidden role="status"></div>
+  </body>
+</html>

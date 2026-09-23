@@ -142,14 +142,16 @@ test("read-only evidence panel and keyboard dismissal", async ({ page }) => {
       "",
     );
     await page
-      .getByRole("button", { name: "关闭参考面板", exact: true })
+      .getByRole("button", { name: "返回临床提示", exact: true })
       .press("Tab");
     await expect(
-      page.getByRole("button", { name: "关闭参考面板", exact: true }),
+      page.getByRole("button", { name: "返回临床提示", exact: true }),
     ).toBeFocused();
   }
   await page.keyboard.press("Escape");
-  await expect(page.locator("#reference-panel")).toBeHidden();
+  if (page.viewportSize().width < 1200)
+    await expect(page.locator("#reference-panel")).toBeHidden();
+  else await expect(page.locator("#panel-title")).toHaveText("临床提示");
   await expect(
     page.getByRole("button", { name: "原文证据", exact: true }),
   ).toBeFocused();
@@ -168,7 +170,9 @@ test("recording stop then cancel is compact and leaves empty state", async ({
   ).toBeEnabled();
   await page.locator("#record-cancel").click();
   await expect(page.locator("#phase-badge")).toHaveText("待采集");
-  await expect(page.locator("#reference-panel")).toBeHidden();
+  if (page.viewportSize().width < 1200)
+    await expect(page.locator("#reference-panel")).toBeHidden();
+  else await expect(page.locator("#panel-title")).toHaveText("临床提示");
 });
 
 test("no API calls or external requests in sample workflow", async ({
@@ -191,4 +195,40 @@ test("no API calls or external requests in sample workflow", async ({
     .click();
   await expect(page.locator("#phase-badge")).toHaveText("草稿待处理");
   expect(unexpected).toEqual([]);
+});
+
+test("readable three columns keep geometry when evidence opens", async ({
+  page,
+}) => {
+  const before = await page.locator(".ml-document-area").boundingBox();
+  await expect(page.locator(".ml-transcript-column")).toBeVisible();
+  const sizes = await page.evaluate(() => ({
+    transcript: parseFloat(
+      getComputedStyle(document.querySelector(".ml-speech p")).fontSize,
+    ),
+    record: parseFloat(
+      getComputedStyle(document.querySelector(".ml-field p")).fontSize,
+    ),
+    action: parseFloat(
+      getComputedStyle(document.querySelector("#primary-action")).fontSize,
+    ),
+    label: parseFloat(
+      getComputedStyle(document.querySelector(".ml-field h3")).fontSize,
+    ),
+  }));
+  expect(sizes.transcript).toBeGreaterThanOrEqual(18);
+  expect(sizes.record).toBeGreaterThanOrEqual(18);
+  expect(sizes.action).toBeGreaterThanOrEqual(16);
+  expect(sizes.label).toBeGreaterThanOrEqual(18);
+  if (page.viewportSize().width >= 1200) {
+    await expect(page.locator("#reference-panel")).toBeVisible();
+    const left = await page.locator(".ml-transcript-column").boundingBox();
+    const right = await page.locator("#reference-panel").boundingBox();
+    expect(left.x + left.width).toBeLessThanOrEqual(before.x);
+    expect(before.x + before.width).toBeLessThanOrEqual(right.x);
+  }
+  await page.getByRole("button", { name: "原文证据", exact: true }).click();
+  const after = await page.locator(".ml-document-area").boundingBox();
+  expect(after).toEqual(before);
+  await expect(page.locator("#panel-content")).toContainText("absent");
 });

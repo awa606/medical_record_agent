@@ -1,0 +1,74 @@
+{
+  "schema_version": "mra-alpha51-preview-evidence-v2",
+  "recorded_at": "2026-09-23T16:42:00+08:00",
+  "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
+  "branch": "codex/alpha51-demo-visual-e2e",
+  "user_feedback": {
+    "v1": "字太小，而且我还是偏向于原有的三栏的前端",
+    "v2": "方向对，还需调整"
+  },
+  "visual_review": "NEEDS_ADJUSTMENT",
+  "baseline_approved": false,
+  "changes": [
+    "三栏并排：转写/结构化病历/临床提示",
+    "正文18px、按钮16px、辅助文字>=14px",
+    "右栏切换不移动病历/转写",
+    "窄屏保留两主栏并按需打开辅助栏"
+  ],
+  "tests": {
+    "command": "npm test --prefix tests/visual",
+    "stats": {
+      "startTime": "2026-09-23T08:38:16.254Z",
+      "duration": 32699.595,
+      "expected": 68,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "report_sha256": "c93394485145ff46f106f341fc22995229a207c534ebd807e7e15cc1b757571b",
+    "initial_stats": {
+      "startTime": "2026-09-23T08:37:06.740Z",
+      "duration": 35313.04,
+      "expected": 64,
+      "skipped": 0,
+      "unexpected": 4,
+      "flaky": 0
+    },
+    "initial_report_sha256": "6f7f3eb2d9571104b7a84aafc1fb89e1a85d68d8d6d61248875a8f1bbee147df",
+    "initial_failure": "4个测试定位到两个相同可访问名称的试听按钮；区别名称后完整重跑",
+    "viewports": [
+      [
+        1366,
+        768
+      ],
+      [
+        1440,
+        900
+      ],
+      [
+        1920,
+        1080
+      ],
+      [
+        1000,
+        720
+      ]
+    ]
+  },
+  "unapproved_baseline_check": {
+    "observed": "VISUAL_BASELINE_NOT_APPROVED",
+    "expected_failure": true
+  },
+  "browser": "Edge已打开并读取V2状态；截图CDP超时；不宣称真实缩放兼容验收",
+  "production_files_changed": false,
+  "official_wbs_status": "backlog",
+  "real_model_e2e": "NOT_TESTED",
+  "offline_restore": "NOT_TESTED",
+  "source_sha256": {
+    "docs/prototypes/doctor-workspace-v2/index.html": "16edb2e35e40f4cd842cc9398e16ac69fdebfaa23f05c93745870c82864e8999",
+    "docs/prototypes/doctor-workspace-v2/README.md": "97f3b659ed7c81e221d86a65971ab8ad2f9c599f896e1d8620bf3c8fa8607cce",
+    "docs/prototypes/doctor-workspace-v2/workspace.css": "54cf9ead412e5ec63346e4d86ecd30976a9b5553f8d606a0a94c87646e25ef1a",
+    "docs/prototypes/doctor-workspace-v2/workspace.js": "4ede0094711c9ecc9b50ef484fc77a06e84e487ee5d568d33ce8680412e3d15f"
+  },
+  "next_task": "按用户补充细节微调三栏大字样稿；未确认前不接业务、不冻结"
+}

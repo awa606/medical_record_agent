@@ -45,7 +45,7 @@ jobs:
         run: node --check static/doctor.js
 
       - name: Check isolated workspace prototype
-        run: node --check docs/prototypes/doctor-workspace-v1/workspace.js
+        run: node --check docs/prototypes/doctor-workspace-v2/workspace.js
 
       - name: Test prototype layout and interactions (not visual approval or real E2E)
         working-directory: tests/visual
@@ -59,7 +59,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: alpha51-prototype-review
-          path: .artifacts/alpha51-preview
+          path: .artifacts/alpha51-preview-v2
           if-no-files-found: ignore
 
       - name: Check service health and readiness endpoints

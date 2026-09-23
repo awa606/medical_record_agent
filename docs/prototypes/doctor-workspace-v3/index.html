@@ -7,7 +7,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
-    <title>MediListen · 医生工作区 V3 · 简洁工作台样稿</title>
+    <title>MediListen · 医生工作区 V3.2 · 就诊信息区整理</title>
     <link rel="stylesheet" href="workspace.css" />
     <script src="workspace.js" defer></script>
   </head>
@@ -65,6 +65,25 @@
         <div class="ml-breadcrumb">
           医生工作台 <span>/</span> <strong>就诊工作区</strong>
         </div>
+        <div class="ml-preview-bar">
+          <span><b>V3.2 样稿</b> 匿名固定数据 · 未执行录音或真实模型</span
+          ><label
+            >场景
+            <select id="scenario" aria-label="切换演示场景">
+              <option value="draft">病历草稿</option>
+              <option value="empty">待采集</option>
+              <option value="recording">录音中</option>
+              <option value="processing">生成中</option>
+              <option value="editing">编辑病历</option>
+              <option value="review">等待审核</option>
+              <option value="approved">已审核</option>
+              <option value="role">角色待确认</option>
+              <option value="conflict">版本冲突</option>
+              <option value="failed">生成失败</option>
+              <option value="long">长病历</option>
+            </select></label
+          >
+        </div>
         <div class="ml-profile">
           <span>演示医生</span>
         </div>
@@ -86,45 +105,26 @@
         </button>
       </aside>
       <main class="ml-main" id="main-content">
-        <div class="ml-preview-bar">
-          <span
-            ><b>V3 · 简洁工作台样稿</b> 匿名固定数据 ·
-            未执行录音或真实模型</span
-          ><label
-            >场景
-            <select id="scenario" aria-label="切换演示场景">
-              <option value="draft">病历草稿</option>
-              <option value="empty">待采集</option>
-              <option value="recording">录音中</option>
-              <option value="processing">生成中</option>
-              <option value="editing">编辑病历</option>
-              <option value="review">等待审核</option>
-              <option value="approved">已审核</option>
-              <option value="role">角色待确认</option>
-              <option value="conflict">版本冲突</option>
-              <option value="failed">生成失败</option>
-              <option value="long">长病历</option>
-            </select></label
-          >
-        </div>
-        <section class="ml-encounter" aria-label="当前就诊">
-          <div class="ml-patient">
-            <div>
-              <h1>模拟患者 <span>SIM-001</span></h1>
-              <p>本次就诊：DEMO-0923 <span>·</span> 本地演示登记</p>
+        <div class="ml-visit-context" aria-label="就诊信息与流程">
+          <section class="ml-encounter" aria-label="当前就诊">
+            <div class="ml-patient">
+              <div>
+                <h1>模拟患者 <span>SIM-001</span></h1>
+                <p>本次就诊：DEMO-0923 <span>·</span> 本地演示登记</p>
+              </div>
             </div>
-          </div>
-          <div class="ml-encounter-status">
-            <span class="ml-status" id="phase-badge">草稿待处理</span>
-          </div>
-        </section>
-        <ol class="ml-steps" aria-label="问诊五步流程">
-          <li data-step="0"><span>1</span>选择就诊</li>
-          <li data-step="1"><span>2</span>采集问诊</li>
-          <li data-step="2"><span>3</span>AI 处理</li>
-          <li data-step="3"><span>4</span>医生审核</li>
-          <li data-step="4"><span>5</span>完成导出</li>
-        </ol>
+            <div class="ml-encounter-status">
+              <span class="ml-status" id="phase-badge">草稿待处理</span>
+            </div>
+          </section>
+          <ol class="ml-steps" aria-label="问诊五步流程">
+            <li data-step="0"><span>1</span>选择就诊</li>
+            <li data-step="1"><span>2</span>采集问诊</li>
+            <li data-step="2"><span>3</span>AI 处理</li>
+            <li data-step="3"><span>4</span>医生审核</li>
+            <li data-step="4"><span>5</span>完成导出</li>
+          </ol>
+        </div>
         <section
           class="ml-workspace"
           id="workspace-grid"
@@ -183,12 +183,10 @@
                 <div id="record-fields"></div>
               </article>
               <div class="ml-empty" id="empty-state" hidden>
-                
                 <h2 id="empty-title">从这次问诊开始</h2>
                 <p id="empty-description">
                   录音、上传音频或输入文本，形成可核对的病历草稿。
                 </p>
-                
               </div>
             </div>
           </div>

@@ -217,7 +217,7 @@ test("readable three columns keep geometry when evidence opens", async ({
     ),
   }));
   expect(sizes.transcript).toBeGreaterThanOrEqual(16);
-  expect(sizes.record).toBeGreaterThanOrEqual(16);
+  expect(sizes.record).toBeGreaterThanOrEqual(17);
   expect(sizes.action).toBeGreaterThanOrEqual(14);
   expect(sizes.label).toBeGreaterThanOrEqual(16);
   if (page.viewportSize().width >= 1200) {
@@ -230,5 +230,9 @@ test("readable three columns keep geometry when evidence opens", async ({
   await page.getByRole("button", { name: "原文证据", exact: true }).click();
   const after = await page.locator(".ml-document-area").boundingBox();
   expect(after).toEqual(before);
+  const gutter = await page
+    .locator(".ml-workspace")
+    .evaluate((el) => parseFloat(getComputedStyle(el).columnGap));
+  expect(gutter).toBeGreaterThanOrEqual(20);
   await expect(page.locator("#panel-content")).toContainText("absent");
 });

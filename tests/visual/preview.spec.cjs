@@ -151,7 +151,7 @@ test("read-only evidence panel and keyboard dismissal", async ({ page }) => {
   await page.keyboard.press("Escape");
   if (page.viewportSize().width < 1200)
     await expect(page.locator("#reference-panel")).toBeHidden();
-  else await expect(page.locator("#panel-title")).toHaveText("临床提示");
+  else await expect(page.locator("#panel-title")).toHaveText("核对与参考");
   await expect(
     page.getByRole("button", { name: "原文证据", exact: true }),
   ).toBeFocused();
@@ -172,7 +172,7 @@ test("recording stop then cancel is compact and leaves empty state", async ({
   await expect(page.locator("#phase-badge")).toHaveText("待采集");
   if (page.viewportSize().width < 1200)
     await expect(page.locator("#reference-panel")).toBeHidden();
-  else await expect(page.locator("#panel-title")).toHaveText("临床提示");
+  else await expect(page.locator("#panel-title")).toHaveText("核对与参考");
 });
 
 test("no API calls or external requests in sample workflow", async ({
@@ -216,10 +216,10 @@ test("readable three columns keep geometry when evidence opens", async ({
       getComputedStyle(document.querySelector(".ml-field h3")).fontSize,
     ),
   }));
-  expect(sizes.transcript).toBeGreaterThanOrEqual(18);
-  expect(sizes.record).toBeGreaterThanOrEqual(18);
-  expect(sizes.action).toBeGreaterThanOrEqual(16);
-  expect(sizes.label).toBeGreaterThanOrEqual(18);
+  expect(sizes.transcript).toBeGreaterThanOrEqual(16);
+  expect(sizes.record).toBeGreaterThanOrEqual(16);
+  expect(sizes.action).toBeGreaterThanOrEqual(14);
+  expect(sizes.label).toBeGreaterThanOrEqual(16);
   if (page.viewportSize().width >= 1200) {
     await expect(page.locator("#reference-panel")).toBeVisible();
     const left = await page.locator(".ml-transcript-column").boundingBox();

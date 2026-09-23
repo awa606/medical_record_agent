@@ -3,14 +3,14 @@ const base = require("./playwright.config.cjs");
 module.exports = defineConfig({
   ...base,
   testMatch: "visual.spec.cjs",
-  outputDir: "../../.artifacts/alpha51-preview-v2/baseline-check",
+  outputDir: "../../.artifacts/alpha51-preview-v3/baseline-check",
   reporter: [
     ["list"],
     [
       "json",
       {
         outputFile:
-          "../../.artifacts/alpha51-preview-v2/baseline-check-results.json",
+          "../../.artifacts/alpha51-preview-v3/baseline-check-results.json",
       },
     ],
   ],

@@ -1,0 +1,70 @@
+{
+  "schema_version": "mra-alpha51-preview-evidence-v3",
+  "recorded_at": "2026-09-23T16:52:50+08:00",
+  "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
+  "branch": "codex/alpha51-demo-visual-e2e",
+  "user_feedback_on_v2": "字体太大，而且有很多不必要的部分，不够简洁，尽量按照真实医院使用的系统页面的情况来制作",
+  "visual_review": "NEEDS_ADJUSTMENT",
+  "baseline_approved": false,
+  "research_gate": "NEEDS_MORE_EVIDENCE",
+  "design_gate": "NEEDS_VALIDATION",
+  "changes": [
+    "保留转写/病历/核对参考三栏",
+    "正文16px、按钮14px、辅助13px",
+    "就诊信息压成一行",
+    "删除重复病历标题、英文装饰标题、大头像、侧栏口号、重复输入入口和草稿上的新录音按钮",
+    "待生成状态不展示过敏等患者事实",
+    "关键错误与未保存提示继续保留"
+  ],
+  "research_sources": [
+    "https://bahmni.atlassian.net/wiki/spaces/BAH/pages/5441617957/Consultation%2BPad",
+    "https://bahmni.atlassian.net/wiki/spaces/BAH/pages/32604195/Clinical%2BServices",
+    "https://o3-docs.openmrs.org/en-US/docs/workspaces/"
+  ],
+  "research_accessed_at": "2026-09-23T16:52:50+08:00",
+  "research_limit": "参考公开医疗软件的同屏上下文和录入原则；并非中国医院统一UI标准或HIS对接证据",
+  "tests": {
+    "command": "npm test --prefix tests/visual",
+    "stats": {
+      "startTime": "2026-09-23T08:50:14.946Z",
+      "duration": 33103.844000000005,
+      "expected": 68,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "report_sha256": "4008cab16dbef8cde1629b2099df1ecdb6de6c76727970b1375016df253e04a1",
+    "viewports": [
+      [
+        1366,
+        768
+      ],
+      [
+        1440,
+        900
+      ],
+      [
+        1920,
+        1080
+      ],
+      [
+        1000,
+        720
+      ]
+    ]
+  },
+  "unapproved_baseline_check": "VISUAL_BASELINE_NOT_APPROVED (expected rejection)",
+  "edge_observation": "V3页面已打开，AX包含三栏、紧凑就诊信息与16px正文；截图通道此前超时，不重复声称截图/缩放/Chrome验收",
+  "source_sha256": {
+    "docs/prototypes/doctor-workspace-v3/index.html": "15025705b06b8641a21697ee7f6483f68a16e14e205c62cc08e2f499d6a7406f",
+    "docs/prototypes/doctor-workspace-v3/README.md": "08527a592ddd9db62d62968775395b6de99529ccb32f32b5dc838da8a4b33f73",
+    "docs/prototypes/doctor-workspace-v3/workspace.css": "2b3594d9fe720378269f9f90ad62c686537225ab31c817b2cc1288bde430f916",
+    "docs/prototypes/doctor-workspace-v3/workspace.js": "197fadf000ea156bd4a1f93829b1438437cda6e14b44734cee393f4e01b72276"
+  },
+  "production_files_changed": false,
+  "real_model_e2e": "NOT_TESTED",
+  "offline_restore": "NOT_TESTED",
+  "official_wbs_status": "backlog",
+  "next_task": "取得V3具体版式认可；认可后固定截图再接既有业务",
+  "user_feedback_on_v3": "病历部分稍微字小，其他部分堆积，希望增加中间留白、布局更合理美观"
+}

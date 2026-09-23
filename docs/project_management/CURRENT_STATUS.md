@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-23T16:25:53+08:00`
-- Source hash: `0847d6786e730000b7e8913bc3856a64ab31c6d2586780337abfef8a404d590f`
+- Updated at: `2026-09-23T16:42:17+08:00`
+- Source hash: `360af72df5971e5e0adbb4bd2c234bea02c7faea1b2e7cc713f19d42474856ae`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@3879664df7bac69ea60a9275c6dfe5c3abae4c71`
+- Repo: `codex/alpha51-demo-visual-e2e@8762877b18eded3f59b84be5b27c8d143fbc9ab1`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 三条主路径E2E Smoke（前置界面样稿待重做）** — `BACKLOG`
+**5.1 · 三条主路径E2E Smoke（前置三栏大字样稿V2待微调）** — `BACKLOG`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 根据用户具体反馈重做医生工作区样稿；视觉认可前不接业务、不冻结
-- Parallel waiting task: 1.2目标硬件验证继续DEFERRED；5.1真实三路径待视觉与业务接入
+- Single next task: 按用户具体意见微调三栏大字V2；方向认可不等于布局批准，未确认前不接业务、不冻结
+- Parallel waiting task: 无；保持单一视觉调整主线
 
 ## Manual Actions
 
-- 指出V1样稿最需修改的2–3处或提供认可的参考设计
+- 指出三栏大字样稿仍需调整的具体区域与期望
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

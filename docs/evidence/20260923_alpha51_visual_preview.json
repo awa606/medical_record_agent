@@ -1,0 +1,70 @@
+{
+  "schema_version": "mra-alpha51-preview-evidence-v1",
+  "recorded_at": "2026-09-23T16:26:34+08:00",
+  "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
+  "last_merged_pr": 112,
+  "branch": "codex/alpha51-demo-visual-e2e",
+  "visual_review": {
+    "status": "REJECTED",
+    "reviewer": "user",
+    "feedback": "不认可，需要重新调整布局",
+    "baseline_approved": false
+  },
+  "research_gate": "NEEDS_MORE_EVIDENCE",
+  "design_gate": "NEEDS_VALIDATION",
+  "prototype_contract_tests": {
+    "stats": {
+      "startTime": "2026-09-23T08:24:21.494Z",
+      "duration": 29216.997,
+      "expected": 64,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "report_sha256": "e3b612be73d96b93dc4e382aab6a0e7ae4152b4eef33f16bc32bc547247e4449",
+    "viewports": [
+      [
+        1366,
+        768
+      ],
+      [
+        1440,
+        900
+      ],
+      [
+        1920,
+        1080
+      ],
+      [
+        1000,
+        720
+      ]
+    ],
+    "playwright": "1.60.0",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "data": "synthetic_only"
+  },
+  "unapproved_baseline_check": {
+    "expected": "reject",
+    "observed": "VISUAL_BASELINE_NOT_APPROVED",
+    "exit_code": 1
+  },
+  "production_files_changed": false,
+  "real_model_e2e": {
+    "text": "NOT_TESTED",
+    "upload": "NOT_TESTED",
+    "physical_microphone": "NOT_TESTED"
+  },
+  "offline_restore": "NOT_TESTED",
+  "docker_observation": "engine_not_reachable_this_run_no_deployment_attempt",
+  "edge_observation": "first_screenshot_visible_then_capture_timeout_after_viewport_override; zoom_regression_not_claimed",
+  "official_wbs_status": "backlog",
+  "task_frontmatter_unchanged": 16,
+  "source_sha256": {
+    "docs/prototypes/doctor-workspace-v1/index.html": "4b6dee437fc47f7466bff7b7b045388a9ad43ff4b9938636d93df8e97cd83ecb",
+    "docs/prototypes/doctor-workspace-v1/README.md": "f12e0d8526cc32992e4ac6aac46043eb52e2e7908cff237f95b364b9f39c1158",
+    "docs/prototypes/doctor-workspace-v1/workspace.css": "2dfcf9d405e8cbdfe2ad0b8c29e17776b0509e9afd4c84afffc1f04567bfc40c",
+    "docs/prototypes/doctor-workspace-v1/workspace.js": "fc89abab13fe5cf5f32110422cec12b3ff7aec14be1f06740712366ef9684e33"
+  },
+  "next_task": "取得用户具体反馈或参考设计后重做样稿，不接业务、不冻结"
+}

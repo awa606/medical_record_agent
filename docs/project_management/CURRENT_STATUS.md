@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-23T17:02:37+08:00`
-- Source hash: `383db423808b252798e805b205734c1caec212f204c5efc061ee6326387156cf`
+- Updated at: `2026-09-23T17:11:10+08:00`
+- Source hash: `2696a20d5b6632659fccc560fe1626e8d1e66c418b57be1144be516914d06dfa`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@00cba9eb21c5e0be9ddcd6e6091dd3e441a95168`
+- Repo: `codex/alpha51-demo-visual-e2e@0e54c1434fd21ed80425c3502731fd77827c1b42`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 三条主路径E2E Smoke（前置V3.2三栏与就诊信息区待确认）** — `BACKLOG`
+**5.1 · 三条主路径E2E Smoke（前置V3.3录音问诊样稿待确认）** — `BACKLOG`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 确认V3.2顶部及整页布局；认可后固定截图并接入既有业务，未确认前不冻结
+- Single next task: 确认V3.3录音问诊操作、顶部字号和模块边界；认可后固定截图并接既有业务
 - Parallel waiting task: 无；保持单一视觉调整主线
 
 ## Manual Actions
 
-- 确认8767的V3.2就诊信息区和整页布局
+- 试用8767的V3.3开始录音到草稿流程并确认版式
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

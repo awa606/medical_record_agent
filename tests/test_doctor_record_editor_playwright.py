@@ -59,6 +59,10 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(page.locator('[data-record-field-input="past_history"]')).to_have_value(original_past_history)
             editor = page.locator('[data-record-field-input="chief_complaint"]')
             editor.fill("患者发热39度，医生补充记录")
+            edited_field = page.evaluate("window.__MRA_APP_STATE__.currentRecordFields.chief_complaint")
+            assert edited_field["status"] == "partial"
+            assert edited_field["source_spans"] == []
+            assert edited_field["confidence"] is None
             expect(page.locator("[data-record-edit-status]")).to_have_text("有未保存修改")
             expect(page.locator("#saveDraftButton")).to_be_enabled()
             expect(page.locator("#confirmFieldsButton")).to_be_disabled()
@@ -74,11 +78,13 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             persisted = page.evaluate(
                 """async (taskId) => {
                   const task = await fetch(`/api/tasks/${taskId}`).then((response) => response.json());
-                  return task.result_json.fields.chief_complaint.value;
+                  return task.result_json.fields.chief_complaint;
                 }""",
                 task_id,
             )
-            assert persisted == "患者发热39度，医生补充记录"
+            assert persisted["value"] == "患者发热39度，医生补充记录"
+            assert persisted["status"] == "partial"
+            assert persisted["source_spans"] == []
 
             page.click('[data-field="chief_complaint"] [data-knowledge-field="chief_complaint"]')
             page.wait_for_function(

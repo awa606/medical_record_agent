@@ -129,11 +129,11 @@ def test_recording_entry_guides_to_encounter_selection_and_panel() -> None:
             page = context.new_page()
             _login(page, server.base_url)
 
-            page.click("#inputMethodButton")
+            page.click('[data-product-view-target="encounter"]')
+            page.click('[data-workflow-action="open-worklist"]')
             expect(page.locator("#drawer")).to_have_class(re.compile(r".*\bactive\b.*"))
             expect(page.locator("#inputMethodMenu")).to_be_hidden()
-            expect(page.locator(".encounter-selection-notice")).to_contain_text("请先选择已报到或问诊中的患者")
-            assert page.evaluate("window.__MRA_APP_STATE__?.pendingInputMethodAfterEncounterSelection") == "record"
+            assert page.evaluate("window.__MRA_APP_STATE__?.pendingInputMethodAfterEncounterSelection") == ""
 
             encounter_id = page.evaluate(
                 """
@@ -154,16 +154,16 @@ def test_recording_entry_guides_to_encounter_selection_and_panel() -> None:
                 """
             )
             drawer_record_button = page.locator(
-                f'#encounterWorklist [data-restore-encounter="{encounter_id}"][data-after-restore-input="record"]'
+                f'#encounterWorklist [data-restore-encounter="{encounter_id}"]'
             )
-            expect(drawer_record_button).to_contain_text("选择并开始录音")
+            expect(drawer_record_button).to_contain_text("继续处理")
             drawer_metrics = page.evaluate(
                 """
                 (encounterId) => {
                   const drawer = document.querySelector("#drawer");
                   const list = document.querySelector("#encounterWorklist");
                   const button = Array.from(document.querySelectorAll("#encounterWorklist [data-restore-encounter]"))
-                    .find((node) => node.dataset.restoreEncounter === String(encounterId) && node.dataset.afterRestoreInput === "record");
+                    .find((node) => node.dataset.restoreEncounter === String(encounterId));
                   const article = button.closest(".encounter-worklist-item");
                   const drawerBox = drawer.getBoundingClientRect();
                   const articleBox = article.getBoundingClientRect();
@@ -195,9 +195,14 @@ def test_recording_entry_guides_to_encounter_selection_and_panel() -> None:
             assert drawer_metrics["buttonInsideArticle"] is True
             assert drawer_metrics["buttonHitTarget"] is True
             drawer_record_button.click()
+            page.wait_for_function("(id) => window.__MRA_APP_STATE__?.currentEncounter?.id === id", arg=encounter_id)
+            page.click('[data-workflow-action="record-audio"]')
             expect(page.locator("#recordingPanel.active")).to_be_visible()
             expect(page.locator("#drawerTitle")).to_contain_text("浏览器录音生成病历")
-            expect(page.locator("#browserRecordingMessage")).to_contain_text("点击“开始录音”")
+            # The approved one-click flow immediately requests the microphone.
+            # This headless context has no device, so it must expose a clear error.
+            page.wait_for_function("window.__MRA_APP_STATE__.browserRecordingStatus === 'error'")
+            expect(page.locator("#browserRecordingMessage")).to_contain_text("Not supported")
 
             page.evaluate(
                 """

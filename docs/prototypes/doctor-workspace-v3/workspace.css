@@ -1,4 +1,4 @@
-/* V3.3：简洁临床工作区。病历17px、转写16px；三栏；只加载此样式，不追加旧CSS覆盖。 */
+/* V3.4：简洁临床工作区。病历17px、转写16px；三栏；只加载此样式。 */
 :root {
   color-scheme: light;
   font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
@@ -212,11 +212,9 @@ body {
   font-size: 14px;
 }
 .ml-visit-context {
-  border: 1px solid var(--line);
-  border-top: 3px solid #55799e;
-  border-radius: 6px;
-  background: #fff;
-  margin-bottom: 16px;
+  display: grid;
+  gap: 9px;
+  margin-bottom: 17px;
 }
 /* 验收工具与医生操作分开，默认收起。 */
 .ml-preview-tools {
@@ -253,8 +251,11 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid var(--line);
-  padding: 12px 18px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #55799e;
+  border-radius: 6px;
+  background: #fff;
+  padding: 11px 16px;
 }
 .ml-patient {
   display: flex;
@@ -263,13 +264,13 @@ body {
 }
 .ml-patient > div {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
 }
 .ml-patient h1 {
   font-size: 22px;
-  margin: 0 22px 0 0;
+  margin: 0;
 }
 .ml-patient h1 span {
   font-size: 16px;
@@ -308,7 +309,9 @@ body {
   align-items: center;
   list-style: none;
   margin: 0;
-  padding: 14px 18px;
+  padding: 11px 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
   color: #435d75;
   font-size: 16px;
   background: #edf3fa;
@@ -730,13 +733,17 @@ body {
   color: #2366be;
 }
 .ml-empty {
-  min-height: 100%;
-  padding: 32px 4px;
+  max-width: 570px;
+  padding: 19px 22px;
+  margin: 24px 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
   flex-direction: column;
-  text-align: center;
+  text-align: left;
+  border: 1px solid #dbe6f0;
+  border-left: 3px solid #70a0ce;
+  border-radius: 6px;
+  background: #f8fbfe;
 }
 .ml-empty-icon {
   width: 58px;
@@ -749,14 +756,15 @@ body {
   margin-bottom: 16px;
 }
 .ml-empty h2 {
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.5;
-  margin: 0 0 14px;
+  margin: 0 0 6px;
 }
 .ml-empty p {
-  font-size: 14px;
+  font-size: 15px;
   color: #61788b;
-  line-height: 1.8;
+  line-height: 1.7;
+  margin: 0;
 }
 .ml-input-options {
   display: flex;
@@ -790,31 +798,6 @@ body {
   font-size: 20px;
   font-variant-numeric: tabular-nums;
 }
-.ml-waveform {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  height: 60px;
-  margin: 10px 0;
-  overflow: hidden;
-}
-.ml-waveform span {
-  background: #7faedb;
-  height: 14px;
-  width: 3px;
-  flex: none;
-  border-radius: 3px;
-}
-.ml-waveform span:nth-child(3n) {
-  height: 34px;
-}
-.ml-waveform span:nth-child(4n) {
-  height: 24px;
-}
-.ml-waveform span:nth-child(7n) {
-  height: 48px;
-}
 .ml-rec-controls {
   display: flex;
   flex-wrap: wrap;
@@ -824,12 +807,6 @@ body {
   padding: 7px 9px;
   min-height: 36px;
   flex: 1;
-}
-.ml-rec-card progress {
-  width: 100%;
-  height: 6px;
-  accent-color: #3d84c8;
-  margin-top: 16px;
 }
 .ml-panel-actions {
   display: flex;

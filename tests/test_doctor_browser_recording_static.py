@@ -224,10 +224,11 @@ def test_fixed_audio_demo_uses_live_follow_and_idempotent_convergence() -> None:
     assert "FIXED_DEMO_CHUNK_SECONDS" in script
     assert "uploadFixedDemoAudioChunk" in script
     assert "固定音频跟随识别演示" in script
-    assert "开始问诊演示" in script
+    assert "开始录音问诊" in script
     assert "结束问诊并生成正式病历" in script
     assert "/converge-record" in script
-    assert 'key: "start-live-demo", label: "开始问诊演示"' in script
+    assert 'key: "record-audio", label: "开始录音"' in script
+    assert 'if (encounterReadyForInput()) await startBrowserRecording();' in script
     assert 'key: "finalize-live-demo", label: "结束问诊并生成正式病历"' in script
     assert 'appState.fixedDemoStatus === "ready_to_finalize"' in script
     assert 'button.textContent = "结束问诊并生成正式病历"' in script

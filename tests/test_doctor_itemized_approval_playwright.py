@@ -99,7 +99,7 @@ def test_unreviewed_fields_and_missing_demographics_are_not_confirmed():
             page.evaluate("createRecordTask('患者发热3天，体温39℃。')")
             page.wait_for_function('Boolean(window.__MRA_APP_STATE__?.currentRecordFields)',timeout=30000)
             page.evaluate('setProductView("encounter"); renderAll()')
-            expect(page.locator('#patientProfile')).to_have_text('年龄、性别未登记')
+            expect(page.locator('#patientProfile')).to_contain_text('年龄、性别未登记')
             expect(page.locator('[data-field="chief_complaint"]')).to_contain_text('待医生审核')
             assert page.evaluate('window.__MRA_APP_STATE__.currentRecordFields.chief_complaint.confirmed_by_doctor') is False
             browser.close()

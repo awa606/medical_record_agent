@@ -190,9 +190,17 @@
     $("scenario").value = state.mode;
     $("phase-badge").textContent = current.badge;
     $("primary-action").querySelector("span").textContent = current.primary;
+    $("primary-action").hidden = state.mode === "recording";
     $("primary-action").disabled = state.mode === "processing";
     $("secondary-action").textContent = current.secondary;
-    $("secondary-action").hidden = ["draft", "long"].includes(state.mode);
+    $("secondary-action").hidden = ["draft", "long", "recording"].includes(
+      state.mode,
+    );
+    document.querySelector(".ml-capture-toolbar").hidden =
+      state.mode === "recording";
+    document.querySelectorAll('[data-panel="knowledge"], [data-panel="summary"]').forEach(
+      (button) => (button.disabled = state.mode === "recording"),
+    );
     $("action-hint").textContent = current.hint;
     $("revision-label").textContent = `版本 ${state.revision}`;
     $("listen-transcript").disabled = ["empty", "recording"].includes(
@@ -400,15 +408,18 @@
       state.trigger.focus();
   }
   function renderRecorder() {
+    const stopped = !state.recording;
+    const clock = `${String(Math.floor(state.seconds / 60)).padStart(2, "0")}:${String(state.seconds % 60).padStart(2, "0")}`;
     $("panel-content").innerHTML =
-      `<p class="ml-panel-caption">录音交互示意 · 不访问麦克风，不产生音频</p><div class="ml-rec-card"><div class="ml-rec-time"><span id="record-label">${state.recording ? "正在录音" : "录音已就绪"}</span><strong id="record-time">00:${String(state.seconds).padStart(2, "0")}</strong></div><div class="ml-waveform" aria-hidden="true">${"<span></span>".repeat(36)}</div><div class="ml-rec-controls"><button id="record-toggle">${state.recording ? "暂停" : "重新录制"}</button><button id="record-stop" ${!state.recording ? "disabled" : ""}>停止</button><button id="record-cancel">取消</button></div><progress value="${state.recording ? 40 : 100}" max="100" aria-label="录音进度示意"></progress></div><div class="ml-panel-actions"><button id="record-listen" ${state.recording ? "disabled" : ""}>试听示意</button><button id="generate-preview" class="ml-primary" ${state.recording ? "disabled" : ""}>模拟提交</button></div><div class="ml-safe-note">真实链路将在版式确认后接入。物理麦克风验收与此样稿分开记录。</div>`;
+      `<p class="ml-panel-caption">交互样稿 · 不访问麦克风，不产生音频</p><div class="ml-rec-card"><div class="ml-rec-time"><span id="record-label">${stopped ? "录音已停止" : state.paused ? "录音已暂停" : "正在录音"}</span><strong id="record-time">${clock}</strong></div><div class="ml-rec-controls"><button id="record-toggle">${stopped ? "重新录制" : state.paused ? "恢复" : "暂停"}</button>${stopped ? "" : '<button id="record-stop">停止</button>'}<button id="record-cancel">取消</button></div></div>${stopped ? '<div class="ml-panel-actions"><button id="record-listen">试听示意</button><button id="generate-preview" class="ml-primary">模拟提交</button></div>' : ""}`;
   }
   function stopRecording() {
     state.recording = false;
     state.paused = false;
+    clearInterval(recordingTimer);
+    recordingTimer = null;
     openPanel("record");
     $("phase-badge").textContent = "录音已停止 · 样稿";
-    $("primary-action").querySelector("span").textContent = "生成病历";
     $("action-hint").textContent = "可先试听；确认后生成草稿";
   }
   function generatePreview() {
@@ -542,19 +553,16 @@
     if (button.id === "generate-preview") generatePreview();
     if (button.id === "record-stop") stopRecording();
     if (button.id === "record-toggle") {
-      state.recording = true;
+      if (!state.recording) {
+        state.seconds = 0;
+        setMode("recording");
+        return;
+      }
       state.paused = !state.paused;
-      $("record-label").textContent = state.paused
-        ? "已暂停（示意）"
-        : "正在录音（示意）";
-      button.textContent = state.paused ? "恢复" : "暂停";
       $("phase-badge").textContent = state.paused
         ? "录音暂停 · 样稿"
         : "正在录音 · 示意";
-      $("primary-action").querySelector("span").textContent = "结束录音";
-      $("record-stop").disabled = false;
-      $("generate-preview").disabled = true;
-      $("record-listen").disabled = true;
+      renderRecorder();
     }
     if (button.id === "record-cancel") {
       closePanel();

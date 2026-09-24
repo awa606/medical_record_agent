@@ -40,6 +40,7 @@ for (const scenario of [
       const panel = document.querySelector("#reference-panel");
       const action = document.querySelector("#primary-action");
       const button = action.getBoundingClientRect();
+      const actionVisible = !action.hidden;
       const modal = panel.getAttribute("aria-modal") === "true";
       return {
         width: innerWidth,
@@ -50,7 +51,9 @@ for (const scenario of [
         actionBottom: actions.bottom,
         height: innerHeight,
         actionWidth: button.width,
+        actionVisible,
         actionHit:
+          !actionVisible ||
           modal ||
           action.contains(
             document.elementFromPoint(
@@ -64,15 +67,15 @@ for (const scenario of [
     expect(geometry.bodyWidth).toBeLessThanOrEqual(geometry.width);
     expect(geometry.paperBottom).toBeLessThanOrEqual(geometry.actionTop + 1);
     expect(geometry.actionBottom).toBeLessThanOrEqual(geometry.height);
-    expect(geometry.actionWidth).toBeGreaterThanOrEqual(100);
+    if (scenario === "recording") expect(geometry.actionVisible).toBe(false);
+    else expect(geometry.actionWidth).toBeGreaterThanOrEqual(100);
     expect(geometry.actionHit).toBe(true);
     await expect(
       page.getByText("匿名固定数据 · 未执行录音或真实模型", { exact: false }),
     ).toBeVisible();
     if (scenario === "recording") {
-      await expect(
-        page.getByRole("button", { name: "模拟提交", exact: true }),
-      ).toBeDisabled();
+      await expect(page.getByRole("button", { name: "停止", exact: true })).toHaveCount(1);
+      await expect(page.getByRole("button", { name: "模拟提交", exact: true })).toHaveCount(0);
       const heights = await page
         .locator(".ml-rec-controls button")
         .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
@@ -254,6 +257,8 @@ test("doctor starts consultation without selecting test scenarios", async ({
   await expect(page.locator(".ml-audio-preview")).toBeHidden();
   await page.getByRole("button", { name: "开始录音", exact: true }).click();
   await expect(page.locator("#record-label")).toContainText("正在录音");
+  await expect(page.getByRole("button", { name: "结束录音", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "停止", exact: true })).toHaveCount(1);
   await expect(page.locator("#paper")).toBeHidden();
   await page.getByRole("button", { name: "停止", exact: true }).click();
   await expect(page.locator("#record-listen")).toBeEnabled();
@@ -261,4 +266,31 @@ test("doctor starts consultation without selecting test scenarios", async ({
   await expect(page.locator("#phase-badge")).toHaveText("草稿待处理");
   await expect(page.locator("#paper")).toBeVisible();
   await expect(page.getByLabel("切换演示场景")).toBeHidden();
+});
+
+test("visit context is separate and recording has one control group", async ({ page }) => {
+  await page.reload();
+  const layout = await page.evaluate(() => {
+    const visit = document.querySelector(".ml-encounter").getBoundingClientRect();
+    const steps = document.querySelector(".ml-steps").getBoundingClientRect();
+    const grid = document.querySelector(".ml-workspace").getBoundingClientRect();
+    const empty = document.querySelector(".ml-empty").getBoundingClientRect();
+    return {
+      visitGap: steps.top - visit.bottom,
+      workGap: grid.top - steps.bottom,
+      emptyTop: empty.top - grid.top,
+    };
+  });
+  expect(layout.visitGap).toBeGreaterThanOrEqual(8);
+  expect(layout.workGap).toBeGreaterThanOrEqual(15);
+  expect(layout.emptyTop).toBeLessThan(110);
+  await expect(page.getByRole("button", { name: "开始录音", exact: true })).toHaveCount(1);
+  await page.getByRole("button", { name: "开始录音", exact: true }).click();
+  await page.getByRole("button", { name: "暂停", exact: true }).click();
+  await expect(page.locator("#record-label")).toHaveText("录音已暂停");
+  await page.getByRole("button", { name: "恢复", exact: true }).click();
+  await expect(page.locator("#record-label")).toHaveText("正在录音");
+  await page.getByRole("button", { name: "停止", exact: true }).click();
+  await expect(page.getByRole("button", { name: "停止", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "模拟提交", exact: true })).toHaveCount(1);
 });

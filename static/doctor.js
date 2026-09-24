@@ -333,6 +333,12 @@ function derivePersistedWorkflowState({
 
 function currentWorkflowState() {
   if (appState.asrLastError || appState.asrChunkLastError) return "failed";
+  if (!appState.currentTaskId && !appState.currentAsrSessionId
+    && !appState.currentAsrResult && !appState.currentRecordFields
+    && !appState.busy
+    && !["requesting", "recording", "paused", "finalizing", "uploading"].includes(appState.browserRecordingStatus)) {
+    return encounterReadyForInput() ? "capture_input" : "select_encounter";
+  }
   const persisted = derivePersistedWorkflowState({
     encounterStatus: appState.currentEncounter?.status,
     taskStatus: appState.currentTask?.status || appState.taskStatus,
@@ -1923,6 +1929,18 @@ function nextActionState() {
     };
   }
 
+  if (!appState.currentAsrResult && !appState.currentTaskId
+    && ["requesting", "recording", "paused", "finalizing", "recorded"].includes(appState.browserRecordingStatus)) {
+    return {
+      tone: "active",
+      title: appState.browserRecordingStatus === "recorded" ? "录音已就绪" : "正在录音问诊",
+      detail: appState.browserRecordingStatus === "recorded"
+        ? "请在录音面板试听并提交；确认前不会生成病历。"
+        : "专心完成问诊；录音面板保留暂停、停止和取消操作。",
+      actions: [],
+    };
+  }
+
   if (appState.currentAsrResult && roleReviewRequired() && appState.viewMode !== "debug") {
     const pendingCount = roleReviewPendingCount();
     const pendingText = pendingCount
@@ -1994,9 +2012,9 @@ function nextActionState() {
   if (!hasActiveSession()) {
     return {
       tone: "neutral",
-      title: "开始问诊演示",
-      detail: "当前就诊已就绪。答辩版固定使用脱敏音频跟随识别演示，不把备用音频回放冒充真人麦克风。",
-      actions: singlePrimaryAction({ key: "start-live-demo", label: "开始问诊演示" }),
+      title: "开始录音问诊",
+      detail: "当前就诊已就绪。使用浏览器麦克风采音；上传音频和文本输入可在转写栏选择。",
+      actions: singlePrimaryAction({ key: "record-audio", label: "开始录音" }),
     };
   }
 
@@ -2216,11 +2234,16 @@ function openDetailDrawer(title, html) {
 function renderPatientBar() {
   const llm = llmDisplayState();
   const displayState = doctorDisplayState();
-  $("patientName").textContent = patientDisplayName(
-    appState.currentEncounter?.patient_display_name,
-    appState.currentEncounter?.patient_deidentified_id || "模拟患者",
-  );
-  $("patientProfile").textContent = "年龄、性别未登记";
+  $("patientName").textContent = appState.currentEncounter
+    ? patientDisplayName(
+      appState.currentEncounter.patient_display_name,
+      appState.currentEncounter.patient_deidentified_id || "模拟患者",
+    )
+    : "未选择患者";
+  const encounterId = selectedEncounterId();
+  $("patientProfile").textContent = encounterId
+    ? `本次就诊：${String(encounterId).slice(0, 12)} · 年龄、性别未登记 · 本地演示登记`
+    : "年龄、性别未登记 · 请从工作列表选择本次就诊";
   $("sessionId").textContent = appState.currentTaskId
     ? `T-${appState.currentTaskId}`
     : appState.currentAsrSessionId
@@ -2238,6 +2261,11 @@ function renderPatientBar() {
 }
 
 function renderBrowserRecordingPanel() {
+  $("encounterView")?.classList.toggle(
+    "recording-active",
+    ["requesting", "recording", "paused", "finalizing"].includes(appState.browserRecordingStatus),
+  );
+  $("encounterView")?.classList.toggle("has-record", Boolean(appState.currentRecordFields));
   const statusLabel = $("browserRecordingStatusLabel");
   const timer = $("browserRecordingTimer");
   const startButton = $("startBrowserRecordingButton");
@@ -2512,10 +2540,23 @@ function updateRecordFieldValue(key, value) {
   const field = appState.currentRecordFields?.[key];
   if (!field || !EDITABLE_FIELD_DEFS.some(([itemKey]) => itemKey === key)) return;
   const normalized = String(value || "").trim();
+  const baseline = appState.recordEditBaseline?.[key];
+  if (baseline && normalized === String(baseline.value || "").trim()) {
+    appState.currentRecordFields[key] = cloneRecordFields(baseline);
+    appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
+    appState.recordEditConflict = null;
+    renderFooter();
+    const notice = document.querySelector("[data-record-edit-status]");
+    if (notice) notice.textContent = appState.recordEditDirty ? "有未保存修改" : "编辑模式";
+    return;
+  }
   field.value = normalized || null;
   field.missing = !normalized;
-  field.status = normalized ? (field.status === "partial" ? "partial" : "complete") : "missing";
-  field.hint = normalized ? null : "医生编辑后标记为本次未采集";
+  field.status = normalized ? "partial" : "missing";
+  field.hint = normalized ? "医生手工修改；原始转写证据仅供对照，需重新审核" : "医生编辑后标记为本次未采集";
+  field.source_spans = [];
+  field.fact_ids = [];
+  field.confidence = null;
   field.confirmed_by_doctor = false;
   field.doctor_review_status = "pending";
   field.high_risk_confirmed_by_doctor = false;
@@ -6707,6 +6748,7 @@ async function handleWorkflowAction(action) {
   }
   if (action === "record-audio") {
     openReservedRecording();
+    if (encounterReadyForInput()) await startBrowserRecording();
     return;
   }
   if (action === "start-live-demo") {
@@ -8248,6 +8290,10 @@ function bindEvents() {
     const button = event.target.closest("[data-input-method]");
     if (!button) return;
     handleInputMethod(button.dataset.inputMethod);
+  });
+  document.querySelector("#encounterView .transcript-input-toolbar")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-input-method]");
+    if (button) handleInputMethod(button.dataset.inputMethod);
   });
   document.addEventListener("click", (event) => {
     if (appState.inputMenuOpen && !event.target.closest(".input-method-menu")) {

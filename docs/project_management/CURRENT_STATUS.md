@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-24T14:00:48.706177+08:00`
-- Source hash: `2fd9be6ab0bfa0bfed198d57bbfa6788b9a631249c8543a87f73b558401ce4d7`
+- Updated at: `2026-09-24T14:07:41.910728+08:00`
+- Source hash: `b6664023ab87a2d46e1dad3dc7a38edb9b632fae3275353b6f09c1755f1f8c75`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@b15ddfb6a00c2f0a6bbcf4a14813c9adfe2749f8`
+- Repo: `codex/alpha51-demo-visual-e2e@2f39e415113bb8f40cd4aa183293b6de68ea37b5`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; visual and host-offline gate impact pending; Full M4 TBD / HARDWARE DEPENDENT**
+- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; Edge zoom impact pending; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 核验Edge实际125%和150%缩放，并完成Windows主机物理断网恢复Smoke
+- Single next task: 核验Edge实际125%和150%缩放；通过后关闭5.1视觉门禁
 - Parallel waiting task: 无；5.3正式连续五次E2E待5.1 Release Gate关闭
 
 ## Manual Actions

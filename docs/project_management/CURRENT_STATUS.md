@@ -8,24 +8,24 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-23T17:11:10+08:00`
-- Source hash: `2696a20d5b6632659fccc560fe1626e8d1e66c418b57be1144be516914d06dfa`
+- Updated at: `2026-09-24T13:28:54.086137+08:00`
+- Source hash: `5b39ab29dc132dcfcd8f8d26cfb763d989a3b2e089b486f73043c7dbb08164d9`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@0e54c1434fd21ed80425c3502731fd77827c1b42`
+- Repo: `codex/alpha51-demo-visual-e2e@23f5dd7f644e9aaf9dc9946c3caa31114cc90b39`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; visual rework impact pending; Full M4 TBD / HARDWARE DEPENDENT**
+- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; visual and network gate impact pending; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 5 | 0 | 0 | 1 | 2 | 8 | 99 |
+| 4 | 0 | 0 | 1 | 3 | 8 | 99 |
 
 ## Current Task
 
-**5.1 · 三条主路径E2E Smoke（前置V3.3录音问诊样稿待确认）** — `BACKLOG`
+**5.1 · 三条主路径E2E Smoke及可恢复候选** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 确认V3.3录音问诊操作、顶部字号和模块边界；认可后固定截图并接既有业务
-- Parallel waiting task: 无；保持单一视觉调整主线
+- Single next task: 核验Edge实际125%和150%缩放，并封闭归档网关外连后重跑断网恢复
+- Parallel waiting task: 无；5.3正式连续五次E2E待5.1 Release Gate关闭
 
 ## Manual Actions
 
-- 试用8767的V3.3开始录音到草稿流程并确认版式
+- 在8785医生页面手动查看Edge 125%与150%缩放并反馈遮挡或操作问题
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

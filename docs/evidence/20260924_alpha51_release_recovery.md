@@ -6,20 +6,20 @@ V3.4 三栏版式已获用户认可并接入真实业务。DEV-01 的文本、�
 
 | 项目 | 结果 |
 |---|---|
-| 本地归档 | `C:\Users\AWA007\Desktop\Data\开题报告\病历\01_STABLE_BASELINES\alpha-demo-m4-rc1-r5` |
-| 归档源 Git SHA | `b8d01eecdfc3cbe53092a6d03631956d6f9a7335` |
-| `manifest.json` SHA256 | `1e62974bdcf3c6b0244d20d9e3cc4ab597b6af05ffb2592392a48590a5c20beb` |
-| 文件 | 80 项、10,244,433,421 字节；逐文件 SHA256 位于 `sha256sums.txt` |
+| 本地归档 | `C:\Users\AWA007\Desktop\Data\开题报告\病历\01_STABLE_BASELINES\alpha-demo-m4-rc1-r6` |
+| 归档源 Git SHA | `0399533441f0f74fccc4a82d2d318332ae61089d` |
+| `manifest.json` SHA256 | `6934620ba88e1c45353cc0fe9c53e1ab12f5b367feba46c5ec1f18fedc764dac` |
+| 文件 | 80 项、10,244,456,623 字节；逐文件 SHA256 位于 `sha256sums.txt` |
 | 模型 | `qwen3:4b`，Ollama 清单 SHA256 `359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7`；FunASR 缓存原文件逐项校验 |
 | 数据 | 一名合成患者与一次合成就诊；归档内无用户、任务、音频、密码或真实患者数据库 |
 | 证据 | 归档内含三路径 JSON、V3.4 匿名截图、许可清单及 SHA 匹配的合成病例 DOCX |
 
-从归档复制到全新 `.artifacts/alpha51-offline-restore-r5-20260924/`，在新端口 `8785` 运行恢复器。`restore-result.json` 记录：`/health=200`、`/ready=200`、医生页面 `200`、应用容器外部连接 `BLOCKED`；模型摘要与上表相同，FunASR 四组件预热完成，SQLite `quick_check=ok`。恢复后的合成病例再次由本地 Qwen 生成到 `WAITING_DOCTOR_REVIEW`。原始运行日志、密码和恢复数据库只留在 `.artifacts`，不进入 Git。
+从归档复制到全新 `.artifacts/alpha51-offline-restore-r6-20260924/`，在新端口 `8788` 运行恢复器。`restore-result.json` 记录：`/health=200`、`/ready=200`、医生页面 `200`；应用、网关、Ollama 三个容器的外部连接均为 `BLOCKED`。模型摘要与上表相同，FunASR 四组件预热完成，SQLite `quick_check=ok`。恢复后的合成病例再次由本地 Qwen 生成到 `WAITING_DOCTOR_REVIEW`。原始运行日志、密码和恢复数据库只留在 `.artifacts`，不进入 Git。
 
 ```powershell
 python scripts/alpha51_release_archive.py restore `
-  --package 'C:\Users\AWA007\Desktop\Data\开题报告\病历\01_STABLE_BASELINES\alpha-demo-m4-rc1-r5' `
-  --target '.artifacts\alpha51-offline-restore-new' --port 8786 --timeout 600
+  --package 'C:\Users\AWA007\Desktop\Data\开题报告\病历\01_STABLE_BASELINES\alpha-demo-m4-rc1-r6' `
+  --target '.artifacts\alpha51-offline-restore-new' --port 8789 --timeout 600
 ```
 
 恢复目标必须是新的空路径，端口必须空闲。归档的 `manifest.json` 保留 `CANDIDATE_UNVERIFIED` 原始状态；只有配套的恢复结果才证明这次运行成功，不能回写归档掩盖此前失败。
@@ -32,9 +32,10 @@ python scripts/alpha51_release_archive.py restore `
 | r2 | CPU 模式 Qwen 探测超时，初期网关连接偶发断开 | 使用开发机 NVIDIA GPU、明确 `OLLAMA_NO_CLOUD=1`，网关改为流式 HTTP 转发；没有放宽 `/ready` |
 | r3 | 归档创建时 Python 导入路径错误 | 修复归档脚本；失败包未被标为候选通过 |
 | r4 | 新目录 `8784` 恢复、真实探测与合成病例生成通过 | 用于确认修正有效；最终封存的不是此包 |
-| r5 | 新目录 `8785` 恢复、真实探测与合成病例生成通过 | 最终工程候选；归档内补齐匿名证据和样例 |
+| r5 | 新目录 `8785` 恢复、真实探测与合成病例生成通过，但网关可外连 | 保留原包及失败证据，未改写 manifest |
+| r6 | 新目录 `8788` 恢复、真实探测与合成病例生成通过，三个容器外连均阻断 | 当前工程候选；网关启动时删除默认路由、降权运行，验收器逐容器探测 |
 
-这次验证证明**应用与模型可在服务级隔离网络中使用本地缓存运行**，没有证明主机物理断网。额外探针显示：应用容器外连被阻断，但只监听 loopback 的前端网关仍有外网出口。网关代码仅转发到内部应用、无模型和数据库挂载；在完全禁止每个容器外连的严格口径下，此网络拓扑仍需修正并重测。不得把 `restore-result.json` 的应用容器 `BLOCKED` 写成“所有容器均无外网路由”。
+这次验证证明**三个运行容器在服务级隔离网络中使用本地缓存运行，外连探针均被阻断**，没有证明 Windows 主机物理断网。网关仍只监听主机 loopback、无模型或数据库挂载；它以短暂的 `NET_ADMIN` 权限删除默认路由后降为普通用户。如果部署环境不允许删除路由，网关启动失败，不静默降级到可外连状态。r5的网关外连缺口与原始结果继续保留。
 
 ## 验证与剩余项
 
@@ -43,7 +44,7 @@ python scripts/alpha51_release_archive.py restore `
 - Edge 完成用户现场物理麦克风录音；Chrome 完成三栏几何检查。Edge **实际** 125%/150% 浏览器缩放尚未完成；等效 CSS 视口检查不能替代。
 - 原 2600/2666 容器保持停止，2626 现用容器未切换。Jetson 与完整 Alpha M4 Gate 仍未验收。
 
-当前结论是**可恢复工程候选**，不标记为稳定发布版。5.1 的视觉缩放与严格网关断网口径须在 Release Gate 中继续核验，完成前不得启动 5.3 的正式连续五次验收。
+当前结论是**可恢复、三容器外连阻断的工程候选**，不标记为稳定发布版。5.1 的 Edge 真实缩放尚未完成，且本次没有物理断开 Windows 主机网络；如果 Release Gate 要求物理断网，还需单独实测。完成前不得启动 5.3 的正式连续五次验收。
 
 ## 参考资料
 

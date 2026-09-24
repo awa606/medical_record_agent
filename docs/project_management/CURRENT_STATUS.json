@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-09-24T13:53:45.579690+08:00",
-  "source_hash": "41a82d230f1132ac37f60de51b85f97d0d39bc37cb20aaa6d7b6f2f3fa18089c",
+  "updated_at": "2026-09-24T14:00:48.706177+08:00",
+  "source_hash": "2fd9be6ab0bfa0bfed198d57bbfa6788b9a631249c8543a87f73b558401ce4d7",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "103ebf10d8334f4333cb0dd717bc58e7c5b721e7",
+  "repo_sha": "b15ddfb6a00c2f0a6bbcf4a14813c9adfe2749f8",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/alpha51-demo-visual-e2e",
   "active_pr": {
@@ -127,6 +127,7 @@
   },
   "extra_source_files": {
     ".artifacts/project-status/hardware_gates_deferred.json": "369afa7b5b4b262098c983555453ce260acb2b30b7a05553b648bc814818d2f9",
+    "docs/evidence/20260924_alpha51_poc_to_alpha_case_card.md": "29095a03502117f0ab5f6030be668aa157b25a68e9564f29b97b2caa0292b735",
     "docs/evidence/20260924_alpha51_release_recovery.md": "1c1e36c9cc08c4d53561548b7381746264c3c6b98a21926c853e017f8339f507"
   },
   "snapshot_verification": {

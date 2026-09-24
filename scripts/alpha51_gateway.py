@@ -11,7 +11,15 @@ import socketserver
 
 class Handler(socketserver.BaseRequestHandler):
     def handle(self) -> None:
-        with socket.create_connection(("app", 8000), timeout=10) as upstream:
+        try:
+            upstream = socket.create_connection(("app", 8000), timeout=10)
+        except OSError:
+            self.request.sendall(
+                b"HTTP/1.1 503 Service Unavailable\r\n"
+                b"Content-Length: 0\r\nConnection: close\r\n\r\n"
+            )
+            return
+        with upstream:
             self.request.settimeout(None)
             upstream.settimeout(None)
             peers = (self.request, upstream)

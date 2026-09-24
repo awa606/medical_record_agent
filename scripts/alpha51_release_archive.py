@@ -15,6 +15,7 @@ from pathlib import Path
 import secrets
 import shutil
 import socket
+import sqlite3
 import subprocess
 import sys
 import time
@@ -113,8 +114,33 @@ def create(args: argparse.Namespace) -> None:
     (package / "runtime-template" / "uploads").mkdir(parents=True)
     (package / "runtime-template" / "outputs").mkdir()
     (package / "runtime-template" / "speaker_profiles").mkdir()
+    seed_db = package / "runtime-template" / "medical_record_agent.sqlite3"
+    previous_db = os.environ.get("MEDICAL_RECORD_AGENT_DB")
+    previous_bootstrap = os.environ.get("MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP")
+    try:
+        os.environ["MEDICAL_RECORD_AGENT_DB"] = str(seed_db)
+        os.environ["MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP"] = "0"
+        from app.db.sqlite import create_encounter, init_db
+        init_db()
+        create_encounter(doctor_user_id=None, deidentified_id="SIM-ALPHA51", display_name="模拟患者")
+        with sqlite3.connect(seed_db) as conn:
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            conn.execute("PRAGMA journal_mode=DELETE")
+            counts = {name: conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
+                      for name in ("patient", "encounter", "auth_user", "agent_task")}
+            if counts != {"patient": 1, "encounter": 1, "auth_user": 0, "agent_task": 0}:
+                raise RuntimeError(f"unsafe seed database contents: {counts}")
+    finally:
+        if previous_db is None:
+            os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
+        else:
+            os.environ["MEDICAL_RECORD_AGENT_DB"] = previous_db
+        if previous_bootstrap is None:
+            os.environ.pop("MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP", None)
+        else:
+            os.environ["MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP"] = previous_bootstrap
     (package / "runtime-template" / "README.md").write_text(
-        "Empty synthetic runtime. SQLite is initialized on first launch; no identities or audio are bundled.\n",
+        "Synthetic patient and encounter only. No auth users, tasks, or audio are bundled.\n",
         encoding="utf-8",
     )
     (package / "tools").mkdir()
@@ -156,7 +182,7 @@ def response_code(url: str) -> int:
     try:
         with urlopen(url, timeout=8) as response:
             return response.status
-    except URLError as exc:
+    except (URLError, OSError) as exc:
         return getattr(exc, "code", 0) or 0
 
 
@@ -219,6 +245,8 @@ COMPOSE = """services:
     image: ollama/ollama:0.34.0
     environment:
       OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NO_CLOUD: "1"
+    gpus: all
     volumes:
       - ./models/ollama:/root/.ollama/models
     networks: [offline]

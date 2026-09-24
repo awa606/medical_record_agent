@@ -111,6 +111,34 @@ def create(args: argparse.Namespace) -> None:
         "patient_display_name": "模拟患者", "patient_deidentified_id": "SIM-ALPHA51",
         "source": "synthetic fixture; no real patient information",
     }, ensure_ascii=False, indent=2), encoding="utf-8")
+    evidence = package / "evidence"
+    evidence.mkdir()
+    for name in (
+        "20260924_alpha51_real_three_path_smoke.json",
+        "20260924_alpha51_visual_verification.md",
+        "20260924_alpha51_poc_to_alpha_case_card.md",
+    ):
+        shutil.copy2(ROOT / "docs" / "evidence" / name, evidence / name)
+    shutil.copytree(ROOT / "docs" / "evidence" / "images" / "alpha51_v34_review",
+                    evidence / "images" / "alpha51_v34_review")
+    asr_licenses = []
+    for card in sorted((package / "models" / "modelscope" / "models").glob("*/snapshots/*/README.md")):
+        license_line = next((line.strip() for line in card.read_text(encoding="utf-8").splitlines()
+                             if line.lower().startswith("license:")), "license: UNKNOWN")
+        asr_licenses.append({"card": card.relative_to(package).as_posix(),
+                             "card_sha256": digest(card), "declared_license": license_line.partition(":")[2].strip()})
+    (evidence / "model_license_inventory.json").write_text(json.dumps({
+        "qwen3_4b": {"license": "Apache-2.0",
+                      "source": "https://huggingface.co/Qwen/Qwen3-4B-Thinking-2507/blob/main/LICENSE",
+                      "ollama_manifest_sha256": digest(source_manifest)},
+        "funasr_cached_models": asr_licenses,
+        "scope": "local engineering archive; license metadata is not a clinical-use approval",
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    expected = json.loads((evidence / "20260924_alpha51_real_three_path_smoke.json").read_text(
+        encoding="utf-8"))["cases"]["text"]["docx_sha256"]
+    if digest(args.sample_export) != expected:
+        raise RuntimeError("synthetic export does not match the verified text-case SHA")
+    shutil.copy2(args.sample_export, evidence / "synthetic_text_case_export.docx")
     (package / "runtime-template" / "uploads").mkdir(parents=True)
     (package / "runtime-template" / "outputs").mkdir()
     (package / "runtime-template" / "speaker_profiles").mkdir()
@@ -164,6 +192,7 @@ def create(args: argparse.Namespace) -> None:
         "git_sha": sha,
         "images": {APP_IMAGE: image_id(APP_IMAGE), OLLAMA_IMAGE: image_id(OLLAMA_IMAGE)},
         "model": {"tag": OLLAMA_MODEL, "manifest_sha256": digest(source_manifest),
+                  "license": "Apache-2.0", "license_inventory": "evidence/model_license_inventory.json",
                   "blobs": dict(expected_blobs)},
         "data_policy": "synthetic only; source runtime/audio/password excluded",
         "files": files,
@@ -309,7 +338,8 @@ RUNBOOK = """# Alpha demo m4 rc1 · 离线恢复候选
 该包只含合成数据和固定模型。`manifest.json` 状态为 CANDIDATE_UNVERIFIED；
 恢复成功后以 `restore-result.json` 和真实生成 Smoke 判定可恢复，不能把候选直接称作稳定版。
 
-在已安装 Python 3、Docker Engine 和 Docker Compose 的开发机执行：
+在已安装 Python 3、Docker Engine、Docker Compose 与可用 NVIDIA 容器 GPU 的
+DEV-01 开发机执行。该归档未在 Jetson ARM/CUDA 上验证：
 
 ```powershell
 python tools/release.py restore --package <归档目录> --target <新空目录> --port 8781
@@ -321,7 +351,9 @@ Docker internal 网络；无运行数据卷的 TCP 网关把 App 发布到主机
 浏览器仅访问 `http://127.0.0.1:8781/static/doctor.html`。
 `admin-password.txt` 和 `.env` 在恢复时随机生成，位于恢复目录，不属于原归档。
 `/health` 仅表示 Web 进程存活，`/ready` 表示本地 ASR/LLM 等真实依赖就绪。
-需要通过另外的合成病例生成 Smoke，才可标为可恢复候选。真实音频和患者资料不得放入归档。
+`evidence/` 包含匿名测试摘要、认可版截图、模型许可清单及一份经 SHA 对照的
+合成病例导出样例。需要通过另外的合成病例生成 Smoke，才可标为可恢复候选。
+真实音频和患者资料不得放入归档。
 """
 
 
@@ -332,6 +364,7 @@ def main() -> None:
     create_parser.add_argument("--package", type=Path, required=True)
     create_parser.add_argument("--modelscope", type=Path, required=True)
     create_parser.add_argument("--ollama-models", type=Path, required=True)
+    create_parser.add_argument("--sample-export", type=Path, required=True)
     restore_parser = sub.add_parser("restore")
     restore_parser.add_argument("--package", type=Path, required=True)
     restore_parser.add_argument("--target", type=Path, required=True)

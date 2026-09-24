@@ -253,10 +253,20 @@ def restore(args: argparse.Namespace) -> None:
         "try:\n socket.create_connection(('1.1.1.1',443),timeout=3); print('OPEN')\n"
         "except OSError:\n print('BLOCKED')\n"
     )
-    checks["external_connection"] = run(*command, "exec", "-T", "app", "python", "-c", network_probe, cwd=target)
+    checks["external_connections"] = {
+        service: run(*command, "exec", "-T", service, "python", "-c", network_probe, cwd=target)
+        for service in ("app", "gateway")
+    }
+    checks["external_connections"]["ollama"] = run(
+        *command, "exec", "-T", "ollama", "bash", "-c",
+        "if timeout 3 bash -c 'echo >/dev/tcp/1.1.1.1/443' >/dev/null 2>&1; "
+        "then echo OPEN; else echo BLOCKED; fi",
+        cwd=target,
+    )
+    checks["external_connection"] = checks["external_connections"]["app"]
     checks["pass"] = (
         all(checks.get(key) == 200 for key in ("health", "ready", "doctor_page"))
-        and checks["external_connection"] == "BLOCKED"
+        and all(value == "BLOCKED" for value in checks["external_connections"].values())
     )
     (target / "restore-result.json").write_text(json.dumps(checks, indent=2), encoding="utf-8")
     print(json.dumps(checks))
@@ -322,6 +332,8 @@ COMPOSE = """services:
     image: mra-alpha-demo-m4-rc1:candidate
     depends_on: [app]
     command: ["python", "/gateway.py"]
+    user: "0:0"
+    cap_add: [NET_ADMIN]
     ports:
       - "127.0.0.1:${MRA_PORT}:8000"
     volumes:
@@ -347,7 +359,8 @@ python tools/release.py stop --target <新空目录> --port 8781
 ```
 
 恢复器先核对每个文件 SHA256，再复制到新目录、加载镜像。App 与 Ollama 只接入
-Docker internal 网络；无运行数据卷的 TCP 网关把 App 发布到主机 loopback 端口。
+Docker internal 网络；无运行数据卷的 TCP 网关移除默认外连路由、降权运行，
+仅把 App 发布到主机 loopback 端口。恢复验收分别探测三个容器的外连状态。
 浏览器仅访问 `http://127.0.0.1:8781/static/doctor.html`。
 `admin-password.txt` 和 `.env` 在恢复时随机生成，位于恢复目录，不属于原归档。
 `/health` 仅表示 Web 进程存活，`/ready` 表示本地 ASR/LLM 等真实依赖就绪。

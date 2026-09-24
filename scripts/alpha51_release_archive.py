@@ -119,6 +119,7 @@ def create(args: argparse.Namespace) -> None:
     )
     (package / "tools").mkdir()
     shutil.copy2(Path(__file__), package / "tools" / "release.py")
+    shutil.copy2(ROOT / "scripts" / "alpha51_gateway.py", package / "tools" / "gateway.py")
     (package / "compose.offline.yml").write_text(COMPOSE, encoding="utf-8")
     (package / "env.template").write_text(
         "MRA_PORT=8781\nMRA_BOOTSTRAP_PASSWORD=GENERATED_ON_RESTORE\n",
@@ -191,7 +192,16 @@ def restore(args: argparse.Namespace) -> None:
         if all(checks[key] == 200 for key in ("health", "ready", "doctor_page")):
             break
         time.sleep(5)
-    checks["pass"] = all(checks.get(key) == 200 for key in ("health", "ready", "doctor_page"))
+    network_probe = (
+        "import socket\n"
+        "try:\n socket.create_connection(('1.1.1.1',443),timeout=3); print('OPEN')\n"
+        "except OSError:\n print('BLOCKED')\n"
+    )
+    checks["external_connection"] = run(*command, "exec", "-T", "app", "python", "-c", network_probe, cwd=target)
+    checks["pass"] = (
+        all(checks.get(key) == 200 for key in ("health", "ready", "doctor_page"))
+        and checks["external_connection"] == "BLOCKED"
+    )
     (target / "restore-result.json").write_text(json.dumps(checks, indent=2), encoding="utf-8")
     print(json.dumps(checks))
     if not checks["pass"]:
@@ -215,8 +225,6 @@ COMPOSE = """services:
   app:
     image: mra-alpha-demo-m4-rc1:candidate
     depends_on: [ollama]
-    ports:
-      - "127.0.0.1:${MRA_PORT}:8000"
     environment:
       PYTHONPATH: /app
       MEDICAL_RECORD_AGENT_DB: /app/runtime/medical_record_agent.sqlite3
@@ -252,9 +260,19 @@ COMPOSE = """services:
       timeout: 10s
       retries: 3
       start_period: 90s
+  gateway:
+    image: mra-alpha-demo-m4-rc1:candidate
+    depends_on: [app]
+    command: ["python", "/gateway.py"]
+    ports:
+      - "127.0.0.1:${MRA_PORT}:8000"
+    volumes:
+      - ./tools/gateway.py:/gateway.py:ro
+    networks: [offline, frontend]
 networks:
   offline:
     internal: true
+  frontend: {}
 """
 
 RUNBOOK = """# Alpha demo m4 rc1 · 离线恢复候选
@@ -269,8 +287,9 @@ python tools/release.py restore --package <归档目录> --target <新空目录>
 python tools/release.py stop --target <新空目录> --port 8781
 ```
 
-恢复器先核对每个文件 SHA256，再复制到新目录、加载镜像，并在 Docker internal 网络
-启动两个容器。浏览器仅访问 `http://127.0.0.1:8781/static/doctor.html`。
+恢复器先核对每个文件 SHA256，再复制到新目录、加载镜像。App 与 Ollama 只接入
+Docker internal 网络；无运行数据卷的 TCP 网关把 App 发布到主机 loopback 端口。
+浏览器仅访问 `http://127.0.0.1:8781/static/doctor.html`。
 `admin-password.txt` 和 `.env` 在恢复时随机生成，位于恢复目录，不属于原归档。
 `/health` 仅表示 Web 进程存活，`/ready` 表示本地 ASR/LLM 等真实依赖就绪。
 需要通过另外的合成病例生成 Smoke，才可标为可恢复候选。真实音频和患者资料不得放入归档。

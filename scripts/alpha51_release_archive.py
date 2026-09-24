@@ -120,6 +120,7 @@ def create(args: argparse.Namespace) -> None:
     try:
         os.environ["MEDICAL_RECORD_AGENT_DB"] = str(seed_db)
         os.environ["MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP"] = "0"
+        sys.path.insert(0, str(ROOT))
         from app.db.sqlite import create_encounter, init_db
         init_db()
         create_encounter(doctor_user_id=None, deidentified_id="SIM-ALPHA51", display_name="模拟患者")

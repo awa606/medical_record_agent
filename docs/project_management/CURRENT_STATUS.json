@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-09-24T13:35:36.141498+08:00",
-  "source_hash": "50690a20b3185c02d0749b1b854ff57a4ed8c507bd5ae90d0b54a48c988c0e52",
+  "updated_at": "2026-09-24T13:53:45.579690+08:00",
+  "source_hash": "41a82d230f1132ac37f60de51b85f97d0d39bc37cb20aaa6d7b6f2f3fa18089c",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "9fb0aa04ee72ddc47db9ad3d9d8eacb182603da1",
+  "repo_sha": "103ebf10d8334f4333cb0dd717bc58e7c5b721e7",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/alpha51-demo-visual-e2e",
   "active_pr": {
@@ -93,21 +93,21 @@
     }
   },
   "purchase_decision": "DEFERRED",
-  "next_task": "核验Edge实际125%和150%缩放，并封闭归档网关外连后重跑断网恢复",
+  "next_task": "核验Edge实际125%和150%缩放，并完成Windows主机物理断网恢复Smoke",
   "parallel_waiting_task": "无；5.3正式连续五次E2E待5.1 Release Gate关闭",
   "manual_actions": [
     "在8785医生页面手动查看Edge 125%与150%缩放并反馈遮挡或操作问题"
   ],
-  "forecast_alpha_exit": "Software Lane baseline 2026-10-07; visual and network gate impact pending; Full M4 TBD / HARDWARE DEPENDENT",
+  "forecast_alpha_exit": "Software Lane baseline 2026-10-07; visual and host-offline gate impact pending; Full M4 TBD / HARDWARE DEPENDENT",
   "source_files": {
     ".obsidian/plugins/project-planner-engineering/main.js": "e4006974bdcc45cb5ab80aebc5b9fd721a24c451ea883fd7d7e5239676017cca",
     ".obsidian/plugins/project-planner-engineering/manifest.json": "23672403c65ab17af6d28d84bbd822fab00ceeac1961612eb5cf9d514befa979",
-    "Projects/Medical_Record_Agent/00_Project_Home.md": "dfdb06ba45e5a87ac62a5140bbc2a3f5327a0c089791c2374feda51e5e7af0e2",
-    "Projects/Medical_Record_Agent/05_WBS.md": "e7d612c344db2adb1ae175a84e2e0f19f6226b575046cd2003d82e4f0bbefd0b",
+    "Projects/Medical_Record_Agent/00_Project_Home.md": "2ff83a27678d51031f7654710bc30be2406da1e4a72d5065e00c3d7c3c195321",
+    "Projects/Medical_Record_Agent/05_WBS.md": "23b5cc27df82508b2ce82060214be51dc19c2c58cb7577efc1c64bd990ae3b73",
     "Projects/Medical_Record_Agent/06_Milestones.md": "ae281ee0e67d9a2a1c8053ba8ed44a6aaf57b837ca50ffa4cbe911f9e5929235",
     "Projects/Medical_Record_Agent/07_Risks.md": "e27e77140e9c7f7cdfe30849731c9c5d0df4b592212741d1ea174ccb2b955602",
     "Projects/Medical_Record_Agent/08_Verification_Matrix.md": "00c6cfbc1aaaec9aa313f29457cc59c3d5eb878de678c65942c7422b747cce18",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "85ba384e466618abc39673ccd4b38ca55cd48f41cb6531d590c7d9fb8a05782a",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "f5fe133865841e322dad31c48a6ff48bf8ec2c83d519f1b38fe3fdd931cb73af",
     "Projects/Medical_Record_Agent/Tasks/1.1 目标硬件与BOM基线.md": "e2a97826a25b65428c0d6d6f3421ab4ddfa625ad2fd36586e6188087f39ac9ef",
     "Projects/Medical_Record_Agent/Tasks/1.2 Docker _ 本地运行环境整合.md": "896034a122795debea681b63df387072de2c97176f10850054d52a180dcd8bf7",
     "Projects/Medical_Record_Agent/Tasks/1.3 本地ASR _ LLM Provider核对与整合.md": "bcbf1c48b6357ca663a0e88a8f5bfdb4b22939794e38ca567a158bf711ac90f9",
@@ -120,14 +120,14 @@
     "Projects/Medical_Record_Agent/Tasks/3.3 医生修改、审核与导出.md": "b2d325c1534f4b696f90766e9a0cddde2b71ebda4b27d4640d5a263a0edbafaf",
     "Projects/Medical_Record_Agent/Tasks/4.1 Encounter _ Transcript _ Draft基础持久化.md": "ac396168165bbc5b8ce20ec77fdbb8b0c52d9d57fb0aa21783b39a431c143939",
     "Projects/Medical_Record_Agent/Tasks/4.2 病历证据与Revision版本关联.md": "caa937a1f5f28c8ae4a817d7ca692217560256101c390e4d585152c392949054",
-    "Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke.md": "cbe8f8058d90f978c94c7f6d7e00e0fcbd02d0a523f062bca14c7dab1d92db49",
+    "Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke.md": "90ff975906fabb6011d71ba4b5e13a4921b1c0fa5812f103f5040151a0f1db1f",
     "Projects/Medical_Record_Agent/Tasks/5.2 断网本地运行验证.md": "9cbfed70e6f73c9199e7031611a2a2760b4b30eed8268f4385f35426c45aecda",
     "Projects/Medical_Record_Agent/Tasks/5.3 连续5次真实音频E2E.md": "128e7dd1c17ce42c2ff5ff9ceda13283eaa860b981673c621e81d05dff7dd5c3",
     "Projects/Medical_Record_Agent/Tasks/5.4 Alpha缺陷回归和证据归档.md": "f904dcf687858ef01903e7fb53eca97c004f7b56656186dc8fae38fa240b1157"
   },
   "extra_source_files": {
     ".artifacts/project-status/hardware_gates_deferred.json": "369afa7b5b4b262098c983555453ce260acb2b30b7a05553b648bc814818d2f9",
-    "docs/evidence/20260924_alpha51_release_recovery.md": "f3ce4b03310f59bd21771d2e69b99201d894ea0be962c797824401cb4c66adfd"
+    "docs/evidence/20260924_alpha51_release_recovery.md": "1c1e36c9cc08c4d53561548b7381746264c3c6b98a21926c853e017f8339f507"
   },
   "snapshot_verification": {
     "result": "PASS",

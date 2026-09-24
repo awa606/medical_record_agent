@@ -200,9 +200,13 @@ def test_recording_entry_guides_to_encounter_selection_and_panel() -> None:
             expect(page.locator("#recordingPanel.active")).to_be_visible()
             expect(page.locator("#drawerTitle")).to_contain_text("浏览器录音生成病历")
             # The approved one-click flow immediately requests the microphone.
-            # This headless context has no device, so it must expose a clear error.
+            # Headless browser errors differ by host: Windows reports
+            # NotSupportedError, while Linux reports NotFoundError. Both must
+            # surface a clear failure instead of proceeding as a recording.
             page.wait_for_function("window.__MRA_APP_STATE__.browserRecordingStatus === 'error'")
-            expect(page.locator("#browserRecordingMessage")).to_contain_text("Not supported")
+            expect(page.locator("#browserRecordingMessage")).to_contain_text(
+                re.compile(r"Not supported|未检测到麦克风输入设备")
+            )
 
             page.evaluate(
                 """

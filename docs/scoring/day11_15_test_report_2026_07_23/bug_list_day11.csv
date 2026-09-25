@@ -1,0 +1,11 @@
+﻿编号,级别,问题,证据,建议处理,状态
+BUG-001,P0,真实 FunASR 音频转写超时,direct transcribe funasr 60 秒未返回；容器日志显示 modelscope.cn DNS 解析失败,展示时不要现场跑真实 FunASR；主流程使用文本输入，后续预置模型缓存并加超时失败态,未关闭
+BUG-002,P1,ASR session 上传后停在 stream_ready，用户容易误以为转写已完成,session audio smoke 最后状态为 stream_ready,前端需把“已上传/待转写”和“转写完成”区分显示,待排期
+BUG-003,P1,PowerShell 管道中文编码会导致接口测试文本变成问号,第一次 API smoke 的 input_text 为问号，Unicode escape 复测通过,测试脚本统一使用 UTF-8 文件或 Unicode escape，避免误判抽取质量,已规避
+BUG-004,P1,文本生成候选诊断依赖输入质量，错误编码会导致 candidate_count=0,有效中文复测生成 2 个候选：发热待查、肺部感染待排,报告仅采信有效中文复测结果,已规避
+BUG-005,P1,演示模式/真实模型边界需要口头说明,/ready provider 显示 mock；真实 FunASR 受模型下载影响,演示说明“文本主链路稳定，真实音频需模型预热/缓存”,待产品化
+BUG-006,P2,导出接口响应仍包含服务器内部路径,export response 返回 /app/runtime/outputs/...，但下载接口可用,前端只显示“已生成，可下载”，不展示服务器路径,需复核 UI
+BUG-007,P2,Docker 日志中 ready 探针过多，报告噪声较大,docker logs 中大量 /ready 200,测试报告只保留异常/关键日志摘要,已处理
+BUG-008,P2,DOCX 导出文件体积偏小，需人工打开检查版式,task_15_valid_chinese_export.docx 1500 bytes,明天展示建议优先展示 Markdown 内容或浏览器下载动作，DOCX 打开作为补充,待人工验收
+BUG-009,P2,音频生成入口容易诱导老师现场触发不稳定路径,真实 FunASR 60 秒超时,展示脚本中将音频入口作为“已接入能力”，不作为主链路现场运行,需讲稿约束
+BUG-010,P3,测试报告尚未覆盖真实 30 分钟连续录音,本轮按 Day11-15 当前时间只做 API 和短音频 smoke,后续按录音 V2 验收补 5-10 分钟真实浏览器人工测试,待后续

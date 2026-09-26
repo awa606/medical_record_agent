@@ -44,6 +44,24 @@ jobs:
       - name: Check doctor frontend JavaScript
         run: node --check static/doctor.js
 
+      - name: Check isolated workspace prototype
+        run: node --check docs/prototypes/doctor-workspace-v3/workspace.js
+
+      - name: Test prototype layout and interactions (not visual approval or real E2E)
+        working-directory: tests/visual
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+          npm test
+
+      - name: Upload prototype review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpha51-prototype-review
+          path: .artifacts/alpha51-preview-v3
+          if-no-files-found: ignore
+
       - name: Check service health and readiness endpoints
         env:
           PYTHONPATH: ${{ github.workspace }}

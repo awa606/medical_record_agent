@@ -1,0 +1,8 @@
+{
+  "status": "approved",
+  "version": "V3.4",
+  "reviewed_by": "user",
+  "reviewed_at": "2026-09-24T11:19:00+08:00",
+  "decision": "认可 V3.4，接入真实业务",
+  "scope": "三栏布局、顶部就诊信息与录音操作顺序；真实业务与发布验收仍待验证"
+}

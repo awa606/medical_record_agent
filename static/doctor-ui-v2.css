@@ -857,6 +857,7 @@ body.doctor-mode .encounter-view {
   padding-bottom: var(--action-bar-safe-space);
 }
 
+
 .encounter-patient-banner {
   display: grid;
   grid-template-columns: minmax(190px, 1.2fr) repeat(3, minmax(130px, 0.8fr)) minmax(150px, 0.9fr);

@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>MediListen - AI 智能病历助手</title>
     <link rel="stylesheet" href="./doctor.css?v=2026071601" />
-    <link rel="stylesheet" href="./doctor-ui-v2.css?v=2026072901" />
+    <link rel="stylesheet" href="./doctor-ui-v2.css?v=2026092602" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=2026092602" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -82,15 +83,15 @@
         </div>
         <button type="button" class="product-nav-item" data-product-view-target="workbench">
           <span>工作台</span>
-          <small>今日待办与就诊列表</small>
+          <small>就诊列表与待办</small>
         </button>
         <button type="button" class="product-nav-item" data-product-view-target="encounter">
           <span>就诊工作区</span>
-          <small>转写、病历与医生审核</small>
+          <small>转写 · 病历 · 审核</small>
         </button>
         <button type="button" class="product-nav-item" data-product-view-target="admin">
           <span>管理后台</span>
-          <small>用户权限与运行状态</small>
+          <small>账号与运行状态</small>
         </button>
         <div class="product-nav-foot">
           <span class="environment-dot" aria-hidden="true"></span>
@@ -165,22 +166,22 @@
         </section>
       </section>
 
-      <section id="encounterView" class="product-view encounter-view" data-product-view="encounter" aria-label="患者就诊工作区">
+      <section id="encounterView" class="product-view encounter-view alpha51-workspace" data-product-view="encounter" aria-label="患者就诊工作区">
         <section class="patient-bar encounter-patient-banner" aria-label="患者与会话信息">
           <div class="patient-identity-cell">
             <span class="meta-label">当前患者</span>
             <strong id="patientName">-</strong>
             <small id="patientProfile">-</small>
           </div>
-          <div>
+          <div class="encounter-session-cell">
             <span class="meta-label">就诊会话</span>
             <strong id="sessionId">-</strong>
           </div>
-          <div>
+          <div class="encounter-input-cell">
             <span class="meta-label">输入方式</span>
             <strong id="recordingStatus">-</strong>
           </div>
-          <div>
+          <div class="encounter-review-cell">
             <span class="meta-label">审核状态</span>
             <strong id="reviewStatus">-</strong>
           </div>
@@ -204,12 +205,6 @@
         </section>
 
         <section class="encounter-command-center" aria-label="病历生成流程与下一步操作">
-          <div class="encounter-command-copy">
-            <span class="page-eyebrow">当前流程</span>
-            <h2>问诊记录处理</h2>
-            <p class="process-hint">AI 先生成草稿，医生完成核对与审核后方可导出。</p>
-          </div>
-
           <section class="workflow-panel" aria-label="病历生成流程">
             <ol id="workflowSteps" class="workflow-steps"></ol>
           </section>
@@ -218,7 +213,10 @@
             请上传问诊音频或粘贴问诊文本开始。
           </section>
 
-          <section id="nextActionPanel" class="next-action-panel" aria-live="polite"></section>
+          <div class="workspace-panel-switches" aria-label="辅助工作区">
+            <button type="button" id="showTranscriptButton" data-workspace-panel="transcript">转写与录音</button>
+            <button type="button" id="showReferenceButton" data-workspace-panel="assist">诊疗参考</button>
+          </div>
         </section>
 
         <section id="transcriptionFailurePanel" class="failure-recovery-panel" hidden aria-live="polite">
@@ -280,11 +278,11 @@
         </div>
       </section>
 
-      <main class="workbench" aria-label="医生工作台主体">
+      <div class="workbench" aria-label="医生工作台主体">
         <aside class="column field-column">
           <div class="panel-header">
             <div>
-              <h2>结构化病历</h2>
+              <h2>门诊病历</h2>
               <p>核对 AI 提取字段，缺失和低置信内容会单独标记。</p>
             </div>
             <span id="fieldCountBadge" class="status-badge neutral">-</span>
@@ -296,14 +294,41 @@
         <section class="column transcript-column">
           <div class="panel-header">
             <div>
-              <h2>问诊转写与证据</h2>
+              <h2>问诊转写</h2>
               <p>核对说话人和原文，点击转写可定位对应音频。</p>
             </div>
             <div class="transcript-header-actions">
-              <button type="button" id="transcriptSettingsButton" class="transcript-settings-button">显示设置</button>
               <span id="transcriptBadge" class="status-badge info transcript-badge-inline">-</span>
             </div>
           </div>
+          <div class="transcript-input-toolbar" aria-label="其他问诊输入">
+            <button type="button" data-input-method="audio">上传音频</button>
+            <button type="button" data-input-method="text">文本输入</button>
+            <button type="button" id="transcriptSettingsButton" class="transcript-settings-button">显示设置</button>
+          </div>
+          <section id="nextActionPanel" class="next-action-panel" aria-live="polite"></section>
+      <section id="recordingPanel" class="inline-recording" hidden>
+
+        <div class="browser-recording-panel" aria-live="polite">
+          <div class="browser-recording-meter">
+            <span id="browserRecordingStatusLabel">等待录音</span>
+            <strong id="browserRecordingTimer">00:00</strong>
+          </div>
+          <div class="recording-actions">
+            <button type="button" class="primary-action" id="startBrowserRecordingButton">开始录音</button>
+            <button type="button" id="pauseBrowserRecordingButton">暂停</button>
+            <button type="button" id="resumeBrowserRecordingButton">恢复</button>
+            <button type="button" id="stopBrowserRecordingButton">停止</button>
+            <button type="button" class="danger-action" id="cancelBrowserRecordingButton">取消</button>
+          </div>
+          <audio id="browserRecordingPreview" controls preload="metadata"></audio>
+          <div id="browserRecordingChunkStatus" class="recording-chunk-status"></div>
+          <div id="browserRecordingMessage" class="recording-message"></div>
+          <button type="button" id="retryBrowserRecordingChunksButton">重新上传失败片段</button>
+        </div>
+        <button type="button" class="primary-action wide-action" id="submitBrowserRecordingButton">上传并生成病历</button>
+      </section>
+
           <div id="transcriptList" class="transcript-list"></div>
           <footer id="consultationAudioPlayer" class="transcript-audio-player" hidden>
             <audio id="consultationAudio" preload="metadata"></audio>
@@ -365,13 +390,13 @@
         <aside class="column assist-column">
           <div class="panel-header">
             <div>
-              <h2>临床提示</h2>
-              <p>集中展示风险、缺失项和候选诊断，仅供医生参考。</p>
+              <h2>诊疗参考</h2>
+              <p>点击名称查看完整依据，仅供医生参考。</p>
             </div>
           </div>
           <div id="assistPanels" class="assist-list"></div>
         </aside>
-      </main>
+      </div>
       <footer class="bottom-actions assist-operation-panel encounter-action-bar" aria-label="病历操作区">
         <div class="operation-heading">
           <strong id="currentTaskLabel">当前任务</strong>
@@ -452,8 +477,12 @@
       </main>
     </div>
 
+    <dialog id="workspaceAuxDialog" class="workspace-aux-dialog" aria-labelledby="workspaceAuxTitle">
+      <header><h2 id="workspaceAuxTitle">辅助工作区</h2><button type="button" id="closeWorkspaceAuxButton">返回病历</button></header>
+      <div id="workspaceAuxContent"></div>
+    </dialog>
     <div id="drawerBackdrop" class="drawer-backdrop"></div>
-    <aside id="drawer" class="drawer" aria-hidden="true">
+    <aside id="drawer" class="drawer" aria-hidden="true" inert role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
       <header class="drawer-header">
         <h2 id="drawerTitle">抽屉</h2>
         <button type="button" id="closeDrawerButton">关闭</button>
@@ -507,28 +536,6 @@
           <small>注册音频提取 CAM++ 向量后立即删除，只在本机保存声纹向量。</small>
         </div>
         <button type="button" class="primary-action wide-action" id="submitAudioButton">上传</button>
-      </section>
-
-      <section id="recordingPanel" class="drawer-panel">
-        <p class="form-help">使用浏览器麦克风录制最长 30 分钟 WAV 音频，支持暂停/恢复、分块上传、刷新后按 session 恢复转写。</p>
-        <div class="browser-recording-panel" aria-live="polite">
-          <div class="browser-recording-meter">
-            <span id="browserRecordingStatusLabel">等待录音</span>
-            <strong id="browserRecordingTimer">00:00</strong>
-          </div>
-          <div class="recording-actions">
-            <button type="button" class="primary-action" id="startBrowserRecordingButton">开始录音</button>
-            <button type="button" id="pauseBrowserRecordingButton">暂停</button>
-            <button type="button" id="resumeBrowserRecordingButton">恢复</button>
-            <button type="button" id="stopBrowserRecordingButton">停止</button>
-            <button type="button" class="danger-action" id="cancelBrowserRecordingButton">取消</button>
-          </div>
-          <audio id="browserRecordingPreview" controls preload="metadata"></audio>
-          <div id="browserRecordingChunkStatus" class="recording-chunk-status"></div>
-          <div id="browserRecordingMessage" class="recording-message"></div>
-          <button type="button" id="retryBrowserRecordingChunksButton">重新上传失败片段</button>
-        </div>
-        <button type="button" class="primary-action wide-action" id="submitBrowserRecordingButton">上传并生成病历</button>
       </section>
 
       <section id="evaluationPanel" class="drawer-panel">
@@ -615,6 +622,6 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=2026091701"></script>
+    <script src="./doctor.js?v=2026092602"></script>
   </body>
 </html>

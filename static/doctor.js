@@ -2124,6 +2124,11 @@ function nextActionState() {
 
 function renderNextActionPanel() {
   const state = nextActionState();
+  const exceptional = roleReviewRequired() || doctorDisplayState().key === "failed" || appState.lastActionError;
+  const inlineRecording = !$("recordingPanel")?.hidden;
+  $("nextActionPanel").hidden = !exceptional && (Boolean(appState.currentRecordFields) || inlineRecording);
+  $("showTranscriptButton").textContent = roleReviewRequired() ? "确认说话人身份" : "转写与录音";
+
   $("nextActionPanel").className = `next-action-panel ${state.tone}`.trim();
   const stages = state.stages ? renderProcessingStages() : "";
   $("nextActionPanel").innerHTML = `
@@ -2201,8 +2206,33 @@ function renderTranscriptionFailurePanel() {
 }
 
 let detailReturnFocus = null;
+let workspaceAuxiliary = null;
+
+function closeWorkspaceAuxiliary() {
+  if (!workspaceAuxiliary) return;
+  const { column, placeholder, trigger } = workspaceAuxiliary;
+  workspaceAuxiliary = null;
+  placeholder.replaceWith(column);
+  $("workspaceAuxDialog").close();
+  trigger?.focus({ preventScroll: true });
+}
+
+function openWorkspaceAuxiliary(kind) {
+  closeWorkspaceAuxiliary();
+  const column = document.querySelector(kind === "assist" ? ".assist-column" : ".transcript-column");
+  const placeholder = document.createComment("workspace auxiliary return position");
+  const trigger = $(kind === "assist" ? "showReferenceButton" : "showTranscriptButton");
+  column.replaceWith(placeholder);
+  workspaceAuxiliary = { column, placeholder, trigger };
+  $("workspaceAuxContent").append(column);
+  $("workspaceAuxTitle").textContent = kind === "assist" ? "诊疗参考" : "转写与录音";
+  $("workspaceAuxDialog").showModal();
+  $("closeWorkspaceAuxButton").focus();
+}
+
 
 function openDrawer(panelId, title) {
+  closeWorkspaceAuxiliary();
   closeInputMethodMenu();
   closeDisplaySettingsMenu();
   $("drawerTitle").textContent = title;
@@ -2215,7 +2245,7 @@ function openDrawer(panelId, title) {
 }
 
 function closeDrawer() {
-  if (!detailReturnFocus && (appState.browserRecordingStatus === "recording" || appState.browserRecordingStatus === "requesting")) {
+  if (!detailReturnFocus && $("drawer").contains($("recordingPanel")) && (appState.browserRecordingStatus === "recording" || appState.browserRecordingStatus === "requesting")) {
     appState.browserRecordingMessage = "录音正在进行。请先点击“停止”完成试听，或点击“取消”放弃本次录音。";
     renderBrowserRecordingPanel();
     showToast("录音进行中，请先停止或取消录音");
@@ -2238,6 +2268,7 @@ function closeDrawer() {
 }
 
 function openDetailDrawer(title, html) {
+  closeWorkspaceAuxiliary();
   const content = $("detailDrawerContent");
   if (!content) return;
   if (!detailReturnFocus) detailReturnFocus = document.activeElement;
@@ -2321,6 +2352,16 @@ function renderBrowserRecordingPanel() {
   cancelButton.disabled = isUploading || (appState.browserRecordingStatus === "idle" && !hasQueuedChunks && !appState.browserRecordingFinalized);
   submitButton.disabled = appState.busy || isUploading || !appState.browserRecordingFinalized || hasFailedChunks || appState.browserRecordingRecovering;
   retryButton.disabled = appState.browserRecordingUploadInFlight || !appState.browserRecordingSessionId || !hasFailedChunks;
+  const panelOpen = !$("recordingPanel").hidden;
+  startButton.hidden = isRecording || isPaused || isRequesting || isUploading || Boolean(appState.browserRecordingFinalized);
+  pauseButton.hidden = !isRecording;
+  resumeButton.hidden = !isPaused;
+  stopButton.hidden = !(isRecording || isPaused);
+  cancelButton.hidden = appState.browserRecordingStatus === "idle" && !hasQueuedChunks;
+  submitButton.hidden = !appState.browserRecordingFinalized;
+  retryButton.hidden = !hasFailedChunks;
+  if (appState.currentRecordFields && appState.browserRecordingMessage.startsWith("病历草稿已生成")) $("recordingPanel").hidden = true;
+  if (panelOpen) renderNextActionPanel();
   preview.style.display = appState.browserRecordingObjectUrl ? "block" : "none";
   chunkStatus.textContent = appState.browserRecordingChunkStatus || "";
   message.textContent = appState.browserRecordingMessage || browserRecordingDefaultMessage();
@@ -5325,6 +5366,13 @@ function renderFooter() {
     cancelEditButton.hidden = true;
     saveButton.hidden = true;
   }
+  const primary = appState.recordEditMode ? saveButton
+    : ["approved", "exported"].includes(displayState.key) ? exportButton
+    : displayState.key === "pending_review" ? confirmButton : editButton;
+  [regenerateButton, editButton, cancelEditButton, saveButton, confirmButton, exportButton].forEach(button => {
+    button.classList.toggle("primary-action", button === primary);
+    button.classList.remove("danger-action");
+  });
 }
 
 function openWorkbenchDetail(target = "") {
@@ -8234,11 +8282,16 @@ async function submitBrowserRecording() {
 
 function openReservedRecording() {
   if (!requireEncounterBeforeInput("record")) return;
+  setProductView("encounter");
   closeInputMethodMenu();
   clearActionError();
   appState.audioMode = "generate";
   appState.browserRecordingMessage = browserRecordingDefaultMessage();
-  openDrawer("recordingPanel", "浏览器录音生成病历");
+  $("recordingPanel").hidden = false;
+  renderBrowserRecordingPanel();
+  renderNextActionPanel();
+  if (window.innerWidth < 1024) openWorkspaceAuxiliary("transcript");
+  $("startBrowserRecordingButton").focus({ preventScroll: true });
 }
 
 function openEvaluation() {
@@ -8273,6 +8326,15 @@ async function testLlmConnection() {
 }
 
 function bindEvents() {
+  document.querySelectorAll("[data-workspace-panel]").forEach(button => {
+    button.addEventListener("click", () => openWorkspaceAuxiliary(button.dataset.workspacePanel));
+  });
+  $("closeWorkspaceAuxButton").addEventListener("click", closeWorkspaceAuxiliary);
+  $("workspaceAuxDialog").addEventListener("cancel", event => { event.preventDefault(); closeWorkspaceAuxiliary(); });
+  window.addEventListener("resize", () => {
+    if (workspaceAuxiliary && (window.innerWidth >= 1280 ||
+      (workspaceAuxiliary.column.classList.contains("transcript-column") && window.innerWidth >= 1024))) closeWorkspaceAuxiliary();
+  });
   const consultationAudio = $("consultationAudio");
   $("doctorModeButton").addEventListener("click", () => setViewMode("doctor"));
   $("debugModeButton").addEventListener("click", () => setViewMode("debug"));

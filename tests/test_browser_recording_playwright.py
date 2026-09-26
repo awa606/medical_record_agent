@@ -197,8 +197,9 @@ def test_recording_entry_guides_to_encounter_selection_and_panel() -> None:
             drawer_record_button.click()
             page.wait_for_function("(id) => window.__MRA_APP_STATE__?.currentEncounter?.id === id", arg=encounter_id)
             page.click('[data-workflow-action="record-audio"]')
-            expect(page.locator("#recordingPanel.active")).to_be_visible()
-            expect(page.locator("#drawerTitle")).to_contain_text("浏览器录音生成病历")
+            expect(page.locator("#recordingPanel")).to_be_visible()
+            assert page.locator(".transcript-column #recordingPanel").is_visible()
+            expect(page.locator("#drawer")).not_to_have_class(re.compile(r".*\bactive\b.*"))
             # The approved one-click flow immediately requests the microphone.
             # Headless browser errors differ by host: Windows reports
             # NotSupportedError, while Linux reports NotFoundError. Both must
@@ -218,8 +219,8 @@ def test_recording_entry_guides_to_encounter_selection_and_panel() -> None:
                 }
                 """
             )
-            expect(page.locator("#drawer")).to_have_class(re.compile(r".*\bactive\b.*"))
-            expect(page.locator("#browserRecordingMessage")).to_contain_text("录音正在进行")
+            expect(page.locator("#drawer")).not_to_have_class(re.compile(r".*\bactive\b.*"))
+            expect(page.locator("#stopBrowserRecordingButton")).to_be_visible()
             assert page.evaluate("window.__MRA_APP_STATE__?.browserRecordingStatus") == "recording"
             browser.close()
     finally:

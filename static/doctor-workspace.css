@@ -1,0 +1,184 @@
+/* Alpha 5.1 clinical workspace candidate. One owner for shell/layout rules.
+   Presentation only: workflow, approval and provider gates remain in doctor.js. */
+body.doctor-mode {
+  --ws-s1: 4px; --ws-s2: 8px; --ws-s3: 12px; --ws-s4: 16px; --ws-s6: 24px;
+  --ws-border: #dce3e9; --ws-muted: #526477; --ws-bg: #f2f4f7;
+}
+body.doctor-mode .doctor-app { grid-template-columns: 144px minmax(0, 1fr); grid-template-rows: 48px minmax(0, 1fr); gap: 0; padding: 0; }
+body.doctor-mode .topbar { min-height: 48px; padding: 6px 16px; margin: 0; box-shadow: none; }
+body.doctor-mode .brand-mark { width: 30px; height: 30px; font-size: 12px; border-radius: 6px; }
+body.doctor-mode .brand-copy h1 { font-size: 20px; line-height: 1.3; }
+body.doctor-mode .brand-copy p { display: none; }
+body.doctor-mode .top-actions { gap: 8px; }
+body.doctor-mode .top-actions button { min-height: 32px; font-size: 14px; padding: 5px 10px; }
+body.doctor-mode .top-actions .input-method-menu { display: none; }
+body.doctor-mode .product-nav { height: calc(100dvh - 48px); min-height: 0; padding: 20px 8px; }
+body.doctor-mode .product-nav-heading { padding: 0 10px 18px; }
+body.doctor-mode .product-nav-heading span { font-size: 12px; letter-spacing: 0; }
+body.doctor-mode .product-nav-heading strong { display: none; }
+body.doctor-mode .product-nav-item { min-height: 64px; padding: 12px 10px; gap: 4px; border-radius: 5px; }
+body.doctor-mode .product-nav-item span { font-size: 16px; font-weight: 600; line-height: 1.5; }
+body.doctor-mode .product-nav-item small { font-size: 12px; line-height: 1.5; }
+body.doctor-mode .product-nav-foot { padding-inline: 8px; }
+body.doctor-mode .alpha51-workspace {
+  height: calc(100dvh - 48px); max-height: calc(100dvh - 48px); min-height: 0;
+  display: flex; flex-direction: column; gap: 8px; padding: 12px 16px;
+  background: var(--ws-bg); overflow: hidden;
+}
+body.doctor-mode .alpha51-workspace[hidden] { display: none; }
+body.doctor-mode .alpha51-workspace .encounter-patient-banner {
+  flex: none; display: flex; justify-content: space-between; align-items: center;
+  min-height: 56px; border: 1px solid var(--ws-border); border-radius: 6px; background: white;
+}
+body.doctor-mode .alpha51-workspace .encounter-patient-banner > div { min-height: 54px; padding: 8px 16px; border: 0; background: transparent; }
+body.doctor-mode .alpha51-workspace .patient-identity-cell { display: flex; align-items: center; justify-content: flex-start; gap: 16px; text-align: left; }
+body.doctor-mode .alpha51-workspace .patient-identity-cell .meta-label { display: none; }
+body.doctor-mode .alpha51-workspace .patient-identity-cell strong { flex: none; font-size: 19px; font-weight: 700; }
+body.doctor-mode .alpha51-workspace .patient-identity-cell small { font-size: 13px; color: var(--ws-muted); line-height: 1.5; }
+body.doctor-mode .alpha51-workspace .encounter-review-cell { flex: none; align-content: center; justify-items: end; gap: 2px; }
+body.doctor-mode .alpha51-workspace .encounter-review-cell .meta-label { display: none; }
+body.doctor-mode .alpha51-workspace .encounter-review-cell strong { font-size: 14px; font-weight: 600; }
+body.doctor-mode .alpha51-workspace .encounter-session-cell,
+body.doctor-mode .alpha51-workspace .encounter-input-cell,
+body.doctor-mode .alpha51-workspace .patient-data-cell { display: none; }
+body.doctor-mode .alpha51-workspace .encounter-command-center { flex: none; display: flex; align-items: center; gap: 12px; min-height: 36px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+body.doctor-mode .alpha51-workspace .workflow-panel { flex: 1; min-height: 36px; padding: 0; }
+body.doctor-mode .alpha51-workspace .workflow-steps { gap: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+body.doctor-mode .alpha51-workspace .workflow-step { min-height: 36px; border: 0; border-radius: 4px; padding: 4px 8px; gap: 8px; background: transparent; color: #526477; font-size: 14px; font-weight: 500; box-shadow: none; }
+body.doctor-mode .alpha51-workspace .workflow-step.active { background: #e2edf8; color: #144f87; font-weight: 700; }
+body.doctor-mode .alpha51-workspace .workflow-step.done { color: #366655; }
+body.doctor-mode .alpha51-workspace .workflow-index { width: 20px; height: 20px; font-size: 11px; background: #fff; color: inherit; }
+body.doctor-mode .alpha51-workspace #stepPrompt { display: none !important; }
+.workspace-panel-switches { display: none; gap: 8px; flex: none; }
+.workspace-panel-switches button { min-height: 36px; padding: 6px 12px; font-size: 14px; background: white; }
+body.doctor-mode .alpha51-workspace .workbench {
+  flex: 1; height: auto; min-height: 0; min-width: 0; display: grid;
+  grid-template-columns: minmax(0, 24fr) minmax(0, 54fr) minmax(0, 22fr);
+  grid-template-rows: minmax(0, 1fr); gap: 12px; overflow: hidden;
+}
+body.doctor-mode .alpha51-workspace .column { height: 100%; max-height: 100%; min-height: 0; border: 1px solid var(--ws-border); border-radius: 6px; background: white; box-shadow: none; }
+body.doctor-mode .alpha51-workspace .column > .panel-header,
+.workspace-aux-dialog .column > .panel-header { min-height: 48px; padding: 10px 16px; background: white; border-bottom: 1px solid var(--ws-border); }
+body.doctor-mode .alpha51-workspace .panel-header h2, .workspace-aux-dialog .panel-header h2 { font-size: 18px; font-weight: 650; line-height: 1.5; }
+body.doctor-mode .alpha51-workspace .panel-header p, .workspace-aux-dialog .panel-header p { display: none; }
+body.doctor-mode .alpha51-workspace .transcript-header-actions { display: none; }
+body.doctor-mode .alpha51-workspace .transcript-column, .workspace-aux-dialog .transcript-column { display: flex; flex-direction: column; }
+body.doctor-mode .alpha51-workspace .field-column { grid-template-rows: auto auto minmax(0, 1fr); }
+body.doctor-mode .alpha51-workspace .assist-column { grid-template-rows: auto minmax(0, 1fr); }
+.transcript-input-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.transcript-input-toolbar button { padding: 5px 8px; min-height: 32px; font-size: 13px; background: white; }
+body.doctor-mode .alpha51-workspace .transcript-list, .workspace-aux-dialog .transcript-list { flex: 1; min-height: 0; padding: 12px; background: white; overflow: auto; }
+body.doctor-mode .alpha51-workspace .transcript-row-text, .workspace-aux-dialog .transcript-row-text { font-size: 16px; line-height: 1.6; }
+body.doctor-mode .alpha51-workspace .transcript-table-row, .workspace-aux-dialog .transcript-table-row { grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; padding: 12px 0; }
+body.doctor-mode .alpha51-workspace .transcript-row-text, .workspace-aux-dialog .transcript-row-text { grid-column: 1 / -1; grid-row: 2; }
+body.doctor-mode .alpha51-workspace .transcript-row-time, .workspace-aux-dialog .transcript-row-time { font-size: 12px; color: var(--ws-muted); }
+body.doctor-mode .alpha51-workspace .transcript-role-tag, .workspace-aux-dialog .transcript-role-tag { font-size: 13px; }
+body.doctor-mode .alpha51-workspace .transcript-audio-player { flex: none; }
+body.doctor-mode .alpha51-workspace .field-list { display: flex; flex-direction: column; gap: 0; padding: 4px 24px 20px; background: white; }
+body.doctor-mode .alpha51-workspace .field-card.doctor-summary-card {
+  flex: none; min-height: 0; max-height: none; padding: 16px 0; gap: 6px;
+  border: 0; border-bottom: 1px solid #e7ebef; border-radius: 0; background: white; box-shadow: none;
+}
+body.doctor-mode .alpha51-workspace:not(.has-record) .field-card { min-height: 0; padding: 12px 0; border: 0; border-bottom: 1px solid #e7ebef; border-radius: 0; background: white; }
+body.doctor-mode .alpha51-workspace .field-head { margin: 0; }
+body.doctor-mode .alpha51-workspace .field-title { font-size: 15px; font-weight: 650; color: #374b5e; }
+body.doctor-mode .alpha51-workspace .field-value { font-size: 17px; line-height: 1.65; min-height: 0; max-height: none; overflow: visible; color: #172a3a; }
+body.doctor-mode .alpha51-workspace .field-card.conflicting { border-left: 3px solid var(--red); padding-left: 12px; background: #fff8f8; }
+body.doctor-mode .alpha51-workspace .field-card.record-field-updated { animation: record-field-flash 1.4s ease-out 1; }
+body.doctor-mode .alpha51-workspace .field-meta { margin-top: 0; }
+body.doctor-mode .alpha51-workspace .review-boundary-notice { margin: 0; border: 0; border-bottom: 1px solid var(--ws-border); border-radius: 0; padding: 8px 16px; font-size: 13px; line-height: 1.5; }
+body.doctor-mode .alpha51-workspace .assist-list, .workspace-aux-dialog .assist-list { padding: 16px; background: white; }
+body.doctor-mode .alpha51-workspace .doctor-assist-overview, .workspace-aux-dialog .doctor-assist-overview { gap: 24px; }
+body.doctor-mode .alpha51-workspace .next-action-panel, .workspace-aux-dialog .next-action-panel { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; margin: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: #f7f9fc; flex: none; }
+body.doctor-mode .alpha51-workspace .next-action-panel[hidden], .workspace-aux-dialog .next-action-panel[hidden] { display: none; }
+body.doctor-mode .alpha51-workspace .next-action-panel .meta-label, .workspace-aux-dialog .next-action-panel .meta-label { display: none; }
+body.doctor-mode .alpha51-workspace .next-action-panel strong, .workspace-aux-dialog .next-action-panel strong { font-size: 15px; }
+body.doctor-mode .alpha51-workspace .next-action-panel p, .workspace-aux-dialog .next-action-panel p { font-size: 13px; line-height: 1.5; }
+body.doctor-mode .alpha51-workspace .next-action-buttons button, .workspace-aux-dialog .next-action-buttons button { min-height: 36px; font-size: 14px; }
+body.doctor-mode .alpha51-workspace .processing-stage-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body.doctor-mode .alpha51-workspace .encounter-action-bar {
+  position: static; flex: none; inset: auto; width: auto; min-height: 52px; max-height: none;
+  display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 8px 16px; border: 1px solid var(--ws-border); border-radius: 6px; background: white; box-shadow: none;
+}
+body.doctor-mode .alpha51-workspace .encounter-action-bar .operation-heading { display: block; }
+body.doctor-mode .alpha51-workspace .encounter-action-bar .operation-heading strong { display: none; }
+body.doctor-mode .alpha51-workspace .encounter-action-bar .operation-heading span { font-size: 13px; color: var(--ws-muted); line-height: 1.5; }
+body.doctor-mode .alpha51-workspace .encounter-action-bar .button-group { display: flex; flex-wrap: wrap; gap: 8px; flex: none; }
+body.doctor-mode .alpha51-workspace .encounter-action-bar button { min-height: 36px; font-size: 14px; padding: 6px 14px; }
+body.doctor-mode .alpha51-workspace:not(.has-record) .encounter-action-bar,
+body.doctor-mode .alpha51-workspace.recording-active .encounter-action-bar { display: none; }
+.inline-recording { flex: none; padding: 12px; border-bottom: 1px solid var(--line); }
+.inline-recording[hidden] { display: none !important; }
+.inline-recording .browser-recording-panel { display: flex; flex-direction: column; gap: 8px; padding: 0; border: 0; border-radius: 0; background: white; }
+.inline-recording .browser-recording-meter { display: flex; justify-content: space-between; font-size: 14px; }
+.inline-recording .browser-recording-meter strong { font-size: 20px; }
+.inline-recording .recording-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.inline-recording button { flex: none; min-height: 36px; height: auto; padding: 6px 12px; font-size: 14px; }
+.inline-recording button[hidden] { display: none !important; }
+.inline-recording audio { width: 100%; height: 36px; }
+.inline-recording .recording-chunk-status, .inline-recording .recording-message { font-size: 12px; line-height: 1.5; }
+.inline-recording .wide-action { width: 100%; margin-top: 8px; }
+.workspace-aux-dialog { width: min(500px, calc(100vw - 24px)); height: calc(100dvh - 24px); max-height: none; max-width: none; margin: 12px 12px 12px auto; padding: 0; border: 1px solid #c8d3df; border-radius: 8px; color: var(--text); background: white; }
+.workspace-aux-dialog::backdrop { background: rgba(16, 32, 48, .3); }
+.workspace-aux-dialog[open] { display: flex; flex-direction: column; }
+.workspace-aux-dialog > header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.workspace-aux-dialog > header h2 { margin: 0; font-size: 18px; }
+.workspace-aux-dialog > header button { min-height: 36px; padding: 6px 12px; font-size: 14px; }
+#workspaceAuxContent { flex: 1; min-height: 0; }
+.workspace-aux-dialog .column { width: 100%; height: 100%; max-height: 100%; min-height: 0; border: 0; border-radius: 0; box-shadow: none; overflow: hidden; }
+.workspace-aux-dialog .column > .panel-header { display: none; }
+.workspace-aux-dialog .assist-column { display: grid; grid-template-rows: minmax(0, 1fr); }
+@media (max-width: 1279px) {
+  body.doctor-mode .alpha51-workspace .workbench { grid-template-columns: minmax(0, 30fr) minmax(0, 70fr); grid-template-areas: "transcript record"; }
+  body.doctor-mode .alpha51-workspace .assist-column { display: none; }
+  .workspace-panel-switches { display: flex; }
+  #showTranscriptButton { display: none; }
+  body.doctor-mode .alpha51-workspace .patient-identity-cell { display: grid; gap: 2px; }
+  body.doctor-mode .alpha51-workspace .encounter-action-bar { gap: 8px; }
+}
+@media (max-width: 1023px) {
+  body.doctor-mode .doctor-app { grid-template-columns: 124px minmax(0, 1fr); }
+  body.doctor-mode .alpha51-workspace { padding: 8px; }
+  body.doctor-mode .alpha51-workspace .workbench { grid-template-columns: minmax(0, 1fr); grid-template-areas: "record"; }
+  body.doctor-mode .alpha51-workspace .transcript-column { display: none; }
+  #showTranscriptButton { display: inline-flex; }
+  body.doctor-mode .alpha51-workspace .encounter-command-center { flex-wrap: wrap; }
+  body.doctor-mode .alpha51-workspace .workflow-panel { flex-basis: 100%; }
+  body.doctor-mode .alpha51-workspace .encounter-action-bar { flex-wrap: wrap; }
+  body.doctor-mode .alpha51-workspace .encounter-action-bar .button-group { flex-wrap: wrap; }
+}
+@media (max-width: 680px) {
+  body.doctor-mode .doctor-app { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  body.doctor-mode .product-nav { display: none; }
+  body.doctor-mode .topbar { flex-wrap: wrap; }
+  body.doctor-mode .alpha51-workspace { height: calc(100dvh - 88px); max-height: calc(100dvh - 88px); }
+  body.doctor-mode .alpha51-workspace .encounter-review-cell { display: none; }
+  body.doctor-mode .alpha51-workspace .workflow-step { font-size: 12px; gap: 4px; padding-inline: 2px; }
+}
+.clinical-reference-section { min-width: 0; }
+.clinical-reference-section + .clinical-reference-section { border-top: 1px solid var(--line-strong); padding-top: 20px; }
+.clinical-reference-section h3 { margin: 0 0 12px; color: var(--text); font-size: 17px; font-weight: 700; line-height: 1.5; }
+.clinical-reference-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.clinical-reference-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: left;
+}
+.clinical-reference-link span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.clinical-reference-link span[aria-hidden] { flex: none; color: var(--primary); font-size: 22px; line-height: 1; }
+.clinical-reference-empty { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
+.clinical-reference-context { margin-top: 24px; border-top: 1px solid var(--line-strong); padding-top: 16px; }
+.clinical-reference-context > summary { cursor: pointer; padding: 8px 0; font-size: 16px; font-weight: 700; }
+.clinical-reference-context[open] > summary { margin-bottom: 16px; }

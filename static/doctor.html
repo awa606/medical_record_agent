@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>MediListen - AI 智能病历助手</title>
     <link rel="stylesheet" href="./doctor.css?v=2026071601" />
-    <link rel="stylesheet" href="./doctor-ui-v2.css?v=2026092601" />
+    <link rel="stylesheet" href="./doctor-ui-v2.css?v=2026092602" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=2026092602" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -212,7 +213,10 @@
             请上传问诊音频或粘贴问诊文本开始。
           </section>
 
-          <section id="nextActionPanel" class="next-action-panel" aria-live="polite"></section>
+          <div class="workspace-panel-switches" aria-label="辅助工作区">
+            <button type="button" id="showTranscriptButton" data-workspace-panel="transcript">转写与录音</button>
+            <button type="button" id="showReferenceButton" data-workspace-panel="assist">诊疗参考</button>
+          </div>
         </section>
 
         <section id="transcriptionFailurePanel" class="failure-recovery-panel" hidden aria-live="polite">
@@ -274,11 +278,11 @@
         </div>
       </section>
 
-      <main class="workbench" aria-label="医生工作台主体">
+      <div class="workbench" aria-label="医生工作台主体">
         <aside class="column field-column">
           <div class="panel-header">
             <div>
-              <h2>结构化病历</h2>
+              <h2>门诊病历</h2>
               <p>核对 AI 提取字段，缺失和低置信内容会单独标记。</p>
             </div>
             <span id="fieldCountBadge" class="status-badge neutral">-</span>
@@ -290,7 +294,7 @@
         <section class="column transcript-column">
           <div class="panel-header">
             <div>
-              <h2>问诊转写与证据</h2>
+              <h2>问诊转写</h2>
               <p>核对说话人和原文，点击转写可定位对应音频。</p>
             </div>
             <div class="transcript-header-actions">
@@ -302,6 +306,29 @@
             <button type="button" data-input-method="text">文本输入</button>
             <button type="button" id="transcriptSettingsButton" class="transcript-settings-button">显示设置</button>
           </div>
+          <section id="nextActionPanel" class="next-action-panel" aria-live="polite"></section>
+      <section id="recordingPanel" class="inline-recording" hidden>
+
+        <div class="browser-recording-panel" aria-live="polite">
+          <div class="browser-recording-meter">
+            <span id="browserRecordingStatusLabel">等待录音</span>
+            <strong id="browserRecordingTimer">00:00</strong>
+          </div>
+          <div class="recording-actions">
+            <button type="button" class="primary-action" id="startBrowserRecordingButton">开始录音</button>
+            <button type="button" id="pauseBrowserRecordingButton">暂停</button>
+            <button type="button" id="resumeBrowserRecordingButton">恢复</button>
+            <button type="button" id="stopBrowserRecordingButton">停止</button>
+            <button type="button" class="danger-action" id="cancelBrowserRecordingButton">取消</button>
+          </div>
+          <audio id="browserRecordingPreview" controls preload="metadata"></audio>
+          <div id="browserRecordingChunkStatus" class="recording-chunk-status"></div>
+          <div id="browserRecordingMessage" class="recording-message"></div>
+          <button type="button" id="retryBrowserRecordingChunksButton">重新上传失败片段</button>
+        </div>
+        <button type="button" class="primary-action wide-action" id="submitBrowserRecordingButton">上传并生成病历</button>
+      </section>
+
           <div id="transcriptList" class="transcript-list"></div>
           <footer id="consultationAudioPlayer" class="transcript-audio-player" hidden>
             <audio id="consultationAudio" preload="metadata"></audio>
@@ -369,7 +396,7 @@
           </div>
           <div id="assistPanels" class="assist-list"></div>
         </aside>
-      </main>
+      </div>
       <footer class="bottom-actions assist-operation-panel encounter-action-bar" aria-label="病历操作区">
         <div class="operation-heading">
           <strong id="currentTaskLabel">当前任务</strong>
@@ -450,6 +477,10 @@
       </main>
     </div>
 
+    <dialog id="workspaceAuxDialog" class="workspace-aux-dialog" aria-labelledby="workspaceAuxTitle">
+      <header><h2 id="workspaceAuxTitle">辅助工作区</h2><button type="button" id="closeWorkspaceAuxButton">返回病历</button></header>
+      <div id="workspaceAuxContent"></div>
+    </dialog>
     <div id="drawerBackdrop" class="drawer-backdrop"></div>
     <aside id="drawer" class="drawer" aria-hidden="true" inert role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
       <header class="drawer-header">
@@ -505,28 +536,6 @@
           <small>注册音频提取 CAM++ 向量后立即删除，只在本机保存声纹向量。</small>
         </div>
         <button type="button" class="primary-action wide-action" id="submitAudioButton">上传</button>
-      </section>
-
-      <section id="recordingPanel" class="drawer-panel">
-        <p class="form-help">使用浏览器麦克风录制最长 30 分钟 WAV 音频，支持暂停/恢复、分块上传、刷新后按 session 恢复转写。</p>
-        <div class="browser-recording-panel" aria-live="polite">
-          <div class="browser-recording-meter">
-            <span id="browserRecordingStatusLabel">等待录音</span>
-            <strong id="browserRecordingTimer">00:00</strong>
-          </div>
-          <div class="recording-actions">
-            <button type="button" class="primary-action" id="startBrowserRecordingButton">开始录音</button>
-            <button type="button" id="pauseBrowserRecordingButton">暂停</button>
-            <button type="button" id="resumeBrowserRecordingButton">恢复</button>
-            <button type="button" id="stopBrowserRecordingButton">停止</button>
-            <button type="button" class="danger-action" id="cancelBrowserRecordingButton">取消</button>
-          </div>
-          <audio id="browserRecordingPreview" controls preload="metadata"></audio>
-          <div id="browserRecordingChunkStatus" class="recording-chunk-status"></div>
-          <div id="browserRecordingMessage" class="recording-message"></div>
-          <button type="button" id="retryBrowserRecordingChunksButton">重新上传失败片段</button>
-        </div>
-        <button type="button" class="primary-action wide-action" id="submitBrowserRecordingButton">上传并生成病历</button>
       </section>
 
       <section id="evaluationPanel" class="drawer-panel">
@@ -613,6 +622,6 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=2026092601"></script>
+    <script src="./doctor.js?v=2026092602"></script>
   </body>
 </html>

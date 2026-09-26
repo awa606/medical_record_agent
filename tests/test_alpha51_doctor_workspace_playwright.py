@@ -46,12 +46,16 @@ def test_doctor_workspace_layout_and_real_record_entry(width: int, height: int) 
                   renderAll();
                 }"""
             )
+            if width < 1024:
+                page.locator("#showTranscriptButton").click()
             page.get_by_role("button", name="开始录音", exact=True).wait_for()
             assert page.get_by_role("button", name="开始录音", exact=True).count() == 1
             assert page.get_by_text("模拟患者", exact=True).count() >= 1
             assert page.locator("#patientProfile").inner_text().startswith("本次就诊：")
             assert "active" in (page.locator("#workflowSteps .workflow-step").nth(1).get_attribute("class") or "")
             assert not page.locator(".encounter-action-bar").is_visible()
+            if width < 1024:
+                page.locator("#closeWorkspaceAuxButton").click()
             layout = page.evaluate(
                 """() => {
                   const box = (selector) => {
@@ -74,7 +78,7 @@ def test_doctor_workspace_layout_and_real_record_entry(width: int, height: int) 
             assert layout["documentWidth"] <= width + 1, layout
             assert layout["patient"]["bottom"] + 4 <= layout["steps"]["top"], layout
             assert layout["steps"]["bottom"] + 4 <= layout["record"]["top"], layout
-            if width >= 1220:
+            if width >= 1280:
                 assert layout["transcript"]["right"] + 10 <= layout["record"]["left"], layout
                 assert layout["record"]["right"] + 10 <= layout["reference"]["left"], layout
             screenshot_dir = os.environ.get("ALPHA51_SCREENSHOT_DIR")

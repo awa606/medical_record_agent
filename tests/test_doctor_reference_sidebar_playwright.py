@@ -149,10 +149,14 @@ def test_reference_layout_on_real_page(page, width, height):
           font: parseFloat(getComputedStyle(x).fontSize), height: x.getBoundingClientRect().height}))};
     }""")
     assert layout['width'] <= width + 1, layout
-    assert layout['nav'] == 16 and layout['title'] == 22 and layout['heading'] == 20, layout
+    assert layout['nav'] == 16 and layout['title'] == 20 and layout['heading'] == 18, layout
     assert layout['field'] == 17 and layout['transcript'] == 16, layout
-    assert max(layout['headers']) - min(layout['headers']) <= 1, layout
-    assert all(x['font'] == 16 and x['height'] >= 44 for x in layout['names']), layout
+    visible_headers = [h for h in layout['headers'] if h > 0]
+    assert max(visible_headers) - min(visible_headers) <= 1, layout
+    if width < 1280:
+        page.locator('#showReferenceButton').click()
+    names = page.locator('.clinical-reference-link').evaluate_all("els => els.map(x => ({font: parseFloat(getComputedStyle(x).fontSize), height: x.getBoundingClientRect().height}))")
+    assert all(x['font'] == 16 and x['height'] >= 44 for x in names), names
     page.get_by_role('button', name='上呼吸道感染', exact=True).click()
     expect(page.locator('#closeDrawerButton')).to_be_in_viewport()
     page.keyboard.press('Escape')

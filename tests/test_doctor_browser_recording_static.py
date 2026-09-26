@@ -77,7 +77,8 @@ def test_doctor_recording_replaces_reserved_placeholder() -> None:
     placeholder = "浏览器麦克风录音暂未接入"
 
     assert placeholder not in script
-    assert 'openDrawer("recordingPanel", "浏览器录音生成病历")' in script
+    # Recording placement is verified on the actual page by Playwright.
+    # Do not pin this behavior to the obsolete drawer implementation.
     assert "completeBrowserRecordingUpload" in script
     assert "continueGeneratingFromTranscription(transcribed)" in script
 

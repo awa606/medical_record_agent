@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-26T23:26:21+08:00`
-- Source hash: `fcd3cb80165541ec40c5eb4ea01355e71a368e7a8217adcc6e9f720a7db96f21`
+- Updated at: `2026-09-27T00:20:39.674371+08:00`
+- Source hash: `8622e9ccd5abaa2aab12eb4f7dc05922602a1c5d9e670ce82b720d957448a123`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@b56f17a7044345d2e432b3b3e310ea37b18572a5`
+- Repo: `codex/alpha51-demo-visual-e2e@b86b542941b89af04799cd21f2950a27e9589415`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 三路径Smoke：参考栏视觉修正待认可及新版本恢复** — `VERIFY`
+**5.1 · 三路径Smoke：临床工作区整体候选待认可** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 验收新版参考栏、导航标题及实际Edge125%/150%缩放；认可后重建与当前Git SHA一致的恢复候选
+- Single next task: 认可整体临床工作区候选；之后核验实际Edge缩放、最终版真实三路径及新SHA恢复候选
 - Parallel waiting task: 无；5.1保持VERIFY，5.3不启动
 
 ## Manual Actions
 
-- 试用8790合成数据验收页，确认参考栏和标题版式；实际Edge缩放仍待核验
+- 试用8791/workspace-review合成数据候选，确认整体版式；不替换2626、不冻结
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

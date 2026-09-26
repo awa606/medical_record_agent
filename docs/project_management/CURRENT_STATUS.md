@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-24T14:07:41.910728+08:00`
-- Source hash: `b6664023ab87a2d46e1dad3dc7a38edb9b632fae3275353b6f09c1755f1f8c75`
+- Updated at: `2026-09-26T23:26:21+08:00`
+- Source hash: `fcd3cb80165541ec40c5eb4ea01355e71a368e7a8217adcc6e9f720a7db96f21`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@2f39e415113bb8f40cd4aa183293b6de68ea37b5`
+- Repo: `codex/alpha51-demo-visual-e2e@b56f17a7044345d2e432b3b3e310ea37b18572a5`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; Edge zoom impact pending; Full M4 TBD / HARDWARE DEPENDENT**
+- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; visual rework/restore impact pending; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 三条主路径E2E Smoke及可恢复候选** — `VERIFY`
+**5.1 · 三路径Smoke：参考栏视觉修正待认可及新版本恢复** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 核验Edge实际125%和150%缩放；通过后关闭5.1视觉门禁
-- Parallel waiting task: 无；5.3正式连续五次E2E待5.1 Release Gate关闭
+- Single next task: 验收新版参考栏、导航标题及实际Edge125%/150%缩放；认可后重建与当前Git SHA一致的恢复候选
+- Parallel waiting task: 无；5.1保持VERIFY，5.3不启动
 
 ## Manual Actions
 
-- 在8785医生页面手动查看Edge 125%与150%缩放并反馈遮挡或操作问题
+- 试用8790合成数据验收页，确认参考栏和标题版式；实际Edge缩放仍待核验
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

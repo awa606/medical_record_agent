@@ -101,15 +101,15 @@ def test_asr_failures_are_sanitized_before_doctor_toast() -> None:
     assert "technical_detail" not in script
 
 
-def test_diagnosis_reference_shows_two_candidates_and_hides_rule_ids_normally() -> None:
+def test_diagnosis_reference_uses_name_navigation_and_hides_rule_ids_normally() -> None:
     script = read_script()
 
     assert "鉴别诊断参考" in script
-    assert "listPreview(diagnoses, 2)" in script
-    assert "依据：" in script
-    assert "关注：" in script
-    assert "查看完整依据" in script
-    assert "仅供鉴别诊断参考，需医生判断，不能作为已确诊结论。" in script
+    assert "clinical-reference-link" in script
+    assert "live-diagnosis" in script
+    assert "renderDiagnosisDetailContent" in script
+    assert "renderClinicalReferenceContext" in script
+    assert "病例级参考（未关联单项）" in script
     assert "证据匹配度" in script
     assert "非疾病概率" in script
     assert "规则置信度" not in script

@@ -868,14 +868,22 @@ body.doctor-mode .doctor-app {
 
 body.doctor-mode .topbar { min-height: 54px; padding-inline: 16px; }
 body.doctor-mode .product-nav { height: calc(100dvh - 54px); min-height: 0; padding: 18px 10px; }
-body.doctor-mode .product-nav-item { min-height: 48px; padding: 9px; }
+body.doctor-mode .product-nav-item { min-height: 60px; padding: 10px 9px; gap: 7px; }
+body.doctor-mode .product-nav-item span { font-size: 16px; font-weight: 700; line-height: 1.5; }
+body.doctor-mode .product-nav-item small { font-size: 13px; line-height: 1.5; }
+body.doctor-mode .product-nav-heading span { font-size: 13px; letter-spacing: 0; }
+body.doctor-mode .brand-copy h1 { font-size: 22px; }
+body.doctor-mode .brand-copy p { display: none; }
+body.doctor-mode .top-actions > button,
+body.doctor-mode .top-actions > a,
+body.doctor-mode .top-actions .display-settings-menu > button { font-size: 15px; }
 body.doctor-mode .top-actions .input-method-menu { display: none; }
 
 body.doctor-mode .alpha51-workspace {
   height: calc(100dvh - 54px);
   max-height: calc(100dvh - 54px);
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 9px;
+  gap: 12px;
   padding: 16px 16px 102px;
   background: #edf2f7;
 }
@@ -939,10 +947,10 @@ body.doctor-mode .alpha51-workspace .workflow-step {
   border-radius: 0;
   padding: 6px 8px;
   background: transparent;
-  font-size: 13px;
+  font-size: 15px;
 }
 body.doctor-mode .alpha51-workspace .workflow-step:last-child { border-right: 0; }
-body.doctor-mode .alpha51-workspace .workflow-step.active { box-shadow: inset 0 -3px #2366be; }
+body.doctor-mode .alpha51-workspace .workflow-step.active { background: #e5effc; font-weight: 800; box-shadow: inset 0 -3px #2366be; }
 body.doctor-mode .alpha51-workspace .workflow-index { width: 21px; height: 21px; font-size: 12px; }
 body.doctor-mode .alpha51-workspace #stepPrompt { display: none !important; }
 
@@ -968,8 +976,8 @@ body.doctor-mode .alpha51-workspace .workbench {
   overflow: hidden;
 }
 body.doctor-mode .alpha51-workspace .column { border: 1px solid #b9cadb; border-radius: 7px; box-shadow: none; }
-body.doctor-mode .alpha51-workspace .panel-header { min-height: 50px; padding: 10px 13px; background: #f5f8fb; }
-body.doctor-mode .alpha51-workspace .panel-header h2 { font-size: 18px; }
+body.doctor-mode .alpha51-workspace .panel-header { min-height: 54px; padding: 12px 14px; background: #edf3fa; border-bottom: 1px solid #b9cadb; }
+body.doctor-mode .alpha51-workspace .panel-header h2 { font-size: 20px; font-weight: 700; line-height: 1.4; }
 body.doctor-mode .alpha51-workspace .panel-header p { display: none; }
 body.doctor-mode .alpha51-workspace .transcript-column { grid-template-rows: auto auto minmax(0, 1fr) auto; }
 body.doctor-mode .alpha51-workspace .transcript-input-toolbar {
@@ -993,6 +1001,34 @@ body.doctor-mode .alpha51-workspace .field-card .field-value {
   line-height: 1.55;
 }
 body.doctor-mode .alpha51-workspace .transcript-row-text { font-size: 16px; line-height: 1.55; }
+body.doctor-mode .alpha51-workspace .doctor-assist-overview { gap: 20px; }
+body.doctor-mode .alpha51-workspace .assist-list { padding: 18px 16px; }
+.clinical-reference-section { min-width: 0; }
+.clinical-reference-section + .clinical-reference-section { border-top: 1px solid var(--line-strong); padding-top: 20px; }
+.clinical-reference-section h3 { margin: 0 0 12px; color: var(--text); font-size: 17px; font-weight: 700; line-height: 1.5; }
+.clinical-reference-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.clinical-reference-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: left;
+}
+.clinical-reference-link span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.clinical-reference-link span[aria-hidden] { flex: none; color: var(--primary); font-size: 22px; line-height: 1; }
+.clinical-reference-empty { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
+.clinical-reference-context { margin-top: 24px; border-top: 1px solid var(--line-strong); padding-top: 16px; }
+.clinical-reference-context > summary { cursor: pointer; padding: 8px 0; font-size: 16px; font-weight: 700; }
+.clinical-reference-context[open] > summary { margin-bottom: 16px; }
 body.doctor-mode .alpha51-workspace .encounter-action-bar { left: 172px; right: 16px; bottom: 12px; }
 body.doctor-mode .alpha51-workspace:not(.has-record) .encounter-action-bar { display: none; }
 body.doctor-mode .alpha51-workspace.recording-active .encounter-action-bar { display: none; }

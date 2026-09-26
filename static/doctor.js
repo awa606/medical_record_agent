@@ -2200,6 +2200,8 @@ function renderTranscriptionFailurePanel() {
   }
 }
 
+let detailReturnFocus = null;
+
 function openDrawer(panelId, title) {
   closeInputMethodMenu();
   closeDisplaySettingsMenu();
@@ -2207,12 +2209,13 @@ function openDrawer(panelId, title) {
   $("drawerBackdrop").classList.add("active");
   $("drawer").classList.add("active");
   $("drawer").setAttribute("aria-hidden", "false");
+  $("drawer").inert = false;
   document.querySelectorAll(".drawer-panel").forEach((panel) => panel.classList.remove("active"));
   $(panelId).classList.add("active");
 }
 
 function closeDrawer() {
-  if (appState.browserRecordingStatus === "recording" || appState.browserRecordingStatus === "requesting") {
+  if (!detailReturnFocus && (appState.browserRecordingStatus === "recording" || appState.browserRecordingStatus === "requesting")) {
     appState.browserRecordingMessage = "录音正在进行。请先点击“停止”完成试听，或点击“取消”放弃本次录音。";
     renderBrowserRecordingPanel();
     showToast("录音进行中，请先停止或取消录音");
@@ -2221,14 +2224,27 @@ function closeDrawer() {
   $("drawerBackdrop").classList.remove("active");
   $("drawer").classList.remove("active");
   $("drawer").setAttribute("aria-hidden", "true");
+  $("drawer").inert = true;
+  if (detailReturnFocus) {
+    document.querySelector('.doctor-app').inert = false;
+    const target = detailReturnFocus;
+    detailReturnFocus = null;
+    const replacement = target.dataset?.openDetail
+      ? [...document.querySelectorAll('.doctor-app [data-open-detail]')].find(node => node.dataset.openDetail === target.dataset.openDetail)
+      : null;
+    (target.isConnected ? target : replacement)?.focus({ preventScroll: true });
+  }
   return true;
 }
 
 function openDetailDrawer(title, html) {
   const content = $("detailDrawerContent");
   if (!content) return;
+  if (!detailReturnFocus) detailReturnFocus = document.activeElement;
   content.innerHTML = html;
   openDrawer("detailPanel", title);
+  document.querySelector('.doctor-app').inert = true;
+  $("closeDrawerButton").focus({ preventScroll: true });
 }
 
 function renderPatientBar() {
@@ -2755,7 +2771,7 @@ function renderReferenceList(diagnosis = {}, { compact = false } = {}) {
         }
         const title = reference.title || reference.name || reference.reference_id || "未命名来源";
         const meta = referenceMetaLine(reference);
-        const url = reference.url || reference.link || "";
+        const url = safeKnowledgeUrl(reference.url || reference.link);
         return `<article class="reference-item">
           <strong>${escapeHtml(title)}</strong>
           ${meta ? `<span>${escapeHtml(meta)}</span>` : ""}
@@ -2853,7 +2869,8 @@ function renderDiagnosisDetailContent(index) {
           : (diagnosisQuality.suggested_action || "鉴别诊断参考结构完整，等待医生判断。")
       )}</div>
     `) : ""}
-    ${detailSection("诊断证据", `<div class="detail-text">${escapeHtml(doctorFacingDiagnosisText((diagnosis.evidence || []).map((item) => item.text).filter(Boolean).join("\n") || "暂无鉴别诊断参考证据。"))}</div>`)}
+    ${detailSection("原始转写证据（只读）", renderFieldEvidenceDetails({ source_spans: diagnosis.evidence || [] }))}
+    ${renderClinicalReferenceContext()}
   `;
 }
 
@@ -4642,40 +4659,60 @@ function renderLiveClinicalDetailContent() {
 }
 
 function renderCandidateDiagnosisCard(diagnoses) {
-  if (!diagnoses.length) {
-    return assistCard({
-      title: "鉴别诊断参考",
-      badgeClass: "confirmed",
-      badgeText: "暂无",
-      body: `<div class="empty-state">当前信息不足，完成关键补问后生成。</div>`,
-    });
-  }
-  const preview = listPreview(diagnoses, 2);
+  const finalized = Boolean(activeRecordFields());
+  const items = finalized ? diagnoses : (liveClinicalDraft()?.differentials || diagnoses);
+  return renderClinicalReferenceSection("诊断参考", items.map((item, index) => ({
+    title: item.name || "未命名诊断",
+    target: `${finalized ? 'diagnosis' : 'live-diagnosis'}:${index}`,
+  })));
+}
 
-  return assistCard({
-    title: "鉴别诊断参考",
-    badgeClass: "candidate",
-    badgeText: "需医生判断",
-    detailTarget: "assist:candidates",
-    detailLabel: "查看完整依据",
-    body: `
-      <ol class="assist-number-list">
-        ${preview.visible.map((diagnosis, index) => `
-          <li>
-            <span>${index + 1}</span>
-            <div class="assist-diagnosis-summary">
-              <strong>${escapeHtml(diagnosis.name || "未命名诊断")}</strong>
-              <em>${escapeHtml(diagnosis.status || "候选/待医生确认")} · ${escapeHtml(diagnosisConfidence(diagnosis))}</em>
-              <p>依据：${escapeHtml(diagnosisEvidenceLine(diagnosis))}</p>
-              <p>关注：${escapeHtml(diagnosisRiskLine(diagnosis))}</p>
-            </div>
-          </li>
-        `).join("")}
-      </ol>
-      ${preview.hiddenCount ? `<div class="summary-note">另有 ${preview.hiddenCount} 条鉴别诊断参考，点击查看完整依据。</div>` : ""}
-      <div class="summary-note">仅供鉴别诊断参考，需医生判断，不能作为已确诊结论。</div>
-    `,
+function renderClinicalReferenceSection(title, items) {
+  return `<section class="clinical-reference-section" aria-label="${escapeHtml(title)}">
+    <h3>${escapeHtml(title)}</h3>
+    ${items.length ? `<ul class="clinical-reference-list">${items.map(item => `<li>
+      <button type="button" class="clinical-reference-link" data-open-detail="${escapeHtml(item.target)}">
+        <span>${escapeHtml(item.title)}</span><span aria-hidden="true">›</span>
+      </button></li>`).join('')}</ul>` : `<p class="clinical-reference-empty">${escapeHtml(
+        appState.liveClinicalError || appState.recordPreviewError ? "参考生成失败，请查看当前流程提示。" : "暂无参考"
+      )}</p>`}
+  </section>`;
+}
+
+function renderClinicalReferenceContext() {
+  // Case-level evidence is deliberately not attributed to a selected diagnosis/plan.
+  return `<details class="clinical-reference-context">
+    <summary>病例级参考（未关联单项）</summary>
+    ${appState.recordPreviewError ? detailSection("参考生成状态", `<p>${escapeHtml(appState.recordPreviewError)}</p>`) : ''}
+    ${isRecordPreviewActive() ? detailSection("临时结果", `<p>${escapeHtml(previewNoticeText())}；不作为最终诊断或处方。</p>`) : ''}
+    ${appState.liveClinicalError ? detailSection("实时参考状态", `<p>${escapeHtml(appState.liveClinicalError)}</p>`) : ''}
+    ${renderAssistDetailContent("evidence")}
+    ${renderAssistDetailContent("knowledge")}
+    ${renderAssistDetailContent("quality")}
+    ${renderAssistDetailContent("safety")}
+    ${!activeRecordFields() && liveClinicalDraft() ? renderLiveClinicalDetailContent() : ''}
+  </details>`;
+}
+
+function renderLiveReferenceDetail(type, index) {
+  const draft = liveClinicalDraft();
+  const item = (type === 'live-diagnosis' ? draft?.differentials : draft?.care_plan)?.[index];
+  if (!item) return '<div class="empty-state">暂无参考详情。</div>';
+  const evidence = (item.evidence_segment_ids || []).map(id => {
+    const row = transcriptRows().find(row => row.segmentId === id);
+    return { segment_id: id, text: row?.text || '该片段正文暂不可用' };
   });
+  return `${detailSection(item.name || item.title || '临时参考', `
+    <p class="summary-note">临时结果，待医生确认；不作为最终诊断或处方。</p>
+    <div class="detail-text">${escapeHtml(item.summary || '')}</div>
+    ${renderDiagnosisDetailLine("依据", item.reason)}
+    ${renderDiagnosisDetailList("缺失证据", item.missing_evidence)}
+    ${renderDiagnosisDetailList("建议补问", item.recommended_questions)}
+    ${renderDiagnosisDetailList("建议检查", item.recommended_tests)}
+    ${renderReferenceList(item)}
+  `)}
+  ${detailSection("原始转写证据（只读）", renderFieldEvidenceDetails({ source_spans: evidence }))}
+  ${renderClinicalReferenceContext()}`;
 }
 
 function uniqueDiagnosisItems(diagnoses, key) {
@@ -4690,32 +4727,14 @@ function uniqueDiagnosisItems(diagnoses, key) {
 
 function renderTreatmentRecommendationCard(fields, diagnoses) {
   const treatment = fields?.treatment_plan;
-  const treatmentText = treatment?.value || treatment?.hint || previewTreatmentText() || "暂无处理建议。";
-  const suggestedChecks = uniqueDiagnosisItems(diagnoses, "suggested_checks");
-  const medicationNotes = uniqueDiagnosisItems(diagnoses, "medication_notes");
-
-  return assistCard({
-    title: "治疗方案推荐",
-    badgeClass: fields ? "candidate" : "neutral",
-    badgeText: fields ? "需医生确认" : "待生成",
-    detailTarget: "assist:treatment",
-    body: `
-      <div class="assist-plan-block">
-        <span>处理建议</span>
-        <strong>${escapeHtml(treatmentText)}</strong>
-      </div>
-      <div class="assist-mini-grid">
-        <div>
-          <span>建议检查</span>
-          <strong>${escapeHtml(suggestedChecks.slice(0, 3).join("、") || "待补充")}</strong>
-        </div>
-        <div>
-          <span>用药提示</span>
-          <strong>${escapeHtml(medicationNotes.slice(0, 3).join("、") || "需医生确认")}</strong>
-        </div>
-      </div>
-    `,
-  });
+  const livePlans = !fields ? liveClinicalDraft()?.care_plan || [] : [];
+  const hasDetails = Boolean(treatment?.value || treatment?.hint || previewTreatmentText()
+    || diagnoses.some(item => ['suggested_checks', 'medication_notes', 'risk_warnings', 'follow_up_questions']
+      .some(key => diagnosisList(item[key]).length)));
+  const items = livePlans.length ? livePlans.map((item, index) => ({
+    title: item.title || '查看处理建议', target: `live-treatment:${index}`,
+  })) : hasDetails ? [{ title: '查看处理建议', target: 'assist:treatment' }] : [];
+  return renderClinicalReferenceSection('治疗参考', items);
 }
 
 function renderEvidenceCard(evidence, diagnoses) {
@@ -4979,7 +4998,7 @@ function renderAssistDetailContent(section) {
 
   if (section === "treatment") {
     const treatment = fields?.treatment_plan;
-    const treatmentText = treatment?.value || treatment?.hint || previewTreatmentText() || activeDraftText() || "暂无明确处理建议，需医生补充。";
+    const treatmentText = treatment?.value || treatment?.hint || previewTreatmentText() || "暂无明确处理建议，需医生补充。";
     const suggestedChecks = uniqueDiagnosisItems(diagnoses, "suggested_checks");
     const medicationNotes = uniqueDiagnosisItems(diagnoses, "medication_notes");
     const riskWarnings = uniqueDiagnosisItems(diagnoses, "risk_warnings");
@@ -4990,6 +5009,11 @@ function renderAssistDetailContent(section) {
       ${detailSection("用药提示", `<div class="detail-text">${escapeHtml(medicationNotes.join("\n") || "不自动处方，需医生确认。")}</div>`)}
       ${detailSection("风险提醒", `<div class="detail-text">${escapeHtml(riskWarnings.join("\n") || "暂无结构化风险提醒。")}</div>`)}
       ${detailSection("建议补问", `<div class="detail-text">${escapeHtml(followUpQuestions.join("\n") || "暂无结构化补问建议。")}</div>`)}
+      ${detailSection("适用限制", '<p>仅供医生参考，不自动形成诊断、处方或医嘱；需结合过敏史、禁忌和缺失信息核对。</p>')}
+      ${diagnoses.filter(item => diagnosisReferences(item).length).map(item =>
+        detailSection(`来自候选诊断的参考来源：${item.name || '未命名诊断'}（不等于治疗依据已核验）`, renderReferenceList(item))
+      ).join('')}
+      ${renderClinicalReferenceContext()}
     `;
   }
 
@@ -4997,11 +5021,20 @@ function renderAssistDetailContent(section) {
     const diagnosisReasons = diagnoses
       .map((diagnosis) => diagnosis.reason ? doctorFacingDiagnosisText(`${diagnosis.name || "鉴别诊断参考"}：${diagnosis.reason}`) : "")
       .filter(Boolean);
-    const items = [...diagnosisReasons, ...evidence];
+    const linked = (appState.recordPreview?.evidence_links || []).map(item => ({
+      text: `${item.label || '字段证据'}：${item.evidence || item.text || ''}`,
+      segmentId: item.segment_id || '', start: item.start_time,
+    }));
+    const items = [...linked, ...[...diagnosisReasons, ...evidence].map(text => ({ text }))]
+      .filter((item, index, values) => item.text && values.findIndex(other => other.text === item.text) === index);
     return items.length
       ? detailSection("全部判断证据", `
         <div class="detail-evidence-list">
-          ${items.map((item) => `<div class="assist-evidence-quote">${escapeHtml(item)}</div>`).join("")}
+          ${items.map(item => item.segmentId
+            ? `<button type="button" class="assist-evidence-quote linked" data-evidence-segment-id="${escapeHtml(item.segmentId)}"
+                ${item.start != null ? `data-evidence-start="${escapeHtml(String(item.start))}"` : ''}>
+                ${escapeHtml(item.text)}<span>定位原文片段</span></button>`
+            : `<div class="assist-evidence-quote">${escapeHtml(item.text)}</div>`).join('')}
         </div>
       `)
       : `<div class="empty-state">暂无判断证据。</div>`;
@@ -5049,21 +5082,10 @@ function renderAssistDetailContent(section) {
 }
 
 function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
-  const previewNotice = isRecordPreviewActive()
-    ? `<div class="preview-notice">${escapeHtml(previewNoticeText())}；不作为最终诊断或处方。</div>`
-    : "";
-  const previewError = appState.recordPreviewError
-    ? `<div class="safety-strip warning">${escapeHtml(appState.recordPreviewError)}</div>`
-    : "";
   return `
-    ${previewNotice}
-    ${previewError}
     <div class="doctor-assist-overview">
-      ${renderLiveClinicalReferenceCard()}
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}
-      ${renderEvidenceCard(evidence, diagnoses)}
-      ${renderKnowledgeReferenceCard()}
     </div>
   `;
 }
@@ -5322,6 +5344,10 @@ function openWorkbenchDetail(target = "") {
     openDetailDrawer("鉴别诊断参考详情", renderDiagnosisDetailContent(Number(value)));
     return;
   }
+  if (type === 'live-diagnosis' || type === 'live-treatment') {
+    openDetailDrawer(type === 'live-diagnosis' ? '诊断参考详情' : '治疗参考详情', renderLiveReferenceDetail(type, Number(value)));
+    return;
+  }
   if (type === "transcript") {
     openDetailDrawer("对话转写与校正", renderTranscriptDetailContent(value));
     return;
@@ -5329,7 +5355,7 @@ function openWorkbenchDetail(target = "") {
   if (type === "assist") {
     const titleMap = {
       candidates: "鉴别诊断参考完整依据",
-      treatment: "治疗方案推荐详情",
+      treatment: "治疗参考详情",
       evidence: "判断证据详情",
       knowledge: "相关知识参考",
       quality: "病历质量摘要",
@@ -8325,6 +8351,23 @@ function bindEvents() {
   $("copyRunLogCommandButton").addEventListener("click", copyRunLogCommand);
   $("closeDrawerButton").addEventListener("click", closeDrawer);
   $("drawerBackdrop").addEventListener("click", closeDrawer);
+  $("drawer").addEventListener("keydown", (event) => {
+    if (!detailReturnFocus || !$("drawer").classList.contains('active')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeDrawer();
+    } else if (event.key === 'Tab') {
+      const focusable = [...$("drawer").querySelectorAll('button, a[href], input, textarea, select, summary, [tabindex="0"]')]
+        .filter(node => !node.disabled && node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden');
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first?.focus();
+      }
+    }
+  });
   $("refreshWorklistButton").addEventListener("click", () => {
     refreshEncounterWorklist();
   });

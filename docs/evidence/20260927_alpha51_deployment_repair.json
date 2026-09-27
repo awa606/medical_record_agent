@@ -1,0 +1,306 @@
+{
+  "schema_version": "alpha51-deployment-repair-v1",
+  "checked_at": "2026-09-27T14:05:33.166512+08:00",
+  "base_source_sha": "e6973b7e976ede712c25c18c76e57f27c2ce7d87",
+  "candidate_url": "http://127.0.0.1:8795/static/doctor.html",
+  "active_2626_switched": false,
+  "old_container_preserved": true,
+  "candidate_image": "sha256:b7801a96ecdb4a02d473e4ffb416cbb35c3e9d7a41ffde35acc3f079f9748c3b",
+  "source_fingerprints": {
+    "static/doctor.html": "24659c654f7309d7e76dc6825909817a1c151faea60549393a8792c860d4aa10",
+    "static/doctor.js": "bf98047073b1705cea5aa51d739a1b10787b048771cf4cc655d0c74c37aa70ea",
+    "static/doctor-workspace.css": "d32481fbf729b1ca17b50504fdd40c765da9d8ed56b0f93bf5fdd68fa7fce364",
+    "scripts/alpha51_gateway.py": "44dd806fdecf810cd7700c2bc5f801801c43f7443ba92bc313135547cd6e11d9"
+  },
+  "knowledge_import": {
+    "source_sha256": "b729c1ed3693b9e0fad084269e234f88dfe21b9ca6f0c103e2fc610a6a675abc",
+    "backup_sha256": "6609d15c68d5c1c81a96ad192e6b97d87d4eecc7d823f2e6349821b1ef9f9b3b",
+    "inserted": {
+      "knowledge_source": 4,
+      "knowledge_document": 4,
+      "knowledge_chunk": 39,
+      "knowledge_embedding": 0
+    },
+    "documents": 4,
+    "chunks": 39,
+    "embeddings": 0,
+    "business_tables_imported": false,
+    "admin_audit_imported": false
+  },
+  "knowledge_permissions": {
+    "anonymous_before": 401,
+    "source_count": 4,
+    "source_detail_status": {
+      "nhc-child-mpp-2025": 200,
+      "nhc-covid19-trial-v10": 200,
+      "nhc-influenza-2020": 200,
+      "nhc-record-standard-2010": 200
+    },
+    "anonymous_after_admin_login": 401,
+    "doctor_admin_rejected": 403,
+    "retrieval_mode": "fts5_v1",
+    "citations_complete": true,
+    "hits": 5
+  },
+  "knowledge_ui": {
+    "mode": "fts5_v1",
+    "hits": 5,
+    "source_links_rendered": 5
+  },
+  "hybrid_retrieval": "NOT_VERIFIED: no embeddings in approved package",
+  "ready": {
+    "status": "ready",
+    "checks": {
+      "sqlite": {
+        "ok": true,
+        "path": "/app/runtime/medical_record_agent.sqlite3",
+        "journal_mode": "wal",
+        "quick_check": "ok",
+        "error": null
+      },
+      "uploads": {
+        "ok": true,
+        "path": "/app/runtime/uploads",
+        "free_bytes": 29238362112,
+        "error": null
+      },
+      "outputs": {
+        "ok": true,
+        "path": "/app/runtime/outputs",
+        "free_bytes": 29238362112,
+        "error": null
+      },
+      "speaker_profiles": {
+        "ok": true,
+        "path": "/app/runtime/speaker_profiles",
+        "free_bytes": 29238362112,
+        "error": null
+      },
+      "provider": {
+        "ok": true,
+        "status": {
+          "provider": "ollama",
+          "model": "qwen3:4b",
+          "mode": "edge",
+          "fallback_allowed": false,
+          "configured": true,
+          "reachable": true,
+          "checked": true,
+          "fallback_provider": null,
+          "fallback": false,
+          "fallback_reason": null,
+          "runtime_probe": {
+            "ok": true,
+            "error": null,
+            "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+            "inference_age_seconds": 138.176
+          }
+        },
+        "error": null
+      },
+      "asr_models": {
+        "ok": true,
+        "status": "ready",
+        "profile": "upload",
+        "error_category": null,
+        "retryable": false,
+        "components": [
+          "paraformer-zh",
+          "fsmn-vad",
+          "ct-punc",
+          "cam++"
+        ],
+        "model_cache": {
+          "ok": true,
+          "has_cached_files": true,
+          "caches": {
+            "modelscope": {
+              "path": "/app/model_cache/modelscope",
+              "exists": true,
+              "file_count": 55
+            },
+            "hf": {
+              "path": "/app/model_cache/hf",
+              "exists": true,
+              "file_count": 0
+            },
+            "torch": {
+              "path": "/app/.cache/torch",
+              "exists": false,
+              "file_count": 0
+            }
+          }
+        },
+        "error": null
+      }
+    }
+  },
+  "persistence": {
+    "before": {
+      "agent_task": {
+        "rows": 1,
+        "sha256": "2349165b2efb412a9c1c7a010881ec4f896be6a9d409e28d7f787b932270a3dc"
+      },
+      "patient": {
+        "rows": 1,
+        "sha256": "aa5a8cf12f75bee0924b788ab3af249df6be99c491fffbca455ef3778a1f6603"
+      },
+      "encounter": {
+        "rows": 1,
+        "sha256": "7aa468a3db1d0ae72ce207db386673ef96456d37d8c6197ecc6c4851e1c30eb1"
+      },
+      "record_revision": {
+        "rows": 2,
+        "sha256": "5f589d7a6734853d3c554d48bcda8ab0876649255b6710d14f8ed40220de9421"
+      },
+      "approval": {
+        "rows": 1,
+        "sha256": "eee413832c6b295973bc82722f6c305cfa5b1b1863fb246afd1f843347a89df8"
+      },
+      "knowledge_source": {
+        "rows": 4,
+        "sha256": "ec0465c2c1da21e21d60fe38fb9585171a16421fc99c76aea5b0bcf17aa1acc6"
+      },
+      "knowledge_document": {
+        "rows": 4,
+        "sha256": "72613952fbb554f0504fd760cf7fd4a3a3394425770ba584921eaa6765a11f46"
+      },
+      "knowledge_chunk": {
+        "rows": 39,
+        "sha256": "d36b5b4bd95ddf736bc51b59ccdbe2e49a32844d931b76b2f57fec2d9c0e51fd"
+      },
+      "knowledge_embedding": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    "after": {
+      "agent_task": {
+        "rows": 1,
+        "sha256": "2349165b2efb412a9c1c7a010881ec4f896be6a9d409e28d7f787b932270a3dc"
+      },
+      "patient": {
+        "rows": 1,
+        "sha256": "aa5a8cf12f75bee0924b788ab3af249df6be99c491fffbca455ef3778a1f6603"
+      },
+      "encounter": {
+        "rows": 1,
+        "sha256": "7aa468a3db1d0ae72ce207db386673ef96456d37d8c6197ecc6c4851e1c30eb1"
+      },
+      "record_revision": {
+        "rows": 2,
+        "sha256": "5f589d7a6734853d3c554d48bcda8ab0876649255b6710d14f8ed40220de9421"
+      },
+      "approval": {
+        "rows": 1,
+        "sha256": "eee413832c6b295973bc82722f6c305cfa5b1b1863fb246afd1f843347a89df8"
+      },
+      "knowledge_source": {
+        "rows": 4,
+        "sha256": "ec0465c2c1da21e21d60fe38fb9585171a16421fc99c76aea5b0bcf17aa1acc6"
+      },
+      "knowledge_document": {
+        "rows": 4,
+        "sha256": "72613952fbb554f0504fd760cf7fd4a3a3394425770ba584921eaa6765a11f46"
+      },
+      "knowledge_chunk": {
+        "rows": 39,
+        "sha256": "d36b5b4bd95ddf736bc51b59ccdbe2e49a32844d931b76b2f57fec2d9c0e51fd"
+      },
+      "knowledge_embedding": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    "equal": true
+  },
+  "network": {
+    "app": "BLOCKED",
+    "gateway": "BLOCKED",
+    "ollama": "BLOCKED"
+  },
+  "real_text": {
+    "status": "passed",
+    "encounter_id": 1,
+    "encounter_http_status": 200,
+    "restored_state": {
+      "encounter_id": 1,
+      "task_id": 1,
+      "task_status": "doctor_review",
+      "current_stage": "doctor_review",
+      "has_fields": true,
+      "action_error": null
+    },
+    "task_id": 1,
+    "field_statuses": {
+      "chief_complaint": "conflicting",
+      "present_illness": "complete",
+      "previous_treatment": "missing",
+      "accompanying_symptoms": "complete",
+      "past_history": "missing",
+      "allergy_history": "complete",
+      "physical_exam": "missing"
+    },
+    "revision_before": 1,
+    "revision_after": 2,
+    "field_statuses_after_edit": {
+      "chief_complaint": "partial",
+      "present_illness": "complete",
+      "previous_treatment": "missing",
+      "accompanying_symptoms": "complete",
+      "past_history": "missing",
+      "allergy_history": "complete",
+      "physical_exam": "missing"
+    },
+    "approved": true,
+    "docx_valid": true,
+    "docx_size_bytes": 1434,
+    "exported": true,
+    "preapproval_export_status": 400
+  },
+  "real_asr": {
+    "audio_sha256": "49c1f264172f24032e21304e9fb46a35885eaa52e2bd5814d946c869612d5054",
+    "audio_id": "85a17bae0814451d837c8d9f30e3c2f7",
+    "seconds": 5.84,
+    "engine": "funasr-paraformer-zh",
+    "backend": "funasr",
+    "segments": 1,
+    "scope": "replayed authorized anonymous 11.008s recording; not a new microphone capture"
+  },
+  "role_gate_http": 409,
+  "zoom_actual_125_150": "NOT_VERIFIED",
+  "wbs_status": "VERIFY",
+  "pytest": {
+    "passed": 575,
+    "subtests_passed": 8,
+    "warnings": 1,
+    "seconds": 366.67
+  },
+  "limitations": [
+    "Real ASR replay is not a new physical microphone test.",
+    "Initial text chief-complaint citation was conflicting; doctor correction was required before approval.",
+    "Cold Qwen probe timed out once; later real inference and readiness passed.",
+    "Windows-host access to the live Linux SQLite WAL caused a candidate I/O error; stopped/checkpointed candidate recovered with matching records. Use container-side database access.",
+    "Historical r6 gateway reused cookies across requests. Preserved archive is not an accepted security/release baseline.",
+    "One existing Windows subprocess UTF-8 decode warning retained in full regression.",
+    "No 2626 cutover until actual Edge zoom and candidate acceptance."
+  ],
+  "llm_provider": {
+    "llm_provider": "ollama",
+    "model": "qwen3:4b",
+    "latency_ms": 9977,
+    "fallback": false,
+    "fallback_reason": null,
+    "actual_provider": "ollama",
+    "operation": "field_extraction",
+    "mode": "edge",
+    "fallback_allowed": false
+  },
+  "llm_model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+  "candidate_dockerfile_build": {
+    "result": "PASS",
+    "network": "none",
+    "dependency_manifests_equal": 5,
+    "warning": "MRA_BASE_IMAGE must be supplied explicitly; no default base"
+  }
+}

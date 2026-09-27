@@ -1,0 +1,11 @@
+# Use an already verified local dependency image; no dependency downloads.
+ARG MRA_BASE_IMAGE
+FROM ${MRA_BASE_IMAGE}
+COPY requirements.txt requirements-asr.txt requirements-local-loop.txt requirements-knowledge.txt requirements-dev.txt /tmp/mra-candidate-deps/
+RUN python -c "from pathlib import Path; files=list(Path('/tmp/mra-candidate-deps').glob('*.txt')); assert len(files)==5; assert all(p.read_bytes()==(Path('/app')/p.name).read_bytes() for p in files), 'Base dependency manifests differ; use the normal Dockerfile instead'"
+USER root
+COPY --chown=appuser:appuser . /app
+ARG CODE_SHA
+RUN test -n "$CODE_SHA"
+LABEL org.opencontainers.image.revision=$CODE_SHA
+USER appuser

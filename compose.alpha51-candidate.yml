@@ -1,0 +1,79 @@
+# Every bind source must be absolute. Copy the environment example in the runbook.
+# The old 2626 environment is not part of this Compose project.
+services:
+  ollama:
+    image: ollama/ollama:0.34.0@sha256:684d8674b4315fa18f4f0e973a118ec2652ed96f67563277839985175858e0ba
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NO_CLOUD: "1"
+      OLLAMA_NUM_PARALLEL: "1"
+    gpus: all
+    volumes:
+      - type: bind
+        source: ${MRA_OLLAMA_MODELS:?absolute Ollama model directory required}
+        target: /root/.ollama/models
+        read_only: true
+        bind: {create_host_path: false}
+    networks: [offline]
+  app:
+    image: ${MRA_APP_IMAGE:?verified current source image required}
+    depends_on: [ollama]
+    environment:
+      PYTHONPATH: /app
+      MEDICAL_RECORD_AGENT_DB: /app/runtime/medical_record_agent.sqlite3
+      MEDICAL_RECORD_AGENT_UPLOAD_DIR: /app/runtime/uploads
+      MEDICAL_RECORD_AGENT_OUTPUT_DIR: /app/runtime/outputs
+      MEDICAL_RECORD_AGENT_SPEAKER_PROFILE_DIR: /app/runtime/speaker_profiles
+      MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD: ${MRA_BOOTSTRAP_PASSWORD:?local secret required}
+      RECORD_PROVIDER_MODE: edge
+      MEDICAL_RECORD_AGENT_ASR_ENGINE: funasr
+      MEDICAL_RECORD_AGENT_REQUIRE_FUNASR: "1"
+      FUNASR_DEVICE: cpu
+      ASR_PREWARM_ENABLED: "1"
+      ASR_PREWARM_PROFILE: upload
+      SPEAKER_ROLE_PROVIDER: rules
+      LLM_PROVIDER: ollama
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen3:4b
+      LLM_TIMEOUT_SECONDS: "180"
+      LLM_MAX_RETRIES: "0"
+      MRA_ANONYMIZE: "1"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      MODELSCOPE_CACHE: /app/model_cache/modelscope
+      HF_HOME: /app/model_cache/hf
+    volumes:
+      - type: bind
+        source: ${MRA_RUNTIME:?absolute isolated runtime directory required}
+        target: /app/runtime
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${MRA_MODELSCOPE_CACHE:?absolute model cache required}
+        target: /app/model_cache/modelscope
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${MRA_HF_CACHE:?absolute HF cache required}
+        target: /app/model_cache/hf
+        read_only: true
+        bind: {create_host_path: false}
+    networks: [offline]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+  gateway:
+    image: ${MRA_APP_IMAGE:?verified current source image required}
+    depends_on: [app]
+    command: ["python", "/app/scripts/alpha51_gateway.py"]
+    user: "0:0"
+    cap_add: [NET_ADMIN]
+    ports:
+      - "127.0.0.1:${MRA_PORT:?isolated candidate port required}:8000"
+    networks: [offline, frontend]
+networks:
+  offline:
+    internal: true
+  frontend: {}

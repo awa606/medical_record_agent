@@ -17,9 +17,14 @@ from starlette.background import BackgroundTask
 
 
 app = FastAPI()
-client = httpx.AsyncClient(base_url="http://app:8000", timeout=httpx.Timeout(10, read=None))
 REQUEST_HOP_HEADERS = {"connection", "host", "content-length", "transfer-encoding"}
 RESPONSE_HOP_HEADERS = REQUEST_HOP_HEADERS | {"content-encoding"}
+
+
+def new_upstream_client() -> httpx.AsyncClient:
+    # A shared client's cookie jar would replay one browser's login for another
+    # browser (including anonymous requests). Never retain upstream sessions.
+    return httpx.AsyncClient(base_url="http://app:8000", timeout=httpx.Timeout(10, read=None))
 
 
 def restrict_gateway_egress() -> None:
@@ -64,22 +69,37 @@ async def forward(path: str, request: Request):
     if request.url.query:
         url += "?" + request.url.query
     headers = {key: value for key, value in request.headers.items() if key.lower() not in REQUEST_HOP_HEADERS}
+    client = new_upstream_client()
     try:
         upstream_request = client.build_request(
             request.method, url, headers=headers, content=request.stream()
         )
         response = await client.send(upstream_request, stream=True)
     except httpx.RequestError:
+        await client.aclose()
         return JSONResponse({"detail": "Application is starting or unavailable"}, status_code=503)
+    except BaseException:
+        await client.aclose()
+        raise
     response_headers = {
         key: value for key, value in response.headers.items() if key.lower() not in RESPONSE_HOP_HEADERS
     }
-    return StreamingResponse(
+    async def close_upstream():
+        await response.aclose()
+        await client.aclose()
+
+    outgoing = StreamingResponse(
         response.aiter_bytes(),
         status_code=response.status_code,
         headers=response_headers,
-        background=BackgroundTask(response.aclose),
+        background=BackgroundTask(close_upstream),
     )
+    # Keep each Set-Cookie header separate, rather than folding cookies together.
+    if response.headers.get_list("set-cookie"):
+        outgoing.raw_headers = [(k, v) for k, v in outgoing.raw_headers if k != b"set-cookie"]
+        outgoing.raw_headers.extend((b"set-cookie", value.encode("latin-1"))
+                                    for value in response.headers.get_list("set-cookie"))
+    return outgoing
 
 
 if __name__ == "__main__":

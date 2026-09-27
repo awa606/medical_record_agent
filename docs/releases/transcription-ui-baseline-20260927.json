@@ -1,0 +1,14 @@
+{
+  "git_sha": "bdc24c9a32f83743f3b9e8184d8ba0398a66d1db",
+  "status": "UI_BASELINE_ONLY",
+  "files": {
+    "static/doctor.html": "25f4abd07703f84708ed85756d925fbab31175dbfb9ef1bf0347e1a237bfea33",
+    "static/doctor.js": "927660b7743fce46f39e1b4a8d8686566ec42fcd0055eee5fbb6309254ea3b56",
+    "static/doctor.css": "e499cdbbc7323c527545da2c98b596b9500e90de1852021b869e28b73a65d68d",
+    "static/doctor-ui-v2.css": "317a75d8e7337e7fcd15045204d7f4516da928b75cc00972089ad1d705859d56",
+    "static/doctor-workspace.css": "a1f59ec93e26436d985e150667e74cc14751508ea2087bc32c9cc1064c578525"
+  },
+  "scope": "Transcription layout baseline only; record review interaction may evolve; not a stable release",
+  "local_backup": ".artifacts/alpha51-review-quality-20260927/ui-baseline/",
+  "screenshot": "Historical same-case before screenshot captured from source 4c05a89 deployment; not exact bdc24c9 full-page acceptance"
+}

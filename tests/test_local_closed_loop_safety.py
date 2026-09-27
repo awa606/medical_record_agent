@@ -308,6 +308,25 @@ def test_field_without_any_unique_role_safe_quote_is_removed():
     assert trace["present_illness"]["accepted_span_count"] == 0
 
 
+def test_observed_qwen_citation_corruption_is_not_silently_repaired():
+    # Anonymous Realtek pair, 2026-09-27: the value was copied correctly but
+    # Qwen emitted a malformed quote. An index or matching value alone must
+    # not turn this first output into verified source evidence.
+    source = "患者今天发热三十八点二度，伴有咳嗽和咽痛，没有胸痛，也没有药物过敏史。"
+    fields = MedicalRecordFields(chief_complaint=MedicalField(
+        value=source.rstrip("。"),
+        source_spans=[SourceSpan(text="患者今天发热三十八点二度，伴有咳嗽和咽: 0", index=0)],
+    ))
+    checked = ground_fields(fields.model_copy(deep=True), "[患者] " + source)
+    assert checked.chief_complaint.status == "conflicting"
+    repaired, trace = reconcile_extractive_fields(fields, [
+        {"segment_id": "anonymous-p1", "role": "患者", "text": source},
+    ])
+    assert repaired.chief_complaint.value is None
+    assert repaired.chief_complaint.missing
+    assert trace["chief_complaint"]["accepted_span_count"] == 0
+
+
 def test_inconsistent_missing_model_field_is_discarded_fail_closed():
     from app.services.llm.llm_record_generator import FIELD_KEYS, LLMRecordGenerator
 

@@ -2235,6 +2235,7 @@ function openDrawer(panelId, title) {
   closeWorkspaceAuxiliary();
   closeInputMethodMenu();
   closeDisplaySettingsMenu();
+  $("drawer").classList.remove("reference-detail-mode");
   $("drawerTitle").textContent = title;
   $("drawerBackdrop").classList.add("active");
   $("drawer").classList.add("active");
@@ -2274,6 +2275,7 @@ function openDetailDrawer(title, html) {
   if (!detailReturnFocus) detailReturnFocus = document.activeElement;
   content.innerHTML = html;
   openDrawer("detailPanel", title);
+  $("drawer").classList.toggle("reference-detail-mode", Boolean(content.querySelector(".reference-detail")));
   document.querySelector('.doctor-app').inert = true;
   $("closeDrawerButton").focus({ preventScroll: true });
 }
@@ -2652,8 +2654,8 @@ function renderFieldEvidenceDetails(field) {
     const role = segment.role || "角色未标注";
     const speaker = segment.speaker_id || segment.speaker || "说话人未标注";
     const confidence = segment.role_confidence ?? segment.confidence ?? field?.confidence;
-    const start = span.start_time ?? segment.start_time;
-    const end = span.end_time ?? segment.end_time;
+    const start = span.start_time ?? span.start ?? segment.start_time ?? segment.start;
+    const end = span.end_time ?? span.end ?? segment.end_time ?? segment.end;
     const time = Number.isFinite(Number(start)) || Number.isFinite(Number(end))
       ? `${formatEvidenceTime(start)}–${formatEvidenceTime(end)}`
       : "时间未标注";
@@ -2778,10 +2780,10 @@ function referenceStatusLabel(reference = {}) {
   if (clinicalReview === "needs_medical_review") {
     return "来源已核验，临床映射待复核";
   }
-  if (clinicalReview === "clinically_reviewed") {
+  if (["clinically_reviewed", "reviewed"].includes(clinicalReview)) {
     return "来源已核验，临床映射已复核";
   }
-  if (verification === "verified") {
+  if (["verified", "source_verified"].includes(verification)) {
     return "来源已核验";
   }
   if (verification === "unverified") {
@@ -2885,34 +2887,123 @@ function renderFieldDetailContent(key) {
   `;
 }
 
+function referenceSection(title, html) {
+  return `<section class="reference-section"><h4>${escapeHtml(title)}</h4>${html}</section>`;
+}
+
+function referenceText(text) {
+  return `<p class="reference-prose">${escapeHtml(text || '')}</p>`;
+}
+
+function referenceItems(title, items) {
+  const values = diagnosisList(items);
+  return values.length ? referenceSection(title, `<ul>${values.map(value => `<li>${escapeHtml(value)}</li>`).join('')}</ul>`) : '';
+}
+
+function renderReferenceSources(references = []) {
+  return references.map(raw => {
+    const r = typeof raw === 'string' ? {title: raw} : raw;
+    const url = safeKnowledgeUrl(r.source_url || r.url || r.link);
+    const meta = [r.publisher || r.organization || r.institution || r.source, r.version || r.year || r.published_at,
+      r.section, r.page != null ? `第${r.page}页` : ''].filter(Boolean);
+    const ids = [['文档ID', r.document_id], ['片段ID', r.chunk_id], ['内容SHA256', r.content_sha256]];
+    return `<article class="reference-source">
+      <h4>${escapeHtml(r.title || r.name || r.source_id || '未命名来源')}</h4>
+      ${meta.length ? `<p class="reference-meta">${escapeHtml(meta.join(' · '))}</p>` : ''}
+      <p class="reference-meta">${escapeHtml(referenceStatusLabel(r))}</p>
+      ${r.evidence_scope ? referenceText(`适用范围：${r.evidence_scope}`) : ''}
+      ${r.excerpt || r.summary || r.match_reason ? referenceText(r.excerpt || r.summary || r.match_reason) : ''}
+      ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">打开来源</a>` : '<p class="reference-meta">未提供来源链接</p>'}
+      ${ids.some(([,v]) => v) ? `<details class="reference-metadata"><summary>来源详情</summary><dl>${ids.filter(([,v]) => v).map(([k,v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl></details>` : ''}
+    </article>`;
+  }).join('');
+}
+
+function renderReferenceGuides(item, supplementary = '') {
+  const linked = diagnosisReferences(item);
+  const caseResults = appState.currentKnowledgeEvidence?.results || [];
+  const state = appState.knowledgeEvidenceStatus;
+  const caseStatus = state === 'failed' ? '知识服务不可用，病例级检索结果未能加载。'
+    : state === 'loading' ? '正在加载病例级知识资料。'
+    : state === 'ready' && !caseResults.length ? '本次知识检索无结果。'
+    : !caseResults.length ? '尚未加载病例级知识检索结果。' : '';
+  return referenceSection('已关联指南', linked.length ? renderReferenceSources(linked) : referenceText('当前项目未关联指南；这不代表知识库为空。'))
+    + supplementary
+    + referenceSection('病例级资料 · 未关联当前项目', referenceText('以下资料仅供本次就诊参考，不能视为当前诊断或治疗的直接依据。')
+      + (caseStatus ? `<p class="reference-notice" role="status">${escapeHtml(caseStatus)}</p>` : '')
+      + renderReferenceSources(caseResults));
+}
+
+function referenceReviewStatus(item = {}, temporary = false) {
+  if (temporary) return '临时结果 · 待医生确认';
+  if (item.deleted_by_doctor || item.doctor_review_status === 'ai_candidate_deleted') return '医生已排除';
+  if (item.doctor_review_status === 'not_asked_confirmed') return '医生已确认本次未询问';
+  if (item.doctor_review_status === 'missing_accepted') return '医生已接受本次缺失';
+  if (item.confirmed_by_doctor || ['candidate_confirmed', 'content_confirmed'].includes(item.doctor_review_status)) return '医生已确认';
+  return '候选 · 待医生确认';
+}
+
+function renderReferenceTabs({title, item = {}, patient, checks, quality = null, temporary = false, technical = '', supplementary = ''}) {
+  const errors = [...(riskSummary().errors || [])];
+  if (roleReviewRequired()) errors.push('说话人身份尚未确认，请先完成角色核对。');
+  if (appState.recordEditConflict) errors.push('病历版本冲突，请在主工作区处理。');
+  const safety = activeSafetyCheck();
+  if (safety?.blocked) errors.push('安全校验尚未通过，审核及导出限制保持生效。');
+  const integrity = quality ? referenceSection('信息完整性', referenceText(quality.status === 'complete'
+    ? '结构信息完整；不代表临床诊断成立。' : '结构信息仍需补充，请核对缺失内容。')
+    + referenceItems('缺失内容', quality.missing)
+    + (quality.suggested_action ? referenceText(quality.suggested_action) : '')) : '';
+  const panels = [
+    ['patient', '患者依据', patient],
+    ['guides', '指南资料', renderReferenceGuides(item, supplementary)],
+    ['checks', '待核对事项', checks + integrity + referenceSection('使用边界', referenceText('仅供医生核对，不自动形成已审核诊断、处方或医嘱。'))
+      + (technical ? `<details class="reference-metadata"><summary>技术说明</summary>${referenceText(technical)}</details>` : '')],
+  ];
+  return `<div class="reference-detail">
+    <header class="reference-summary"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(referenceReviewStatus(item, temporary))}</p>
+      ${[...new Set(errors)].map(error => `<p class="reference-alert" role="alert">${escapeHtml(error)}</p>`).join('')}
+    </header>
+    <div class="reference-tabs" role="tablist" aria-label="参考详情分区">${panels.map(([id,label],i) => `<button type="button" role="tab" id="reference-tab-${id}" aria-controls="reference-panel-${id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-reference-tab="${id}">${label}</button>`).join('')}</div>
+    <div class="reference-body">${panels.map(([id,,html],i) => `<section role="tabpanel" id="reference-panel-${id}" aria-labelledby="reference-tab-${id}" tabindex="0" ${i ? 'hidden' : ''}>${html}</section>`).join('')}</div>
+  </div>`;
+}
+
+function selectReferenceTab(tab) {
+  const root = tab.closest('.reference-detail');
+  if (!root) return;
+  root.querySelectorAll('[data-reference-tab]').forEach(button => {
+    const selected = button === tab;
+    button.setAttribute('aria-selected', String(selected)); button.tabIndex = selected ? 0 : -1;
+    root.querySelector(`#${button.getAttribute('aria-controls')}`).hidden = !selected;
+  });
+  root.querySelector('.reference-body').scrollTop = 0;
+}
+
 function renderDiagnosisDetailContent(index) {
-  const diagnosis = activeRecordFields()?.candidate_diagnoses?.[index];
-  if (!diagnosis) return `<div class="empty-state">暂无鉴别诊断参考详情。</div>`;
-  const diagnosisQuality = activeQualityReport()?.candidate_diagnosis_status?.diagnosis_quality?.[index] || null;
-  return `
-    ${detailSection(diagnosis.name || "鉴别诊断参考", `
-      <div class="detail-kv">
-        <span>状态</span>
-        <strong>${escapeHtml(diagnosis.status || "候选/待医生确认")}</strong>
-      </div>
-      <div class="detail-kv">
-        <span>证据匹配度（非疾病概率）</span>
-        <strong>${escapeHtml(diagnosisConfidence(diagnosis))}</strong>
-      </div>
-      <div class="diagnosis-detail-list">${renderDiagnosisDetails(diagnosis)}</div>
-    `)}
-    ${diagnosisQuality ? detailSection("质量判断", `
-      <div class="detail-kv"><span>质量状态</span><strong>${escapeHtml(diagnosisQuality.status === "complete" ? "质量可用" : "需完善")}</strong></div>
-      <div class="detail-kv"><span>医生确认</span><strong>${escapeHtml(diagnosisQuality.doctor_confirmation_required ? "仍需确认" : "已满足边界")}</strong></div>
-      <div class="detail-text">${escapeHtml(
-        diagnosisQuality.missing?.length
-          ? `缺项：${diagnosisQuality.missing.join("、")}。${diagnosisQuality.suggested_action || ""}`
-          : (diagnosisQuality.suggested_action || "鉴别诊断参考结构完整，等待医生判断。")
-      )}</div>
-    `) : ""}
-    ${detailSection("原始转写证据（只读）", renderFieldEvidenceDetails({ source_spans: diagnosis.evidence || [] }))}
-    ${renderClinicalReferenceContext()}
-  `;
+  const item = activeRecordFields()?.candidate_diagnoses?.[index];
+  if (!item) return `<div class="empty-state">暂无鉴别诊断参考详情。</div>`;
+  return renderReferenceTabs({title: item.name || '诊断参考', item,
+    patient: referenceSection('已有依据说明', referenceText(doctorFacingDiagnosisText(item.reason) || '暂无依据说明。'))
+      + referenceSection('原始转写 · 只读', renderFieldEvidenceDetails({source_spans: item.evidence || []})),
+    checks: referenceItems('建议补问', item.follow_up_questions) + referenceItems('建议检查', item.suggested_checks)
+      + referenceItems('用药提示', item.medication_notes) + referenceItems('风险提醒', item.risk_warnings),
+    quality: activeQualityReport()?.candidate_diagnosis_status?.diagnosis_quality?.[index],
+    technical: diagnosisConfidence(item),
+  });
+}
+
+function renderTreatmentReferenceDetail() {
+  const fields = activeRecordFields();
+  const item = fields?.treatment_plan || {};
+  const diagnoses = fields?.candidate_diagnoses || [];
+  const checks = [['建议补问','follow_up_questions'],['建议检查','suggested_checks'],['用药提示','medication_notes'],['风险提醒','risk_warnings']]
+    .map(([title,key]) => referenceItems(title, uniqueDiagnosisItems(diagnoses,key))).join('');
+  return renderReferenceTabs({title: '处理建议', item,
+    patient: referenceSection('已有处理内容', referenceText(item.value || item.hint || previewTreatmentText() || '暂无明确处理建议，需医生补充。'))
+      + referenceSection('原始转写 · 只读', renderFieldEvidenceDetails(item)),
+    checks: referenceText('以下为病例级候选提示，需医生结合过敏史、禁忌与缺失信息核对。') + checks,
+    supplementary: diagnoses.filter(d => diagnosisReferences(d).length).map(d => referenceSection(`候选诊断资料：${d.name || '未命名'}（未核验为治疗依据）`, renderReferenceSources(diagnosisReferences(d)))).join(''),
+  });
 }
 
 function renderAllFieldsDetailContent() {
@@ -4739,21 +4830,14 @@ function renderLiveReferenceDetail(type, index) {
   const draft = liveClinicalDraft();
   const item = (type === 'live-diagnosis' ? draft?.differentials : draft?.care_plan)?.[index];
   if (!item) return '<div class="empty-state">暂无参考详情。</div>';
-  const evidence = (item.evidence_segment_ids || []).map(id => {
-    const row = transcriptRows().find(row => row.segmentId === id);
-    return { segment_id: id, text: row?.text || '该片段正文暂不可用' };
+  const evidence = (item.evidence_segment_ids || []).map(id => ({segment_id: id, text: transcriptRows().find(row => row.segmentId === id)?.text || '该片段正文暂不可用'}));
+  return renderReferenceTabs({title: item.name || item.title || '临时参考', item, temporary: true,
+    patient: referenceSection('临时内容', referenceText(item.summary || '暂无内容。'))
+      + (item.reason ? referenceSection('已有依据说明', referenceText(item.reason)) : '')
+      + referenceSection('原始转写 · 只读', renderFieldEvidenceDetails({source_spans: evidence})),
+    checks: referenceItems('缺失证据', item.missing_evidence) + referenceItems('建议补问', item.recommended_questions)
+      + referenceItems('建议检查', item.recommended_tests) + referenceItems('风险提醒', item.risk_warnings),
   });
-  return `${detailSection(item.name || item.title || '临时参考', `
-    <p class="summary-note">临时结果，待医生确认；不作为最终诊断或处方。</p>
-    <div class="detail-text">${escapeHtml(item.summary || '')}</div>
-    ${renderDiagnosisDetailLine("依据", item.reason)}
-    ${renderDiagnosisDetailList("缺失证据", item.missing_evidence)}
-    ${renderDiagnosisDetailList("建议补问", item.recommended_questions)}
-    ${renderDiagnosisDetailList("建议检查", item.recommended_tests)}
-    ${renderReferenceList(item)}
-  `)}
-  ${detailSection("原始转写证据（只读）", renderFieldEvidenceDetails({ source_spans: evidence }))}
-  ${renderClinicalReferenceContext()}`;
 }
 
 function uniqueDiagnosisItems(diagnoses, key) {
@@ -5409,7 +5493,7 @@ function openWorkbenchDetail(target = "") {
       quality: "病历质量摘要",
       safety: "安全校验结果详情",
     };
-    openDetailDrawer(titleMap[value] || "AI 辅助详情", renderAssistDetailContent(value));
+    openDetailDrawer(titleMap[value] || "AI 辅助详情", value === "treatment" ? renderTreatmentReferenceDetail() : renderAssistDetailContent(value));
   }
 }
 
@@ -8726,7 +8810,18 @@ function bindEvents() {
     updateReviewSegment(Number(row.dataset.segmentIndex), { text: textInput.value });
     renderTranscript();
   });
+  $("detailDrawerContent").addEventListener("keydown", event => {
+    const tab = event.target.closest('[data-reference-tab]');
+    if (!tab || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    const tabs = [...tab.parentElement.querySelectorAll('[data-reference-tab]')];
+    let index = tabs.indexOf(tab);
+    index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    selectReferenceTab(tabs[index]); tabs[index].focus();
+  });
   $("detailDrawerContent").addEventListener("click", async (event) => {
+    const tab = event.target.closest('[data-reference-tab]');
+    if (tab) { selectReferenceTab(tab); return; }
     const generateButton = event.target.closest("[data-generate-from-transcript]");
     if (generateButton) {
       await regenerateRecord();

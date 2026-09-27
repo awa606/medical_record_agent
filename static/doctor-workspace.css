@@ -129,6 +129,51 @@ body.doctor-mode .alpha51-workspace.recording-active .encounter-action-bar { dis
 .workspace-aux-dialog .column { width: 100%; height: 100%; max-height: 100%; min-height: 0; border: 0; border-radius: 0; box-shadow: none; overflow: hidden; }
 .workspace-aux-dialog .column > .panel-header { display: none; }
 .workspace-aux-dialog .assist-column { display: grid; grid-template-rows: minmax(0, 1fr); }
+/* Reference detail owns its layout; other drawers retain their existing contract. */
+body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-width: 0; background: white; height: 100dvh; }
+.reference-detail-mode .drawer-header { flex: none; min-height: 56px; padding: 12px 24px; }
+.reference-detail-mode .drawer-header h2 { font-size: 18px; font-weight: 600; }
+.reference-detail-mode #detailPanel.active { display: flex; flex: 1; min-height: 0; padding: 0; overflow: hidden; }
+.reference-detail-mode #detailDrawerContent { display: flex; flex: 1; min-height: 0; margin: 0; padding: 0; overflow: hidden; }
+.reference-detail { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; color: #263c4d; font-size: 16px; line-height: 1.65; }
+.reference-summary { flex: none; padding: 16px 24px 12px; border-bottom: 1px solid #e7ebef; }
+.reference-summary h3 { margin: 0 0 4px; font-size: 18px; font-weight: 650; }
+.reference-summary > p { margin: 0; color: #526477; font-size: 14px; }
+.reference-summary .reference-alert { margin-top: 8px; padding-left: 10px; border-left: 3px solid #b33131; color: #942b2b; }
+.reference-tabs { display: flex; flex: none; gap: 24px; padding: 0 24px; border-bottom: 1px solid #dce3e9; }
+.reference-tabs [role=tab] { min-height: 44px; margin: 0; padding: 8px 0; background: transparent; border: 0; border-bottom: 3px solid transparent; border-radius: 0; font-size: 16px; font-weight: 500; color: #526477; }
+.reference-tabs [aria-selected=true] { border-bottom-color: #1765a8; color: #155a96; font-weight: 650; }
+.reference-body { flex: 1; min-height: 0; padding: 4px 24px 24px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+.reference-body [role=tabpanel][hidden] { display: none; }
+.reference-section { padding: 20px 0; border-bottom: 1px solid #e7ebef; }
+.reference-section:last-child { border-bottom: 0; }
+.reference-section h4, .reference-source h4 { font-size: 16px; font-weight: 650; margin: 0 0 8px; }
+.reference-prose { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.reference-section ul { padding-left: 20px; margin: 8px 0; }
+.reference-section li + li { margin-top: 8px; }
+.reference-detail .reference-meta, .reference-notice { font-size: 14px; color: #526477; line-height: 1.6; margin: 6px 0; overflow-wrap: anywhere; }
+.reference-notice { border-left: 2px solid #bbc9d5; padding: 6px 12px; }
+.reference-source { padding: 12px 0; }
+.reference-source + .reference-source { border-top: 1px solid #e7ebef; }
+.reference-source a { font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+.reference-metadata { margin-top: 12px; font-size: 14px; color: #526477; }
+.reference-metadata summary { cursor: pointer; padding: 6px 0; }
+.reference-metadata dl { display: grid; grid-template-columns: 96px minmax(0,1fr); gap: 8px 12px; }
+.reference-metadata dt, .reference-metadata dd { margin: 0; overflow-wrap: anywhere; }
+.reference-detail .detail-evidence-list { display: block; }
+.reference-detail .field-evidence-detail { border: 0; border-left: 2px solid #c4d3df; border-radius: 0; background: transparent; padding: 8px 0 8px 14px; margin: 12px 0; }
+.reference-detail .field-evidence-detail > div { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.reference-detail .field-evidence-detail strong { font-size: 14px; font-weight: 600; }
+.reference-detail .field-evidence-detail span, .reference-detail .field-evidence-detail small { font-size: 14px; color: #526477; }
+.reference-detail .field-evidence-detail p { font-size: 16px; line-height: 1.65; margin: 8px 0; }
+.reference-detail .empty-state { padding: 0; min-height: 0; background: transparent; border: 0; text-align: left; font-size: 14px; color: #526477; }
+.reference-detail :focus-visible { outline: 2px solid #1765a8; outline-offset: 3px; }
+@media (max-width: 680px) {
+  .reference-detail-mode .drawer-header, .reference-summary { padding-inline: 16px; }
+  .reference-tabs { gap: 16px; padding-inline: 16px; }
+  .reference-body { padding-inline: 16px; }
+}
+
 @media (max-width: 1279px) {
   body.doctor-mode .alpha51-workspace .workbench { grid-template-columns: minmax(0, 30fr) minmax(0, 70fr); grid-template-areas: "transcript record"; }
   body.doctor-mode .alpha51-workspace .assist-column { display: none; }

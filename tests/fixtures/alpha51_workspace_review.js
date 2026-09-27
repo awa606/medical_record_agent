@@ -51,10 +51,22 @@
     document.querySelector('#workspaceReviewScene')?.setAttribute('data-scene', kind);
   };
   if (!document.querySelector('#workspaceReviewScene')) {
-    const tools = document.createElement('label'); tools.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;white-space:nowrap;color:#704c12';
-    tools.innerHTML = `合成数据 · 版式验收 <select id="workspaceReviewScene" aria-label="版式验收场景" style="width:120px;padding:4px;font-size:13px"><option value="draft">病历草稿</option><option value="empty">待采集</option><option value="recording">录音状态（模拟）</option><option value="long">长病历</option><option value="review">等待审核</option><option value="role">角色阻断</option><option value="conflict">Revision冲突</option></select>`;
+    const tools = document.createElement('div');
+    tools.id = 'workspaceReviewTools';
+    tools.innerHTML = `<style>
+      #workspaceReviewTools { display:flex;align-items:center;gap:8px;margin-left:auto;font-size:12px;position:relative; }
+      #workspaceReviewTools .review-data-badge { color:#805c25;background:#fff8e9;padding:2px 7px;border-radius:4px;white-space:nowrap; }
+      #workspaceReviewTools summary { cursor:pointer;color:#526477;white-space:nowrap;padding:6px; }
+      #workspaceReviewTools .review-tools-popover { position:absolute;right:0;top:38px;z-index:40;width:270px;background:white;padding:16px;border:1px solid #cbd5df;box-shadow:0 6px 24px #10203018;border-radius:6px;font-size:14px; }
+      #workspaceReviewTools p { margin:0 0 12px;line-height:1.5; }
+      #workspaceReviewScene { width:100%;margin-top:8px;font-size:14px; }
+    </style><span class="review-data-badge">演示数据</span><details><summary>验收工具</summary><div class="review-tools-popover"><p>合成数据，仅用于版式验收；未执行真实模型。</p><label for="workspaceReviewScene">验收场景</label><select id="workspaceReviewScene" aria-label="版式验收场景"><option value="draft">病历草稿</option><option value="empty">待采集</option><option value="recording">录音状态（模拟）</option><option value="long">长病历</option><option value="review">等待审核</option><option value="role">角色阻断</option><option value="conflict">Revision冲突</option></select></div></details>`;
     document.querySelector('.topbar').insertBefore(tools, document.querySelector('.top-actions'));
-    tools.querySelector('select').addEventListener('change', e => window.setWorkspaceReviewScene(e.target.value));
+    tools.querySelector('select').addEventListener('change', e => {
+      window.setWorkspaceReviewScene(e.target.value); tools.querySelector('details').open = false;
+    });
+    tools.addEventListener('keydown', e => { if (e.key === 'Escape') { tools.querySelector('details').open = false; tools.querySelector('summary').focus(); } });
+
   }
   document.title = 'MediListen · 整体布局候选（合成数据，未运行真实模型）';
   window.setWorkspaceReviewScene('draft');

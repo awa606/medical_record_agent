@@ -23,11 +23,16 @@ def page(server):
         yield page
         browser.close()
 
+def choose_scene(page, scene):
+    page.locator('#workspaceReviewTools summary').click()
+    page.select_option('#workspaceReviewScene', scene)
+
+
 @pytest.mark.parametrize('width,height', [(1366,768),(1440,900),(1920,1080),(1093,614),(910,512)])
 def test_clinical_density_and_auxiliary_panel_preserves_edit(page, width, height):
     page.set_viewport_size({'width': width, 'height': height})
     for scene in ['empty','recording','long','review','role','conflict']:
-        page.select_option('#workspaceReviewScene', scene)
+        choose_scene(page, scene)
         metrics = page.evaluate("""() => {
           const selectors = ['.transcript-column','.field-column','.assist-column'];
           return {width:document.documentElement.scrollWidth, columns:selectors.map(sel => {
@@ -49,7 +54,7 @@ def test_clinical_density_and_auxiliary_panel_preserves_edit(page, width, height
         if os.environ.get('ALPHA51_CLINICAL_SCREENSHOTS'):
             dest=Path(os.environ['ALPHA51_CLINICAL_SCREENSHOTS']);dest.mkdir(parents=True,exist_ok=True)
             page.screenshot(path=str(dest/f'{scene}-{width}.png'))
-    page.select_option('#workspaceReviewScene','draft')
+    choose_scene(page,'draft')
     page.click('#editRecordButton')
     editor=page.locator('[data-record-field-input="chief_complaint"]')
     editor.fill('合成未保存修改')
@@ -70,17 +75,17 @@ def test_clinical_density_and_auxiliary_panel_preserves_edit(page, width, height
 
 
 def test_recording_controls_are_one_inline_group_and_role_gate_remains(page):
-    page.select_option('#workspaceReviewScene','recording')
+    choose_scene(page,'recording')
     for key in ['pauseBrowserRecordingButton','stopBrowserRecordingButton','cancelBrowserRecordingButton']:
         expect(page.locator('#'+key)).to_be_visible()
     for key in ['startBrowserRecordingButton','resumeBrowserRecordingButton','submitBrowserRecordingButton']:
         expect(page.locator('#'+key)).to_be_hidden()
     expect(page.locator('.encounter-action-bar')).to_be_hidden()
-    page.select_option('#workspaceReviewScene','role')
+    choose_scene(page,'role')
     expect(page.locator('#nextActionPanel')).to_be_visible()
     expect(page.locator('#nextActionPanel')).to_contain_text('确认')
     assert page.evaluate('roleReviewRequired()') is True
-    page.select_option('#workspaceReviewScene','conflict')
+    choose_scene(page,'conflict')
     expect(page.locator('.record-edit-notice.conflict')).to_be_visible()
     expect(page.locator('[data-record-reload-latest]')).to_be_visible()
     expect(page.locator('#exportButton')).to_be_disabled()

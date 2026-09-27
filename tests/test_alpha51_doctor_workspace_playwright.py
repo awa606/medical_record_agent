@@ -24,8 +24,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.mark.parametrize("width,height", [
     (1366, 768), (1440, 900), (1920, 1080), (1000, 720),
-    (1093, 614),  # 1366x768 at approximately 125% browser zoom
-    (910, 512),   # 1366x768 at approximately 150% browser zoom
+    (1093, 614), (910, 512), (800, 600),
+    # Narrow viewport regression only; actual Edge zoom requires separate evidence.
 ])
 def test_doctor_workspace_layout_and_real_record_entry(width: int, height: int) -> None:
     server = RunningServer()
@@ -46,7 +46,7 @@ def test_doctor_workspace_layout_and_real_record_entry(width: int, height: int) 
                   renderAll();
                 }"""
             )
-            if width < 1024:
+            if width < 900:
                 page.locator("#showTranscriptButton").click()
             page.get_by_role("button", name="开始录音", exact=True).wait_for()
             assert page.get_by_role("button", name="开始录音", exact=True).count() == 1
@@ -54,7 +54,7 @@ def test_doctor_workspace_layout_and_real_record_entry(width: int, height: int) 
             assert page.locator("#patientProfile").inner_text().startswith("本次就诊：")
             assert "active" in (page.locator("#workflowSteps .workflow-step").nth(1).get_attribute("class") or "")
             assert not page.locator(".encounter-action-bar").is_visible()
-            if width < 1024:
+            if width < 900:
                 page.locator("#closeWorkspaceAuxButton").click()
             layout = page.evaluate(
                 """() => {
@@ -78,9 +78,12 @@ def test_doctor_workspace_layout_and_real_record_entry(width: int, height: int) 
             assert layout["documentWidth"] <= width + 1, layout
             assert layout["patient"]["bottom"] + 4 <= layout["steps"]["top"], layout
             assert layout["steps"]["bottom"] + 4 <= layout["record"]["top"], layout
-            if width >= 1280:
-                assert layout["transcript"]["right"] + 10 <= layout["record"]["left"], layout
-                assert layout["record"]["right"] + 10 <= layout["reference"]["left"], layout
+            if width >= 900:
+                assert layout["transcript"]["right"] - layout["transcript"]["left"] > 170, layout
+                assert layout["record"]["right"] - layout["record"]["left"] > 400, layout
+                assert layout["reference"]["right"] - layout["reference"]["left"] > 160, layout
+                assert layout["transcript"]["right"] + 6 <= layout["record"]["left"], layout
+                assert layout["record"]["right"] + 6 <= layout["reference"]["left"], layout
             screenshot_dir = os.environ.get("ALPHA51_SCREENSHOT_DIR")
             if screenshot_dir:
                 target = Path(screenshot_dir)

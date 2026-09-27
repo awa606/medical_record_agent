@@ -410,6 +410,15 @@ function patientDisplayName(value, fallback = "脱敏患者") {
   return normalized;
 }
 
+function syntheticDemoLabel(encounter) {
+  const labels = {
+    "SIM-DEMO-0929-FEVER": "合成演示 · 发热咳嗽",
+    "SIM-DEMO-0929-NEGATION": "合成演示 · 否定与家属",
+    "SIM-DEMO-0929-LIVE": "合成演示 · 现场问诊",
+  };
+  return labels[encounter?.patient_deidentified_id] || "";
+}
+
 function detailButton(target, label = "查看详情") {
   return `<button type="button" class="detail-link" data-open-detail="${escapeHtml(target)}">${escapeHtml(label)}</button>`;
 }
@@ -574,12 +583,14 @@ async function refreshKnowledgeEvidence(taskId = appState.currentTaskId) {
     const evidence = await api(`/api/tasks/${encodeURIComponent(taskId)}/evidence`);
     appState.currentKnowledgeEvidence = evidence;
     appState.knowledgeEvidenceStatus = "ready";
+    renderModelAndKnowledgeStatus();
     if ($("assistPanels")) renderAssist();
     return evidence;
   } catch (error) {
     appState.currentKnowledgeEvidence = null;
     appState.knowledgeEvidenceStatus = "failed";
     appState.knowledgeEvidenceError = error?.message || "相关知识参考加载失败";
+    renderModelAndKnowledgeStatus();
     if ($("assistPanels")) renderAssist();
     return null;
   }
@@ -716,7 +727,7 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
   }
   const rows = items.map((item) => {
     const active = appState.currentEncounter?.id === item.id;
-    const patient = patientDisplayName(item.patient_display_name, item.patient_deidentified_id || `Encounter ${item.id}`);
+    const patient = syntheticDemoLabel(item) || patientDisplayName(item.patient_display_name, item.patient_deidentified_id || `Encounter ${item.id}`);
     const encounterNo = item.patient_deidentified_id || `E-${item.id}`;
     const workflowState = derivePersistedWorkflowState({
       encounterStatus: item.status,
@@ -2284,7 +2295,7 @@ function renderPatientBar() {
   const llm = llmDisplayState();
   const displayState = doctorDisplayState();
   $("patientName").textContent = appState.currentEncounter
-    ? patientDisplayName(
+    ? syntheticDemoLabel(appState.currentEncounter) || patientDisplayName(
       appState.currentEncounter.patient_display_name,
       appState.currentEncounter.patient_deidentified_id || "模拟患者",
     )
@@ -2306,7 +2317,25 @@ function renderPatientBar() {
   $("llmFallback").textContent = llm.fallbackLabel;
   if ($("patientDataStatus")) $("patientDataStatus").textContent = displayState.dataStatus;
   $("reviewStatus").textContent = displayState.reviewLabel;
+  renderModelAndKnowledgeStatus();
   renderAsrPrewarmStatus();
+}
+
+function renderModelAndKnowledgeStatus() {
+  const llm = llmDisplayState();
+  const trace = appState.currentAgentTrace?.llm;
+  const target = $("settingsLlmRuntimeStatus");
+  if (target) target.textContent = appState.currentLlmStatus || trace
+    ? `${trace ? "本次病历引擎" : "配置的病历引擎"}：${llm.provider} / ${llm.model}${llm.fallback ? "（发生回退，请核查）" : ""}`
+    : "病历引擎尚未核验";
+  const knowledge = $("settingsKnowledgeRuntimeStatus");
+  const mode = appState.currentKnowledgeEvidence?.retrieval_mode;
+  if (knowledge) knowledge.textContent = appState.knowledgeEvidenceStatus === "failed"
+    ? "知识检索不可用"
+    : mode === "hybrid_v1" ? "本次知识检索：FTS5 + BGE混合检索"
+    : mode === "fts5_v1" ? "本次知识检索：FTS5全文检索"
+    : mode === "deterministic_demo" ? "本次知识检索：演示参考，非正式知识索引"
+    : "知识检索尚未执行";
 }
 
 function renderBrowserRecordingPanel() {
@@ -2399,7 +2428,7 @@ function renderAsrPrewarmStatus() {
     label = "模型已就绪";
     tone = "ok";
   } else if (status === "failed") {
-    label = "预热失败，可用 Mock";
+    label = "预热失败，请检查模型";
     tone = "danger";
   } else if (status === "idle") {
     label = "启动后自动预热";
@@ -8374,7 +8403,7 @@ function openReservedRecording() {
   $("recordingPanel").hidden = false;
   renderBrowserRecordingPanel();
   renderNextActionPanel();
-  if (window.innerWidth < 1024) openWorkspaceAuxiliary("transcript");
+  if (window.innerWidth < 900) openWorkspaceAuxiliary("transcript");
   $("startBrowserRecordingButton").focus({ preventScroll: true });
 }
 
@@ -8416,8 +8445,7 @@ function bindEvents() {
   $("closeWorkspaceAuxButton").addEventListener("click", closeWorkspaceAuxiliary);
   $("workspaceAuxDialog").addEventListener("cancel", event => { event.preventDefault(); closeWorkspaceAuxiliary(); });
   window.addEventListener("resize", () => {
-    if (workspaceAuxiliary && (window.innerWidth >= 1280 ||
-      (workspaceAuxiliary.column.classList.contains("transcript-column") && window.innerWidth >= 1024))) closeWorkspaceAuxiliary();
+    if (workspaceAuxiliary && window.innerWidth >= 900) closeWorkspaceAuxiliary();
   });
   const consultationAudio = $("consultationAudio");
   $("doctorModeButton").addEventListener("click", () => setViewMode("doctor"));

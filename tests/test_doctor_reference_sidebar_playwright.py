@@ -154,7 +154,7 @@ def test_reference_layout_on_real_page(page, width, height):
     assert layout['field'] == 17 and layout['transcript'] == 16, layout
     visible_headers = [h for h in layout['headers'] if h > 0]
     assert max(visible_headers) - min(visible_headers) <= 1, layout
-    if width < 1280:
+    if width < 900:
         page.locator('#showReferenceButton').click()
     names = page.locator('.clinical-reference-link').evaluate_all("els => els.map(x => ({font: parseFloat(getComputedStyle(x).fontSize), height: x.getBoundingClientRect().height}))")
     assert all(x['font'] == 16 and x['height'] >= 44 for x in names), names

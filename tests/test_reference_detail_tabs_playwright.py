@@ -8,7 +8,7 @@ from tests.test_doctor_reference_sidebar_playwright import page, server, prepare
 
 def open_reference(page):
     prepare_reference_fixture(page)
-    if page.viewport_size['width'] < 1280:
+    if page.viewport_size['width'] < 900:
         page.click('#showReferenceButton')
     page.get_by_role('button', name='上呼吸道感染', exact=True).click()
     return page.locator('.reference-detail')
@@ -123,3 +123,17 @@ def test_reference_status_uses_existing_schema_enums(page):
     page.get_by_role('button', name='上呼吸道感染', exact=True).click()
     page.get_by_role('tab', name='指南资料').click()
     expect(page.locator('#reference-panel-guides')).to_contain_text('适用范围：合成适用限制')
+
+
+def test_demo_identity_and_runtime_modes_do_not_claim_unverified_hybrid(page):
+    prepare_reference_fixture(page)
+    page.evaluate("""() => {
+      const s=window.__MRA_APP_STATE__;
+      s.currentEncounter.patient_deidentified_id='SIM-DEMO-0929-NEGATION';
+      s.currentKnowledgeEvidence.retrieval_mode='fts5_v1'; renderAll();
+    }""")
+    expect(page.locator('#patientName')).to_have_text('合成演示 · 否定与家属')
+    expect(page.locator('#settingsKnowledgeRuntimeStatus')).to_have_text('本次知识检索：FTS5全文检索')
+    page.evaluate("window.__MRA_APP_STATE__.knowledgeEvidenceStatus='failed';renderAll()")
+    expect(page.locator('#settingsKnowledgeRuntimeStatus')).to_have_text('知识检索不可用')
+    assert page.evaluate("syntheticDemoLabel({patient_deidentified_id:'NORMAL-001'})") == ''

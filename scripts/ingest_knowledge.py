@@ -42,6 +42,21 @@ def _section(text: str, fallback: str) -> str:
     return match.group(1).strip() if match else fallback
 
 
+def _index_payload(source: dict[str, Any], original: bytes, pages: list[KnowledgePage]) -> tuple[bytes, dict[str, Any]]:
+    """Version a real page-addressable derivative; never salt a duplicate hash."""
+    original_sha = hashlib.sha256(original).hexdigest()
+    page_rows = [{"page": p.page, "section": p.section, "content": p.content} for p in pages]
+    text_bytes = json.dumps(page_rows, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    metadata = {"original_file_sha256": original_sha, "extracted_text_sha256": hashlib.sha256(text_bytes).hexdigest(),
+                "index_profile": source.get("index_profile", "legacy-original-file")}
+    if "index_profile" not in source:
+        return original, metadata
+    if source["index_profile"] != "full-pages-v1" or source.get("max_chunks") is not None:
+        raise ValueError("full-pages-v1 requires all selected page chunks, without a chunk cap")
+    payload = {"schema_version": "knowledge-page-index-v1", "original_file_sha256": original_sha, "pages": page_rows}
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8"), metadata
+
+
 def _ocr_page(path: Path, page_index: int) -> str:
     try:
         import pymupdf
@@ -108,12 +123,15 @@ def main() -> int:
         if actual_sha.lower() != source["expected_sha256"].lower():
             raise ValueError(f"SHA256 mismatch for {source['source_id']}: {actual_sha}")
         cache_dir = args.source_root.parent / "extracted"
-        cache_path = cache_dir / f"{source['source_id']}-{actual_sha[:12]}.json"
+        selection_sha = hashlib.sha256(json.dumps(source.get("page_ranges", "all"), sort_keys=True).encode()).hexdigest()[:12]
+        cache_path = cache_dir / f"{source['source_id']}-{actual_sha[:12]}-{selection_sha}.json"
         if cache_path.exists():
             cached = json.loads(cache_path.read_text(encoding="utf-8"))
             pages = [KnowledgePage(**item) for item in cached["pages"]]
             method = cached["extraction_method"]
             pdf_page_count = cached["pdf_page_count"]
+            if cached["content_sha256"] != actual_sha or [p.page for p in pages] != _page_numbers(source, pdf_page_count):
+                raise ValueError("extraction cache does not match the source and selected pages")
         else:
             pages, method, pdf_page_count = _extract_pages(path, source)
             cache_dir.mkdir(parents=True, exist_ok=True)
@@ -134,13 +152,15 @@ def main() -> int:
                 + "\n",
                 encoding="utf-8",
             )
+        document_bytes, lineage = _index_payload(source, path.read_bytes(), pages)
         result = ingest_pages(
             source=source,
-            document_bytes=path.read_bytes(),
+            document_bytes=document_bytes,
             pages=pages,
             extraction_method=method,
             retrieved_at=generated_at,
             max_chunks=source.get("max_chunks"),
+            activate=source.get("default_active", False),
         )
         result.update(
             {
@@ -149,6 +169,8 @@ def main() -> int:
                 "selected_pages": [page.page for page in pages],
                 "extraction_method": method,
                 "acquisition_note": source.get("acquisition_note"),
+                **lineage,
+                "page_coverage_complete": result["page_count"] == len(pages),
             }
         )
         imported.append(result)
@@ -174,7 +196,10 @@ def main() -> int:
         "sources": imported,
         "embedding": embedding_result,
         "embedding_error": embedding_error,
-        "gate": "PASS" if len(imported) == 3 and sum(item["chunk_count"] for item in imported) >= 30 else "NEEDS VALIDATION",
+        "gate": "PASS" if len(imported) == len(manifest["sources"]) > 0
+        and len({item["source_id"] for item in imported}) == len(imported)
+        and all(item["chunk_count"] > 0 and item["page_coverage_complete"] for item in imported)
+        else "NEEDS VALIDATION",
         "disclaimer": manifest["scope"],
     }
     args.report.parent.mkdir(parents=True, exist_ok=True)

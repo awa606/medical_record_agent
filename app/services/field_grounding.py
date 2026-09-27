@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 from app.schemas import MedicalRecordFields, SourceSpan
-from app.services.clinical_facts import split_clinical_segments
+from app.services.clinical_facts import extract_clinical_facts, split_clinical_segments
 
 FIELD_KEYS = ("chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms", "past_history", "allergy_history", "physical_exam")
 
@@ -190,6 +190,11 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
             continue
         # Require extractive clauses. Negation, subject, time, numbers and units
         # therefore survive unchanged; confidence cannot override this gate.
+        # These seven fields describe the patient. An accurately quoted family
+        # fact still belongs to another person, even if the model kept “父亲”.
+        # Retain it for review; do not silently move, rewrite or approve it.
+        if any(fact.experiencer in {"family", "other"} for fact in extract_clinical_facts(field.value)):
+            errors.append("家属或他人事实不能归入患者本人字段，需医生核对归属")
         clauses = [x for x in re.split(r"[，,。；;\n]+", field.value) if x.strip()]
         if not clauses or any(compact(x) not in compact(evidence) for x in clauses):
             errors.append("字段改写不能由引用逐项支持，需医生修正")

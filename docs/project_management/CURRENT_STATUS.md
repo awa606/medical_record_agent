@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-27T15:07:20.447929+08:00`
-- Source hash: `1171faffa8fb9716c9501c8eb3b530814504cd2c97efa191cd82ddf2a24d18cb`
+- Updated at: `2026-09-27T17:10:20.399974+08:00`
+- Source hash: `1d21ac937f821e4753382124595c3adcb489e497452cf075243316509f2c1387`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@272fa6bdd2843e0cce69d5682a103f47a10604d2`
+- Repo: `codex/alpha51-demo-visual-e2e@98511a7935eb05f7e4fe50f1fa0f95e2cf72142f`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; visual rework/restore impact pending; Full M4 TBD / HARDWARE DEPENDENT**
+- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; course checkpoint 2026-09-29; rework/restore impact pending; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 三路径Smoke：0d39d642部署候选已复验，人工缩放后切换2626** — `VERIFY`
+**5.1 · 9月29日展示冲刺：8795真实知识/模型候选可用，实际150%核验后切换2626** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 补齐实际Edge125%/150%证据，满足门禁后切换2626，再完成最终SHA真实三路径与离线恢复
+- Single next task: 完成新版实际Edge150%三栏检查后安全切换2626，再验最终SHA三路径与离线恢复
 - Parallel waiting task: 无；5.1保持VERIFY，5.3不启动
 
 ## Manual Actions
 
-- 8791手动设置Edge125%及150%，提供菜单百分比和关闭菜单后的页面/详情截图；不再重复原生识别
+- 当前Edge150%检查8791或8795三栏、必要操作及详情；保留菜单百分比和页面截图，外屏和现场短录音随后实际验证
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

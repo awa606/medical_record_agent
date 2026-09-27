@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-09-27T15:07:20.447929+08:00",
-  "source_hash": "1171faffa8fb9716c9501c8eb3b530814504cd2c97efa191cd82ddf2a24d18cb",
+  "updated_at": "2026-09-27T17:10:20.399974+08:00",
+  "source_hash": "1d21ac937f821e4753382124595c3adcb489e497452cf075243316509f2c1387",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "272fa6bdd2843e0cce69d5682a103f47a10604d2",
+  "repo_sha": "98511a7935eb05f7e4fe50f1fa0f95e2cf72142f",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/alpha51-demo-visual-e2e",
   "active_pr": {
@@ -38,7 +38,7 @@
   "planned_hours": 99,
   "current_task": {
     "wbs": "5.1",
-    "title": "三路径Smoke：0d39d642部署候选已复验，人工缩放后切换2626",
+    "title": "9月29日展示冲刺：8795真实知识/模型候选可用，实际150%核验后切换2626",
     "status": "VERIFY"
   },
   "milestones": [
@@ -93,22 +93,22 @@
     }
   },
   "purchase_decision": "DEFERRED",
-  "next_task": "补齐实际Edge125%/150%证据，满足门禁后切换2626，再完成最终SHA真实三路径与离线恢复",
+  "next_task": "完成新版实际Edge150%三栏检查后安全切换2626，再验最终SHA三路径与离线恢复",
   "parallel_waiting_task": "无；5.1保持VERIFY，5.3不启动",
   "manual_actions": [
-    "8791手动设置Edge125%及150%，提供菜单百分比和关闭菜单后的页面/详情截图；不再重复原生识别"
+    "当前Edge150%检查8791或8795三栏、必要操作及详情；保留菜单百分比和页面截图，外屏和现场短录音随后实际验证"
   ],
-  "forecast_alpha_exit": "Software Lane baseline 2026-10-07; visual rework/restore impact pending; Full M4 TBD / HARDWARE DEPENDENT",
+  "forecast_alpha_exit": "Software Lane baseline 2026-10-07; course checkpoint 2026-09-29; rework/restore impact pending; Full M4 TBD / HARDWARE DEPENDENT",
   "source_files": {
     ".obsidian/plugins/project-planner-engineering/main.js": "e4006974bdcc45cb5ab80aebc5b9fd721a24c451ea883fd7d7e5239676017cca",
     ".obsidian/plugins/project-planner-engineering/manifest.json": "23672403c65ab17af6d28d84bbd822fab00ceeac1961612eb5cf9d514befa979",
     "Projects/Medical_Record_Agent/0 Alpha工程版交付包.md": "4bbfbde20927f571d673cf59c31b172af0fa742c4825695eb13682f4dff2231d",
-    "Projects/Medical_Record_Agent/00_Project_Home.md": "31e36f9f37945e7fdce54b884007d19ce17a199dc4014e3610e623b50b1ee84a",
+    "Projects/Medical_Record_Agent/00_Project_Home.md": "e734d892a01a39e570979e591dc6eb4d1c4de880402b7e23f6fac14491f06cbf",
     "Projects/Medical_Record_Agent/01_Project_Charter.md": "a4f99c0402a0eb280d477a24b9276e41d372bef50ac4e9b5dd7e6aef620e3440",
     "Projects/Medical_Record_Agent/02_PBS.md": "b7639872df85c6d9de9bcc22407d48de9a97ecc4a5921b335aaf50ea6ca6af36",
     "Projects/Medical_Record_Agent/03_Architecture.md": "08ddf9216a9772fe3ae225489535b8095a43b56aeb481966db4a06a4594a522d",
     "Projects/Medical_Record_Agent/04_Roadmap.md": "2a912660b030fd3d521a84192d6970271706b04769b42318d9dcfd6240f0b1e6",
-    "Projects/Medical_Record_Agent/05_WBS.md": "ff775c3a202138974ac540bc0b6b703c1d4baa757b2bfde6948be958bf5483e2",
+    "Projects/Medical_Record_Agent/05_WBS.md": "f428510aed5340c063ee1736c481c6b8eea9f9e317da8cd85cb4dee54b5e2027",
     "Projects/Medical_Record_Agent/06_Milestones.md": "ae281ee0e67d9a2a1c8053ba8ed44a6aaf57b837ca50ffa4cbe911f9e5929235",
     "Projects/Medical_Record_Agent/07_Risks.md": "e27e77140e9c7f7cdfe30849731c9c5d0df4b592212741d1ea174ccb2b955602",
     "Projects/Medical_Record_Agent/08_Verification_Matrix.md": "00c6cfbc1aaaec9aa313f29457cc59c3d5eb878de678c65942c7422b747cce18",
@@ -149,6 +149,7 @@
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_参考详情标签与知识库核验_20260927.md": "697df9150175fb33ef2c4b0cf766c1e97cdbba4dcfcfa563544cb661e220b23b",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_简洁三栏V3待视觉认可_20260923.md": "8d7ffac2eb511a753d7d9990b9077a1ceb6c74646dbcf8f689b29128ebadaba1",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_视觉样稿V1否决与PR112收口_20260923.md": "defde93e20d8c027b2cd833f854d039c92f1d3225876d8ba5cde38efa4d98303",
+    "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_课程展示冲刺与真实知识模型_20260927.md": "ee40abc1688e6c29b8699ee043c7f5767fffd7fb8f6d940d967aebe4dd6522e9",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_部署候选与知识表修复_20260927.md": "2449793485e0c072e32998a93de8f0292a8cc3da0b151c7806c3e38c2a7ad949",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA_真实本地闭环与安全_20260914.md": "39c7ad980126dd17326792f95e40e9611a8d9c13500d554425707ac9dbae6a51",
     "Projects/Medical_Record_Agent/Evidence/Project_OS_Verification.md": "4aeff8942ad4979b36566ecd82a9478f76eec9bc5e724319c027e3b37f9c0574",
@@ -195,22 +196,23 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-21_3.2_临床语义与本地模型_Design_Review.md": "61fdd98d91235b003dae335713d8cf9068e26d62c75a0c8f67676411d9f93148",
     "Projects/Medical_Record_Agent/Reviews/2026-09-22_3.3_医生修改审核导出_Design_Review.md": "903c1f7849a72041b50a8aeb07f54804a5145c4dd28629098e4fc2f3942e2935",
     "Projects/Medical_Record_Agent/Reviews/2026-09-22_4.2_证据与Revision_Design_Review.md": "f69666aa8ce3726d94004f1fb7d246603bca12e075d3c994f0d9e8e4c7262a58",
+    "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "1f1c58bdd247ede7aaaeb8b812e6ae3fc241487fc4770286614ecee5dd22f126",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "670344523980d303fac0cb8c0189adb4db6f06be61c0f525ffe4d161f3496162",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
     "Projects/Medical_Record_Agent/Risks/R02 目标硬件延迟过大或OOM.md": "3bbdaac221c0f9d8814b71578b55c29ef6a5aa88e1c981001d4aef24fb3583bb",
     "Projects/Medical_Record_Agent/Risks/R03 医患角色误判导致病历内容归属错误.md": "3a2edce52b088378337baef42f8b858a8e8e8879aa975d0d77c4bc08895f8586",
-    "Projects/Medical_Record_Agent/Risks/R04 前后端状态不同步.md": "3c54207ccb64c8afb41b877d72c60d250a8176ce4273a1bfb3aa929f833d55cf",
+    "Projects/Medical_Record_Agent/Risks/R04 前后端状态不同步.md": "5321efd3c974176960629320eda4ea0b1e8f2f530aba11f322deb04e1654cae2",
     "Projects/Medical_Record_Agent/Risks/R05 修改后Revision或病历数据丢失.md": "42c49b0be24a9b8058926fcaf05cfb08aec75650a02af5d2d2399f96096977c4",
     "Projects/Medical_Record_Agent/Risks/R06 未审核病历导出门禁失效.md": "7f5083942956f833a39dc2c262e438558b925017a889c883543498c661c300e0",
     "Projects/Medical_Record_Agent/Risks/R07 Alpha范围扩张导致三周无法完成.md": "b31a7f2b014441bcf239d2d8fe1dd43c73077b5bba20c222482d64508869863f",
-    "Projects/Medical_Record_Agent/Risks/R08 本地环境与演示环境不一致.md": "dc7a6e254d67f40bf776b55270d9c6b8d8e7d32c8839f29cbd0bb431af674769",
+    "Projects/Medical_Record_Agent/Risks/R08 本地环境与演示环境不一致.md": "be72b6b7577a1ba9a664d352191efabf597dd4ae5898afbb22503b75493051b9",
     "Projects/Medical_Record_Agent/Risks/R09 单人关键任务集中造成阻塞.md": "7a63e214205397276a84f70e10c905257ad6b2ab7a638ce83aa80d7e7e83182b",
     "Projects/Medical_Record_Agent/Risks/R10 最终真实音频验收失败.md": "0d23fc57df31fa8f389f284d3f979cac44c8d3d9131817f34ca2f2a825ea7f46",
-    "Projects/Medical_Record_Agent/Risks/R11 87小时估计不足或D15修复回归超时.md": "2a1be4d83484032897e5613c8f5529aec5536298783c122154fe9ec64484f3ca",
+    "Projects/Medical_Record_Agent/Risks/R11 87小时估计不足或D15修复回归超时.md": "8314026fa8ed22fe601eb40cbf5490ec833e8a64ac1ff0c164d1e2592e2a8c7f",
     "Projects/Medical_Record_Agent/Risks/R12 接口外壳或散热不兼容导致无法装配.md": "8dfbe6cd178ff467934dbe850b16acbd993472fcaf57c35454fff3a925ce6450",
     "Projects/Medical_Record_Agent/Roadmap.md": "77042df0811c8899ecfc21bd931c0e0fb17ce184696af16d2b7535250d2dbce5",
     "Projects/Medical_Record_Agent/Tasks/1.1 目标硬件与BOM基线.md": "e2a97826a25b65428c0d6d6f3421ab4ddfa625ad2fd36586e6188087f39ac9ef",
@@ -225,7 +227,7 @@
     "Projects/Medical_Record_Agent/Tasks/3.3 医生修改、审核与导出.md": "b2d325c1534f4b696f90766e9a0cddde2b71ebda4b27d4640d5a263a0edbafaf",
     "Projects/Medical_Record_Agent/Tasks/4.1 Encounter _ Transcript _ Draft基础持久化.md": "ac396168165bbc5b8ce20ec77fdbb8b0c52d9d57fb0aa21783b39a431c143939",
     "Projects/Medical_Record_Agent/Tasks/4.2 病历证据与Revision版本关联.md": "caa937a1f5f28c8ae4a817d7ca692217560256101c390e4d585152c392949054",
-    "Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke.md": "9c4706b8ed3bfa814677d9a45218ab58458da6d2aaf843e690b61387ff696c23",
+    "Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke.md": "ee9dc760a2f1121a7f4c165d5ebed76b8cf6601f354ded0bf8182707c56e3455",
     "Projects/Medical_Record_Agent/Tasks/5.2 断网本地运行验证.md": "9cbfed70e6f73c9199e7031611a2a2760b4b30eed8268f4385f35426c45aecda",
     "Projects/Medical_Record_Agent/Tasks/5.3 连续5次真实音频E2E.md": "128e7dd1c17ce42c2ff5ff9ceda13283eaa860b981673c621e81d05dff7dd5c3",
     "Projects/Medical_Record_Agent/Tasks/5.4 Alpha缺陷回归和证据归档.md": "f904dcf687858ef01903e7fb53eca97c004f7b56656186dc8fae38fa240b1157",
@@ -273,12 +275,13 @@
   },
   "extra_source_files": {
     ".artifacts/project-status/hardware_gates_deferred.json": "369afa7b5b4b262098c983555453ce260acb2b30b7a05553b648bc814818d2f9",
-    "docs/evidence/20260927_alpha51_cutover_preflight.json": "108f7eac69a66570acbca3f374c4caa5d49de818b3fe26b7a9639d249b316781",
-    "docs/evidence/20260927_alpha51_cutover_preflight.md": "3a0bc787cffea03a5d64dc32b2516e7d57bd31bde9d5fc14d94b3eb3a546325a"
+    "docs/evidence/20260927_alpha51_demo_sprint.json": "278c031da58a3470357f507af12c994b3716fa4e307b0de764cbbee5648b5931",
+    "docs/evidence/20260927_alpha51_demo_sprint.md": "4a421ea2bc07338b0abe2f96350790664c5360a97668c730180210fe80616f0a",
+    "docs/runbooks/20260929_course_demo.md": "df9c18eaf63917dfb0f5a708c6f6c581ce9fbc7d75d73a19e3b388e50972c581"
   },
   "snapshot_verification": {
     "result": "PASS",
-    "checked": 197,
+    "checked": 199,
     "mismatch": 0
   }
 }

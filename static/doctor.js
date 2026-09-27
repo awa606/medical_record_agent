@@ -3369,6 +3369,7 @@ function renderFields() {
       ? appState.viewMode === "doctor"
         ? `
         <div class="field-meta compact-field-meta">
+          ${String(fields?.[key]?.doctor_review_note || "").startsWith("manual_doctor_edit_v1:") ? '<span class="doctor-edit-origin">医生已修改</span>' : ""}
           ${detailButton(`field:${key}`, "查看原文证据")}
           ${!isPreview && !isEditing && EDITABLE_FIELD_DEFS.some(([item]) => item === key) ? `<button type="button" data-record-edit-field="${escapeHtml(key)}">修改</button>` : ""}
           ${key !== "preliminary_diagnosis" && key !== "treatment_plan" ? `<button type="button" data-knowledge-field="${escapeHtml(key)}">查依据</button>` : ""}

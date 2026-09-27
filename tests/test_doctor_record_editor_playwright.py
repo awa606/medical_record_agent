@@ -85,6 +85,7 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             assert persisted["value"] == "患者发热39度，医生补充记录"
             assert persisted["status"] == "partial"
             assert persisted["source_spans"] == []
+            expect(page.locator('[data-field="chief_complaint"] .doctor-edit-origin')).to_have_text("医生已修改")
 
             page.click('[data-field="chief_complaint"] [data-knowledge-field="chief_complaint"]')
             page.wait_for_function(

@@ -27,6 +27,20 @@ ASSUMPTION A01：当前电脑为演示设备，外接显示设备未验证前不
 
 ## A：8795可操作候选
 
+### 已有容器退出后的恢复
+
+先检查`docker ps -a --filter name=mra51repair8795`、退出日志和8795端口，核对三个容器仍指向已验证镜像与绝对挂载。不要因为页面打不开重建数据库或执行`down -v`。
+
+```powershell
+docker start mra51repair8795-ollama-1
+docker start mra51repair8795-app-1
+docker start mra51repair8795-gateway-1
+```
+
+打开8795并核验`/health`。ASR／LLM预热期间`/ready=503`需查看具体检查层；只有实际返回200才进行真实AI操作。随后检查知识检索、已保存Revision和匿名访问保护。恢复失败保留日志与挂载，不自动切到旧2626或Mock环境。
+
+9月27日晚恢复记录及未通过的JSON引用实验见[恢复与引用对照](../evidence/20260927_alpha51_recovery_citation_ab.md)。原转写界面及运行模型保持不变；不能将此次进程恢复称为新版本离线恢复验收。
+
 1. 更新8795前备份候选容器内数据库，使用SQLite Backup API，记录表级指纹及容器／挂载信息。不改旧2626；不要从Windows直接打开Docker正在使用的WAL数据库。
 2. 检查当前代码、镜像revision及HTTP静态资源SHA一致；真实配置必须是FunASR＋Ollama/Qwen3:4b，无Mock或云端回退。
 3. 使用下列准备工具创建三组显式合成病例。已有相同标识就诊会复用，不删除旧记录，不自动批准；前两组执行真实Qwen，第三组保留供现场输入。首次结果和当前结果分别保存在本地。

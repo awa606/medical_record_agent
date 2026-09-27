@@ -1,0 +1,13 @@
+/* Keep the stock technical table UI; hashes must not squeeze clinical text. */
+.rows-and-columns td.col-content_sha256,
+.rows-and-columns td.col-content_hash {
+  max-width: 9rem;
+  overflow-wrap: anywhere;
+}
+.rows-and-columns td.col-content,
+.rows-and-columns td.col-draft_text {
+  min-width: 26rem;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+.row h1 { overflow-wrap: anywhere; }

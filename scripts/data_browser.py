@@ -158,7 +158,10 @@ def make_datasette(directory: Path, secret: str):
     metadata = json.loads((directory / "metadata.json").read_text(encoding="utf-8"))
     # Enforce, not just trust user-editable metadata defaults.
     metadata["allow"], metadata["allow_sql"] = {"id": "root"}, False
+    assets = Path(__file__).resolve().parents[1] / "tools/data-browser/assets"
+    metadata["extra_css_urls"] = ["/mra-tools/readability.css"]
     return Datasette(immutables=[str(database)], metadata=metadata, secret=secret,
+                     static_mounts=[("mra-tools", str(assets))],
                      settings={"default_allow_sql": False, "allow_download": False, "allow_csv_stream": False,
                                "default_page_size": 25, "max_returned_rows": 100, "sql_time_limit_ms": 1000})
 

@@ -129,6 +129,9 @@ class ViewerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn((await ds.client.post("/mra_snapshot/record_revision/-/insert", headers=headers, json={"id": 2})).status_code, (403, 404, 405))
         html = (await ds.client.get("/mra_snapshot/record_revision", headers=headers)).text
         self.assertIn("/mra_snapshot/encounter/1", html)
+        self.assertIn("/mra-tools/readability.css", html)
+        self.assertEqual((await ds.client.get("/mra-tools/readability.css")).status_code, 200)
+        self.assertEqual((await ds.client.get("/mra-tools/../synthetic-allowlist.json")).status_code, 404)
         self.assertEqual(before, (directory / "mra_snapshot.sqlite3").read_bytes())
         with (directory / "mra_snapshot.sqlite3").open("ab") as f: f.write(b"tamper")
         with self.assertRaises(ValueError): make_datasette(directory, "test")

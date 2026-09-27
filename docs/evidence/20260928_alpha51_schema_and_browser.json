@@ -120,8 +120,8 @@
   },
   "snapshot": {
     "schema_version": "mra-readonly-snapshot-v1",
-    "captured_at": "2026-09-27T16:31:42.453593+00:00",
-    "exporter_sha256": "7b81ca5a0059833c3ed1ddc1fbc8674f17db8e293db7d7e36aa78f01dd5b1284",
+    "captured_at": "2026-09-27T16:41:31.689822+00:00",
+    "exporter_sha256": "9476e38894165420b3db8d58ee96b6d14214d542e70529b2ea6a9490c1039d1c",
     "viewer_version": "datasette 0.65.5",
     "source_label": "8795 / ee0b5f0 / anonymous course demo",
     "synthetic_only": true,
@@ -148,8 +148,9 @@
     "business_navigation": "patient -> encounter -> revision -> approval -> export",
     "knowledge_navigation": "source -> document -> chunk -> embedding metadata",
     "source_unchanged_during_browsing": true,
-    "live_test_sha256": "8edc884b134f0fdcfa89f22da7f5848bdc17c5e4e4a17e2685fa03d55ea7c413",
-    "physical_zoom_test": false
+    "live_test_sha256": "5486efeb7ed1442a6869637b0b8c8dc767c644cdbfbea93e0c295e423246e35b",
+    "physical_zoom_test": false,
+    "readability": "stock Datasette tables; bounded hash columns and minimum text width; visually reviewed at 1440x900"
   },
   "live_api": {
     "health": 200,

@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-27T00:22:42.949307+08:00`
-- Source hash: `1b6f7220bca24282e4bc42b0f76dc54e7a68639be004e0d31eada7aa039459a0`
+- Updated at: `2026-09-27T12:26:06.977774+08:00`
+- Source hash: `0b98427b49ed90729ec78f4a4e5c74879534be1ab448235bb1bc2b1b79a43c7d`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@b86b542941b89af04799cd21f2950a27e9589415`
+- Repo: `codex/alpha51-demo-visual-e2e@9177b165c5bebc3824b8e99e2d67ad51ca298457`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 三路径Smoke：临床工作区整体候选待认可** — `VERIFY`
+**5.1 · 三路径Smoke：参考详情排版认可，缩放与部署核验待完成** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 认可整体临床工作区候选；之后核验实际Edge缩放、最终版真实三路径及新SHA恢复候选
+- Single next task: 核验实际Edge125%/150%及Docker恢复后的2626知识挂载，再执行最终SHA真实三路径与离线恢复
 - Parallel waiting task: 无；5.1保持VERIFY，5.3不启动
 
 ## Manual Actions
 
-- 试用8791/workspace-review合成数据候选，确认整体版式；不替换2626、不冻结
+- 排版已认可；实际Edge125%/150%缩放待检查；不替换2626、不冻结
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

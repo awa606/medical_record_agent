@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-27T14:13:14.401727+08:00`
-- Source hash: `00d46c655c21074a32530e119a62cbe4472c1f07f304999c26fae5d4b63ce4a8`
+- Updated at: `2026-09-27T15:07:20.447929+08:00`
+- Source hash: `1171faffa8fb9716c9501c8eb3b530814504cd2c97efa191cd82ddf2a24d18cb`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@884d90479ab8f7be9b3543b27cfadd7a612f1590`
+- Repo: `codex/alpha51-demo-visual-e2e@272fa6bdd2843e0cce69d5682a103f47a10604d2`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 三路径Smoke：真实部署候选已核验，实际缩放与2626切换待完成** — `VERIFY`
+**5.1 · 三路径Smoke：0d39d642部署候选已复验，人工缩放后切换2626** — `VERIFY`
 
 ## Hardware Gate
 
@@ -59,6 +59,6 @@
 
 ## Manual Actions
 
-- 保存Edge工作并重开同一配置的8791验收标签；原生识别仍失败时手动保留125%/150%菜单与页面证据
+- 8791手动设置Edge125%及150%，提供菜单百分比和关闭菜单后的页面/详情截图；不再重复原生识别
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

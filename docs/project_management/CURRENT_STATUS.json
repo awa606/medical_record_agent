@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-09-27T17:10:20.399974+08:00",
-  "source_hash": "1d21ac937f821e4753382124595c3adcb489e497452cf075243316509f2c1387",
+  "updated_at": "2026-09-27T17:15:51.370206+08:00",
+  "source_hash": "e20ded4f12ca4c090220ce163e07704915226dfb9c07d3c9f6319b716e9c81d2",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "98511a7935eb05f7e4fe50f1fa0f95e2cf72142f",
+  "repo_sha": "6b64172686eea1ed44c19fb7fd2629e95bd18009",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/alpha51-demo-visual-e2e",
   "active_pr": {
@@ -199,7 +199,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "670344523980d303fac0cb8c0189adb4db6f06be61c0f525ffe4d161f3496162",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "b8844a22632864ecd717174d8b04e6a1c3773f446b47903a76fb2354ba40bcca",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -275,8 +275,8 @@
   },
   "extra_source_files": {
     ".artifacts/project-status/hardware_gates_deferred.json": "369afa7b5b4b262098c983555453ce260acb2b30b7a05553b648bc814818d2f9",
-    "docs/evidence/20260927_alpha51_demo_sprint.json": "278c031da58a3470357f507af12c994b3716fa4e307b0de764cbbee5648b5931",
-    "docs/evidence/20260927_alpha51_demo_sprint.md": "4a421ea2bc07338b0abe2f96350790664c5360a97668c730180210fe80616f0a",
+    "docs/evidence/20260927_alpha51_demo_sprint.json": "691fe26f6c7a8aad6952740539f9b97a07d55b506b78d032d013ecd8dd983fcb",
+    "docs/evidence/20260927_alpha51_demo_sprint.md": "bc31b67af2d01250f84c38c196b968c22bf629ad3e6367f906178d1a7b80bab7",
     "docs/runbooks/20260929_course_demo.md": "df9c18eaf63917dfb0f5a708c6f6c581ce9fbc7d75d73a19e3b388e50972c581"
   },
   "snapshot_verification": {

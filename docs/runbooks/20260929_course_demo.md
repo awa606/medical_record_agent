@@ -61,3 +61,33 @@ python scripts/alpha51_prepare_demo_cases.py `
 | 7 | 管理员查看知识文档、启停及测试搜索 | 管理权限与停用排除 |
 
 最终SHA必须重跑文本、上传音频、物理麦克风三条真实路径。精确代码／镜像／配置／匿名库／模型清单和缓存归档后，在新目录新端口断网恢复。旧r6不替本版本验收。未完成前5.1保持VERIFY，5.3不启动。
+
+## 9月27日可用候选与离线依赖
+
+当前实际结果见[冲刺证据](../evidence/20260927_alpha51_demo_sprint.md)：8795是真实候选，2626仍旧环境；不要向评审展示2626并称其已是最新版本。搜索 `SIM-DEMO-0929-FEVER` 可打开已审核导出的合成就诊；`SIM-DEMO-0929-NEGATION` 保留首次抽取冲突供人工核对；`SIM-DEMO-0929-LIVE` 留作现场输入。
+
+候选代码为 `4c05a897c6bc191132b8f44bef822f18c8d807a0`，镜像为 `mra-alpha51:demo-b-bge-4c05a89`。本轮操作文件位于本地 `.artifacts/alpha51-demo-sprint-20260927/`，`candidate-b.env`含本地凭据，不提交或投影展示。原始录音、数据库、截图、PDF、模型和wheel同样仅保留本地。
+
+原基础镜像缺少可选知识依赖；补入官方PyPI的 `sentence-transformers==5.7.0` wheel，SHA256为 `b78141da3d8137e70d965866e2ca43190b9266f3d4d8752e250ded75e7136730`。本地 `knowledge-wheel/requirements.lock` 精确内容：
+
+```text
+sentence-transformers==5.7.0 --hash=sha256:b78141da3d8137e70d965866e2ca43190b9266f3d4d8752e250ded75e7136730
+```
+
+已执行的离线扩展镜像配方如下。它复用已验证基础镜像中的Torch、Transformers等，不下载或升级其他包；`pip check`已通过。后续冻结仍需打包最终镜像，而不是只存本配方。
+
+```dockerfile
+FROM mra-alpha51:demo-b-4c05a89
+USER root
+COPY *.whl requirements.lock /tmp/mra-knowledge-wheel/
+RUN python -m pip install --no-index --no-deps --require-hashes \
+    --find-links=/tmp/mra-knowledge-wheel \
+    -r /tmp/mra-knowledge-wheel/requirements.lock
+USER appuser
+```
+
+新HF缓存位于本轮 `knowledge-hf/`，以只读方式挂载，未覆盖旧缓存。知识版本变更前备份是 `knowledge-staging/before-promote.sqlite3`；事务只增补知识表并断言业务表指纹不变。不能直接用该备份覆盖后来产生的新病历。查询停用资料仍不可见，2025流感版暂不提升为当前版。
+
+服务启动检查先看 `/health`，再轮询 `/ready`；就绪缓存过期后的首次503会触发真实模型探测，应等待后续结果，禁止改为Mock消除503。只有实际 `ollama`、正确模型摘要、`fallback_allowed=false` 和FunASR ready齐全才开展真实生成。
+
+9月28日18:00功能冻结是人工冲刺检查点，本次未创建后台定时任务。现阶段尚无与该镜像对应的三路径3/3和离线恢复包，不称稳定演示版。

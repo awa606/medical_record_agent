@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-27T19:49:09.077701+08:00`
-- Source hash: `c921dd167e22314637e6c25071c12025502c90b39104cdb453eb0f212e278631`
+- Updated at: `2026-09-27T23:28:04.511041+08:00`
+- Source hash: `f3c82fba3e750eb3c5cdb45920308e10634cc476c766317b997f013baeff77a5`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@0c48a3efb5e8dadbc236f6ba1e54469b54e3ade2`
+- Repo: `codex/alpha51-demo-visual-e2e@2cd4569dba378be438e5129d1042a104c8a14ef6`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 病历核对候选与主诉引用错误定位（8795）** — `VERIFY`
+**5.1 · 8795恢复与主诉JSON引用候选拒绝** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 在开发集验证Qwen主诉引用错误的单变量修复，再独立复跑验证与冻结集；随后完成最终版本三路径与恢复
+- Single next task: 独立比较最小SourceSpan Schema与完整Schema的同句引用输出，定位Qwen主诉引文串扰；不放宽安全校验
 - Parallel waiting task: 无；训练数据与资源Gate未通过，5.3不启动
 
 ## Manual Actions

@@ -367,10 +367,10 @@
     "model-eval/validation-31-40/report.json": "8a6a358a46c6f3b386bb4a924d5b7d90ccb86b1ac03d16fad77a71ab2e42df64",
     "model-eval/frozen-41-60/report.json": "55e52fee37d3a41d13f8ea9c2f29c6fff33d6a4dcea953f4b28b0525b5d7caa4",
     "pm-changes.json": "a6845a19ca184c1278d3c5093667308f16a7b0f4ee72170fbbb54fb820f8c874",
-    "pm-after-snapshot.json": "e6f160b99f4b87e92ddfb3f28982d32afebe842921eaf382c99021ea85b903a0"
+    "pm-after-ci-snapshot.json": "1d2a1a6c6f46d21b7842f1b73fd41198b6da2e4f29056a6ff34921a86ea2d39b"
   },
   "project_management": {
-    "snapshot_at": "2026-09-27T17:10:20.399974+08:00",
+    "snapshot_at": "2026-09-27T17:15:51.370206+08:00",
     "source_files_verified": 172,
     "task_counts": {
       "done": 8,

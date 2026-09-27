@@ -182,7 +182,8 @@
     "preserved_tables": 11,
     "static_resources": "HTTP SHA matches source ee0b5f0",
     "native_zoom": "NOT_TESTED_THIS_RUN",
-    "physical_mic": "NOT_TESTED_THIS_RUN"
+    "physical_mic": "NOT_TESTED_THIS_RUN",
+    "snapshot_sources": "173 source hashes verified"
   },
   "release_status": "NOT_FROZEN",
   "remaining": [
@@ -264,5 +265,12 @@
     "knowledge-reference.png": "fc2d83d55e62204b8ce31930f621494b26e108eab7970f0e2139193a3b7a289a",
     "review-exported-reopened.png": "22aebc9a52b40f2dde340bec133f003fdf620bc029e53664d38702c96f1e8ccf"
   },
-  "next_task": "在开发集验证主诉引用错误的单变量修复，再独立复跑验证和冻结集；5.1保持VERIFY"
+  "next_task": "在开发集验证主诉引用错误的单变量修复，再独立复跑验证和冻结集；5.1保持VERIFY",
+  "pm_snapshot_at": "2026-09-27T19:49:09.077701+08:00",
+  "pm_snapshot_counts": {
+    "done": 8,
+    "verify": 3,
+    "blocked": 1,
+    "backlog": 4
+  }
 }

@@ -329,7 +329,14 @@
     },
     "javascript_syntax": "PASS",
     "diff_check": "PASS",
-    "image_pip_check": "No broken requirements found"
+    "image_pip_check": "No broken requirements found",
+    "ci_first_attempt": {
+      "run": 36308644097,
+      "result": "FAIL at collection: optional pypdf absent",
+      "repair": "lazy PDF import; no skipped tests or extra base requirements",
+      "local_targeted_passed": 5,
+      "without_pdf_index_probe": "PASS"
+    }
   },
   "gates": {
     "actual_new_layout_edge_150": "PENDING USER EVIDENCE",

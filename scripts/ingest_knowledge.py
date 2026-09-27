@@ -9,9 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from pypdf import PdfReader
-
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in os.sys.path:
     os.sys.path.insert(0, str(PROJECT_ROOT))
@@ -76,6 +73,8 @@ def _ocr_page(path: Path, page_index: int) -> str:
 
 
 def _extract_pages(path: Path, source: dict[str, Any]) -> tuple[list[KnowledgePage], str, int]:
+    from pypdf import PdfReader
+
     reader = PdfReader(path)
     pages: list[KnowledgePage] = []
     methods: set[str] = set()

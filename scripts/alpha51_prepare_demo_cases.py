@@ -76,7 +76,10 @@ def main() -> None:
                     evidence.write_text(json.dumps({"transcript": transcript, "task": task, "trace": trace}, ensure_ascii=False, indent=2), encoding="utf8")
                 (args.output_dir / f"{marker}-current-result.json").write_text(
                     json.dumps({"task": task, "trace": trace}, ensure_ascii=False, indent=2), encoding="utf8")
-                row.update(task_id=task_id, state=task["status"], result_sha256=hashlib.sha256(evidence.read_bytes()).hexdigest(), human_edits=0)
+                manual_fields = [key for key, field in task.get("result_json", {}).get("fields", {}).items()
+                                 if isinstance(field, dict) and str(field.get("doctor_review_note") or "").startswith("manual_doctor_edit_v1:")]
+                row.update(task_id=task_id, state=task["status"], result_sha256=hashlib.sha256(evidence.read_bytes()).hexdigest(),
+                           human_modified_fields=manual_fields, human_edits=len(manual_fields))
                 llm = trace.get("llm", {})
                 row["llm"] = llm
                 if task["status"] == "FAILED" or llm.get("actual_provider", llm.get("llm_provider")) != "ollama" or llm.get("fallback"):

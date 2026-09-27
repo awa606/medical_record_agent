@@ -36,6 +36,12 @@ jobs:
       - name: Check diff whitespace
         run: git diff --check
 
+      - name: Verify isolated read-only database browser
+        run: |
+          python -m venv .artifacts/data-browser-venv
+          .artifacts/data-browser-venv/bin/python -m pip install -r tools/data-browser/requirements-lock.txt
+          .artifacts/data-browser-venv/bin/python -m unittest tests.test_data_browser -v
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:

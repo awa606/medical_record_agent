@@ -161,6 +161,8 @@ const appState = {
   recordEditDirty: false,
   recordEditBaseline: null,
   recordEditConflict: null,
+  recordEditRecovery: null,
+  recordSaveNotice: "",
   fieldKnowledgeSearch: {},
   currentKnowledgeEvidence: null,
   knowledgeEvidenceStatus: "idle",
@@ -2601,18 +2603,25 @@ function resetRecordEditState() {
   appState.recordEditConflict = null;
 }
 
-function beginRecordEdit() {
+function beginRecordEdit(fieldKey) {
   if (!appState.currentTaskId || !appState.currentRecordFields || isRecordPreviewActive()) {
     showToast("请先生成正式病历草稿");
     return;
   }
-  appState.recordEditBaseline = cloneRecordFields(appState.currentRecordFields);
-  appState.recordEditMode = true;
-  appState.recordEditDirty = false;
-  appState.recordEditConflict = null;
-  clearApprovalReviewSelections();
+  if (!appState.recordEditMode) {
+    appState.recordEditBaseline = cloneRecordFields(appState.currentRecordFields);
+    appState.recordEditMode = true;
+    appState.recordEditDirty = false;
+    appState.recordEditConflict = null;
+    appState.recordSaveNotice = "";
+    clearApprovalReviewSelections();
+  }
   renderAll();
-  document.querySelector("[data-record-field-input]")?.focus();
+  const key = EDITABLE_FIELD_DEFS.find(([key]) => key === fieldKey)?.[0];
+  const input = key ? document.querySelector(`[data-record-field-input="${key}"]`)
+    : document.querySelector("[data-record-field-input]");
+  input?.scrollIntoView({ block: "nearest" });
+  input?.focus();
 }
 
 function cancelRecordEdit() {
@@ -2632,7 +2641,7 @@ function updateRecordFieldValue(key, value) {
   if (baseline && normalized === String(baseline.value || "").trim()) {
     appState.currentRecordFields[key] = cloneRecordFields(baseline);
     appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
-    appState.recordEditConflict = null;
+    if (appState.recordEditConflict?.error_code !== "saved_revision_refresh_failed") appState.recordEditConflict = null;
     renderFooter();
     const notice = document.querySelector("[data-record-edit-status]");
     if (notice) notice.textContent = appState.recordEditDirty ? "有未保存修改" : "编辑模式";
@@ -2649,7 +2658,7 @@ function updateRecordFieldValue(key, value) {
   field.doctor_review_status = "pending";
   field.high_risk_confirmed_by_doctor = false;
   appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
-  appState.recordEditConflict = null;
+  if (appState.recordEditConflict?.error_code !== "saved_revision_refresh_failed") appState.recordEditConflict = null;
   renderFooter();
   const notice = document.querySelector("[data-record-edit-status]");
   if (notice) notice.textContent = appState.recordEditDirty ? "有未保存修改" : "编辑模式";
@@ -3178,10 +3187,15 @@ function renderApprovalChecklist(fields) {
   const regularDone = regularFields.length === 0
     || regularFields.every(({ field }) => fieldReviewComplete(field))
     || appState.approvalRegularFieldsConfirmed;
+  const completedRows = [];
+  const outstanding = (html, done) => {
+    if (done) completedRows.push(html);
+    return done ? "" : html;
+  };
   const missingRows = missingFields.map(({ key, title, field }) => {
     const selected = appState.approvalMissingDecisions[key] || field.doctor_review_status || "";
     const done = fieldReviewComplete(field) || Boolean(appState.approvalMissingDecisions[key]);
-    return `
+    return outstanding(`
       <div class="approval-item" data-approval-item="field:${escapeHtml(key)}">
         <div>
           <strong>${escapeHtml(title)}</strong>
@@ -3189,16 +3203,17 @@ function renderApprovalChecklist(fields) {
         </div>
         ${approvalStatusPill(done)}
         <div class="approval-item-actions">
+          <button type="button" data-review-focus="${escapeHtml(key)}">定位字段</button>
           <button type="button" class="${selected === "confirm_not_asked" ? "active" : ""}" data-approval-missing-key="${escapeHtml(key)}" data-approval-action="confirm_not_asked">确认未询问</button>
           <button type="button" class="${selected === "accept_missing" || selected === "missing_accepted" ? "active" : ""}" data-approval-missing-key="${escapeHtml(key)}" data-approval-action="accept_missing">接受本次缺失</button>
         </div>
       </div>
-    `;
+    `, done);
   }).join("");
   const diagnosisRows = diagnoses.map((diagnosis, index) => {
     const selected = appState.approvalDiagnosisDecisions[index] || diagnosis.doctor_review_status || "";
     const done = diagnosisReviewComplete(diagnosis) || Boolean(appState.approvalDiagnosisDecisions[index]);
-    return `
+    return outstanding(`
       <div class="approval-item" data-approval-item="diagnosis:${index}">
         <div>
           <strong>${escapeHtml(diagnosis.name || `候选诊断${index + 1}`)}</strong>
@@ -3210,11 +3225,11 @@ function renderApprovalChecklist(fields) {
           <button type="button" class="${selected === "delete_ai_candidate" || selected === "ai_candidate_deleted" ? "active" : ""}" data-approval-diagnosis-index="${index}" data-approval-action="delete_ai_candidate">删除AI候选</button>
         </div>
       </div>
-    `;
+    `, done);
   }).join("");
   const riskRows = risks.map((item) => {
     const selected = !item.requiresCorrection && (item.confirmed || appState.approvalHighRiskConfirmations[item.key]);
-    return `
+    return outstanding(`
       <div class="approval-item high-risk" data-approval-item="${escapeHtml(item.key)}">
         <div>
           <strong>${escapeHtml(item.label)}</strong>
@@ -3222,10 +3237,10 @@ function renderApprovalChecklist(fields) {
         </div>
         ${approvalStatusPill(Boolean(selected))}
         <div class="approval-item-actions">
-          ${item.requiresCorrection ? '<span>需修正内容和证据</span>' : `<button type="button" class="${selected ? "active" : ""}" data-approval-risk-key="${escapeHtml(item.key)}">已单独确认</button>`}
+          ${item.requiresCorrection ? `<span>需修正内容和证据</span><button type="button" data-record-edit-field="${escapeHtml(item.key.split(":")[1])}">定位并修正</button>` : `<button type="button" class="${selected ? "active" : ""}" data-approval-risk-key="${escapeHtml(item.key)}">已单独确认</button>`}
         </div>
       </div>
-    `;
+    `, Boolean(selected));
   }).join("");
   return `
     <section class="approval-checklist" aria-label="分项审核">
@@ -3237,7 +3252,7 @@ function renderApprovalChecklist(fields) {
         </div>
         <span class="status-badge ${pending ? "missing" : "confirmed"}">${pending ? `${pending}项待处理` : "可完成审核"}</span>
       </div>
-      <div class="approval-section">
+      ${outstanding(`<div class="approval-section">
         <div class="approval-section-title">
           <strong>普通字段</strong>
           ${approvalStatusPill(regularDone)}
@@ -3245,10 +3260,11 @@ function renderApprovalChecklist(fields) {
         <button type="button" class="approval-primary-action ${regularDone ? "active" : ""}" data-approval-confirm-regular>
           确认当前全部普通字段
         </button>
-      </div>
-      ${missingFields.length ? `<div class="approval-section"><div class="approval-section-title"><strong>缺失项处理</strong></div>${missingRows}</div>` : ""}
-      ${diagnoses.length ? `<div class="approval-section"><div class="approval-section-title"><strong>候选诊断处理</strong></div>${diagnosisRows}</div>` : ""}
-      ${risks.length ? `<div class="approval-section"><div class="approval-section-title"><strong>高风险与冲突确认</strong></div>${riskRows}</div>` : ""}
+      </div>`, regularDone)}
+      ${missingRows ? `<div class="approval-section"><div class="approval-section-title"><strong>缺失项处理</strong></div>${missingRows}</div>` : ""}
+      ${diagnosisRows ? `<div class="approval-section"><div class="approval-section-title"><strong>候选诊断处理</strong></div>${diagnosisRows}</div>` : ""}
+      ${riskRows ? `<div class="approval-section"><div class="approval-section-title"><strong>高风险与冲突确认</strong></div>${riskRows}</div>` : ""}
+      ${completedRows.length ? `<details class="review-completed"><summary>已处理 ${completedRows.length} 项 · 展开复核</summary>${completedRows.join("")}</details>` : ""}
     </section>
   `;
 }
@@ -3354,6 +3370,7 @@ function renderFields() {
         ? `
         <div class="field-meta compact-field-meta">
           ${detailButton(`field:${key}`, "查看原文证据")}
+          ${!isPreview && !isEditing && EDITABLE_FIELD_DEFS.some(([item]) => item === key) ? `<button type="button" data-record-edit-field="${escapeHtml(key)}">修改</button>` : ""}
           ${key !== "preliminary_diagnosis" && key !== "treatment_plan" ? `<button type="button" data-knowledge-field="${escapeHtml(key)}">查依据</button>` : ""}
         </div>
         `
@@ -3370,7 +3387,7 @@ function renderFields() {
       ? `<label class="record-field-editor"><span class="sr-only">编辑${escapeHtml(title)}</span><textarea data-record-field-input="${escapeHtml(key)}" rows="4" placeholder="本次未采集可留空">${escapeHtml(value)}</textarea></label>`
       : `<div class="field-value">${value ? escapeHtml(value) : `<span class="draft-placeholder" aria-hidden="true">&nbsp;</span>`}</div>`;
     return `
-      <article class="field-card ${status.key} ${fieldWeightClass(key)} ${highlightClass} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${isApprovedDisplay && !isEditing ? "readonly-field" : ""} ${isEditing ? "editing" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}">
+      <article class="field-card ${status.key} ${fieldWeightClass(key)} ${highlightClass} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${isApprovedDisplay && !isEditing ? "readonly-field" : ""} ${isEditing ? "editing" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}" tabindex="-1">
         <div class="field-head">
           <span class="field-title">${escapeHtml(title)}</span>
           ${appState.viewMode === "doctor"
@@ -3433,7 +3450,13 @@ function renderFields() {
       </div>
       ${appState.recordEditConflict ? `<button type="button" data-record-reload-latest>加载最新版本</button>` : ""}
     </div>` : "";
-  $("recordFields").innerHTML = previewNotice + editNotice + cards + diagnoses
+  const revision = currentRevisionInfo();
+  const versionNotice = fields && !isPreview && appState.currentTaskId
+    ? `<div class="record-version" role="status">当前版本 #${escapeHtml(revision.revisionNumber || revision.revisionId || "待核验")}${isEditing ? " · 编辑中，尚未保存" : ""}${appState.recordSaveNotice ? `<span>${escapeHtml(appState.recordSaveNotice)}</span>` : ""}</div>` : "";
+  const recovery = appState.recordEditRecovery;
+  const recoveryNotice = recovery && recovery.taskId === appState.currentTaskId && !isEditing
+    ? `<details class="record-recovery"><summary>本次冲突前的本地修改 · 尚未保存</summary><p>当前显示服务器最新版本。下面仅保留您修改过的字段，请与最新内容核对。</p>${EDITABLE_FIELD_DEFS.filter(([key]) => String(recovery.fields[key]?.value || "") !== String(recovery.baseline?.[key]?.value || "")).map(([key, title]) => `<p><strong>${escapeHtml(title)}</strong>：${escapeHtml(recovery.fields[key]?.value || "（留空）")}</p>`).join("")}<button type="button" data-record-reapply>将这些修改带入当前版本继续编辑</button></details>` : "";
+  $("recordFields").innerHTML = previewNotice + versionNotice + editNotice + recoveryNotice + cards + diagnoses
     + (isEditing ? "" : renderApprovalChecklist(fields)) + summaryFooter + draftLegend;
 }
 
@@ -5479,6 +5502,11 @@ function renderFooter() {
     cancelEditButton.hidden = true;
     saveButton.hidden = true;
   }
+  if (appState.recordEditConflict?.error_code === "saved_revision_refresh_failed") {
+    saveButton.disabled = true;
+    cancelEditButton.disabled = true;
+    $("currentTaskHint").textContent = "保存已提交；请加载最新版本核验，不要重复保存。";
+  }
   const primary = appState.recordEditMode ? saveButton
     : ["approved", "exported"].includes(displayState.key) ? exportButton
     : displayState.key === "pending_review" ? confirmButton : editButton;
@@ -5611,6 +5639,8 @@ function resetTaskState({ keepAsr = false, keepEncounter = false } = {}) {
   appState.knowledgeEvidenceError = "";
   appState.fieldKnowledgeSearch = {};
   resetRecordEditState();
+  appState.recordEditRecovery = null;
+  appState.recordSaveNotice = "";
   clearApprovalReviewSelections();
   appState.approvalRevisionId = null;
   appState.currentInputText = "";
@@ -6765,7 +6795,13 @@ async function retryTranscriptionFromFailure() {
 }
 
 async function saveDraftReview() {
+  if (appState.recordEditConflict?.error_code === "saved_revision_refresh_failed") {
+    showToast("请先加载最新版本核验已提交的修改");
+    return;
+  }
+  let committed = false;
   try {
+    appState.recordSaveNotice = "";
     if (!appState.currentTaskId || !appState.currentRecordFields) throw new Error("暂无可保存的病历字段");
     setBusy(true, "正在保存修改到 SQLite...");
     if (!appState.currentExportReadiness?.revision_id || !appState.currentExportReadiness?.content_hash) {
@@ -6784,9 +6820,12 @@ async function saveDraftReview() {
         expected_content_hash: revision.content_hash,
       }),
     });
+    committed = true;
     await refreshTask(appState.currentTaskId, appState.currentTask);
-    await refreshExportReadiness();
+    if (!await refreshExportReadiness()) throw new Error("保存已完成，但版本状态读取失败");
     resetRecordEditState();
+    appState.recordEditRecovery = null;
+    appState.recordSaveNotice = "修改已保存；请审核当前版本后导出。";
     renderAll();
     setBusy(false);
     showToast("修改已保存到 SQLite");
@@ -6800,24 +6839,60 @@ async function saveDraftReview() {
       showToast("当前病历已被更新；本地修改仍保留，请核对后加载最新版本");
       return;
     }
+    appState.recordSaveNotice = committed
+      ? "服务器已接受保存，但版本状态刷新失败。请加载最新版本核验，勿重复提交。"
+      : "保存失败，本地修改仍保留。请检查连接后重试。";
+    if (committed) {
+      appState.recordEditConflict = { error_code: "saved_revision_refresh_failed" };
+      appState.recordEditMode = true;
+    }
+    renderAll();
     reportActionError(error);
   }
 }
 
 async function reloadLatestRecordRevision() {
   if (!appState.currentTaskId) return;
+  const taskId = appState.currentTaskId;
+  const keys = ["currentRecordFields", "currentTask", "currentExportReadiness", "currentSteps",
+    "currentDraft", "currentSafetyCheck", "currentQualityReport", "currentExports", "taskStatus",
+    "recordEditMode", "recordEditDirty", "recordEditBaseline", "recordEditConflict",
+    "approvalRevisionId", "approvalRegularFieldsConfirmed", "approvalMissingDecisions",
+    "approvalDiagnosisDecisions", "approvalHighRiskConfirmations"];
+  const local = Object.fromEntries(keys.map((key) => [key, structuredClone(appState[key])]));
   setBusy(true, "正在加载最新病历版本...");
   try {
+    await refreshTask(taskId);
+    if (!await refreshExportReadiness()) throw new Error("最新版本状态读取失败");
+    if (appState.currentTaskId !== taskId) return;
+    appState.recordEditRecovery = local.recordEditDirty ? {
+      taskId, fields: local.currentRecordFields, baseline: local.recordEditBaseline,
+    } : appState.recordEditRecovery;
     resetRecordEditState();
-    await refreshTask(appState.currentTaskId);
-    await refreshExportReadiness();
-    setBusy(false);
+    appState.recordSaveNotice = "已加载最新版本；冲突前的本地修改可展开核对。";
     renderAll();
-    showToast("已加载最新病历版本");
   } catch (error) {
-    setBusy(false);
+    if (appState.currentTaskId === taskId) {
+      Object.assign(appState, local);
+      appState.recordSaveNotice = "加载失败，本地修改仍保留；未替换当前版本。";
+      renderAll();
+    }
     reportActionError(error);
+  } finally {
+    setBusy(false);
   }
+}
+
+function reapplyLocalRecordChanges() {
+  const recovery = appState.recordEditRecovery;
+  if (!recovery || recovery.taskId !== appState.currentTaskId || appState.busy) return;
+  beginRecordEdit();
+  EDITABLE_FIELD_DEFS.forEach(([key]) => {
+    const value = recovery.fields[key]?.value || "";
+    if (String(value) !== String(recovery.baseline?.[key]?.value || "")) updateRecordFieldValue(key, value);
+  });
+  appState.recordEditRecovery = null;
+  renderAll();
 }
 
 async function confirmFields() {
@@ -8703,6 +8778,17 @@ function bindEvents() {
     appState.recognitionMode = $("recognitionModeSelect").value || "fast";
   });
   $("recordFields").addEventListener("click", (event) => {
+    const editField = event.target.closest("[data-record-edit-field]");
+    if (editField) { beginRecordEdit(editField.dataset.recordEditField); return; }
+    const focusField = event.target.closest("[data-review-focus]");
+    if (focusField) {
+      const key = EDITABLE_FIELD_DEFS.find(([key]) => key === focusField.dataset.reviewFocus)?.[0];
+      const card = key ? document.querySelector(`[data-field="${key}"]`) : null;
+      card?.scrollIntoView({ block: "nearest" });
+      card?.focus();
+      return;
+    }
+    if (event.target.closest("[data-record-reapply]")) { reapplyLocalRecordChanges(); return; }
     const reloadLatest = event.target.closest("[data-record-reload-latest]");
     if (reloadLatest) {
       reloadLatestRecordRevision();

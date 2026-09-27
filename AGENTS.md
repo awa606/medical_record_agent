@@ -34,3 +34,7 @@ PM的正式任务删除、Phase迁移、Gate标准修改、大规模WBS调整、
 
 仓库 `docs/project_plan/alpha`、历史Canonical中的87h/15项、120h或旧5.5缓冲仅作为历史比较，不得用于覆盖当前16任务计划或增加可用容量。仓库当前工作树、Git历史和真实测试用于核实实现事实；代码存在不代表任务验收通过。评审应引用当前Vault任务并说明与历史计划或代码基线的差异，避免另建一套独立WBS。
 <!-- medical-record-agent-project-os:end -->
+
+## MRA 工程汇报
+
+本项目迭代交付遵循 [mra-engineering-report](docs/engineering/skills/mra-engineering-report/SKILL.md) 的六项汇报结构，必要时追加备注。此规则不替代上面的PM／Research／Design门禁，也不要求无事实变化时产生提交。

@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-27T17:15:51.370206+08:00`
-- Source hash: `e20ded4f12ca4c090220ce163e07704915226dfb9c07d3c9f6319b716e9c81d2`
+- Updated at: `2026-09-27T19:49:09.077701+08:00`
+- Source hash: `c921dd167e22314637e6c25071c12025502c90b39104cdb453eb0f212e278631`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@6b64172686eea1ed44c19fb7fd2629e95bd18009`
+- Repo: `codex/alpha51-demo-visual-e2e@0c48a3efb5e8dadbc236f6ba1e54469b54e3ade2`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 9月29日展示冲刺：8795真实知识/模型候选可用，实际150%核验后切换2626** — `VERIFY`
+**5.1 · 病历核对候选与主诉引用错误定位（8795）** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 完成新版实际Edge150%三栏检查后安全切换2626，再验最终SHA三路径与离线恢复
-- Parallel waiting task: 无；5.1保持VERIFY，5.3不启动
+- Single next task: 在开发集验证Qwen主诉引用错误的单变量修复，再独立复跑验证与冻结集；随后完成最终版本三路径与恢复
+- Parallel waiting task: 无；训练数据与资源Gate未通过，5.3不启动
 
 ## Manual Actions
 
-- 当前Edge150%检查8791或8795三栏、必要操作及详情；保留菜单百分比和页面截图，外屏和现场短录音随后实际验证
+- 本轮无需人工操作；最终验收时配合一次真实短录音与投影/外屏实际缩放
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

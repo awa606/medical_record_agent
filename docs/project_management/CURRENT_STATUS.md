@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-28T16:44:15.600177+08:00`
-- Source hash: `af416eebb6a6d2ef9448004361d1f2938d9392b248ee0b5b859e1dd420016d2e`
+- Updated at: `2026-09-28T17:43:54.511407+08:00`
+- Source hash: `ad890c70a043209ff574226a8be998824d9dba28fce73109ccdbe3d9170c8b15`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@abcfe5c36ea2980feed8868b8ba5da0e1ad6a426`
+- Repo: `codex/alpha51-demo-visual-e2e@5acd663032d6ceaee0a02c31a0d35a8a5cbbb1f1`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · Logo接入与桌面路径登记完成；ID选择契约9/21，拒绝部署** — `VERIFY`
+**5.1 · 4B基线9/21；8B冷启动超时，质量未测，保留8795** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1：验证原句对字段的适用性及患者/提问/家属归属，解决整句跨字段误用；模型质量通过后再验收三路径与恢复
-- Parallel waiting task: 无；训练数据与资源Gate未通过，5.3不启动
+- Single next task: 5.1：独立测量8B加载与预热，与病例请求时限分离；运行门通过后才重新决定质量对照，不部署未评分候选
+- Parallel waiting task: 无；例11报告者与事实主体校验误拦单独留证，训练及5.3不启动
 
 ## Manual Actions
 
-- 当前无需补数据或购买；模型门通过后配合最终物理录音与外屏检查，再组织3–5名医生合成病例试用
+- 当前无需操作、补数据或采购；最终版本验收时再配合物理录音与外屏检查
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

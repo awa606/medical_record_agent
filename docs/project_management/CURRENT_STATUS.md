@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-28T15:10:48.082735+08:00`
-- Source hash: `fc74eab2fbe396e89ae07b69b57714fe619f43866d72adf3c12fac284de1a564`
+- Updated at: `2026-09-28T16:44:15.600177+08:00`
+- Source hash: `af416eebb6a6d2ef9448004361d1f2938d9392b248ee0b5b859e1dd420016d2e`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@1ad74ab6815ccd6b560c3715ea02ffc58e8b2b57`
+- Repo: `codex/alpha51-demo-visual-e2e@abcfe5c36ea2980feed8868b8ba5da0e1ad6a426`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 原始引用校验已修复，79份离线重放完成；模型首次输出质量仍未通过** — `VERIFY`
+**5.1 · Logo接入与桌面路径登记完成；ID选择契约9/21，拒绝部署** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 5.1：基于未改写的首次输出定位主诉引用与例11字段归属；模型质量通过后完成最终三路径与隔离恢复
+- Single next task: 5.1：验证原句对字段的适用性及患者/提问/家属归属，解决整句跨字段误用；模型质量通过后再验收三路径与恢复
 - Parallel waiting task: 无；训练数据与资源Gate未通过，5.3不启动
 
 ## Manual Actions

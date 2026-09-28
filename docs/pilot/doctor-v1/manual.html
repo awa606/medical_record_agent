@@ -1,0 +1,26 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MediListen 医生操作手册</title><link rel="stylesheet" href="guide.css">
+<header><span>MediListen · 医生试用</span><nav><a href="feedback.html">填写反馈</a><button onclick="window.print()">打印／另存PDF</button></nav></header>
+<main><p class="eyebrow">使用范围：合成病例与模拟问诊</p><h1>从问诊到审核病历</h1>
+<p id="version">候选版操作说明。是否放行，以本机版本清单为准。</p>
+<aside>AI生成的是待核对草稿。请对照原文检查；缺失内容不能当作正常，指南不能当作患者事实。遇到明显错误请记录反馈。</aside>
+<section class="quick"><h2>一页快速开始</h2><ol>
+<li><strong>打开：</strong>双击桌面「MediListen 医生试用入口」，点击「启动服务」。出现就绪后点击「打开工作台」，使用分配给你的医生账号登录。</li>
+<li><strong>选择就诊：</strong>工作台搜索合成患者，或填写演示登记信息建立本次就诊。不要录入真实姓名或患者资料。</li>
+<li><strong>采集：</strong>点击开始录音并允许麦克风；结束后停止、试听、提交。也可使用上传音频或文本输入。</li>
+<li><strong>核对：</strong>先确认医生／患者角色，再逐项查看病历；点击「查看原文证据」核对。点「修改」纠正或补充，保存后确认Revision更新。</li>
+<li><strong>审核与导出：</strong>处理未完成项，核对后逐项审核；最新版本批准后导出。重新打开历史就诊，确认保存结果。</li>
+<li><strong>反馈：</strong>从试用入口打开反馈表，写下卡住的步骤和预期结果，下载反馈文件交给组织者。</li>
+</ol></section>
+<section><h2>1. 打开与登录</h2><p>网页以独立窗口打开，使用方式与桌面软件相近。模型预热时可以阅读历史内容，真实生成按钮保持不可用。启动失败时保留提示，联系试用组织者，不要自行修改端口。</p><p>每位医生使用独立账号，结束试用时退出登录。关闭网页不会删除已经保存的数据，也不会自动停止后台服务。</p><div data-shot="login"></div></section>
+<section><h2>2. 登记、选择及恢复就诊</h2><p>首次操作使用组织者指定的合成病例。页面可能将姓名显示为匿名编号，请按提供的SIM开头就诊编号选择。在工作台找到记录并进入就诊工作区；历史记录可以重新打开。现场登记只是本地演示功能，不代替医院挂号系统。</p><p>请核对患者标识与本次就诊，避免在另一条记录中修改。未保存修改不等于已经写入病历。</p><div data-shot="worklist"></div></section>
+<section><h2>3. 录音或输入</h2><p>开始录音后专心模拟问诊，支持暂停与恢复；结束后点停止，试听确认声音，再提交。取消表示放弃本次采集，不要再次点提交。麦克风拒绝授权时按页面提示处理；没有声音时请先检查输入设备。</p><p>可用匿名练习句：「今天发热三十八点二度，伴有咳嗽和咽痛，没有胸痛，也没有药物过敏史。」单人朗读只验证采音；完整角色流程需要医生和患者两方模拟。</p><p>转写和生成需要等待。历史结果回放、上传已有录音与现场录音是不同操作，不要混称为现场模型推理。</p></section>
+<section><h2>4. 先确认角色，再核对字段</h2><p>出现「确认说话人身份」时，按录音确认医生与患者映射，提交后继续。不能为赶进度跳过阻断。</p><p>核对重点：主诉是否漏提，否定是否保留，家属病史是否误归患者，体温与单位是否准确。点击「查看原文证据」查看转写片段；点击字段修改或整页编辑后，保存并核对实际Revision。</p><p>「缺失」表示尚无足够信息；「证据冲突」表示需要检查内容与引用。不要仅勾选确认来消除真实冲突。</p><div data-shot="workspace"></div></section>
+<section><h2>5. 查询指南依据</h2><p>「查依据」用于查阅相关知识资料；右栏名称打开详情，区分患者依据、指南资料和待核对事项。核对指南标题、发布机构、版本、章节／页码和适用人群。</p><p>没有关联指南、检索无结果与知识服务故障含义不同，请按实际提示记录。指南内容仅供参考，不自动写入患者事实或生成处方。</p><div data-shot="knowledge"></div></section>
+<section><h2>6. 修改、保存、审核和导出</h2><p>保存后确认成功提示和Revision编号。保存失败时保留编辑内容，不刷新或关闭；旧版本冲突时先查看最新版本，再决定如何保留自己的修改。</p><p>修改会使旧批准失效。逐项核对后批准最新Revision，再导出文件；打开导出文件检查字段及否定信息。最后回到工作台重新打开该就诊，确认内容仍存在。</p><div data-shot="review"></div></section>
+<section><h2>7. 常见问题与反馈</h2><table><tr><th>现象</th><th>下一步</th></tr><tr><td>启动或模型未就绪</td><td>保留提示，点击检查状态；不要切换到旧网址假装恢复。</td></tr><tr><td>录音无声／权限拒绝</td><td>检查麦克风设备与浏览器授权，由组织者协助。</td></tr><tr><td>病历漏项／引用不符</td><td>对照原文修改并保存；反馈中分别注明AI首次结果和人工修改。</td></tr><tr><td>无法审核或导出</td><td>查看阻断原因，解决角色、字段冲突和最新版本审核；不要绕过。</td></tr></table><p>反馈只写合成病例编号、操作步骤和问题，不粘贴真实患者信息、密码或录音。反馈不会自动上传，需要你下载后交给组织者。</p></section>
+</main><script src="manual-evidence.js"></script><script>
+const evidence=window.MRA_MANUAL_EVIDENCE||{};
+if(evidence.version)document.querySelector('#version').textContent=evidence.version;
+for(const item of evidence.screenshots||[]){const target=document.querySelector('[data-shot="'+item.key+'"]');if(!target)continue;const figure=document.createElement('figure'),img=document.createElement('img'),caption=document.createElement('figcaption');img.src=item.path;img.alt=item.caption;caption.textContent=item.caption;figure.append(img,caption);target.append(figure);}
+</script></html>

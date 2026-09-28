@@ -2,6 +2,7 @@
 # The old 2626 environment is not part of this Compose project.
 services:
   ollama:
+    restart: unless-stopped
     image: ollama/ollama:0.34.0@sha256:684d8674b4315fa18f4f0e973a118ec2652ed96f67563277839985175858e0ba
     environment:
       OLLAMA_HOST: 0.0.0.0:11434
@@ -16,6 +17,7 @@ services:
         bind: {create_host_path: false}
     networks: [offline]
   app:
+    restart: unless-stopped
     image: ${MRA_APP_IMAGE:?verified current source image required}
     depends_on: [ollama]
     environment:
@@ -65,6 +67,7 @@ services:
       retries: 3
       start_period: 90s
   gateway:
+    restart: unless-stopped
     image: ${MRA_APP_IMAGE:?verified current source image required}
     depends_on: [app]
     command: ["python", "/app/scripts/alpha51_gateway.py"]

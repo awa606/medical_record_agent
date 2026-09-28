@@ -924,6 +924,12 @@ function requireEncounterBeforeInput(method = "") {
 
 async function restoreEncounter(encounterId, { nextInputMethod = "" } = {}) {
   if (!encounterId) return;
+  // Reopening the current recovered recording must not reset its queue.
+  if (String(encounterId) === String(selectedEncounterId()) && appState.browserRecordingSessionId
+      && ["recording", "paused", "recorded"].includes(appState.browserRecordingStatus)) {
+    renderAll();
+    return;
+  }
   if (encounterSwitchBlocked()) return;
   setBusy(true, "正在恢复就诊草稿...");
   try {
@@ -4074,6 +4080,11 @@ function updateSessionUrl(sessionId = "") {
   const url = new URL(window.location.href);
   if (sessionId) {
     url.searchParams.set("session_id", sessionId);
+    if (selectedEncounterId() && appState.authUser?.id) {
+      try { sessionStorage.setItem(`mra-session-encounter:${sessionId}`, JSON.stringify({
+        encounterId: selectedEncounterId(), ownerId: appState.authUser.id,
+      })); } catch (_) { /* Storage may be unavailable; do not bypass access checks. */ }
+    }
   } else {
     url.searchParams.delete("session_id");
   }
@@ -4108,6 +4119,15 @@ async function restoreAsrSessionFromUrl() {
   if (!sessionId) return;
   try {
     const session = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}`);
+    if (!selectedEncounterId()) {
+      let context = null;
+      try { context = JSON.parse(sessionStorage.getItem(`mra-session-encounter:${sessionId}`)); } catch (_) {}
+      if (context?.ownerId === appState.authUser?.id && context.encounterId) {
+        // The local hint is never authorization: the existing endpoint checks ownership.
+        appState.currentEncounter = await api(`/api/encounters/${encodeURIComponent(context.encounterId)}`);
+        appState.productView = "encounter";
+      }
+    }
     appState.currentAsrSessionId = session.session_id;
     appState.currentAudioId = session.audio_id;
     appState.uploadedFilename = session.filename || "已恢复音频";

@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import socket
+import shutil
 import subprocess
 import sys
 import time
@@ -168,6 +169,74 @@ def web_status(config: dict, items: dict) -> dict:
     return result
 
 
+def data_browser_status() -> dict:
+    """Inspect the separately authenticated snapshot; never expose its token."""
+    state_path = ROOT / ".artifacts/data-browser/state.private.json"
+    if not state_path.is_file():
+        return {"available": False, "phase": "STOPPED"}
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8-sig"))
+        port = int(state["port"])
+        if not 1024 <= port <= 65535:
+            raise ValueError("invalid port")
+        directory = Path(state["snapshot_dir"])
+        manifest = json.loads((directory / "manifest.json").read_text(encoding="utf8"))
+        if (manifest.get("synthetic_only") is not True
+                or sha(directory / "mra_snapshot.sqlite3") != manifest["database_sha256"]):
+            raise ValueError("invalid snapshot")
+        login = json.loads((directory / "login.private.json").read_text(encoding="utf8"))
+        if login.get("run_id") != state["run_id"]:
+            raise ValueError("snapshot process mismatch")
+        # The private run ID binds the process to this tool, not just any HTTP 403.
+        process_code = f"(Get-CimInstance Win32_Process -Filter 'ProcessId = {int(state['pid'])}').CommandLine"
+        process = subprocess.run(["powershell.exe", "-NoProfile", "-Command", process_code],
+                                 capture_output=True, text=True, encoding="utf8", errors="replace",
+                                 timeout=8, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        owned = state["run_id"] in process.stdout and "data_browser.py" in process.stdout
+        code, _ = fetch(port, "/") if owned else (0, b"")
+        return {"available": code == 403, "phase": "AUTH_REQUIRED" if code == 403 else "STOPPED",
+                "url": f"http://127.0.0.1:{port}/", "snapshot_at": manifest["captured_at"],
+                "source_label": manifest["source_label"], "readonly_snapshot": True}
+    except (OSError, ValueError, KeyError, subprocess.TimeoutExpired):
+        return {"available": False, "phase": "INVALID_SNAPSHOT"}
+
+
+def entrypoint_status(config: dict, result: dict) -> dict:
+    documents = Path(config.get("handbook_dir") or ROOT / "docs/pilot/doctor-v1")
+    base = f"http://127.0.0.1:{config['port']}/static/doctor.html"
+    return {**result, "entrypoints": {
+        "doctor": {"available": result["web_available"], "url": base},
+        "knowledge": {"available": result["web_available"], "url": base + "#admin",
+                      "requires": "admin login; doctor uses field evidence search"},
+        "data_browser": data_browser_status(),
+        "manual": {"available": (documents / "manual.html").is_file(), "path": str(documents / "manual.html")},
+    }}
+
+
+def open_data_browser(config: dict) -> dict:
+    # Verify this launcher still belongs to the pinned deployment before opening
+    # any ancillary entry. Start is idempotent and retains the saved backup date.
+    validate(config)
+    shell = shutil.which("pwsh")
+    if not shell:
+        raise PilotError("VIEWER_SHELL_MISSING: 数据浏览器需要现有PowerShell 7；医生服务未改动。")
+    # A newly detached Windows process/browser may inherit a captured pipe and
+    # keep communicate() waiting after PowerShell exits. Use a local log file.
+    log = ROOT / ".artifacts/data-browser/launcher.private.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    with log.open("w", encoding="utf8") as output:
+        process = subprocess.run([shell, "-NoProfile", "-File", str(ROOT / "scripts/Start-MRADataBrowser.ps1"),
+                                  "-Action", "Start", "-OpenBrowser"],
+                                 stdout=output, stderr=output, timeout=60,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    if process.returncode:
+        raise PilotError("VIEWER_START_FAILED: 数据浏览器未启动；检查备份、端口或独立工具环境，医生服务保持原样。")
+    result = data_browser_status()
+    if not result["available"]:
+        raise PilotError("VIEWER_NOT_READY: 本地快照尚未通过认证入口检查。")
+    return {"phase": "VIEWER_READY", "entrypoints": {"data_browser": result}}
+
+
 @contextmanager
 def operation_lock(path: Path):
     lock = path.with_suffix(".operation-lock")
@@ -217,7 +286,7 @@ def stop(config: dict, config_path: Path) -> dict:
         return {"phase": "STOPPED", "message": "已停止本版本，数据库和模型保留。"}
 
 
-def open_workspace(config: dict) -> dict:
+def open_workspace(config: dict, *, view: str = "workbench") -> dict:
     result = web_status(config, validate(config))
     if not result["web_available"]:
         raise PilotError("WEB_NOT_READY: 请先启动本版本。")
@@ -228,14 +297,15 @@ def open_workspace(config: dict) -> dict:
         raise PilotError("EDGE_MISSING: 请维护人员安装Microsoft Edge。")
     # Separate cookies from the maintainer's ordinary Edge/admin session.
     profile = Path(config["runtime"]).parent / "doctor-browser-profile"
+    suffix = "#admin" if view == "admin" else ""
     subprocess.Popen([str(edge), f"--user-data-dir={profile}", "--no-first-run",
-                      f"--app=http://127.0.0.1:{config['port']}/static/doctor.html"])
+                      f"--app=http://127.0.0.1:{config['port']}/static/doctor.html{suffix}"])
     return result
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("action", choices=("configure", "status", "start", "stop", "open"))
+    p.add_argument("action", choices=("configure", "status", "start", "stop", "open", "open-knowledge", "open-data"))
     p.add_argument("--config", type=Path, required=True)
     p.add_argument("--project", default="mra51repair8795")
     p.add_argument("--port", type=int, default=8795)
@@ -247,12 +317,14 @@ def main():
             result = {"phase": "CONFIGURED", "app_git_sha": config["app_git_sha"], "config": str(a.config)}
         else:
             config = json.loads(a.config.read_text(encoding="utf-8-sig"))
-            result = {"status": lambda: web_status(config, validate(config)),
-                      "start": lambda: start(config, a.config, a.timeout),
+            result = {"status": lambda: entrypoint_status(config, web_status(config, validate(config))),
+                      "start": lambda: entrypoint_status(config, start(config, a.config, a.timeout)),
                       "stop": lambda: stop(config, a.config),
-                      "open": lambda: open_workspace(config)}[a.action]()
+                      "open": lambda: open_workspace(config),
+                      "open-knowledge": lambda: open_workspace(config, view="admin"),
+                      "open-data": lambda: open_data_browser(config)}[a.action]()
         print(json.dumps(result, ensure_ascii=False), flush=True)
-    except (PilotError, OSError, ValueError, KeyError) as exc:
+    except (PilotError, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:
         print(json.dumps({"phase": "ERROR", "message": str(exc)}, ensure_ascii=False), flush=True)
         raise SystemExit(1)
 

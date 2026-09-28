@@ -1,10 +1,11 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MediListen 课程演示操作卡 · 2026-09-28</title><link rel="stylesheet" href="guide.css">
+<title>MediListen 课程演示操作卡 · 2026-09-29</title><link rel="stylesheet" href="guide.css">
 <style>body{max-width:1000px;margin:auto;padding:24px;color:#16314c;font:16px/1.7 'Microsoft YaHei UI',sans-serif}header{border-bottom:2px solid #1565a8;padding-bottom:16px}h1{font-size:26px}h2{font-size:20px;margin:24px 0 8px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #d5dfe8;padding:10px;text-align:left;vertical-align:top}.notice{background:#fff5dc;padding:14px;border-left:4px solid #ae7113}.version{font-size:14px;color:#536779}a{color:#095ca9}code{overflow-wrap:anywhere}@media print{body{padding:0}header{background:white;color:#16314c}tr{break-inside:avoid}}</style></head><body>
-<header><h1>MediListen · 10分钟课程演示操作卡</h1><div class="version">2026-09-28更新 · 应用8afc6bd · 本地FunASR＋Qwen3:4b · 仅合成病例</div><p><a href="manual.html">完整产品操作手册</a> · <a href="feedback.html">填写反馈</a> · <a href="maintenance.html">维护说明</a></p></header>
+<header><h1>MediListen · 10分钟课程演示操作卡</h1><div class="version">2026-09-29入口说明更新 · 运行应用8afc6bd · 本地FunASR＋Qwen3:4b · 仅合成病例</div><p><a href="manual.html">完整产品操作手册</a> · <a href="feedback.html">填写反馈</a> · <a href="maintenance.html">维护说明</a></p></header>
 <p class="notice"><strong>课程展示候选，尚未放行独立医生试用。</strong>8B已能预热并推理，但本次质量仅9/21通过，继续使用4B。历史病历含人工修订，必须说明生成时间、模型和修订；不得称为本次现场推理或模型首次正确。</p>
 <h2>启动与检查</h2><ol><li>双击桌面“MediListen 医生试用入口”，点击“启动服务”，再“打开工作台”。正确地址是<a href="http://127.0.0.1:8795/static/doctor.html">8795医生工作台</a>，不要打开旧2626。</li><li>启动器显示网页可用时可登录查看历史；只有显示模型就绪才演示真实生成。预热期间不重复点击生成。</li><li>双击桌面“MediListen 数据与知识浏览器”，由入口完成本地认证。此处是带采样时间的只读快照，不能编辑病历，不是实时数据库。</li></ol>
+<p>也可直接在医生试用入口点击“知识管理（管理员）”或“数据／知识浏览器”。“检查状态”显示四个入口、实际端口和快照时间；数据浏览器停止时可由按钮恢复。认证失效联系组织者刷新，不关闭认证。模型“运行就绪”不代表内容准确率达标。</p>
 <h2>连续操作顺序</h2><table><thead><tr><th>时间</th><th>操作</th><th>应该看到什么</th></tr></thead><tbody>
 <tr><td>0–2分钟</td><td>工作台找到“张示例／演示”，选择就诊E-13的“继续处理”。</td><td>同一就诊的病历、版本与审核结果重开。先说明这是历史合成结果，经过人工修订。</td></tr>
 <tr><td>2–4分钟</td><td>在病历字段点击“查看原文证据”，再“查依据”。</td><td>患者原文与指南分开；指南显示标题、版本、章节、页码和来源。检索命中不等于诊断成立。</td></tr>

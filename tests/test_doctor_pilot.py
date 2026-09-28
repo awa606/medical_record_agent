@@ -155,3 +155,74 @@ def test_brand_fingerprints_optional_for_old_registration_but_complete_for_new(r
     del config["resources"][pilot.BRAND_RESOURCES[0]]
     with pytest.raises(pilot.PilotError):
         pilot.validate(config)
+
+
+def test_missing_ancillary_entry_does_not_claim_product_ready(registered, tmp_path, monkeypatch):
+    config, items = registered
+    config["handbook_dir"] = str(tmp_path / "missing-handbook")
+    monkeypatch.setattr(pilot, "data_browser_status", lambda: {"available": False, "phase": "STOPPED"})
+    result = pilot.entrypoint_status(config, {"phase": "MODEL_NOT_READY", "web_available": True, "model_ready": False})
+    assert result["entrypoints"]["doctor"]["available"]
+    assert result["entrypoints"]["knowledge"]["url"].endswith("#admin")
+    assert not result["entrypoints"]["data_browser"]["available"]
+    assert not result["entrypoints"]["manual"]["available"]
+    assert not result["model_ready"]
+
+
+@pytest.mark.parametrize("owned,http_code,expected", [(True, 403, True), (True, 200, False), (False, 403, False)])
+def test_viewer_status_requires_own_process_auth_and_valid_snapshot(tmp_path, monkeypatch, owned, http_code, expected):
+    from types import SimpleNamespace
+    monkeypatch.setattr(pilot, "ROOT", tmp_path)
+    folder = tmp_path / ".artifacts/data-browser"; folder.mkdir(parents=True)
+    snapshot = folder / "snapshot"; snapshot.mkdir()
+    (snapshot / "mra_snapshot.sqlite3").write_bytes(b"synthetic projection")
+    (snapshot / "manifest.json").write_text(json.dumps({"synthetic_only": True,
+        "database_sha256": pilot.sha(snapshot / "mra_snapshot.sqlite3"), "captured_at": "2026-09-29T00:00:00Z", "source_label": "historical version"}))
+    (snapshot / "login.private.json").write_text(json.dumps({"run_id": "test-run", "url": "SECRET_TOKEN"}))
+    (folder / "state.private.json").write_text(json.dumps({"port": 18896, "pid": 123,
+        "snapshot_dir": str(snapshot), "run_id": "test-run"}))
+    monkeypatch.setattr(pilot.subprocess, "run", lambda *a, **k: SimpleNamespace(stdout="data_browser.py test-run" if owned else "unrelated.exe"))
+    monkeypatch.setattr(pilot, "fetch", lambda *a: (http_code, b""))
+    result = pilot.data_browser_status()
+    assert result["available"] is expected
+    assert "SECRET_TOKEN" not in json.dumps(result)
+    (snapshot / "mra_snapshot.sqlite3").write_bytes(b"tampered")
+    assert pilot.data_browser_status()["phase"] == "INVALID_SNAPSHOT"
+
+
+def test_reused_pid_is_ignored_without_touching_other_process():
+    import re
+    import shutil
+    import subprocess
+    shell = shutil.which("pwsh")
+    if not shell:
+        pytest.skip("PowerShell 7 required for native launcher test")
+    script = (Path(__file__).resolve().parents[1] / "scripts/Start-MRADataBrowser.ps1").read_text(encoding="utf-8-sig")
+    function = re.search(r"function Get-OwnedProcess\(\$saved\) \{.*?\n\}", script, re.S).group(0)
+    code = '''$ErrorActionPreference='Stop'
+$scriptPath='data_browser.py'
+function Get-CimInstance { return @{CommandLine='unrelated.exe'} }
+function Stop-Process { throw 'must never stop unrelated process' }
+''' + function + '''
+$result=Get-OwnedProcess @{pid=123;run_id='viewer-run'}
+if($null -ne $result){throw 'unowned process returned'}
+'''
+    done = subprocess.run([shell, "-NoProfile", "-Command", code], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+
+
+def test_start_viewer_uses_file_output_for_detached_process_and_keeps_errors_private(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setattr(pilot, "ROOT", tmp_path)
+    monkeypatch.setattr(pilot, "validate", lambda c: {})
+    monkeypatch.setattr(pilot.shutil, "which", lambda name: "pwsh")
+    monkeypatch.setattr(pilot, "data_browser_status", lambda: {"available": True, "url": "http://127.0.0.1:8796/"})
+    def run(args, **kwargs):
+        assert "capture_output" not in kwargs
+        assert kwargs["stdout"].fileno() == kwargs["stderr"].fileno()
+        kwargs["stdout"].write("PRIVATE_TOOL_OUTPUT")
+        return SimpleNamespace(returncode=0)
+    monkeypatch.setattr(pilot.subprocess, "run", run)
+    result = pilot.open_data_browser({})
+    assert result["phase"] == "VIEWER_READY"
+    assert "PRIVATE_TOOL_OUTPUT" not in json.dumps(result)

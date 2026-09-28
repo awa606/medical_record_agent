@@ -29,15 +29,15 @@ Add-Type -AssemblyName System.Drawing
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'MediListen · 医生试用入口'
 if (Test-Path -LiteralPath $iconPath) { $form.Icon = New-Object System.Drawing.Icon($iconPath) }
-$form.Size = New-Object System.Drawing.Size(720,530)
-$form.MinimumSize = New-Object System.Drawing.Size(650,500)
+$form.Size = New-Object System.Drawing.Size(800,590)
+$form.MinimumSize = New-Object System.Drawing.Size(780,570)
 $form.StartPosition = 'CenterScreen'
 $form.Font = New-Object System.Drawing.Font('Microsoft YaHei UI',11)
 $form.BackColor = [System.Drawing.Color]::White
 $layout = New-Object System.Windows.Forms.TableLayoutPanel
 $layout.Dock = 'Fill'; $layout.Padding = New-Object System.Windows.Forms.Padding(24)
 $layout.ColumnCount=1; $layout.RowCount=5
-@(65,65,65,70) | ForEach-Object { [void]$layout.RowStyles.Add((New-Object System.Windows.Forms.RowStyle('Absolute',$_))) }
+@(65,65,115,70) | ForEach-Object { [void]$layout.RowStyles.Add((New-Object System.Windows.Forms.RowStyle('Absolute',$_))) }
 [void]$layout.RowStyles.Add((New-Object System.Windows.Forms.RowStyle('Percent',100)))
 $form.Controls.Add($layout)
 $title = New-Object System.Windows.Forms.Label
@@ -89,6 +89,8 @@ $openButton = Add-ActionButton $actions '打开工作台' {
     } else { Invoke-Pilot 'open' }
 }
 $script:buttons += $openButton
+$script:buttons += Add-ActionButton $actions '知识管理（管理员）' { Invoke-Pilot 'open-knowledge' }
+$script:buttons += Add-ActionButton $actions '数据／知识浏览器' { Invoke-Pilot 'open-data' }
 $script:buttons += Add-ActionButton $actions '检查状态' { Invoke-Pilot 'status' }
 $script:buttons += Add-ActionButton $actions '停止服务' {
     $answer=[System.Windows.Forms.MessageBox]::Show('请确认已经停止录音、等待任务结束并保存病历。只停止本版本，数据保留。','停止MediListen','YesNo','Warning')
@@ -106,8 +108,20 @@ $timer.Add_Tick({
         foreach($line in $lines){
             try {
                 $s=$line | ConvertFrom-Json
-                $label=switch($s.phase){'READY'{'已就绪：可以打开工作台。'} 'MODEL_NOT_READY'{'网页可用，真实模型预热中；生成保持阻断。'} 'WEB_STARTING'{'服务启动中。'} 'STOPPED'{'服务已停止，数据保留。'} 'ERROR'{$s.message} default {$s.phase}}
+                $label=switch($s.phase){'READY'{'运行就绪：可以打开工作台；模型质量和医生试用尚未放行。'} 'VIEWER_READY'{'只读数据浏览器已打开，需使用本机认证。'} 'MODEL_NOT_READY'{'网页可用，真实模型预热中；生成保持阻断。'} 'WEB_STARTING'{'服务启动中。'} 'STOPPED'{'服务已停止，数据保留。'} 'ERROR'{$s.message} default {$s.phase}}
                 $readable += $label
+                if($s.entrypoints){
+                    foreach($key in @('doctor','knowledge','data_browser','manual')){
+                        $entry=$s.entrypoints.$key
+                        if($entry){
+                            $name=switch($key){'doctor'{'医生工作台'} 'knowledge'{'知识管理（需管理员登录）'} 'data_browser'{'数据浏览器（只读快照）'} 'manual'{'操作手册'}}
+                            $availability=if($entry.available){'入口可用'}else{'尚不可用'}
+                            $readable += "$name · $availability"
+                            if($entry.url){$readable += "地址：$($entry.url)"}
+                            if($entry.snapshot_at){$readable += "快照时间：$($entry.snapshot_at)；来源：$($entry.source_label)"}
+                        }
+                    }
+                }
                 if($s.web_available){$openButton.Enabled=$true}
             }catch{}
         }

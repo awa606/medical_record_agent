@@ -21,7 +21,10 @@ function Get-OwnedProcess($saved) {
     $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $($saved.pid)" -ErrorAction SilentlyContinue
     if (-not $proc) { return $null }
     if (-not $proc.CommandLine -or -not $proc.CommandLine.Contains($scriptPath) -or -not $proc.CommandLine.Contains($saved.run_id)) {
-        throw 'Saved PID belongs to a different process; refusing to stop or reuse it.'
+        # Windows may reuse the saved PID after reboot. Never stop that process;
+        # let Start create a new viewer only after a successful port-bind probe.
+        Write-Warning 'Stale viewer PID belongs to another process; leaving it untouched.'
+        return $null
     }
     return $proc
 }

@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-28T20:31:05.915198+08:00`
-- Source hash: `e47847f3a9524a45c5d83ef3a84c5b3c6a8f8b97c1f558042b4b4c09c7b21d26`
+- Updated at: `2026-09-29T00:30:27.346768+08:00`
+- Source hash: `6db2e30d9a3e7426351718487cc5d9ade313187e0271f06bfd2bfc2f1b9e14b7`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@be88e7453407fe1966c12e716408bc64e31d6fec`
+- Repo: `codex/alpha51-demo-visual-e2e@b2f2cf9431be2241ed079093adb394c41510c6b2`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8B预热通过但质量9/21；8795课程数据演示及隔离恢复完成，保留4B** — `VERIFY`
+**5.1 · 展示入口恢复；case11规则误拦修复，4B首次12/21、8B9/21未达质量门** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: 5.1：定位本地首次输出的字段归属、漏提与主体混入；保留课程历史备用，质量通过后补最终同SHA三路径及实际显示验收
-- Parallel waiting task: 无；例11规则误拦单独留证；8B未晋级，训练及5.3不启动
+- Single next task: 5.1：基于可信重放基线定位4B剩余主诉错引、漏提及字段归属；质量通过后再验收最终同SHA三路径、实际显示与恢复
+- Parallel waiting task: 无；例11局部修复已回归但未部署；8B未晋级，训练与5.3不启动
 
 ## Manual Actions
 

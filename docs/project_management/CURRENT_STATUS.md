@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-28T00:42:16.157429+08:00`
-- Source hash: `9560652000be9a48599e2c2bd461372b71d57d354cffe6713e64fc2c61346d26`
+- Updated at: `2026-09-28T10:42:52.314170+08:00`
+- Source hash: `c4e480a9e37f0911eec602eecb7c2eca67256fed915b2fb44aa0d3c5a4d0ddb1`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@9bf3d84b974b44a98d8ab66e16c98cb22419fa06`
+- Repo: `codex/alpha51-demo-visual-e2e@923070317f7fb9c50738f9f96fb544432ed9bbbd`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 只读数据库知识库浏览器交付；Schema候选因个案退化拒绝** — `VERIFY`
+**5.1 · 医生试用入口、手册及反馈已交付候选；模型质量与最终验收待完成** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1：在开发病例同时验证主诉引用与医生提问归属，修复第6例退化后再验收最终三路径与恢复；不放宽门禁
+- Single next task: 5.1：修复主诉引用、漏提与过敏史/既往处理归属；通过后验收最终真实三路径、现场显示及恢复，不放宽门禁
 - Parallel waiting task: 无；训练数据与资源Gate未通过，5.3不启动
 
 ## Manual Actions
 
-- 本轮无需人工操作；最终验收时配合一次真实短录音与投影/外屏实际缩放
+- 当前无需补数据或购买；模型门通过后配合最终物理录音与外屏检查，再组织3–5名医生合成病例试用
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

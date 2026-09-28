@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-28T11:58:24.688397+08:00`
-- Source hash: `6db7eaf8d1ab978cfcd5c80c6b90b27c88bc4b28547986d5afd77e178b793e78`
+- Updated at: `2026-09-28T13:42:40.611980+08:00`
+- Source hash: `87d45ac2bde333f793f6784c33a116c11f126fe3e5b65a0e7bbf11ae38b95984`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@172cd54a99259aa78c8152327a0ce31817240b50`
+- Repo: `codex/alpha51-demo-visual-e2e@83e3a9791ee3e5ff0ed9b54574da8fc35aa38620`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 接诊流程与产品手册已交付候选；模型质量与最终验收待完成** — `VERIFY`
+**5.1 · 知识目录和就诊联通候选已交付；主诉质量与最终发布验收待完成** — `VERIFY`
 
 ## Hardware Gate
 

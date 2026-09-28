@@ -16,22 +16,37 @@ def compact(text: str) -> str:
 def reconcile_extractive_fields(
     fields: MedicalRecordFields,
     trusted_segments: list[dict[str, Any]] | None,
+    *,
+    source: str,
 ) -> tuple[MedicalRecordFields, dict[str, dict[str, Any]]]:
-    """Replace model paraphrases with uniquely matched, role-safe source quotes.
+    """Canonicalize already supported extracts against reviewed audio segments.
 
     The language model is still responsible for selecting the fields and spans.
-    This function only canonicalizes a selected span when it maps to exactly one
-    reviewed source segment. Unsupported spans are removed from the field value
-    instead of being allowed to survive as a paraphrase. The normal grounding
-    gate runs afterwards and remains authoritative.
+    Validate the original value and citations before replacing text or clearing
+    sentence indices. Invalid fields remain intact and conflicting for review;
+    canonicalization must not hide a model error. The normal grounding gate also
+    runs afterwards against the resulting audio references.
     """
 
     if not trusted_segments:
         return fields, {}
 
+    # Validate a copy: ground_fields may bind segment IDs. Preserve the model's
+    # original values/spans on a rejected field, including its incorrect index.
+    original_check = ground_fields(fields.model_copy(deep=True), source, trusted_segments)
     repairs: dict[str, dict[str, Any]] = {}
     for key in FIELD_KEYS:
         field = getattr(fields, key)
+        checked = getattr(original_check, key)
+        if checked.status == "conflicting":
+            field.status = "conflicting"
+            field.hint = checked.hint
+            repairs[key] = {
+                "strategy": "preserve_original_conflict",
+                "original_value_changed": False,
+                "original_validation_reason": checked.hint,
+            }
+            continue
         if not field.value or not field.source_spans:
             continue
 

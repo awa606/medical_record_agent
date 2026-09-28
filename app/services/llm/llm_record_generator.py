@@ -114,6 +114,7 @@ class LLMRecordGenerator:
                 fields, self.field_repairs = reconcile_extractive_fields(
                     parsed,
                     safe_source_segments,
+                    source=conversation,
                 )
                 fields = validate_field_evidence(
                     fields,

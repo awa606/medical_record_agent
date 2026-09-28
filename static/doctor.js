@@ -24,6 +24,9 @@ const appState = {
   adminKnowledgeDocuments: [],
   adminKnowledgeHealth: null,
   adminKnowledgeSearch: null,
+  adminKnowledgeError: "",
+  adminKnowledgeSearchError: "",
+  adminKnowledgeSearching: false,
   adminStatus: "idle",
   adminError: "",
   selectedEngine: "system",
@@ -1311,54 +1314,180 @@ function renderAdminHome() {
   renderAdminKnowledge();
 }
 
+function knowledgeDocumentEnabled(doc) {
+  return Boolean(doc.is_active && doc.is_current);
+}
+function knowledgeTypeLabel(value) {
+  return ({ "clinical-reference": "临床参考", "record-standard": "病历规范" })[value] || value || "未分类";
+}
+function selectKnowledgeTab(name, focus = false) {
+  document.querySelectorAll("[data-knowledge-tab]").forEach((button) => {
+    const selected = button.dataset.knowledgeTab === name;
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    $("knowledge" + button.dataset.knowledgeTab + "Pane").hidden = !selected;
+    if (selected && focus) button.focus();
+  });
+}
+function knowledgeSourceLink(url, label = "打开原始资料") {
+  const safe = safeKnowledgeUrl(url);
+  return safe ? '<a href="' + escapeHtml(safe) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(label) + ' ↗</a>' : "未登记可用来源链接";
+}
 function renderAdminKnowledge() {
   const panel = $("adminKnowledgePanel");
-  const searchPanel = $("adminKnowledgeSearchResult");
-  const healthBadge = $("adminKnowledgeHealthBadge");
   const selector = $("knowledgeTestDocument");
-  if (!panel || !searchPanel || !healthBadge || !selector) return;
+  const badge = $("adminKnowledgeHealthBadge");
+  if (!panel || !selector || !badge) return;
   if (appState.authUser?.role !== "admin") {
-    healthBadge.textContent = "仅管理员";
-    panel.innerHTML = `<div class="safety-strip warning">当前账号不能管理知识资料。</div>`;
+    panel.innerHTML = '<p class="safety-strip warning">当前账号不能管理知识资料。</p>';
+    badge.textContent = "仅管理员";
     return;
   }
+  const docs = appState.adminKnowledgeDocuments;
   const health = appState.adminKnowledgeHealth;
-  healthBadge.textContent = health
-    ? `${Number(health.active_document_count || 0)}启用 / ${Number(health.document_count || 0)}版本`
-    : "未检查";
-  healthBadge.className = `status-badge ${health?.index_available ? "ready" : "neutral"}`;
+  badge.textContent = health ? health.active_document_count + " 启用 / " + health.document_count + " 版本" : "状态未取得";
+  badge.className = "status-badge neutral";
   const selected = selector.value;
-  selector.innerHTML = `<option value="">全部版本（含停用）</option>${appState.adminKnowledgeDocuments.map((document) => `
-    <option value="${escapeHtml(document.document_id)}">${escapeHtml(document.title)} · ${escapeHtml(document.version)} · ${document.is_active ? "启用" : "停用"}</option>
-  `).join("")}`;
+  selector.innerHTML = '<option value="">当前启用资料（医生范围）</option>' + docs.map((doc) =>
+    '<option value="' + escapeHtml(doc.document_id) + '">' + escapeHtml(doc.title) + ' · ' + escapeHtml(doc.version) + ' · ' + (knowledgeDocumentEnabled(doc) ? "启用" : "停用／历史") + '</option>').join("");
   if ([...selector.options].some((option) => option.value === selected)) selector.value = selected;
-
-  if (appState.adminStatus === "loading" && !appState.adminKnowledgeDocuments.length) {
-    panel.innerHTML = `<div class="empty-state">正在加载知识资料...</div>`;
-  } else if (!appState.adminKnowledgeDocuments.length) {
-    panel.innerHTML = `<div class="empty-state">尚未导入受管知识资料。</div>`;
+  const query = ($("knowledgeCatalogQuery").value || "").trim().toLocaleLowerCase();
+  const status = $("knowledgeCatalogStatus").value;
+  const type = $("knowledgeCatalogType").value;
+  const filtered = docs.filter((doc) => {
+    const enabled = knowledgeDocumentEnabled(doc);
+    return (!query || [doc.title, doc.publisher, doc.version, doc.disease_scope].join(" ").toLocaleLowerCase().includes(query))
+      && (!status || (status === "active" ? enabled : !enabled))
+      && (!type || doc.document_type === type);
+  }).sort((a, b) => Number(knowledgeDocumentEnabled(b)) - Number(knowledgeDocumentEnabled(a)));
+  if (appState.adminKnowledgeError) {
+    panel.innerHTML = '<p class="safety-strip danger">知识服务不可用：' + escapeHtml(appState.adminKnowledgeError) + '。请刷新重试。</p>';
+  } else if (appState.adminStatus === "loading" && !docs.length) {
+    panel.innerHTML = '<p class="knowledge-empty">正在加载资料目录…</p>';
+  } else if (!filtered.length) {
+    panel.innerHTML = '<p class="knowledge-empty">' + (docs.length ? "没有符合筛选条件的资料。" : "尚未导入受管资料。点击“导入资料”开始。") + '</p>';
   } else {
-    panel.innerHTML = appState.adminKnowledgeDocuments.map((document) => `
-      <div class="admin-list-row knowledge-document-row" data-knowledge-document="${escapeHtml(document.document_id)}">
-        <div class="knowledge-document-copy">
-          <strong>${escapeHtml(document.title)} <span class="status-badge ${document.is_active ? "ready" : "neutral"}">${document.is_active ? "已启用" : "停用"}</span></strong>
-          <span>${escapeHtml(document.publisher)} · ${escapeHtml(document.version)} · ${escapeHtml(document.document_type || "-")}</span>
-          <small>${escapeHtml(document.document_id)} · ${Number(document.chunk_count || 0)}片段 · SHA ${escapeHtml(String(document.content_sha256 || "").slice(0, 12))}</small>
-        </div>
-        <div class="knowledge-document-actions">
-          <button type="button" data-knowledge-action="edit">修改元数据</button>
-          <button type="button" data-knowledge-action="${document.is_active ? "disable" : "enable"}">${document.is_active ? "停用" : "启用"}</button>
-        </div>
-      </div>
-    `).join("");
+    panel.innerHTML = '<p class="knowledge-result-count">显示 ' + filtered.length + ' / ' + docs.length + ' 个版本 · 停用和历史版本不会进入医生检索</p>' +
+      '<div class="knowledge-table-wrap"><table class="knowledge-catalog-table"><caption class="sr-only">受管知识资料版本目录</caption>' +
+      '<thead><tr><th scope="col">资料 / 发布机构</th><th scope="col">版本 / 适用范围</th><th scope="col">状态</th><th scope="col">片段</th><th scope="col">操作</th></tr></thead><tbody>' +
+      filtered.map((doc) => '<tr data-knowledge-document="' + escapeHtml(doc.document_id) + '">' +
+        '<td><button class="knowledge-title-button" type="button" data-knowledge-action="detail">' + escapeHtml(doc.title) + '</button><small>' + escapeHtml(doc.publisher) + ' · ' + escapeHtml(knowledgeTypeLabel(doc.document_type)) + '</small></td>' +
+        '<td>' + escapeHtml(doc.version) + '<small>' + escapeHtml(doc.disease_scope || "适用范围未登记，请核对原文") + '</small></td>' +
+        '<td><span class="status-badge ' + (knowledgeDocumentEnabled(doc) ? "ready" : "neutral") + '">' + (knowledgeDocumentEnabled(doc) ? "已启用" : doc.is_current ? "停用候选" : "历史版本") + '</span></td>' +
+        '<td>' + Number(doc.chunk_count || 0) + '</td><td><div class="knowledge-document-actions"><button type="button" data-knowledge-action="test">验证</button><button type="button" data-knowledge-action="edit">编辑</button><button type="button" data-knowledge-action="' + (knowledgeDocumentEnabled(doc) ? "disable" : "enable") + '">' + (knowledgeDocumentEnabled(doc) ? "停用" : "启用") + '</button></div></td></tr>').join("") + '</tbody></table></div>';
   }
   const search = appState.adminKnowledgeSearch;
-  searchPanel.innerHTML = !search
-    ? ""
-    : `<div class="admin-list-row"><strong>测试搜索：${escapeHtml(search.query)}</strong><span>${Number(search.count || 0)}条结果，仅供管理员验证</span></div>${(search.results || []).map((item) => `
-      <div class="admin-list-row"><strong>${escapeHtml(item.title || item.source_id)} · p.${escapeHtml(item.page)}</strong><span>${escapeHtml(item.section)} · ${escapeHtml(compactText(item.content, 120))}</span></div>
-    `).join("")}`;
+  const searchPanel = $("adminKnowledgeSearchResult");
+  if (appState.adminKnowledgeSearchError) {
+    searchPanel.innerHTML = '<p class="safety-strip danger">检索失败：' + escapeHtml(appState.adminKnowledgeSearchError) + '。本次没有可用结果。</p>';
+  } else if (appState.adminKnowledgeSearching) {
+    searchPanel.innerHTML = '<p class="knowledge-empty">正在查询实际索引…</p>';
+  } else if (!search) {
+    searchPanel.innerHTML = '<p class="knowledge-empty">输入一个问题，核对命中内容与来源。结果不会写入患者病历。</p>';
+  } else {
+    searchPanel.innerHTML = '<p class="knowledge-search-summary">测试搜索：' + escapeHtml(search.query) + ' · ' + (search.results?.length || 0) + ' 条 · 实际模式：' + escapeHtml(search.retrieval_mode || "未报告") + ' · ' + (search.administrative_test_only ? "指定版本，仅管理员验证" : "当前医生检索范围") + '</p>' +
+      (!search.results?.length ? '<p class="knowledge-empty">检索已完成，未命中资料。请调整问题或资料范围。</p>' : search.results.map((item) =>
+        '<article class="knowledge-search-hit"><h3>' + escapeHtml(item.title || item.source_id) + '</h3><p class="knowledge-note">' + escapeHtml(item.publisher) + ' · ' + escapeHtml(item.version) + ' · 第 ' + escapeHtml(item.page) + ' 页 · ' + escapeHtml(item.section) + '</p>' +
+        '<p class="knowledge-passage-preview">' + escapeHtml(compactText(item.excerpt || item.content || item.snippet || "", 180)) + '</p><details><summary>查看完整命中片段</summary><p class="knowledge-passage">' + escapeHtml(item.excerpt || item.content || item.snippet || "") + '</p></details><p>' + knowledgeSourceLink(item.source_url) + '</p>' +
+        '<details><summary>引用技术信息</summary><dl class="knowledge-metadata"><dt>文档</dt><dd>' + escapeHtml(item.document_id) + '</dd><dt>片段</dt><dd>' + escapeHtml(item.chunk_id) + '</dd><dt>内容 SHA256</dt><dd>' + escapeHtml(item.content_sha256) + '</dd></dl></details></article>').join(""));
+  }
+  $("knowledgeHealthSummary").innerHTML = !health
+    ? '<p class="safety-strip warning">知识健康信息未取得，请刷新后重试。</p>'
+    : '<dl class="knowledge-health-list"><dt>启用 / 总版本</dt><dd>' + health.active_document_count + ' / ' + health.document_count + '</dd>' +
+      '<dt>已存储片段</dt><dd>' + health.chunk_count + '（包含历史及停用版本）</dd><dt>已存储 embedding</dt><dd>' + health.embedding_count + '（数量不代表当前查询使用混合检索）</dd>' +
+      '<dt>配置模型</dt><dd>' + escapeHtml(health.embedding_model || "未配置") + '</dd><dt>最近一次查询模式</dt><dd>' +
+      escapeHtml(appState.adminKnowledgeSearchError ? "最近查询失败，未确认" : search?.retrieval_mode || "尚未实测") + '</dd></dl>' +
+      '<p class="knowledge-note">索引计数不证明检索质量。请在“检索验证”查看本次真实结果；儿童资料仅适用于其声明人群。</p>';
 }
+function openKnowledgeDocument(doc, edit = false) {
+  const dialog = $("knowledgeDetailDialog");
+  $("knowledgeDetailTitle").textContent = edit ? "编辑资料元数据" : "资料详情";
+  $("knowledgeDetailContent").innerHTML = edit
+    ? '<p class="safety-strip warning">标题与适用范围属于来源级元数据，保存将影响同来源的所有版本。内容、版本与 SHA 不可在此改写。</p>' +
+      '<form id="knowledgeMetadataForm" class="knowledge-admin-form" data-document-id="' + escapeHtml(doc.document_id) + '">' +
+      '<label class="span-2">资料标题<input id="knowledgeEditTitle" required value="' + escapeHtml(doc.title) + '"></label>' +
+      '<label class="span-2">适用范围<input id="knowledgeEditScope" value="' + escapeHtml(doc.disease_scope || "") + '"></label>' +
+      '<p id="knowledgeMetadataError" class="span-2" role="alert"></p><button type="submit" class="primary-action">保存元数据</button></form>'
+    : '<h3>' + escapeHtml(doc.title) + '</h3><p class="knowledge-note">' + escapeHtml(doc.version) + ' · ' + (knowledgeDocumentEnabled(doc) ? "当前启用" : "停用／历史版本") + '</p>' +
+      '<dl class="knowledge-metadata"><dt>发布机构</dt><dd>' + escapeHtml(doc.publisher) + '</dd><dt>类型</dt><dd>' + escapeHtml(knowledgeTypeLabel(doc.document_type)) + '</dd>' +
+      '<dt>适用范围</dt><dd>' + escapeHtml(doc.disease_scope || "未登记，请核对原文") + '</dd><dt>使用 / 索引范围</dt><dd>' + escapeHtml(doc.usage_scope || "未登记") + '</dd>' +
+      '<dt>页数 / 片段数</dt><dd>' + doc.page_count + ' / ' + doc.chunk_count + '（不表示原始文档全部内容均已索引）</dd></dl><p>' + knowledgeSourceLink(doc.source_url) + '</p>' +
+      '<details><summary>来源与索引技术详情</summary><dl class="knowledge-metadata"><dt>来源 ID</dt><dd>' + escapeHtml(doc.source_id) + '</dd><dt>文档 ID</dt><dd>' + escapeHtml(doc.document_id) +
+      '</dd><dt>内容 SHA256</dt><dd>' + escapeHtml(doc.content_sha256) + '</dd><dt>提取方式</dt><dd>' + escapeHtml(doc.extraction_method) + '</dd><dt>embedding 数</dt><dd>' + (doc.embedding_count || 0) + '</dd></dl></details>' +
+      '<p class="knowledge-note">原始资料通过来源链接打开；索引正文可在检索验证中查看命中片段。本页不提供未经核验的全文。</p>';
+  dialog.showModal();
+}
+async function saveKnowledgeMetadata(event) {
+  if (event.target.id !== "knowledgeMetadataForm") return;
+  event.preventDefault();
+  const form = event.target;
+  const button = form.querySelector("button[type=submit]");
+  button.disabled = true;
+  try {
+    await api("/api/knowledge/admin/documents/" + encodeURIComponent(form.dataset.documentId), {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: $("knowledgeEditTitle").value.trim(), disease_scope: $("knowledgeEditScope").value.trim() }),
+    });
+    $("knowledgeDetailDialog").close();
+    await refreshAdminHome();
+    showToast("来源元数据已保存；历史内容与版本保持不变");
+  } catch (error) {
+    $("knowledgeMetadataError").textContent = error.message || "保存失败，输入已保留，请重试。";
+  } finally { button.disabled = false; }
+}
+async function runKnowledgeTestSearch(event) {
+  event.preventDefault();
+  const documentId = $("knowledgeTestDocument").value;
+  const query = $("knowledgeTestQuery").value.trim();
+  const button = event.target.querySelector("button[type=submit]");
+  button.disabled = true;
+  appState.adminKnowledgeSearching = true;
+  appState.adminKnowledgeSearchError = "";
+  appState.adminKnowledgeSearch = null;
+  renderAdminKnowledge();
+  try {
+    const result = await api(documentId ? "/api/knowledge/admin/test-search" : "/api/knowledge/retrieve", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, ...(documentId ? { document_id: documentId, limit: 5 } : {}) }),
+    });
+    appState.adminKnowledgeSearch = { ...result, query, administrative_test_only: Boolean(documentId) };
+  } catch (error) {
+    appState.adminKnowledgeSearchError = error.message || "知识服务不可用";
+  } finally {
+    appState.adminKnowledgeSearching = false;
+    button.disabled = false;
+    renderAdminKnowledge();
+  }
+}
+async function handleKnowledgeAdminAction(event) {
+  const button = event.target.closest("[data-knowledge-action]");
+  if (!button) return;
+  const id = button.closest("[data-knowledge-document]")?.dataset.knowledgeDocument;
+  const doc = appState.adminKnowledgeDocuments.find((item) => item.document_id === id);
+  if (!doc) return;
+  const action = button.dataset.knowledgeAction;
+  if (action === "detail" || action === "edit") {
+    openKnowledgeDocument(doc, action === "edit");
+    return;
+  }
+  if (action === "test") {
+    $("knowledgeTestDocument").value = id;
+    selectKnowledgeTab("Search");
+    $("knowledgeTestQuery").focus();
+    return;
+  }
+  if (!["enable", "disable"].includes(action)) return;
+  button.disabled = true;
+  try {
+    await api("/api/knowledge/admin/documents/" + encodeURIComponent(id) + "/" + action, { method: "POST" });
+    appState.adminKnowledgeSearch = null;
+    await refreshAdminHome();
+    showToast("知识资料状态已更新；历史内容未删除");
+  } catch (error) { reportActionError(error); }
+  finally { button.disabled = false; }
+}
+
+
 
 async function refreshAdminHome() {
   appState.adminStatus = "loading";
@@ -1389,9 +1518,7 @@ async function refreshAdminHome() {
     appState.adminKnowledgeHealth = knowledgeHealthResult.status === "fulfilled"
       ? knowledgeHealthResult.value
       : null;
-    if (knowledgeResult.status === "rejected" && !appState.adminError) {
-      appState.adminError = knowledgeResult.reason?.message || "无法加载知识库。";
-    }
+    appState.adminKnowledgeError = knowledgeResult.status === "rejected" ? (knowledgeResult.reason?.message || "无法加载知识库") : "";
     appState.adminStatus = "ready";
   } catch (error) {
     appState.adminStatus = "error";
@@ -1413,6 +1540,8 @@ async function decodeUtf8KnowledgeFile(file) {
 
 async function importKnowledgeDocument(event) {
   event.preventDefault();
+  const submit = event.target.querySelector('button[type="submit"]');
+  submit.disabled = true;
   try {
     const file = $("knowledgeFileInput").files?.[0];
     const content = await decodeUtf8KnowledgeFile(file);
@@ -1432,6 +1561,7 @@ async function importKnowledgeDocument(event) {
         content,
       }),
     });
+    $("knowledgeImportDialog").close();
     event.target.reset();
     $("knowledgeDocumentType").value = "clinical-reference";
     $("knowledgeUsageScope").value = "仅供医生人工参考，不参与自动批准、诊断或处方。";
@@ -1439,55 +1569,7 @@ async function importKnowledgeDocument(event) {
     showToast("资料已导入并保持停用，请先测试搜索。\n");
   } catch (error) {
     reportActionError(error);
-  }
-}
-
-async function runKnowledgeTestSearch(event) {
-  event.preventDefault();
-  try {
-    appState.adminKnowledgeSearch = await api("/api/knowledge/admin/test-search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: $("knowledgeTestQuery").value.trim(),
-        document_id: $("knowledgeTestDocument").value || null,
-        limit: 5,
-      }),
-    });
-    renderAdminKnowledge();
-  } catch (error) {
-    reportActionError(error);
-  }
-}
-
-async function handleKnowledgeAdminAction(event) {
-  const button = event.target.closest("[data-knowledge-action]");
-  if (!button) return;
-  const row = button.closest("[data-knowledge-document]");
-  const documentId = row?.dataset.knowledgeDocument;
-  const document = appState.adminKnowledgeDocuments.find((item) => item.document_id === documentId);
-  if (!document) return;
-  try {
-    if (button.dataset.knowledgeAction === "edit") {
-      const title = window.prompt("资料标题", document.title);
-      if (title === null) return;
-      const diseaseScope = window.prompt("适用范围", document.disease_scope || "");
-      if (diseaseScope === null) return;
-      await api(`/api/knowledge/admin/documents/${encodeURIComponent(documentId)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), disease_scope: diseaseScope.trim() }),
-      });
-    } else {
-      await api(`/api/knowledge/admin/documents/${encodeURIComponent(documentId)}/${button.dataset.knowledgeAction}`, {
-        method: "POST",
-      });
-    }
-    await refreshAdminHome();
-    showToast("知识资料状态已更新");
-  } catch (error) {
-    reportActionError(error);
-  }
+  } finally { submit.disabled = false; }
 }
 
 function hasActiveSession() {
@@ -8751,6 +8833,21 @@ function bindEvents() {
   $("refreshAdminHomeButton")?.addEventListener("click", () => {
     refreshAdminHome().catch(reportActionError);
   });
+  $("openKnowledgeImportButton")?.addEventListener("click", () => $("knowledgeImportDialog").showModal());
+  document.querySelectorAll("[data-close-knowledge-dialog]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
+  document.querySelectorAll("[data-knowledge-tab]").forEach((button) => {
+    button.addEventListener("click", () => selectKnowledgeTab(button.dataset.knowledgeTab));
+    button.addEventListener("keydown", (event) => {
+      const tabs = ["Catalog", "Search", "Health"];
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const index = tabs.indexOf(button.dataset.knowledgeTab);
+      const next = event.key === "Home" ? 0 : event.key === "End" ? 2 : (index + (event.key === "ArrowRight" ? 1 : 2)) % 3;
+      selectKnowledgeTab(tabs[next], true);
+    });
+  });
+  ["knowledgeCatalogQuery", "knowledgeCatalogStatus", "knowledgeCatalogType"].forEach((id) => $(id)?.addEventListener("input", renderAdminKnowledge));
+  $("knowledgeDetailDialog")?.addEventListener("submit", saveKnowledgeMetadata);
   $("knowledgeImportForm")?.addEventListener("submit", importKnowledgeDocument);
   $("knowledgeTestSearchForm")?.addEventListener("submit", runKnowledgeTestSearch);
   $("adminKnowledgePanel")?.addEventListener("click", (event) => {

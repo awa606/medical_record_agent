@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-28T17:43:54.511407+08:00`
-- Source hash: `ad890c70a043209ff574226a8be998824d9dba28fce73109ccdbe3d9170c8b15`
+- Updated at: `2026-09-28T20:31:05.915198+08:00`
+- Source hash: `e47847f3a9524a45c5d83ef3a84c5b3c6a8f8b97c1f558042b4b4c09c7b21d26`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@5acd663032d6ceaee0a02c31a0d35a8a5cbbb1f1`
+- Repo: `codex/alpha51-demo-visual-e2e@be88e7453407fe1966c12e716408bc64e31d6fec`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; course checkpoint 2026-09-29; rework/restore impact pending; Full M4 TBD / HARDWARE DEPENDENT**
+- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; restored course checkpoint 2026-09-29; first-output quality and final three-path/display gates pending; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 4B基线9/21；8B冷启动超时，质量未测，保留8795** — `VERIFY`
+**5.1 · 8B预热通过但质量9/21；8795课程数据演示及隔离恢复完成，保留4B** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: 5.1：独立测量8B加载与预热，与病例请求时限分离；运行门通过后才重新决定质量对照，不部署未评分候选
-- Parallel waiting task: 无；例11报告者与事实主体校验误拦单独留证，训练及5.3不启动
+- Single next task: 5.1：定位本地首次输出的字段归属、漏提与主体混入；保留课程历史备用，质量通过后补最终同SHA三路径及实际显示验收
+- Parallel waiting task: 无；例11规则误拦单独留证；8B未晋级，训练及5.3不启动
 
 ## Manual Actions
 

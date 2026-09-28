@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-28T14:30:49.136723+08:00`
-- Source hash: `8210768878941d55f7ce8523ae4ad1b59fddca729c74ca65622ef95eecbe5a57`
+- Updated at: `2026-09-28T15:10:48.082735+08:00`
+- Source hash: `fc74eab2fbe396e89ae07b69b57714fe619f43866d72adf3c12fac284de1a564`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@da24fba55af5fbc166a7db54b6f355762268fe8b`
+- Repo: `codex/alpha51-demo-visual-e2e@1ad74ab6815ccd6b560c3715ea02ffc58e8b2b57`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 原句枚举候选未通过开发门；引用绑定和字段归属仍待修复** — `VERIFY`
+**5.1 · 原始引用校验已修复，79份离线重放完成；模型首次输出质量仍未通过** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 5.1：先验证原始引用编号在音频归一化前的约束，保留例11字段退化回归；模型质量通过后再做最终三路径与恢复
+- Single next task: 5.1：基于未改写的首次输出定位主诉引用与例11字段归属；模型质量通过后完成最终三路径与隔离恢复
 - Parallel waiting task: 无；训练数据与资源Gate未通过，5.3不启动
 
 ## Manual Actions

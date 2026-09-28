@@ -132,7 +132,8 @@ def test_demo_identity_and_runtime_modes_do_not_claim_unverified_hybrid(page):
       s.currentEncounter.patient_deidentified_id='SIM-DEMO-0929-NEGATION';
       s.currentKnowledgeEvidence.retrieval_mode='fts5_v1'; renderAll();
     }""")
-    expect(page.locator('#patientName')).to_have_text('合成演示 · 否定与家属')
+    expect(page.locator('#patientName')).to_have_text('李示例')
+    expect(page.locator('#patientDemoBadge')).to_be_visible()
     expect(page.locator('#settingsKnowledgeRuntimeStatus')).to_have_text('本次知识检索：FTS5全文检索')
     page.evaluate("window.__MRA_APP_STATE__.knowledgeEvidenceStatus='failed';renderAll()")
     expect(page.locator('#settingsKnowledgeRuntimeStatus')).to_have_text('知识检索不可用')

@@ -94,7 +94,10 @@ def test_reference_names_open_full_details_without_losing_edits(page):
 
 
 def test_empty_live_and_failure_references_remain_compact_and_escaped(page):
-    page.evaluate('setProductView("encounter"); renderAll()')
+    page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
+    page.click("#createLocalEncounterButton")
+    page.locator('#dashboardEncounterList [data-encounter-action="start"]').first.click()
+    page.wait_for_function('appState.currentEncounter && !appState.busy && document.body.dataset.productView === "encounter"')
     panel = page.locator('#assistPanels')
     expect(panel.locator('.clinical-reference-section')).to_have_count(2)
     expect(panel.get_by_role('button')).to_have_count(0)
@@ -122,6 +125,10 @@ def test_empty_live_and_failure_references_remain_compact_and_escaped(page):
 
 
 def test_live_reference_close_does_not_stop_recording_and_restores_replaced_trigger(page):
+    page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
+    page.click("#createLocalEncounterButton")
+    page.locator('#dashboardEncounterList [data-encounter-action="start"]').first.click()
+    page.wait_for_function('appState.currentEncounter && !appState.busy && document.body.dataset.productView === "encounter"')
     page.evaluate("""() => {
       setProductView('encounter');
       applyLiveClinicalDraft({version: 1, differentials: [{name: '临时参考', summary: '合成说明'}]});

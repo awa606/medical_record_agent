@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import random
 import subprocess
 import sys
 import tempfile
@@ -18,9 +19,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        return int(sock.getsockname()[1])
+    # Do not rely on Windows low ephemeral ranges or disable browser protection.
+    for _ in range(100):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            port = random.SystemRandom().randint(20000, 60000)
+            try:
+                sock.bind(("127.0.0.1", port))
+            except OSError:
+                continue
+            return port
+    raise RuntimeError("No browser-safe local test port available")
 
 
 def _wait_for_health(base_url: str) -> None:

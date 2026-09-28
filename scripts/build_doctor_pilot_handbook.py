@@ -30,12 +30,12 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
     if manifest.get("synthetic_only") is not True:
         raise ValueError("Only reviewed synthetic screenshots may be packaged")
     output.mkdir(parents=True, exist_ok=True)
-    for name in ("manual.html", "guide.css", "feedback.html", "feedback.js", "maintenance.html"):
+    for name in ("manual.html", "guide.css", "manual.css", "feedback.html", "feedback.js", "maintenance.html"):
         shutil.copyfile(source / name, output / name)
     shots = []
     for item in manifest["screenshots"]:
         key = item["key"]
-        if key not in {"login", "worklist", "workspace", "knowledge", "review"}:
+        if not re.fullmatch(r"[a-z][a-z0-9_-]{0,39}", key):
             raise ValueError("Unexpected screenshot section")
         picture = (manifest_path.parent / item["path"]).resolve()
         if not picture.is_relative_to(manifest_path.parent.resolve()) or picture.suffix != ".png":
@@ -52,56 +52,76 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
     evidence = {"version": version, "app_git_sha": manifest["app_git_sha"], "screenshots": shots}
     (output / "manual-evidence.js").write_text("window.MRA_MANUAL_EVIDENCE=" + json.dumps(evidence, ensure_ascii=False) + ";\n", encoding="utf8")
     pdfmetrics.registerFont(TTFont("MRA-CJK", str(font), subfontIndex=0))
-    text = ParagraphStyle("text", fontName="MRA-CJK", fontSize=11, leading=19,
-                          spaceAfter=12, textColor=colors.HexColor("#172d43"), wordWrap="CJK")
-    heading = ParagraphStyle("heading", parent=text, fontSize=18, leading=25, spaceAfter=20)
-    small = ParagraphStyle("small", parent=text, fontSize=9, leading=14, textColor=colors.HexColor("#53697c"))
-    width = A4[0] - 100
+    text = ParagraphStyle("text", fontName="MRA-CJK", fontSize=10.5, leading=17,
+                          spaceAfter=9, textColor=colors.HexColor("#172d43"), wordWrap="CJK")
+    heading = ParagraphStyle("heading", parent=text, fontSize=18, leading=26, spaceAfter=14)
+    small = ParagraphStyle("small", parent=text, fontSize=8.5, leading=13, textColor=colors.HexColor("#53697c"))
+    width = A4[0] - 88
     story = []
     soup = BeautifulSoup((source / "manual.html").read_text(encoding="utf8"), "html.parser")
-    def paragraph(value, style=text):
-        story.append(Paragraph(escape(value), style))
-    paragraph("MediListen 医生试用", small)
-    paragraph("一页快速开始", heading)
-    paragraph(version, small)
-    paragraph(soup.select_one("main > aside").get_text(" ", strip=True))
-    for number, li in enumerate(soup.select(".quick li"), 1):
-        paragraph(f"{number}. {li.get_text(' ', strip=True)}")
+    sections = soup.select("main > section")
     images = {s["key"]: s for s in shots}
-    for section in soup.select("main > section:not(.quick)"):
-        # Keep short, related instructions together instead of seven mostly
-        # empty pages. Captures are bounded viewport crops, never full scrolls.
-        if section.h2.get_text().startswith(("4.", "7.")):
-            story.append(Spacer(1, 22))
-        else:
-            story.append(PageBreak())
-        paragraph(section.h2.get_text(" ", strip=True), heading)
-        for element in section.find_all(["p", "table", "div"], recursive=False):
+    required = {e["data-shot"] for e in soup.select("[data-shot]")}
+    if not required.issubset(images):
+        raise ValueError("Missing current-version screenshots: " + str(sorted(required - images.keys())))
+
+    class GuideDoc(SimpleDocTemplate):
+        def afterFlowable(self, flowable):
+            if hasattr(flowable, "bookmark"):
+                self.canv.bookmarkPage(flowable.bookmark)
+                self.canv.addOutlineEntry(flowable.getPlainText(), flowable.bookmark, 0, False)
+
+    def paragraph(value, style=text, bookmark=None):
+        item = Paragraph(escape(value), style)
+        if bookmark:
+            item.bookmark = bookmark
+        story.append(item)
+
+    paragraph("MediListen / 医生试用", small)
+    story.append(Spacer(1, 85))
+    paragraph("医生工作台操作手册", ParagraphStyle("cover", parent=heading, fontSize=28, leading=40))
+    paragraph("工作台接诊 · 病历核对 · 审核导出", heading)
+    paragraph(version, small)
+    story.append(Spacer(1, 40))
+    paragraph(soup.select_one("main > aside").get_text(" ", strip=True))
+    paragraph(soup.select_one(".revision-note").get_text(" ", strip=True))
+    paragraph("每项任务按使用条件、编号步骤、实际界面、成功结果与失败恢复组织。维护说明与医生正文分开。")
+    paragraph("界面截图为当前候选与合成病例。未通过最终三路径、模型质量及恢复验收前，不将本手册视为临床或稳定发布证明。", small)
+    story.append(PageBreak())
+    paragraph("操作目录", heading, "contents")
+    for n, section in enumerate(sections):
+        label = section.h2.get_text(" ", strip=True)
+        # Stable chapter links; page numbers remain in the PDF footer.
+        story.append(Paragraph(f'<link href="#chapter-{n}" color="#07598a">{escape(label)}</link>', text))
+    paragraph("界面区域：工作台负责登记／报到；工作区负责撰写和审核。左栏转写、中栏病历、右栏参考；五步进度无需逐步点击。", small)
+    for n, section in enumerate(sections):
+        story.append(PageBreak())
+        paragraph(section.h2.get_text(" ", strip=True), heading, f"chapter-{n}")
+        for element in section.find_all(["p", "ol", "div"], recursive=False):
             if element.name == "p":
-                paragraph(element.get_text(" ", strip=True))
-            elif element.name == "table":
-                for row in element.find_all("tr")[1:]:
-                    paragraph("：".join(c.get_text(" ", strip=True) for c in row.find_all("td")))
+                paragraph(element.get_text(" ", strip=True), small if "precondition" in element.get("class", []) else text)
+            elif element.name == "ol":
+                for number, li in enumerate(element.find_all("li", recursive=False), 1):
+                    paragraph(f"{number}. {li.get_text(' ', strip=True)}")
             elif element.get("data-shot") in images:
-                image = images[element["data-shot"]]
-                im = Image(str(output / image["path"]))
-                scale = min(width / im.imageWidth, 355 / im.imageHeight)
-                im.drawWidth = im.imageWidth * scale
-                im.drawHeight = im.imageHeight * scale
+                shot = images[element["data-shot"]]
+                im = Image(str(output / shot["path"]))
+                scale = min(width / im.imageWidth, 350 / im.imageHeight)
+                im.drawWidth, im.drawHeight = im.imageWidth * scale, im.imageHeight * scale
                 im.hAlign = "LEFT"
-                story.extend([Spacer(1, 10), im, Spacer(1, 8)])
-                paragraph(image["caption"], small)
+                story.extend([Spacer(1, 5), im, Spacer(1, 5)])
+                paragraph(shot["caption"], small)
     pdf = output / "doctor-manual.pdf"
     def footer(canvas, doc):
         canvas.saveState()
         canvas.setFont("MRA-CJK", 8)
         canvas.setFillColor(colors.HexColor("#53697c"))
-        canvas.drawString(50, 28, "合成病例 / 模拟问诊 · 不能作为临床使用放行证明")
-        canvas.drawRightString(A4[0]-50, 28, str(doc.page))
+        canvas.drawString(44, 26, "MediListen v1.1 · 合成病例 / 候选操作手册")
+        canvas.drawRightString(A4[0]-44, 26, str(doc.page))
         canvas.restoreState()
-    SimpleDocTemplate(str(pdf), pagesize=A4, leftMargin=50, rightMargin=50,
-                      topMargin=44, bottomMargin=48, title="MediListen 医生操作手册").build(
-                          story, onFirstPage=footer, onLaterPages=footer)
+    GuideDoc(str(pdf), pagesize=A4, leftMargin=44, rightMargin=44,
+             topMargin=40, bottomMargin=46, title="MediListen 医生操作手册 v1.1").build(
+                 story, onFirstPage=footer, onLaterPages=footer)
     package = dict(manifest, screenshots=shots, release_status="CANDIDATE_NOT_RELEASED")
     package["files"] = {p.relative_to(output).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                         for p in output.rglob("*") if p.is_file() and p.name != "manifest.json"}

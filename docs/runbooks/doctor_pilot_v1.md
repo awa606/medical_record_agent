@@ -15,9 +15,9 @@
 在仓库根目录执行：
 
 ```powershell
-python scripts/doctor_pilot.py configure --project mra51repair8795 --port 8795 --config .artifacts/doctor-pilot-v1-20260928/deployment-complete.json
-python scripts/doctor_pilot.py status --config .artifacts/doctor-pilot-v1-20260928/deployment-complete.json
-powershell.exe -NoProfile -STA -File scripts/Start-DoctorPilot.ps1 -Config .artifacts/doctor-pilot-v1-20260928/deployment-complete.json -Python C:\Anaconda\python.exe -InstallShortcut
+python scripts/doctor_pilot.py configure --project mra51repair8795 --port 8795 --config .artifacts/workbench-flow-20260928/deployment.json
+python scripts/doctor_pilot.py status --config .artifacts/workbench-flow-20260928/deployment.json
+powershell.exe -NoProfile -STA -File scripts/Start-DoctorPilot.ps1 -Config .artifacts/workbench-flow-20260928/deployment.json -Python C:\Anaconda\python.exe -InstallShortcut
 ```
 
 登记会核对Compose标签、三个具名容器、镜像ID、loopback端口、绝对挂载、实际应用Git SHA、静态资源及固定模型manifest摘要。配置不包含密码。实际容器或资源变化时停止操作，由维护人员重新验收登记，不能手工篡改指纹“解决”失败。
@@ -26,12 +26,18 @@ powershell.exe -NoProfile -STA -File scripts/Start-DoctorPilot.ps1 -Config .arti
 
 桌面程序运行在Windows PowerShell 5.1，源文件保留UTF-8 BOM。没有更改机器执行策略或自动登录配置。用户若在其他电脑受组织策略限制，应由该组织维护人员处理，不关闭安全策略。
 
+## 接诊流程与合成患者
+
+登录默认进入工作台。选择张示例、李示例、王示例之一，登记并报到成功后仍留在工作台；点击该行开始接诊，才进入录音／上传／文本工作区。登记成功而报到失败时重试原记录，不重复登记。
+
+只有三条明确的合成患者标识显示模拟姓名；未知历史记录继续脱敏。正在录音、尚未提交录音或未保存编辑时，切换患者被阻止。
+
 ## 手册与反馈
 
-源文件在`docs/pilot/doctor-v1/`。本地成品在`.artifacts/doctor-pilot-v1-20260928/handbook/`，包含HTML、PDF、实际匿名截图及SHA清单。配置可使用绝对`handbook_dir`指向该目录。
+源文件在`docs/pilot/doctor-v1/`。本地成品在`.artifacts/workbench-flow-20260928/handbook/`，包含HTML、PDF、实际匿名截图及SHA清单。新版为分任务图文手册（含一页快速开始、PDF书签与页码）；旧包保留在原doctor-pilot-v1目录。配置可使用绝对`handbook_dir`指向新版目录。
 
 ```powershell
-python scripts/build_doctor_pilot_handbook.py --manifest .artifacts/doctor-pilot-v1-20260928/manual-screenshots.json --output .artifacts/doctor-pilot-v1-20260928/handbook
+python scripts/build_doctor_pilot_handbook.py --manifest .artifacts/workbench-flow-20260928/manual-screenshots.json --output .artifacts/workbench-flow-20260928/handbook
 ```
 
 构建工具为开发环境工具，依赖ReportLab、BeautifulSoup及本机中文字体；不进入生产容器依赖。必须先核对截图仅含合成数据并记录实际应用SHA，生成后渲染检查PDF，不能用另一版本页面截图证明本版本功能。

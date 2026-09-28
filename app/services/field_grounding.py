@@ -188,6 +188,21 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
                 errors.append("医生提问不能作为患者事实")
             if re.search(r"忽略.{0,12}(?:规则|指令|提示)|(?:伪造|编造).{0,12}(?:病历|症状|诊断)|绕过.{0,12}(?:审核|审批)|ignore.{0,20}instructions", context, re.I):
                 errors.append("转写中的操作指令不能作为患者事实")
+            # A leading role label identifies the speaker, not the experiencer.
+            # Exclude only that label from qualifier checks; never edit the
+            # source/quote or relax trusted audio role checks above. First-person
+            # and unspecified family statements remain ineligible patient facts.
+            family_statement = re.fullmatch(
+                r"\s*(?:家属\s*[:：]|\[家属\]\s*[:：]?|【家属】\s*[:：]?)\s*(.+)",
+                context, re.S,
+            )
+            if family_statement:
+                context = family_statement.group(1)
+                referent = re.match(r"(?:患者|病人|她|他)", context)
+                if not referent or referent.group(0) not in field.value:
+                    errors.append("家属发言缺少明确且保留的患者主体，需医生核对归属")
+                if re.search(r"吗|么|有没有|是否|[?？]", context):
+                    errors.append("家属提问不能作为已确认的患者事实")
             for token in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子", "昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏", "不确定", "不知道"):
                 if token in context and token not in field.value:
                     errors.append("引用截断了主体、时间、确定性或状态限定")

@@ -159,3 +159,36 @@ def test_generator_conflict_survives_revision_and_blocks_approval_and_export(tmp
         export_task(task_id)
     assert export.value.status_code == 400
     assert not list((tmp_path / "exports").rglob("*.docx"))
+
+
+@pytest.mark.parametrize("label", ["家属：", "家属: ", "[家属] ", "【家属】"])
+def test_generator_family_speaker_label_is_not_a_patient_fact_qualifier(label):
+    source = f"医生：哪里不舒服？\n{label}她发烧39度，还说头痛。\n患者：头痛。"
+    quote = "她发烧39度，还说头痛"
+    generator, fields = extract(quote, [SourceSpan(text=quote, index=1)], source, [], key="present_illness")
+    field = fields.present_illness
+    assert field.status == "complete"
+    assert field.value == quote and field.source_spans[0].text == quote
+    assert field.source_spans[0].index == 1
+    assert not generator.field_repairs
+    assert not field.confirmed_by_doctor
+
+
+@pytest.mark.parametrize("body,value", [
+    ("我有花生过敏", "我有花生过敏"),
+    ("有花生过敏", "有花生过敏"),
+    ("我父亲有花生过敏", "我父亲有花生过敏"),
+    ("她没有花生过敏", "她有花生过敏"),
+    ("她有花生过敏", "有花生过敏"),
+    ("她有花生过敏吗", "她有花生过敏"),
+    ("她是否对花生过敏", "她是否对花生过敏"),
+])
+def test_generator_family_statement_still_requires_patient_subject_and_polarity(body, value):
+    _, fields = extract(value, [SourceSpan(text=body, index=0)], f"家属：{body}。", [], key="allergy_history")
+    assert fields.allergy_history.status == "conflicting"
+
+
+def test_generator_family_word_inside_statement_is_not_removed():
+    _, fields = extract("有花生过敏", [SourceSpan(text="有花生过敏", index=0)],
+                        "患者：我的家属有花生过敏。", [], key="allergy_history")
+    assert fields.allergy_history.status == "conflicting"

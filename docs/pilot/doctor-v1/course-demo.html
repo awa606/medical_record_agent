@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MediListen 课程演示操作卡 · 2026-09-28</title><link rel="stylesheet" href="guide.css">
+<style>body{max-width:1000px;margin:auto;padding:24px;color:#16314c;font:16px/1.7 'Microsoft YaHei UI',sans-serif}header{border-bottom:2px solid #1565a8;padding-bottom:16px}h1{font-size:26px}h2{font-size:20px;margin:24px 0 8px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #d5dfe8;padding:10px;text-align:left;vertical-align:top}.notice{background:#fff5dc;padding:14px;border-left:4px solid #ae7113}.version{font-size:14px;color:#536779}a{color:#095ca9}code{overflow-wrap:anywhere}@media print{body{padding:0}header{background:white;color:#16314c}tr{break-inside:avoid}}</style></head><body>
+<header><h1>MediListen · 10分钟课程演示操作卡</h1><div class="version">2026-09-28更新 · 应用8afc6bd · 本地FunASR＋Qwen3:4b · 仅合成病例</div><p><a href="manual.html">完整产品操作手册</a> · <a href="feedback.html">填写反馈</a> · <a href="maintenance.html">维护说明</a></p></header>
+<p class="notice"><strong>课程展示候选，尚未放行独立医生试用。</strong>8B已能预热并推理，但本次质量仅9/21通过，继续使用4B。历史病历含人工修订，必须说明生成时间、模型和修订；不得称为本次现场推理或模型首次正确。</p>
+<h2>启动与检查</h2><ol><li>双击桌面“MediListen 医生试用入口”，点击“启动服务”，再“打开工作台”。正确地址是<a href="http://127.0.0.1:8795/static/doctor.html">8795医生工作台</a>，不要打开旧2626。</li><li>启动器显示网页可用时可登录查看历史；只有显示模型就绪才演示真实生成。预热期间不重复点击生成。</li><li>双击桌面“MediListen 数据与知识浏览器”，由入口完成本地认证。此处是带采样时间的只读快照，不能编辑病历，不是实时数据库。</li></ol>
+<h2>连续操作顺序</h2><table><thead><tr><th>时间</th><th>操作</th><th>应该看到什么</th></tr></thead><tbody>
+<tr><td>0–2分钟</td><td>工作台找到“张示例／演示”，选择就诊E-13的“继续处理”。</td><td>同一就诊的病历、版本与审核结果重开。先说明这是历史合成结果，经过人工修订。</td></tr>
+<tr><td>2–4分钟</td><td>在病历字段点击“查看原文证据”，再“查依据”。</td><td>患者原文与指南分开；指南显示标题、版本、章节、页码和来源。检索命中不等于诊断成立。</td></tr>
+<tr><td>4–6分钟</td><td>“编辑整页病历”→按模拟原文作一处实际修订→保存。</td><td>新Revision，旧批准失效；未重新审核时导出不可用。冲突需修正，不能仅勾选消除。</td></tr>
+<tr><td>6–7分钟</td><td>处理普通字段、缺失项、候选诊断及风险项→完成审核→导出→工作台重开。</td><td>批准与导出绑定最新版本。未采集内容保留缺失，不填造；课堂模拟审核不代表医生临床复核。</td></tr>
+<tr><td>7–9分钟</td><td>管理员进入“管理后台”→资料目录→检索验证；查询“流感 临床表现”。</td><td>7个版本、4个当前启用版本；可定位片段和原始指南。停用版本不进入医生默认检索。</td></tr>
+<tr><td>9–10分钟</td><td>只读浏览器沿患者→encounter→record_revision→approval/export_event；再看来源→文档→chunk→embedding元数据。</td><td>可筛选、读长文本、沿关联打开记录；采样时间清楚。embedding数量不表示检索质量合格。</td></tr>
+</tbody></table>
+<h2>现场输入与失败切换</h2><p>需要现场展示时，在工作台“登记并报到”→“开始接诊”→选择录音、上传或文本。使用无身份信息的短句，例如“患者今天发热，伴咳嗽和咽痛，没有胸痛，也没有药物过敏史”。角色不确定时先人工确认；模型引用或主体错误必须保留阻断。</p>
+<p>若生成失败或出现内容冲突，说明实际失败层，停止反复重试；返回工作台打开已标明的E-13历史合成就诊继续展示持久化、原文、知识、修订与导出。历史备用不是对现场失败的掩盖。</p>
+<h2>边界与退出</h2><p>本版不承诺所有病历准确，不生成自动处方。5.1仍VERIFY；本轮已完成隔离网络恢复；最终同一版本三条真实输入路径及实际显示检查仍待完成，5.3未开始。结束前保存，关闭网页不会清库；仅在无人操作时通过启动器“停止服务”。遇到版本不匹配，保留现场并联系维护者，不手改数据库。</p>
+</body></html>

@@ -98,11 +98,13 @@ const appState = {
   browserRecordingObjectUrl: "",
   browserRecordingFile: null,
   browserRecordingFinalized: null,
+  browserRecordingSubmitted: false,
   browserRecordingMessage: "",
   browserRecordingChunkStatus: "",
   browserRecordingRequestId: 0,
   pendingInputMethodAfterEncounterSelection: "",
   encounterSelectionNotice: "",
+  pendingRegisteredEncounterId: null,
   lastActionError: "",
   inputMenuOpen: false,
   settingsOpen: false,
@@ -412,13 +414,33 @@ function patientDisplayName(value, fallback = "脱敏患者") {
   return normalized;
 }
 
+// Presentation names apply only to the approved synthetic-case manifest.
+// Never recover names from the private identity map or relax anonymization.
+const SYNTHETIC_PATIENTS = Object.freeze({
+  "SIM-DEMO-0929-FEVER": { name: "张示例", topic: "发热咳嗽" },
+  "SIM-DEMO-0929-NEGATION": { name: "李示例", topic: "否定与家属病史" },
+  "SIM-DEMO-0929-LIVE": { name: "王示例", topic: "现场模拟问诊" },
+});
+
 function syntheticDemoLabel(encounter) {
-  const labels = {
-    "SIM-DEMO-0929-FEVER": "合成演示 · 发热咳嗽",
-    "SIM-DEMO-0929-NEGATION": "合成演示 · 否定与家属",
-    "SIM-DEMO-0929-LIVE": "合成演示 · 现场问诊",
-  };
-  return labels[encounter?.patient_deidentified_id] || "";
+  return SYNTHETIC_PATIENTS[encounter?.patient_deidentified_id]?.name || "";
+}
+
+function encounterPatientLabel(encounter) {
+  return syntheticDemoLabel(encounter) || `脱敏患者 ${encounter?.patient_id || ""}`.trim();
+}
+
+function encounterSwitchBlocked() {
+  if (["requesting", "recording", "paused", "finalizing", "uploading"].includes(appState.browserRecordingStatus)
+      || (appState.browserRecordingStatus === "recorded" && !appState.browserRecordingSubmitted)) {
+    showToast("请先结束并提交或取消当前录音，再切换就诊。");
+    return true;
+  }
+  if (appState.recordEditDirty || appState.roleReviewDirty || appState.recordEditConflict) {
+    showToast("当前有未保存修改或待处理冲突，请先保存或取消编辑，再切换就诊。");
+    return true;
+  }
+  return false;
 }
 
 function detailButton(target, label = "查看详情") {
@@ -616,7 +638,15 @@ function productViewFromHash() {
 }
 
 function setProductView(view, { updateHash = true } = {}) {
-  const nextView = PRODUCT_VIEWS.includes(view) ? view : "workbench";
+  let nextView = PRODUCT_VIEWS.includes(view) ? view : "workbench";
+  if (nextView !== appState.productView && encounterSwitchBlocked()) {
+    if (window.location.hash !== `#${appState.productView}`) window.location.hash = appState.productView;
+    return false;
+  }
+  if (nextView === "encounter" && !selectedEncounterId() && !hasActiveSession()) {
+    nextView = "workbench";
+    appState.encounterSelectionNotice = "请先在工作台登记、报到并开始接诊。";
+  }
   if (nextView !== appState.productView) clearToast();
   appState.productView = nextView;
   if (updateHash && window.location.hash !== `#${nextView}`) {
@@ -629,6 +659,7 @@ function setProductView(view, { updateHash = true } = {}) {
   if (nextView === "admin" && appState.authUser) {
     refreshAdminHome().catch(reportActionError);
   }
+  return true;
 }
 
 function renderProductShell() {
@@ -664,7 +695,6 @@ function encounterCheckInStatusLabel(status) {
 function encounterActionButtons(item = {}, active = false) {
   const encounterId = escapeHtml(item.id);
   const checkInStatus = item.check_in_status || "checked_in";
-  const selectingForRecording = appState.pendingInputMethodAfterEncounterSelection === "record";
   if (checkInStatus === "registered") {
     return `
       <button type="button" class="primary-action" data-encounter-action="check-in" data-encounter-id="${encounterId}">报到</button>
@@ -672,14 +702,8 @@ function encounterActionButtons(item = {}, active = false) {
     `;
   }
   if (checkInStatus === "checked_in") {
-    if (selectingForRecording) {
-      return `
-        <button type="button" class="primary-action recording-action" data-encounter-action="start-recording" data-encounter-id="${encounterId}">开始问诊并录音</button>
-        <button type="button" data-encounter-action="cancel" data-encounter-id="${encounterId}">取消</button>
-      `;
-    }
     return `
-      <button type="button" class="primary-action" data-encounter-action="start" data-encounter-id="${encounterId}">开始问诊</button>
+      <button type="button" class="primary-action" data-encounter-action="start" data-encounter-id="${encounterId}">开始接诊</button>
       <button type="button" data-encounter-action="cancel" data-encounter-id="${encounterId}">取消</button>
     `;
   }
@@ -688,9 +712,6 @@ function encounterActionButtons(item = {}, active = false) {
   }
   if (checkInStatus === "cancelled") {
     return `<button type="button" data-restore-encounter="${encounterId}">只读查看</button>`;
-  }
-  if (selectingForRecording && checkInStatus === "in_progress") {
-    return `<button type="button" class="primary-action recording-action" data-restore-encounter="${encounterId}" data-after-restore-input="record">选择并开始录音</button>`;
   }
   return `<button type="button" data-restore-encounter="${encounterId}">${active ? "返回工作区" : "继续处理"}</button>`;
 }
@@ -720,16 +741,14 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
         <strong>今日暂无就诊任务</strong>
         <span>可以从下方入口开始一次新的问诊工作。</span>
         <div class="empty-state-actions">
-          <button type="button" class="primary-action" data-product-view-target="encounter">新建问诊</button>
-          <button type="button" data-input-method="audio">上传问诊音频</button>
-          <button type="button" data-input-method="text">粘贴问诊文本</button>
+          <button type="button" data-focus-registration>登记演示就诊</button>
         </div>
       </div>
     `;
   }
   const rows = items.map((item) => {
     const active = appState.currentEncounter?.id === item.id;
-    const patient = syntheticDemoLabel(item) || patientDisplayName(item.patient_display_name, item.patient_deidentified_id || `Encounter ${item.id}`);
+    const patient = encounterPatientLabel(item);
     const encounterNo = item.patient_deidentified_id || `E-${item.id}`;
     const workflowState = derivePersistedWorkflowState({
       encounterStatus: item.status,
@@ -743,8 +762,8 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
     return `
       <article class="encounter-worklist-item ${active ? "active" : ""}" data-workflow-state="${escapeHtml(workflowState)}">
         <div class="encounter-worklist-primary">
-          <strong>${escapeHtml(patient)}</strong>
-          <span>${escapeHtml(encounterNo)}</span>
+          <div class="encounter-patient-heading"><strong>${escapeHtml(patient)}</strong>${syntheticDemoLabel(item) ? '<span class="demo-patient-badge">演示</span>' : '<span class="anonymous-patient-badge">已脱敏</span>'}</div>
+          <span>患者标识 ${escapeHtml(encounterNo)} · 就诊 E-${escapeHtml(item.id)}</span>
           <small class="debug-only">版本 ${escapeHtml(item.current_revision_id || "-")} · Task ${escapeHtml(item.task_id || "-")}</small>
         </div>
         <div class="encounter-worklist-meta" aria-label="就诊任务摘要">
@@ -810,13 +829,24 @@ function encounterStatusLabel(status) {
     draft: "草稿",
     modified: "已修改",
     pending_review: "待审核",
+    waiting_review: "待审核",
+    waiting_doctor_review: "待审核",
+    doctor_review: "草稿已生成",
+    reviewed: "待审核",
     approved: "已批准",
     exported: "已导出",
   };
-  return labels[status] || status || "未开始";
+  return labels[status] || "待处理";
 }
 
 function renderEncounterWorklistPanel() {
+  if ($("localSyntheticPatient")) $("localSyntheticPatient").disabled = Boolean(appState.pendingRegisteredEncounterId);
+  if ($("createLocalEncounterButton")) $("createLocalEncounterButton").textContent = appState.pendingRegisteredEncounterId ? "重试报到" : "登记并报到";
+  const notice = $("workbenchSelectionNotice");
+  if (notice) {
+    notice.hidden = !appState.encounterSelectionNotice;
+    notice.textContent = appState.encounterSelectionNotice;
+  }
   const list = $("encounterWorklist");
   const dashboardList = $("dashboardEncounterList");
   const drawerHtml = encounterWorklistMarkup({ includeRevisions: true });
@@ -831,14 +861,16 @@ async function refreshEncounterWorklist() {
   appState.encounterWorklistError = "";
   renderEncounterWorklistPanel();
   const query = $("encounterSearchInput")?.value?.trim() || "";
+  const syntheticIds = Object.keys(SYNTHETIC_PATIENTS).filter(id => query && SYNTHETIC_PATIENTS[id].name.includes(query));
   const status = $("encounterStatusFilter")?.value || "";
   const mine = appState.authUser?.role === "admin" ? "false" : "true";
   const params = new URLSearchParams({ mine });
-  if (query) params.set("q", query);
-  if (status) params.set("status", status);
+  if (query && !syntheticIds.length) params.set("q", query);
+  if (status && status !== "pending_review") params.set("status", status);
   try {
     const data = await api(`/api/encounters?${params.toString()}`);
-    appState.encounterWorklist = data.encounters || [];
+    appState.encounterWorklist = (data.encounters || []).filter(item => !syntheticIds.length || syntheticIds.includes(item.patient_deidentified_id)).filter(item => status !== "pending_review"
+      || ["pending_review", "waiting_review", "waiting_doctor_review", "reviewed"].includes(String(item.status).toLowerCase()));
     appState.encounterWorklistStatus = "ready";
   } catch (error) {
     appState.encounterWorklist = [];
@@ -849,8 +881,10 @@ async function refreshEncounterWorklist() {
 }
 
 async function openEncounterWorklist() {
-  openDrawer("encounterWorklistPanel", "今日就诊");
+  if (!setProductView("workbench")) return;
+  closeDrawer();
   await refreshEncounterWorklist();
+  $("encounterSearchInput")?.focus();
 }
 
 function applyEncounterDetail(detail) {
@@ -881,10 +915,8 @@ function encounterReadyForInput() {
 
 function requireEncounterBeforeInput(method = "") {
   if (encounterReadyForInput()) return true;
-  appState.pendingInputMethodAfterEncounterSelection = method;
-  appState.encounterSelectionNotice = method === "record"
-    ? "请先选择已报到或问诊中的患者，再开始录音生成。可用就诊会显示“选择并开始录音”。"
-    : "请先选择已报到或问诊中的患者，再开始录音、上传音频或粘贴文本。";
+  appState.pendingInputMethodAfterEncounterSelection = "";
+  appState.encounterSelectionNotice = "请在工作台完成报到，点击“开始接诊”后选择录音、上传音频或文本输入。";
   showToast(appState.encounterSelectionNotice);
   openEncounterWorklist().catch(reportActionError);
   return false;
@@ -892,6 +924,7 @@ function requireEncounterBeforeInput(method = "") {
 
 async function restoreEncounter(encounterId, { nextInputMethod = "" } = {}) {
   if (!encounterId) return;
+  if (encounterSwitchBlocked()) return;
   setBusy(true, "正在恢复就诊草稿...");
   try {
     const detail = await api(`/api/encounters/${encodeURIComponent(encounterId)}`);
@@ -923,21 +956,29 @@ async function restoreEncounter(encounterId, { nextInputMethod = "" } = {}) {
 
 async function performEncounterAction(encounterId, action) {
   if (!encounterId || !action) return;
+  if (appState.busy || encounterSwitchBlocked()) return;
   setBusy(true, "正在更新就诊状态...");
   try {
     const detail = await api(`/api/encounters/${encodeURIComponent(encounterId)}/${encodeURIComponent(action)}`, {
       method: "POST",
     });
-    if (appState.currentEncounter?.id === detail.id || action === "start") {
+    if (action === "start") {
       applyEncounterDetail(detail);
+      closeDrawer();
       setProductView("encounter");
+    } else if (appState.currentEncounter?.id === detail.id) {
+      appState.currentEncounter = { ...appState.currentEncounter, ...detail };
     }
     if (action !== "check-in") {
       appState.pendingInputMethodAfterEncounterSelection = "";
       appState.encounterSelectionNotice = "";
     }
     await refreshEncounterWorklist();
-    showToast("就诊状态已更新");
+    appState.encounterSelectionNotice = action === "check-in" ? "报到完成，请点击“开始接诊”。" : "";
+    if (["check-in", "cancel"].includes(action) && String(appState.pendingRegisteredEncounterId) === String(encounterId)) {
+      appState.pendingRegisteredEncounterId = null;
+    }
+    showToast(action === "start" ? "已开始接诊，请选择撰写方式。" : "就诊状态已更新");
   } catch (error) {
     reportActionError(error);
   } finally {
@@ -948,28 +989,39 @@ async function performEncounterAction(encounterId, action) {
 
 async function createLocalEncounterFromForm(event) {
   event?.preventDefault();
-  const deidentifiedId = $("localPatientDeidentifiedId")?.value?.trim() || "";
-  const displayName = $("localPatientDisplayName")?.value?.trim() || "";
-  setBusy(true, "正在登记患者...");
+  if (appState.busy || encounterSwitchBlocked()) return;
+  const deidentifiedId = $("localSyntheticPatient")?.value || "";
+  const patient = SYNTHETIC_PATIENTS[deidentifiedId];
+  if (!patient) { showToast("请选择一位演示患者。"); return; }
+  setBusy(true, "正在登记并报到...");
   try {
-    const detail = await api("/api/encounters", {
+    if (!appState.pendingRegisteredEncounterId) {
+      const detail = await api("/api/encounters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        patient_deidentified_id: deidentifiedId || undefined,
-        patient_display_name: displayName || undefined,
+        patient_deidentified_id: deidentifiedId,
+        patient_display_name: patient.name,
       }),
-    });
-    applyEncounterDetail(detail);
-    if ($("localPatientDeidentifiedId")) $("localPatientDeidentifiedId").value = "";
-    if ($("localPatientDisplayName")) $("localPatientDisplayName").value = "";
+      });
+      appState.pendingRegisteredEncounterId = detail.id;
+    }
+    await api(`/api/encounters/${appState.pendingRegisteredEncounterId}/check-in`, { method: "POST" });
+    appState.pendingRegisteredEncounterId = null;
+    appState.encounterSelectionNotice = "登记与报到完成，请在下方点击“开始接诊”。";
     await refreshEncounterWorklist();
-    setProductView("encounter");
-    showToast("患者已登记，请先报到后开始问诊");
+    setProductView("workbench");
+    showToast(appState.encounterSelectionNotice);
   } catch (error) {
+    appState.encounterSelectionNotice = appState.pendingRegisteredEncounterId
+      ? "登记已保存，报到未完成。请在该就诊行点击“报到”重试，不必重复登记。"
+      : "登记未能确认，请先刷新列表核对是否已有新就诊，再决定是否重新登记。";
+    await refreshEncounterWorklist();
     reportActionError(error);
   } finally {
     setBusy(false);
+    if ($("localSyntheticPatient")) $("localSyntheticPatient").disabled = Boolean(appState.pendingRegisteredEncounterId);
+    if ($("createLocalEncounterButton")) $("createLocalEncounterButton").textContent = appState.pendingRegisteredEncounterId ? "重试报到" : "登记并报到";
     renderAll();
   }
 }
@@ -2296,15 +2348,11 @@ function openDetailDrawer(title, html) {
 function renderPatientBar() {
   const llm = llmDisplayState();
   const displayState = doctorDisplayState();
-  $("patientName").textContent = appState.currentEncounter
-    ? syntheticDemoLabel(appState.currentEncounter) || patientDisplayName(
-      appState.currentEncounter.patient_display_name,
-      appState.currentEncounter.patient_deidentified_id || "模拟患者",
-    )
-    : "未选择患者";
+  $("patientName").textContent = appState.currentEncounter ? encounterPatientLabel(appState.currentEncounter) : "未选择患者";
+  if ($("patientDemoBadge")) $("patientDemoBadge").hidden = !syntheticDemoLabel(appState.currentEncounter);
   const encounterId = selectedEncounterId();
   $("patientProfile").textContent = encounterId
-    ? `本次就诊：${String(encounterId).slice(0, 12)} · 年龄、性别未登记 · 本地演示登记`
+    ? `患者标识 ${appState.currentEncounter?.patient_deidentified_id || "未登记"} · 本次就诊 E-${encounterId}`
     : "年龄、性别未登记 · 请从工作列表选择本次就诊";
   $("sessionId").textContent = appState.currentTaskId
     ? `T-${appState.currentTaskId}`
@@ -8192,6 +8240,7 @@ async function startBrowserRecording() {
   appState.browserRecordingMissingChunks = [];
   appState.browserRecordingSessionId = "";
   appState.browserRecordingFinalized = null;
+  appState.browserRecordingSubmitted = false;
   appState.browserRecordingPausedAt = 0;
   appState.browserRecordingTotalPausedMs = 0;
   appState.browserRecordingElapsedSeconds = 0;
@@ -8433,6 +8482,7 @@ async function cancelBrowserRecording({ silent = false } = {}) {
     ? ""
     : (serverCleanupConfirmed ? "录音已取消。" : "取消请求已保存，网络恢复后会自动清理服务端录音。");
   appState.browserRecordingFinalized = null;
+  appState.browserRecordingSubmitted = false;
   appState.browserRecordingFile = null;
   renderAll();
   if (!silent) showToast(serverCleanupConfirmed ? "录音已取消" : "取消请求已保存，网络恢复后会自动清理");
@@ -8456,6 +8506,7 @@ async function submitBrowserRecording() {
     appState.browserRecordingMessage = "病历草稿已生成，可在工作区继续修改、审核和导出。";
     renderBrowserRecordingPanel();
     if (generated?.task_id || appState.currentTaskId) {
+      appState.browserRecordingSubmitted = true;
       closeDrawer();
       setProductView("encounter");
       showToast("病历草稿已生成，请继续修改和审核");
@@ -8629,7 +8680,7 @@ function bindEvents() {
   $("encounterStatusFilter").addEventListener("change", () => {
     refreshEncounterWorklist();
   });
-  $("encounterWorklist").addEventListener("click", async (event) => {
+  $("encounterWorklist")?.addEventListener("click", async (event) => {
     const actionButton = event.target.closest("[data-encounter-action]");
     if (actionButton) {
       if (actionButton.dataset.encounterAction === "start-recording") {
@@ -8645,6 +8696,7 @@ function bindEvents() {
     await restoreEncounter(button.dataset.restoreEncounter, { nextInputMethod: button.dataset.afterRestoreInput || "" });
   });
   $("dashboardEncounterList")?.addEventListener("click", async (event) => {
+    if (event.target.closest("[data-focus-registration]")) { $("localSyntheticPatient")?.focus(); return; }
     const actionButton = event.target.closest("[data-encounter-action]");
     if (actionButton) {
       if (actionButton.dataset.encounterAction === "start-recording") {
@@ -9054,6 +9106,7 @@ async function init() {
   startAsrPrewarmPolling();
   refreshLlmStatus();
   await restoreAsrSessionFromUrl();
+  if (appState.productView === "encounter" && !selectedEncounterId() && !hasActiveSession()) setProductView("workbench");
 }
 
 init();

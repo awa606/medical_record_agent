@@ -34,24 +34,15 @@ def test_doctor_workspace_layout_and_real_record_entry(width: int, height: int) 
             browser = playwright.chromium.launch(headless=True)
             page = browser.new_page(viewport={"width": width, "height": height})
             _login(page, server.base_url)
-            page.evaluate(
-                """() => {
-                  window.__MRA_APP_STATE__.currentEncounter = {
-                    id: 'sim-alpha51',
-                    patient_display_name: '模拟患者',
-                    patient_deidentified_id: 'SIM-001',
-                    check_in_status: 'checked_in'
-                  };
-                  setProductView('encounter');
-                  renderAll();
-                }"""
-            )
+            page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
+            page.click("#createLocalEncounterButton")
+            page.locator('#dashboardEncounterList [data-encounter-action="start"]').click()
             if width < 900:
                 page.locator("#showTranscriptButton").click()
             page.get_by_role("button", name="开始录音", exact=True).wait_for()
             assert page.get_by_role("button", name="开始录音", exact=True).count() == 1
-            assert page.get_by_text("模拟患者", exact=True).count() >= 1
-            assert page.locator("#patientProfile").inner_text().startswith("本次就诊：")
+            assert page.get_by_text("张示例", exact=True).count() >= 1
+            assert page.locator("#patientProfile").inner_text().startswith("患者标识 SIM-DEMO-0929-FEVER · 本次就诊 E-")
             assert "active" in (page.locator("#workflowSteps .workflow-step").nth(1).get_attribute("class") or "")
             assert not page.locator(".encounter-action-bar").is_visible()
             if width < 900:

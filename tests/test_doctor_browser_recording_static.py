@@ -88,12 +88,12 @@ def test_doctor_recording_requires_visible_encounter_selection() -> None:
     stylesheet = (ROOT / "static" / "doctor-ui-v2.css").read_text(encoding="utf-8")
 
     assert "pendingInputMethodAfterEncounterSelection" in script
-    assert "请先选择已报到或问诊中的患者，再开始录音生成" in script
+    assert "请在工作台完成报到" in script
     assert "encounter-selection-notice" in script
     assert ".encounter-selection-notice" in stylesheet
-    assert "开始问诊并录音" in script
-    assert "选择并开始录音" in script
-    assert 'data-after-restore-input="record"' in script
+    assert "开始接诊" in script
+    assert "选择并开始录音" not in script
+    assert 'data-after-restore-input="record"' not in script
     input_button_handler = script[
         script.index('$("inputMethodButton").addEventListener("click"') :
         script.index('$("displaySettingsButton").addEventListener("click"')

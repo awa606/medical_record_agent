@@ -204,8 +204,8 @@ def test_novice_workbench_uses_task_stats_and_recoverable_empty_actions() -> Non
     assert "pendingInput" in js
     assert "exceptions" in js
     assert "dashboard-empty-state" in js
-    assert 'data-input-method="audio"' in js
-    assert 'data-input-method="text"' in js
+    assert 'data-input-method="audio"' in html
+    assert 'data-input-method="text"' in html
     assert ".encounter-worklist-meta" in ui_css
     assert ".empty-state-actions" in ui_css
 

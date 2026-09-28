@@ -209,9 +209,10 @@ textarea:focus {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(23, 104, 196, 0.2);
+  border: 0;
   border-radius: 10px;
-  background: linear-gradient(145deg, #edf6ff, #dbeaff);
+  background: transparent;
+  object-fit: contain;
   color: #145da9;
   font-size: 11px;
   font-weight: 900;
@@ -2210,8 +2211,8 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
 }
 
 .login-brand-lockup .brand-mark {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.1);
+  border: 0;
+  background: transparent;
   color: #fff;
 }
 

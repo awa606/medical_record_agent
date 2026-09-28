@@ -139,3 +139,19 @@ def test_open_uses_isolated_browser_profile(registered, tmp_path, monkeypatch):
     assert str(edge) == args[0]
     assert "--app=http://127.0.0.1:8795/static/doctor.html" in args
     assert "--user-data-dir=" + str(Path(config["runtime"]).parent / "doctor-browser-profile") in args
+
+
+def test_brand_fingerprints_optional_for_old_registration_but_complete_for_new(registered, monkeypatch):
+    config, items = registered
+    pilot.validate(config)  # Existing registrations remain usable.
+    for name in pilot.BRAND_RESOURCES:
+        config["resources"][name] = pilot.hashlib.sha256(b"brand").hexdigest()
+    pilot.validate(config)
+    monkeypatch.setattr(pilot, "fetch", lambda port, path: (200, b"brand" if "/brand/" in path else b"current"))
+    assert pilot.web_status(config, items)["web_available"]
+    monkeypatch.setattr(pilot, "fetch", lambda *args: (200, b"current"))
+    with pytest.raises(pilot.PilotError, match="RESOURCE_MISMATCH"):
+        pilot.web_status(config, items)
+    del config["resources"][pilot.BRAND_RESOURCES[0]]
+    with pytest.raises(pilot.PilotError):
+        pilot.validate(config)

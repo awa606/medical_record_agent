@@ -32,6 +32,11 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
     output.mkdir(parents=True, exist_ok=True)
     for name in ("manual.html", "guide.css", "manual.css", "feedback.html", "feedback.js", "maintenance.html"):
         shutil.copyfile(source / name, output / name)
+    brand = source.parents[2] / "static/brand/medilisten-v1.png"
+    shutil.copyfile(brand, output / "medilisten-v1.png")
+    html = output / "manual.html"
+    html.write_text(html.read_text(encoding="utf8").replace(
+        "../../../static/brand/medilisten-v1.png", "medilisten-v1.png"), encoding="utf8")
     shots = []
     for item in manifest["screenshots"]:
         key = item["key"]
@@ -77,6 +82,9 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
             item.bookmark = bookmark
         story.append(item)
 
+    cover_logo = Image(str(brand), width=64, height=64)
+    cover_logo.hAlign = "LEFT"
+    story.append(cover_logo)
     paragraph("MediListen / 医生试用", small)
     story.append(Spacer(1, 85))
     paragraph("医生工作台操作手册", ParagraphStyle("cover", parent=heading, fontSize=28, leading=40))

@@ -16,6 +16,7 @@ from urllib import error, request
 
 SERVICES = ("ollama", "app", "gateway")
 RESOURCES = ("doctor.html", "doctor.js", "doctor.css", "doctor-ui-v2.css", "doctor-workspace.css")
+BRAND_RESOURCES = ("brand/medilisten-v1.png", "brand/medilisten-v1.ico")
 MODEL_DIGEST = "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7"
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -108,7 +109,7 @@ def configure(project: str, port: int, path: Path) -> dict:
     if not manifest.is_file() or sha(manifest) != MODEL_DIGEST:
         raise PilotError("MODEL_DIGEST_MISMATCH: 固定模型摘要不符。")
     resources = {}
-    for resource in RESOURCES:
+    for resource in (*RESOURCES, *BRAND_RESOURCES):
         status, content = fetch(port, "/static/" + resource)
         if status != 200:
             raise PilotError("RESOURCE_MISSING: 医生页面资源不完整。")
@@ -128,7 +129,8 @@ def configure(project: str, port: int, path: Path) -> dict:
 def validate(config: dict) -> dict:
     if config.get("schema_version") != 1 or set(config.get("containers", {})) != set(SERVICES):
         raise PilotError("INVALID_CONFIG: 配置版本或服务不完整。")
-    if set(config.get("resources", {})) != set(RESOURCES):
+    # Previous registrations stay valid; a new registration pins both brand assets.
+    if set(config.get("resources", {})) not in (set(RESOURCES), set(RESOURCES) | set(BRAND_RESOURCES)):
         raise PilotError("INVALID_CONFIG: 网页资源指纹不完整，需要维护人员重新登记。")
     items = {s: inspect(config["containers"][s]["id"]) for s in SERVICES}
     check_real(items, config["project"], config["port"])

@@ -6,6 +6,7 @@ $configPath = (Resolve-Path -LiteralPath $Config).Path
 $pythonPath = (Get-Command $Python).Source
 $controller = Join-Path $PSScriptRoot 'doctor_pilot.py'
 $documents = Join-Path $root 'docs\pilot\doctor-v1'
+$iconPath = Join-Path $root 'static\brand\medilisten-v1.ico'
 
 if ($InstallShortcut) {
     $desktop = [Environment]::GetFolderPath('Desktop')
@@ -16,6 +17,7 @@ if ($InstallShortcut) {
     $shortcut.Arguments = '-NoProfile -STA -WindowStyle Hidden -File "' + $PSCommandPath + '" -Config "' + $configPath + '" -Python "' + $pythonPath + '"'
     $shortcut.WorkingDirectory = $root
     $shortcut.Description = '本机候选版：启动、工作台、操作手册与试用反馈'
+    if (Test-Path -LiteralPath $iconPath) { $shortcut.IconLocation = "$iconPath,0" }
     $shortcut.Save()
     Write-Output $link
     exit
@@ -26,6 +28,7 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'MediListen · 医生试用入口'
+if (Test-Path -LiteralPath $iconPath) { $form.Icon = New-Object System.Drawing.Icon($iconPath) }
 $form.Size = New-Object System.Drawing.Size(720,530)
 $form.MinimumSize = New-Object System.Drawing.Size(650,500)
 $form.StartPosition = 'CenterScreen'
@@ -121,7 +124,7 @@ $timer.Add_Tick({
 $timer.Start()
 $form.Add_FormClosed({$timer.Stop();$timer.Dispose()})
 if ($SmokeTest) {
-    $result=@{title=$form.Text; action_buttons=@($actions.Controls | ForEach-Object {$_.Text}); help_buttons=@($help.Controls | ForEach-Object {$_.Text}); document_directory=$documents}
+    $result=@{title=$form.Text; icon_path=$iconPath; custom_icon=(Test-Path -LiteralPath $iconPath); action_buttons=@($actions.Controls | ForEach-Object {$_.Text}); help_buttons=@($help.Controls | ForEach-Object {$_.Text}); document_directory=$documents}
     $timer.Stop();$timer.Dispose();$form.Dispose()
     $result | ConvertTo-Json -Compress
     exit

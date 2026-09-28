@@ -1,6 +1,6 @@
 # 数据库与知识库只读浏览器
 
-医生入口仍为 `http://127.0.0.1:8795/static/doctor.html`。技术浏览器优先使用 `http://127.0.0.1:8796/`，占用时8797，以启动器输出为准。它展示**明确合成病例的只读快照**，不是实时数据库或病历编辑后台。
+医生入口仍为 `http://127.0.0.1:8795/static/doctor.html`。技术浏览器依次尝试8796、8797、18896、18897，以启动器输出为准。9月28日晚本机Windows保留8796／8797，实际使用 `http://127.0.0.1:18896/`。它展示**明确合成病例的只读快照**，不是实时数据库或病历编辑后台。
 
 ## 安装、启动、刷新和停止
 
@@ -9,15 +9,15 @@
 ```powershell
 python -m venv .artifacts/alpha51-data-browser-20260928/venv
 ./.artifacts/alpha51-data-browser-20260928/venv/Scripts/python.exe -m pip install -r tools/data-browser/requirements-lock.txt
-./scripts/Start-MRADataBrowser.ps1 -SourceDb '.artifacts/alpha51-deployment-repair-20260927-1345/runtime/medical_record_agent.sqlite3' -SourceLabel '8795 / ee0b5f0 / anonymous course demo' -OpenBrowser
+./scripts/Start-MRADataBrowser.ps1 -SourceDb '.artifacts/<本轮目录>/source-backup.private.sqlite3' -SourceLabel '8795 / <实际运行SHA> / <备份时间>' -OpenBrowser
 ./scripts/Start-MRADataBrowser.ps1 -Action Open
 ./scripts/Start-MRADataBrowser.ps1 -Action Refresh -OpenBrowser
 ./scripts/Start-MRADataBrowser.ps1 -Action Stop
 ```
 
-`SourceDb`必须对应实际环境，会被解析为绝对路径。首次使用本地一次性链接登录，不需要医生账号，不要复制该链接到Git或报告。后续使用同一浏览器配置；换浏览器或登录失效时执行刷新并重新打开。
+`SourceDb`必须是先在应用容器内用SQLite Backup API生成、再复制到本机的一致性备份，会被解析为绝对路径。不要从Windows直接读取Docker正在使用的WAL库。刷新前重新备份，并更新来源SHA和时间；复用旧备份只能称为重新发布同一采样。首次使用本地一次性链接登录，不需要医生账号，不要复制该链接到Git或报告。后续使用同一浏览器配置；换浏览器或登录失效时执行刷新并重新打开。
 
-刷新先生成、校验新快照，再停止本工具旧进程；8796与8797可能交替。停止不删快照，不影响8795、2626和模型。两端口占用时失败，不停止无关服务。旧快照及manifest保留，可用同一工具重新启动。
+刷新先生成、校验新快照，在另一个可绑定端口启动成功，再停止本工具旧进程。停止不删快照，不影响8795、2626和模型。端口选择实际尝试本机绑定，不只检查监听列表；Windows保留端口即使无人监听也不可用。默认端口均不可用时明确失败；可指定`-Port 18898`等已确认空闲端口，不停止无关服务。旧快照及manifest保留，可用同一工具重新启动。
 
 ## 两分钟关联演示
 
@@ -27,7 +27,7 @@ python -m venv .artifacts/alpha51-data-browser-20260928/venv
 2. **知识链**：`knowledge_source`查看机构和URL，进入关联 `knowledge_document`查看版本、启停和SHA，再打开 `knowledge_chunk`查看章节、页码和完整正文；最后查看 `knowledge_embedding_metadata`模型和维度。
 3. 表格中的外键可返回关联记录。Datasette 0.65.5单行页主要提供入向关联；返回上游时先回表格再点外键。长正文可打开行详情阅读。
 
-本轮快照含4名合成患者、4次就诊、5个Revision、2条批准/导出、7个知识文档版本、116个片段、96条embedding元数据，其中4份文档启用。首页标明采样时间及来源。停用/历史文档用于版本检查，**不表示医生检索使用它们**；embedding行数不等于混合检索验收。
+9月28日19:01容器备份的投影含4名合成患者、8次就诊、9个Revision、4条批准／导出、7个知识文档版本、116个片段、96条embedding元数据，其中4份文档启用。后续刷新以首页和manifest为准。停用／历史文档用于版本检查，**不表示医生检索使用它们**；embedding行数不等于混合检索验收。
 
 ## 数据边界与故障
 

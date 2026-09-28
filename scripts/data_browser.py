@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 import secrets
+import socket
 import sqlite3
 import webbrowser
 
@@ -34,6 +35,24 @@ SPAN_KEYS = ("text", "index", "segment_id", "start_time", "end_time")
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def choose_loopback_port(ports: list[int]) -> int:
+    """Probe binding, including Windows exclusions not shown as listeners."""
+    if not ports or any(not 1024 <= port <= 65535 for port in ports):
+        raise ValueError("viewer ports must be in 1024..65535")
+    failures = []
+    for port in ports:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+                if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                    probe.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+                probe.bind(("127.0.0.1", port))
+            return port
+        except OSError as exc:
+            failures.append(f"{port}: {getattr(exc, 'winerror', None) or exc.errno}")
+    raise RuntimeError("No bindable loopback port (" + ", ".join(failures) +
+                       "); choose an explicit -Port. Existing services retained.")
 
 
 def _rows(connection, table):
@@ -185,15 +204,21 @@ def main():
     p.add_argument("--source-label", required=True)
     p = sub.add_parser("serve")
     p.add_argument("--snapshot-dir", type=Path, required=True)
-    p.add_argument("--port", type=int, choices=(8796, 8797), required=True)
+    p.add_argument("--port", type=int, required=True)
     p.add_argument("--run-id", required=True)
     p = sub.add_parser("open")
     p.add_argument("--snapshot-dir", type=Path, required=True)
+    p = sub.add_parser("choose-port")
+    p.add_argument("ports", type=int, nargs="+")
     args = parser.parse_args()
     if args.command == "snapshot":
         print(json.dumps(export_snapshot(args.source_db, args.output, args.allowlist, args.source_label), ensure_ascii=False))
     elif args.command == "serve":
+        if not 1024 <= args.port <= 65535:
+            parser.error("viewer port must be in 1024..65535")
         serve(args.snapshot_dir, args.port, args.run_id)
+    elif args.command == "choose-port":
+        print(choose_loopback_port(args.ports))
     else:
         login_file = args.snapshot_dir / "login.private.json"
         login = json.loads(login_file.read_text(encoding="utf-8"))

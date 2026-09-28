@@ -3,11 +3,37 @@ import importlib.util
 import json
 from pathlib import Path
 import sqlite3
+import socket
 import tempfile
 import unittest
 from contextlib import contextmanager
+from unittest.mock import patch
 
-from scripts.data_browser import TABLES, export_snapshot, make_datasette
+from scripts.data_browser import TABLES, choose_loopback_port, export_snapshot, make_datasette
+
+
+class PortTests(unittest.TestCase):
+    def test_windows_reserved_port_can_fall_back_without_stopping_anything(self):
+        with patch("scripts.data_browser.socket.socket") as factory:
+            probe = factory.return_value.__enter__.return_value
+            probe.bind.side_effect = [PermissionError(13, "reserved"), None]
+            self.assertEqual(choose_loopback_port([8796, 18896]), 18896)
+            self.assertEqual(probe.bind.call_args.args, (("127.0.0.1", 18896),))
+
+    def test_occupied_port_is_rejected_and_listener_remains_alive(self):
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+            listener.listen(1)
+            port = listener.getsockname()[1]
+            with self.assertRaises(RuntimeError):
+                choose_loopback_port([port])
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                pass
+
+    def test_invalid_ports_cannot_select_privileged_or_random_binding(self):
+        for ports in ([], [0], [80], [65536]):
+            with self.assertRaises(ValueError):
+                choose_loopback_port(ports)
 
 
 @contextmanager

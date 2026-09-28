@@ -5859,6 +5859,14 @@ async function refreshTask(taskId, taskFromEvent = null) {
   if (previousApprovalRevisionKey && previousApprovalRevisionKey !== appState.approvalRevisionId) {
     appState.currentExportReadiness = null;
   }
+  // Saving a new revision invalidates the persisted encounter approval/export.
+  // Reload that state before rendering; a cached 'exported' encounter must not
+  // hide the review action for the newly saved revision.
+  const encounterId = selectedEncounterId();
+  if (encounterId && Number(appState.currentEncounter?.task_id) === Number(appState.currentTaskId)) {
+    const encounter = await api(`/api/encounters/${encodeURIComponent(encounterId)}`);
+    if (selectedEncounterId() === encounterId) appState.currentEncounter = encounter;
+  }
   await refreshKnowledgeEvidence(appState.currentTaskId);
   await refreshAgentTrace(appState.currentTaskId);
   renderAll();

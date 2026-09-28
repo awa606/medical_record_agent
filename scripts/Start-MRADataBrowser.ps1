@@ -3,6 +3,7 @@ param(
     [string]$SourceDb,
     [string]$SourceLabel = '8795 candidate',
     [string]$PythonPath,
+    [ValidateRange(0,65535)][int]$Port = 0,
     [switch]$OpenBrowser
 )
 $ErrorActionPreference = 'Stop'
@@ -44,10 +45,10 @@ $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $snapshotDir = Join-Path $toolDir $stamp
 & $PythonPath $scriptPath snapshot --source-db $SourceDb --output $snapshotDir --allowlist $policyPath --source-label $SourceLabel
 if ($LASTEXITCODE -ne 0) { throw 'Snapshot failed; existing browser retained.' }
-$usedPorts = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort)
-$port = @(8796,8797 | Where-Object { $_ -notin $usedPorts } | Select-Object -First 1)
-if ($port.Count -eq 0) { throw '8796 and 8797 occupied; existing services retained.' }
-$port = [int]$port[0]
+$candidatePorts = if ($Port) { @($Port) } else { @(8796,8797,18896,18897) }
+$selectedPort = & $PythonPath $scriptPath choose-port @candidatePorts
+if ($LASTEXITCODE -ne 0) { throw 'Viewer port unavailable or reserved; use an explicit -Port. Existing services retained.' }
+$port = [int]$selectedPort
 $runId = [guid]::NewGuid().ToString()
 $argsLine = '"{0}" serve --snapshot-dir "{1}" --port {2} --run-id {3}' -f $scriptPath, $snapshotDir, $port, $runId
 $proc = Start-Process -FilePath $PythonPath -ArgumentList $argsLine -WindowStyle Hidden -PassThru `

@@ -67,3 +67,12 @@ python scripts/build_doctor_pilot_handbook.py --manifest .artifacts/workbench-fl
 - 同一版本三路径及恢复通过前，不将内部候选交给医生独立使用。
 
 官方依据：[Docker重启策略](https://docs.docker.com/engine/containers/start-containers-automatically/)、[Edge网站应用与快捷方式](https://support.microsoft.com/en-us/edge/install-manage-or-uninstall-apps-in-microsoft-edge)。本工具使用Edge独立应用窗口，不声称已安装或离线缓存完整PWA。
+
+
+## 2026-09-28 知识目录增量
+
+当前8795候选应用为 `a3a5ca8`。桌面入口配置改为 `.artifacts/knowledge-workspace-20260928/deployment.json`，手册位于同目录 `handbook/`。旧配置、镜像及手册保留，回退环境文件为 `rollback.env`。
+
+管理员：管理后台 → 资料目录／检索验证／索引状态。医生：病历字段 → 查依据。两者都检索启用版本，但医生还带入就诊上下文，排序不要求相同。2025年流感候选页码定位8/10，保持停用；不以找到文档代替正确定位。
+
+新版手册只增补知识章节；录音、报到两张未修改区域截图沿用86f4b58并标注来源，其余为本轮实际页面。此候选没有新的物理麦克风、实际缩放或完整离线恢复证据，不是稳定发布。

@@ -86,7 +86,7 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
     paragraph(soup.select_one("main > aside").get_text(" ", strip=True))
     paragraph(soup.select_one(".revision-note").get_text(" ", strip=True))
     paragraph("每项任务按使用条件、编号步骤、实际界面、成功结果与失败恢复组织。维护说明与医生正文分开。")
-    paragraph("界面截图为当前候选与合成病例。未通过最终三路径、模型质量及恢复验收前，不将本手册视为临床或稳定发布证明。", small)
+    paragraph("界面截图使用合成病例，图注标明沿用的历史截图。本次知识章节来自当前候选；未通过最终三路径、模型质量及恢复验收前，不将本手册视为临床或稳定发布证明。", small)
     story.append(PageBreak())
     paragraph("操作目录", heading, "contents")
     for n, section in enumerate(sections):
@@ -106,7 +106,8 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
             elif element.get("data-shot") in images:
                 shot = images[element["data-shot"]]
                 im = Image(str(output / shot["path"]))
-                scale = min(width / im.imageWidth, 350 / im.imageHeight)
+                max_height = 260 if shot["key"] == "knowledge-admin" else 350
+                scale = min(width / im.imageWidth, max_height / im.imageHeight)
                 im.drawWidth, im.drawHeight = im.imageWidth * scale, im.imageHeight * scale
                 im.hAlign = "LEFT"
                 story.extend([Spacer(1, 5), im, Spacer(1, 5)])

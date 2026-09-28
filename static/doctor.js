@@ -2686,7 +2686,9 @@ function draftFieldValue(fields, key) {
   if (!fields) return "";
   if (key === "preliminary_diagnosis") {
     return draftDiagnoses(fields)
-      .map((diagnosis) => diagnosis.name || "")
+      .map((diagnosis) => diagnosis.name
+        ? `${diagnosis.name}${diagnosis.deleted_by_doctor || diagnosis.doctor_review_status === "ai_candidate_deleted" ? "（医生已排除）" : ""}`
+        : "")
       .filter(Boolean)
       .join("；");
   }

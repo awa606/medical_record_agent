@@ -50,7 +50,7 @@ def image_id(name: str) -> str:
 def tracked_files(package: Path) -> list[Path]:
     return sorted(
         (item for item in package.rglob("*") if item.is_file()
-         and item.name not in {"manifest.json", "sha256sums.txt"}),
+         and item.relative_to(package).as_posix() not in {"manifest.json", "sha256sums.txt"}),
         key=lambda item: item.relative_to(package).as_posix(),
     )
 
@@ -234,6 +234,12 @@ def restore(args: argparse.Namespace) -> None:
     (target / "admin-password.txt").write_text(password, encoding="utf-8")
     for image_name in ("app-image.tar", "ollama-image.tar"):
         run("docker", "load", "-i", str(target / image_name))
+    # The synthetic SQLite seed may be root-owned after export. Prepare only
+    # this newly created runtime for the image's unprivileged application user.
+    app_image = next(name for name in manifest["images"] if name != "ollama/ollama:0.34.0")
+    run("docker", "run", "--rm", "--network", "none", "--user", "0:0",
+        "--entrypoint", "chown", "-v", f"{runtime}:/restore-runtime",
+        app_image, "-R", "appuser:appuser", "/restore-runtime")
     project = f"mra51restore{args.port}"
     command = ("docker", "compose", "-p", project, "-f", "compose.offline.yml")
     run(*command, "up", "-d", cwd=target)

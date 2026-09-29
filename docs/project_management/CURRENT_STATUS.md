@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-29T10:32:48.210128+08:00`
-- Source hash: `80faa23bb04f9482361bf25af978ced92e26285ac357af9f320e42404d405f20`
+- Updated at: `2026-09-29T11:41:57.062581+08:00`
+- Source hash: `e8e47a8c429d9c546adbfb58ba4b933891b9b8d2ab79065f7fad8ca319474230`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@2ba52dd204a7e5c9ce0ba4346e4d67a73ef94a84`
+- Repo: `codex/alpha51-demo-visual-e2e@43dfef1075ba37ea9133761d5a7e68ad9af73bfe`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; restored course checkpoint 2026-09-29; first-output quality and final three-path/display gates pending; Full M4 TBD / HARDWARE DEPENDENT**
+- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; course checkpoint 2026-09-29; rework/restore impact pending; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 展示8795与独立测试8798交付；原文和分项审核恢复，模型质量及最终发布仍待验收** — `VERIFY`
+**5.1 · 使用界面与数据查看器中文化已交付；模型质量和最终发布待验收** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1：在独立测试版定位首次字段主诉归属和漏提，保留失败；模型质量通过后完成同SHA三路径、显示及恢复
-- Parallel waiting task: 8795固定展示界面，后续功能进入8798；5.3和模型训练不启动
+- Single next task: 5.1：修复主诉引用、漏提与过敏史/既往处理归属；通过后验收最终真实三路径、现场显示及恢复，不放宽门禁
+- Parallel waiting task: 无；训练数据与资源Gate未通过，5.3不启动
 
 ## Manual Actions
 
-- 可通过桌面使用测试版新建匿名患者、上传音频并核对保存；最终验收时再安排物理麦克风
+- 当前无需补数据或购买；模型门通过后配合最终物理录音与外屏检查，再组织3–5名医生合成病例试用
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

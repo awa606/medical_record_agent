@@ -313,7 +313,7 @@ c.close()
 active=[]
 for p in pathlib.Path('/app/runtime/uploads').rglob('session.json'):
  d=json.loads(p.read_text()); status=d.get('status')
- if status not in ('completed','failed','cancelled'): active.append(status)
+ if status not in ('completed','stream_ready','reviewed','formal_record_created','failed','cancelled'): active.append(status)
 print(json.dumps({'tasks':n,'sessions':len(active)}))"""
     result = json.loads(command("docker", "exec", items["app"]["Id"], "python", "-c", script))
     if result["tasks"] or result["sessions"]:

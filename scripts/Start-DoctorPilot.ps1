@@ -106,6 +106,9 @@ $script:buttons += Add-ActionButton $actions '停止服务' {
 }
 [void](Add-ActionButton $help '快速开始／操作手册' { Start-Process (Join-Path $documents 'manual.html') })
 [void](Add-ActionButton $help '填写试用反馈' { Start-Process (Join-Path $documents 'feedback.html') })
+if ($version.account_note -and (Test-Path -LiteralPath $version.account_note)) {
+    [void](Add-ActionButton $help '本机测试账号' { Start-Process -FilePath notepad.exe -ArgumentList ('"' + $version.account_note + '"') })
+}
 [void](Add-ActionButton $help '维护说明' { Start-Process (Join-Path $documents 'maintenance.html') })
 $timer=New-Object System.Windows.Forms.Timer; $timer.Interval=1000
 $timer.Add_Tick({

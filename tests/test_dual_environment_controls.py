@@ -1,5 +1,8 @@
 import copy
 import json
+import sqlite3
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -53,3 +56,26 @@ def test_environment_cookie_pinning_cannot_silently_change(registered):
     items["app"]["Config"]["Env"].append("MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME=other")
     with pytest.raises(pilot.PilotError, match="COOKIE_MISMATCH"):
         pilot.validate(config)
+
+
+@pytest.mark.parametrize('status,busy', [('stream_ready',False), ('reviewed',False),
+    ('formal_record_created',False), ('recording',True), ('transcribing',True), ('unknown',True)])
+def test_idle_probe_distinguishes_reviewable_audio_from_running_capture(registered, tmp_path, monkeypatch, status, busy):
+    config, items = registered
+    db = tmp_path / 'medical_record_agent.sqlite3'
+    with sqlite3.connect(db) as conn:
+        conn.execute('CREATE TABLE agent_task(status TEXT)')
+        conn.execute("INSERT INTO agent_task VALUES ('WAITING_DOCTOR_REVIEW')")
+    uploads = tmp_path / 'uploads'
+    uploads.mkdir()
+    (uploads / 'session.json').write_text(json.dumps({'status':status}))
+    def local_probe(*args):
+        assert args[:2] == ('docker','exec')
+        script = args[-1].replace('/app/runtime', tmp_path.as_posix())
+        return subprocess.check_output([sys.executable,'-c',script], text=True)
+    monkeypatch.setattr(pilot, 'command', local_probe)
+    if busy:
+        with pytest.raises(pilot.PilotError, match='ACTIVE_WORK'):
+            pilot.assert_idle(config, items, True)
+    else:
+        pilot.assert_idle(config, items, True)

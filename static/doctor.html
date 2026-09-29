@@ -4,18 +4,22 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>MediListen - AI 智能病历助手</title>
-    <link rel="stylesheet" href="./doctor.css?v=2026071601" />
-    <link rel="stylesheet" href="./doctor-ui-v2.css?v=2026072901" />
+    <link rel="icon" href="./brand/medilisten-v1.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
+    <link rel="stylesheet" href="./doctor.css?v=alpha51-zh-20260929" />
+    <link rel="stylesheet" href="./doctor-ui-v2.css?v=alpha51-zh-20260929" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-zh-20260929" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
       <header class="topbar">
         <div class="brand-block">
-          <div class="brand-mark" aria-hidden="true">ML</div>
+          <img class="brand-mark" src="./brand/medilisten-v1.png" alt="" aria-hidden="true" />
           <div class="brand-copy">
             <h1>MediListen</h1>
-            <p>LISTEN · TRANSCRIBE · GENERATE · REVIEW</p>
+            <p>聆听 · 转写 · 整理 · 审核</p>
           </div>
+          <span id="deploymentBadge" class="deployment-badge" role="status">正在核验环境</span>
         </div>
         <nav class="top-actions" aria-label="全局操作">
           <button type="button" id="openWorklistButton">查找就诊</button>
@@ -25,7 +29,7 @@
               <button type="button" data-input-method="record">录音生成</button>
               <button type="button" data-input-method="audio">音频生成</button>
               <button type="button" data-input-method="text">文本生成</button>
-              <button type="button" data-input-method="mock">Mock 演示</button>
+              <button type="button" data-input-method="mock">模拟数据演示</button>
             </div>
           </div>
           <div class="display-settings-menu">
@@ -55,6 +59,8 @@
               <section>
                 <span class="settings-label">模型状态</span>
                 <strong id="settingsAsrModelStatus">模型状态未知</strong>
+                <p id="settingsLlmRuntimeStatus">病历引擎尚未核验</p>
+                <p id="settingsKnowledgeRuntimeStatus">知识检索尚未执行</p>
               </section>
             </div>
           </div>
@@ -62,8 +68,8 @@
             <summary>调试工具</summary>
             <div class="debug-tool-menu">
               <button type="button" id="openAudioTranscribeButton">上传转写</button>
-              <button type="button" id="openEvaluationButton">ASR评测</button>
-              <button type="button" id="testLlmButton">LLM自检</button>
+              <button type="button" id="openEvaluationButton">语音转写评测</button>
+              <button type="button" id="testLlmButton">病历生成自检</button>
               <button type="button" id="openDebugButton">调试详情</button>
               <a href="./debug.html">打开调试页</a>
             </div>
@@ -80,17 +86,17 @@
           <span>临床工作区</span>
           <strong>MediListen</strong>
         </div>
-        <button type="button" class="product-nav-item" data-product-view-target="workbench">
-          <span>工作台</span>
-          <small>今日待办与就诊列表</small>
+        <button type="button" class="product-nav-item" data-product-view-target="workbench" aria-label="工作台">
+          <span class="product-nav-full">工作台</span><span class="product-nav-short" aria-hidden="true">工作台</span>
+          <small>就诊列表与待办</small>
         </button>
-        <button type="button" class="product-nav-item" data-product-view-target="encounter">
-          <span>就诊工作区</span>
-          <small>转写、病历与医生审核</small>
+        <button type="button" class="product-nav-item" data-product-view-target="encounter" aria-label="就诊工作区">
+          <span class="product-nav-full">就诊工作区</span><span class="product-nav-short" aria-hidden="true">就诊</span>
+          <small>转写 · 病历 · 审核</small>
         </button>
-        <button type="button" class="product-nav-item" data-product-view-target="admin">
-          <span>管理后台</span>
-          <small>用户权限与运行状态</small>
+        <button type="button" class="product-nav-item" data-product-view-target="admin" aria-label="管理后台">
+          <span class="product-nav-full">管理后台</span><span class="product-nav-short" aria-hidden="true">管理</span>
+          <small>账号与运行状态</small>
         </button>
         <div class="product-nav-foot">
           <span class="environment-dot" aria-hidden="true"></span>
@@ -136,22 +142,22 @@
         <section class="dashboard-panel local-registration-panel" aria-label="本地患者登记">
           <div class="panel-header">
             <div>
-              <h2>本地患者登记</h2>
-              <p>用于未接入 HIS 的演示环境，只录入脱敏标识并绑定当前登录医生。</p>
+              <h2 id="localRegistrationTitle">新建演示就诊</h2>
+              <p id="localRegistrationHelp">选择合成患者，完成报到后开始接诊。此入口不代替医院挂号系统。</p>
             </div>
           </div>
           <form id="localEncounterForm" class="local-registration-form">
             <label>
-              <span>脱敏患者标识</span>
-              <input id="localPatientDeidentifiedId" type="text" maxlength="80" placeholder="例如 SIM-0001" autocomplete="off" />
+              <span id="localPatientLabel">模拟患者 · 仅演示</span>
+              <select id="localSyntheticPatient" required>
+                <option value="SIM-DEMO-0929-FEVER">张示例 · 发热咳嗽</option>
+                <option value="SIM-DEMO-0929-NEGATION">李示例 · 否定与家属病史</option>
+                <option value="SIM-DEMO-0929-LIVE">王示例 · 现场模拟问诊</option>
+              </select>
             </label>
-            <label>
-              <span>显示名称</span>
-              <input id="localPatientDisplayName" type="text" maxlength="80" placeholder="模拟患者" autocomplete="off" />
-            </label>
-            <button type="submit" class="primary-action" id="createLocalEncounterButton">登记患者</button>
+            <button type="submit" class="primary-action" id="createLocalEncounterButton">登记并报到</button>
           </form>
-          <p class="form-help">新登记患者默认“已登记”，需报到后才能开始问诊和生成病历。</p>
+          <p class="form-help">报到完成后，在就诊任务中点击“开始接诊”。同一模拟患者可以建立不同的就诊记录。</p>
         </section>
         <section class="dashboard-panel">
           <div class="panel-header">
@@ -161,26 +167,40 @@
             </div>
             <button type="button" id="dashboardOpenWorklistButton">搜索与筛选</button>
           </div>
+          <p id="workbenchSelectionNotice" class="encounter-selection-notice" role="status" hidden></p>
+          <div class="worklist-toolbar">
+            <input id="encounterSearchInput" type="search" placeholder="搜索模拟姓名或患者标识" aria-label="搜索就诊" />
+            <select id="encounterStatusFilter" aria-label="筛选就诊状态">
+              <option value="">全部状态</option>
+              <option value="pending_review">待审核</option>
+              <option value="approved">已批准</option>
+              <option value="exported">已导出</option>
+              <option value="draft">草稿</option>
+              <option value="modified">已修改</option>
+            </select>
+            <button type="button" id="refreshWorklistButton">刷新</button>
+          </div>
           <div id="dashboardEncounterList" class="encounter-worklist" aria-live="polite"></div>
         </section>
       </section>
 
-      <section id="encounterView" class="product-view encounter-view" data-product-view="encounter" aria-label="患者就诊工作区">
+      <section id="encounterView" class="product-view encounter-view alpha51-workspace" data-product-view="encounter" aria-label="患者就诊工作区">
         <section class="patient-bar encounter-patient-banner" aria-label="患者与会话信息">
           <div class="patient-identity-cell">
             <span class="meta-label">当前患者</span>
             <strong id="patientName">-</strong>
+            <span id="patientDemoBadge" class="demo-patient-badge" hidden>演示</span>
             <small id="patientProfile">-</small>
           </div>
-          <div>
+          <div class="encounter-session-cell">
             <span class="meta-label">就诊会话</span>
             <strong id="sessionId">-</strong>
           </div>
-          <div>
+          <div class="encounter-input-cell">
             <span class="meta-label">输入方式</span>
             <strong id="recordingStatus">-</strong>
           </div>
-          <div>
+          <div class="encounter-review-cell">
             <span class="meta-label">审核状态</span>
             <strong id="reviewStatus">-</strong>
           </div>
@@ -190,26 +210,20 @@
           </div>
           <span id="asrModelStatus" class="model-status neutral debug-only">模型状态未知</span>
           <div class="debug-only">
-            <span class="meta-label">LLM Provider</span>
+            <span class="meta-label">病历生成服务（LLM）</span>
             <strong id="llmProvider">-</strong>
           </div>
           <div class="debug-only">
-            <span class="meta-label">LLM Model</span>
+            <span class="meta-label">病历生成模型</span>
             <strong id="llmModel">-</strong>
           </div>
           <div class="debug-only">
-            <span class="meta-label">LLM Fallback</span>
+            <span class="meta-label">模型回退状态</span>
             <strong id="llmFallback">-</strong>
           </div>
         </section>
 
         <section class="encounter-command-center" aria-label="病历生成流程与下一步操作">
-          <div class="encounter-command-copy">
-            <span class="page-eyebrow">当前流程</span>
-            <h2>问诊记录处理</h2>
-            <p class="process-hint">AI 先生成草稿，医生完成核对与审核后方可导出。</p>
-          </div>
-
           <section class="workflow-panel" aria-label="病历生成流程">
             <ol id="workflowSteps" class="workflow-steps"></ol>
           </section>
@@ -218,7 +232,10 @@
             请上传问诊音频或粘贴问诊文本开始。
           </section>
 
-          <section id="nextActionPanel" class="next-action-panel" aria-live="polite"></section>
+          <div class="workspace-panel-switches" aria-label="辅助工作区">
+            <button type="button" id="showTranscriptButton" data-workspace-panel="transcript">转写与录音</button>
+            <button type="button" id="showReferenceButton" data-workspace-panel="assist">诊疗参考</button>
+          </div>
         </section>
 
         <section id="transcriptionFailurePanel" class="failure-recovery-panel" hidden aria-live="polite">
@@ -233,7 +250,7 @@
               </div>
               <div>
                 <dt>错误编号</dt>
-                <dd id="transcriptionFailureCode">ASR_FAILED</dd>
+                <dd id="transcriptionFailureCode">语音转写失败（ASR_FAILED）</dd>
               </div>
               <div>
                 <dt>音频状态</dt>
@@ -250,11 +267,11 @@
 
       <section class="run-context debug-only" aria-label="当前运行与保存信息">
         <div>
-          <span class="meta-label">当前 task_id</span>
+          <span class="meta-label">当前任务编号（task_id）</span>
           <strong id="currentTaskIdValue">-</strong>
         </div>
         <div>
-          <span class="meta-label">当前 audio_id</span>
+          <span class="meta-label">当前音频编号（audio_id）</span>
           <strong id="currentAudioIdValue">-</strong>
         </div>
         <div class="run-command-box">
@@ -280,11 +297,11 @@
         </div>
       </section>
 
-      <main class="workbench" aria-label="医生工作台主体">
+      <div class="workbench" aria-label="医生工作台主体">
         <aside class="column field-column">
           <div class="panel-header">
             <div>
-              <h2>结构化病历</h2>
+              <h2>门诊病历</h2>
               <p>核对 AI 提取字段，缺失和低置信内容会单独标记。</p>
             </div>
             <span id="fieldCountBadge" class="status-badge neutral">-</span>
@@ -296,14 +313,41 @@
         <section class="column transcript-column">
           <div class="panel-header">
             <div>
-              <h2>问诊转写与证据</h2>
+              <h2 id="transcriptHeading">问诊转写</h2>
               <p>核对说话人和原文，点击转写可定位对应音频。</p>
             </div>
             <div class="transcript-header-actions">
-              <button type="button" id="transcriptSettingsButton" class="transcript-settings-button">显示设置</button>
               <span id="transcriptBadge" class="status-badge info transcript-badge-inline">-</span>
             </div>
           </div>
+          <div class="transcript-input-toolbar" aria-label="其他问诊输入">
+            <button type="button" data-input-method="audio">上传音频</button>
+            <button type="button" data-input-method="text">文本输入</button>
+            <button type="button" id="transcriptSettingsButton" class="transcript-settings-button">显示设置</button>
+          </div>
+          <section id="nextActionPanel" class="next-action-panel" aria-live="polite"></section>
+      <section id="recordingPanel" class="inline-recording" hidden>
+
+        <div class="browser-recording-panel" aria-live="polite">
+          <div class="browser-recording-meter">
+            <span id="browserRecordingStatusLabel">等待录音</span>
+            <strong id="browserRecordingTimer">00:00</strong>
+          </div>
+          <div class="recording-actions">
+            <button type="button" class="primary-action" id="startBrowserRecordingButton">开始录音</button>
+            <button type="button" id="pauseBrowserRecordingButton">暂停</button>
+            <button type="button" id="resumeBrowserRecordingButton">恢复</button>
+            <button type="button" id="stopBrowserRecordingButton">停止</button>
+            <button type="button" class="danger-action" id="cancelBrowserRecordingButton">取消</button>
+          </div>
+          <audio id="browserRecordingPreview" controls preload="metadata"></audio>
+          <div id="browserRecordingChunkStatus" class="recording-chunk-status"></div>
+          <div id="browserRecordingMessage" class="recording-message"></div>
+          <button type="button" id="retryBrowserRecordingChunksButton">重新上传失败片段</button>
+        </div>
+        <button type="button" class="primary-action wide-action" id="submitBrowserRecordingButton">上传并生成病历</button>
+      </section>
+
           <div id="transcriptList" class="transcript-list"></div>
           <footer id="consultationAudioPlayer" class="transcript-audio-player" hidden>
             <audio id="consultationAudio" preload="metadata"></audio>
@@ -345,11 +389,11 @@
                 aria-label="音量"
               >
               <select id="audioPlaybackRate" class="audio-rate-select" aria-label="播放倍速">
-                <option value="0.75">0.75x</option>
-                <option value="1" selected>1.0x</option>
-                <option value="1.25">1.25x</option>
-                <option value="1.5">1.5x</option>
-                <option value="2">2.0x</option>
+                <option value="0.75">0.75倍速</option>
+                <option value="1" selected>1.0倍速</option>
+                <option value="1.25">1.25倍速</option>
+                <option value="1.5">1.5倍速</option>
+                <option value="2">2.0倍速</option>
               </select>
             </div>
             <div class="audio-player-secondary">
@@ -365,13 +409,13 @@
         <aside class="column assist-column">
           <div class="panel-header">
             <div>
-              <h2>临床提示</h2>
-              <p>集中展示风险、缺失项和候选诊断，仅供医生参考。</p>
+              <h2>诊疗参考</h2>
+              <p>点击名称查看完整依据，仅供医生参考。</p>
             </div>
           </div>
           <div id="assistPanels" class="assist-list"></div>
         </aside>
-      </main>
+      </div>
       <footer class="bottom-actions assist-operation-panel encounter-action-bar" aria-label="病历操作区">
         <div class="operation-heading">
           <strong id="currentTaskLabel">当前任务</strong>
@@ -420,64 +464,78 @@
             <div class="panel-header">
               <div>
                 <h2>知识库管理</h2>
-                <p>导入资料默认停用；完成测试搜索后再显式启用。停用不会删除历史版本和引用。</p>
+                <p>管理医生可查阅的资料、版本与来源。知识仅供参考，不写入患者事实。</p>
               </div>
               <span id="adminKnowledgeHealthBadge" class="status-badge neutral">未检查</span>
+              <button id="openKnowledgeImportButton" type="button" class="primary-action">导入资料</button>
             </div>
-            <form id="knowledgeImportForm" class="knowledge-admin-form">
-              <label>来源ID<input id="knowledgeSourceId" required pattern="[A-Za-z0-9._-]+" placeholder="nhc-record-standard"></label>
+            <div class="knowledge-tabs" role="tablist" aria-label="知识库工作区">
+              <button id="knowledgeTabCatalog" type="button" role="tab" aria-selected="true" aria-controls="knowledgeCatalogPane" data-knowledge-tab="Catalog">资料目录</button>
+              <button id="knowledgeTabSearch" type="button" role="tab" aria-selected="false" aria-controls="knowledgeSearchPane" data-knowledge-tab="Search" tabindex="-1">检索验证</button>
+              <button id="knowledgeTabHealth" type="button" role="tab" aria-selected="false" aria-controls="knowledgeHealthPane" data-knowledge-tab="Health" tabindex="-1">索引状态</button>
+            </div>
+            <div id="knowledgeCatalogPane" role="tabpanel" aria-labelledby="knowledgeTabCatalog">
+              <div class="knowledge-catalog-toolbar">
+                <label>搜索资料<input id="knowledgeCatalogQuery" type="search" placeholder="名称、机构或适用范围"></label>
+                <label>状态<select id="knowledgeCatalogStatus"><option value="">全部版本</option><option value="active">当前启用</option><option value="inactive">停用／历史版本</option></select></label>
+                <label>类型<select id="knowledgeCatalogType"><option value="">全部类型</option><option value="clinical-reference">临床参考</option><option value="record-standard">病历规范</option></select></label>
+              </div>
+              <div id="adminKnowledgePanel" aria-live="polite"></div>
+            </div>
+            <div id="knowledgeSearchPane" role="tabpanel" aria-labelledby="knowledgeTabSearch" hidden>
+              <p class="knowledge-note">默认与医生查询范围一致。选择停用版本仅供管理员验证，不会使其进入医生检索。</p>
+              <form id="knowledgeTestSearchForm" class="knowledge-test-search">
+                <label>检索问题<input id="knowledgeTestQuery" required placeholder="例如：流感的临床表现"></label>
+                <label>资料范围<select id="knowledgeTestDocument"><option value="">当前启用资料（医生范围）</option></select></label>
+                <button type="submit">测试搜索</button>
+              </form>
+              <div id="adminKnowledgeSearchResult" aria-live="polite"></div>
+            </div>
+            <div id="knowledgeHealthPane" role="tabpanel" aria-labelledby="knowledgeTabHealth" hidden>
+              <div id="knowledgeHealthSummary" aria-live="polite"></div>
+            </div>
+            <dialog id="knowledgeImportDialog" class="knowledge-dialog" aria-labelledby="knowledgeImportTitle">
+              <header><h2 id="knowledgeImportTitle">导入知识资料</h2><button type="button" data-close-knowledge-dialog>关闭</button></header>
+              <p class="knowledge-note">新资料默认停用；测试后再启用。内容变化必须导入新版本，不覆盖历史引用。</p>
+              <form id="knowledgeImportForm" class="knowledge-admin-form">
+              <label>来源编号（ID）<input id="knowledgeSourceId" required pattern="[A-Za-z0-9._-]+" placeholder="nhc-record-standard"></label>
               <label>标题<input id="knowledgeTitle" required placeholder="病历书写基本规范"></label>
               <label>发布机构<input id="knowledgePublisher" required placeholder="国家卫生健康委员会"></label>
               <label>版本<input id="knowledgeVersion" required placeholder="卫医政发〔2010〕11号"></label>
-              <label>资料类型<input id="knowledgeDocumentType" value="clinical-reference" required></label>
+              <label>资料类型<select id="knowledgeDocumentType" required><option value="clinical-reference">临床参考</option><option value="record-standard">病历规范</option></select></label>
               <label>适用范围<input id="knowledgeDiseaseScope" placeholder="发热/呼吸或通用病历书写"></label>
-              <label class="span-2">来源URL<input id="knowledgeSourceUrl" type="url" required placeholder="https://..."></label>
+              <label class="span-2">来源链接（URL）<input id="knowledgeSourceUrl" type="url" required placeholder="https://..."></label>
               <label class="span-2">使用边界<input id="knowledgeUsageScope" required value="仅供医生人工参考，不参与自动批准、诊断或处方。"></label>
-              <label class="span-2">TXT / Markdown文件<input id="knowledgeFileInput" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" required></label>
+              <label class="span-2">文本文件（TXT / Markdown）<input id="knowledgeFileInput" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" required></label>
               <div class="span-2 knowledge-admin-actions">
                 <button type="submit" class="primary-action">导入为停用版本</button>
-                <small>UTF-8，最大2 MiB；内容变更必须导入新版本。</small>
+                <small>采用UTF-8文本编码，最大2 MiB（约2兆字节）；内容变更必须导入新版本。</small>
               </div>
-            </form>
-            <form id="knowledgeTestSearchForm" class="knowledge-test-search">
-              <input id="knowledgeTestQuery" required placeholder="输入测试检索问题">
-              <select id="knowledgeTestDocument"><option value="">全部版本（含停用）</option></select>
-              <button type="submit">测试搜索</button>
-            </form>
-            <div id="adminKnowledgeSearchResult" class="admin-list" aria-live="polite"></div>
-            <div id="adminKnowledgePanel" class="admin-list" aria-live="polite"></div>
+              </form>
+            </dialog>
+            <dialog id="knowledgeDetailDialog" class="knowledge-dialog" aria-labelledby="knowledgeDetailTitle">
+              <header><h2 id="knowledgeDetailTitle">资料详情</h2><button type="button" data-close-knowledge-dialog>关闭</button></header>
+              <div id="knowledgeDetailContent"></div>
+            </dialog>
           </section>
         </div>
       </section>
       </main>
     </div>
 
+    <dialog id="workspaceAuxDialog" class="workspace-aux-dialog" aria-labelledby="workspaceAuxTitle">
+      <header><h2 id="workspaceAuxTitle">辅助工作区</h2><button type="button" id="closeWorkspaceAuxButton">返回病历</button></header>
+      <div id="workspaceAuxContent"></div>
+    </dialog>
     <div id="drawerBackdrop" class="drawer-backdrop"></div>
-    <aside id="drawer" class="drawer" aria-hidden="true">
+    <aside id="drawer" class="drawer" aria-hidden="true" inert role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
       <header class="drawer-header">
         <h2 id="drawerTitle">抽屉</h2>
         <button type="button" id="closeDrawerButton">关闭</button>
       </header>
 
-      <section id="encounterWorklistPanel" class="drawer-panel">
-        <p class="form-help">查看当前账号可访问的就诊记录，恢复未完成草稿或继续审核。</p>
-        <div class="worklist-toolbar">
-          <input id="encounterSearchInput" type="search" placeholder="搜索患者脱敏标识" aria-label="搜索就诊" />
-          <select id="encounterStatusFilter" aria-label="筛选就诊状态">
-            <option value="">全部状态</option>
-            <option value="pending_review">待审核</option>
-            <option value="approved">已批准</option>
-            <option value="exported">已导出</option>
-            <option value="draft">草稿</option>
-            <option value="modified">已修改</option>
-          </select>
-          <button type="button" id="refreshWorklistButton">刷新</button>
-        </div>
-        <div id="encounterWorklist" class="encounter-worklist" aria-live="polite"></div>
-      </section>
-
       <section id="textImportPanel" class="drawer-panel">
-        <p class="form-help">粘贴人工问诊文本后调用 <code>POST /api/records/generate</code> 生成病历。</p>
+        <p class="form-help">粘贴人工问诊文本，生成待医生核对的病历草稿。</p>
         <textarea id="conversationInput">[医生] 你好，哪里不舒服？
 [患者] 我发热三天了，最高到40度，还有咳嗽和铁锈色痰，吃了布洛芬后还是反复发热。
 [医生] 有没有胸痛、气促？以前有类似情况吗？
@@ -487,7 +545,8 @@
 
       <section id="audioPanel" class="drawer-panel">
         <p id="audioPanelHint" class="form-help">上传已录好的 MP3/WAV 问诊音频，选择识别模式后系统自动转写并推定医患角色。</p>
-        <input id="audioFileInput" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" />
+        <input id="audioFileInput" type="file" accept=".wav,.mp3,.m4a,.flac,.ogg,audio/wav,audio/mpeg,audio/mp4,audio/flac,audio/ogg" />
+        <p class="form-help">支持 WAV、MP3、M4A、FLAC、OGG，最大 200 MiB（约200兆字节）。请使用合成或已获授权的去标识音频。</p>
         <label class="recognition-mode-control" for="recognitionModeSelect">识别模式
           <select id="recognitionModeSelect">
             <option value="fast">尽快识别</option>
@@ -504,38 +563,16 @@
             <input id="doctorProfileAudioInput" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" aria-label="医生声纹注册音频">
             <button type="button" id="enrollDoctorProfileButton">注册 10-30 秒声纹</button>
           </div>
-          <small>注册音频提取 CAM++ 向量后立即删除，只在本机保存声纹向量。</small>
+          <small>注册音频提取声纹特征（CAM++）后立即删除，只在本机保存声纹向量。</small>
         </div>
         <button type="button" class="primary-action wide-action" id="submitAudioButton">上传</button>
       </section>
 
-      <section id="recordingPanel" class="drawer-panel">
-        <p class="form-help">使用浏览器麦克风录制最长 30 分钟 WAV 音频，支持暂停/恢复、分块上传、刷新后按 session 恢复转写。</p>
-        <div class="browser-recording-panel" aria-live="polite">
-          <div class="browser-recording-meter">
-            <span id="browserRecordingStatusLabel">等待录音</span>
-            <strong id="browserRecordingTimer">00:00</strong>
-          </div>
-          <div class="recording-actions">
-            <button type="button" class="primary-action" id="startBrowserRecordingButton">开始录音</button>
-            <button type="button" id="pauseBrowserRecordingButton">暂停</button>
-            <button type="button" id="resumeBrowserRecordingButton">恢复</button>
-            <button type="button" id="stopBrowserRecordingButton">停止</button>
-            <button type="button" class="danger-action" id="cancelBrowserRecordingButton">取消</button>
-          </div>
-          <audio id="browserRecordingPreview" controls preload="metadata"></audio>
-          <div id="browserRecordingChunkStatus" class="recording-chunk-status"></div>
-          <div id="browserRecordingMessage" class="recording-message"></div>
-          <button type="button" id="retryBrowserRecordingChunksButton">重新上传失败片段</button>
-        </div>
-        <button type="button" class="primary-action wide-action" id="submitBrowserRecordingButton">上传并生成病历</button>
-      </section>
-
       <section id="evaluationPanel" class="drawer-panel">
-        <p class="form-help">调用 <code>POST /api/audio/{audio_id}/evaluate</code>，展示 CER、keyword_recall、recognized、missing。</p>
+        <p class="form-help">核对人工转写后运行评测，查看字错误率（CER）、关键词召回率、已识别和遗漏内容。</p>
         <textarea id="groundTruthInput" placeholder="人工标注文本"></textarea>
         <textarea id="keywordsInput" placeholder="期望关键词，可用逗号或换行分隔；为空时后端会尝试使用样本 manifest"></textarea>
-        <button type="button" class="primary-action wide-action" id="submitEvaluationButton">运行 ASR 评测</button>
+        <button type="button" class="primary-action wide-action" id="submitEvaluationButton">运行语音转写评测</button>
         <div id="evaluationDrawerResult" class="drawer-result"></div>
       </section>
 
@@ -545,23 +582,23 @@
           <pre id="debugRunLogCommand">python scripts/save_run_log.py --task-id xxx --audio-id xxx --title fever_01_demo</pre>
         </details>
         <details open>
-          <summary>ASRResult JSON</summary>
+          <summary>转写原始结果（ASRResult JSON）</summary>
           <pre id="debugAsrJson">-</pre>
         </details>
         <details open>
-          <summary>Agent Trace JSON</summary>
+          <summary>处理轨迹（Agent Trace JSON）</summary>
           <pre id="debugAgentTraceJson">-</pre>
         </details>
         <details>
-          <summary>Task JSON</summary>
+          <summary>任务数据（Task JSON）</summary>
           <pre id="debugTaskJson">-</pre>
         </details>
         <details>
-          <summary>Steps JSON</summary>
+          <summary>处理步骤（Steps JSON）</summary>
           <pre id="debugStepsJson">-</pre>
         </details>
         <details>
-          <summary>Safety JSON</summary>
+          <summary>安全检查（Safety JSON）</summary>
           <pre id="debugSafetyJson">-</pre>
         </details>
       </section>
@@ -575,10 +612,10 @@
       <div class="login-shell">
         <aside class="login-brand-pane">
           <div class="login-brand-lockup">
-            <div class="brand-mark" aria-hidden="true">ML</div>
+            <img class="brand-mark" src="./brand/medilisten-v1.png" alt="" aria-hidden="true" />
             <div>
               <strong>MediListen</strong>
-              <span>LISTEN · TRANSCRIBE · GENERATE · REVIEW</span>
+              <span>聆听 · 转写 · 整理 · 审核</span>
             </div>
           </div>
           <div class="login-product-copy">
@@ -615,6 +652,6 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=2026091701"></script>
+    <script src="./doctor.js?v=alpha51-zh-20260929"></script>
   </body>
 </html>

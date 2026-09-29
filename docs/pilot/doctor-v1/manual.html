@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MediListen 医生操作手册</title>
+<link rel="stylesheet" href="guide.css">
+<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+<header>
+<span><img class="manual-brand" src="../../../static/brand/medilisten-v1.png" alt="" width="32" height="32"> MediListen · 产品操作手册</span>
+<nav>
+<a href="dual-environment.html">展示版／使用测试版操作补充（9月29日）</a>
+<a href="course-demo.html">9月29日演示操作卡与版本补充</a>
+<a href="feedback.html">反馈</a>
+<a href="#viewer">数据与知识查看器说明</a>
+<a href="doctor-manual.pdf">PDF手册</a>
+<button onclick="window.print()">打印</button>
+</nav>
+</header>
+<div class="guide-layout">
+<nav class="toc" aria-label="目录">
+<strong>操作目录</strong>
+<a href="#quick">快速开始</a>
+<a href="#login">01 启动与登录</a>
+<a href="#workbench">02 登记与报到</a>
+<a href="#entry">03 开始接诊与选择方式</a>
+<a href="#record">04 浏览器录音</a>
+<a href="#upload">05 上传已有音频</a>
+<a href="#text">06 文本输入</a>
+<a href="#role">07 角色确认与原文核对</a>
+<a href="#edit">08 核对与修改病历</a>
+<a href="#knowledge">09 查看指南与参考</a>
+<a href="#knowledge-admin">09A 管理知识资料（管理员）</a>
+<a href="#save">10 保存与版本冲突</a>
+<a href="#review">11 审核与受控导出</a>
+<a href="#history">12 历史重开与结束试用</a>
+<a href="#help">13 故障、反馈与术语</a>
+</nav>
+<main>
+<p class="eyebrow">医生试用 / 合成病例 / v1.2</p>
+<h1>医生工作台操作手册</h1>
+<p id="version">候选版，以本机版本清单为准；尚未放行独立临床试用。</p>
+<p>从工作台报到，到病历核对、审核与历史重开。</p>
+<aside>使用范围：中文发热／呼吸模拟问诊。AI只生成待核对草稿；本系统不是自动诊断或处方工具。手册截图对应本轮候选，示例患者均为合成。</aside>
+<p class="revision-note">修订记录：2026-09-29 · v1.2 · 将登记报到移至工作台，增加稳定模拟姓名、失败恢复和分任务图解；本次统一中文操作文案，增加只读快照、关联查看和技术术语说明；旧包保留。</p>
+<section id="quick" class="quick">
+<h2>快速开始</h2>
+<p class="precondition">
+<strong>使用条件：</strong>已分配医生账号；只使用组织者提供的合成病例。</p>
+<ol>
+<li>双击桌面“MediListen 医生试用入口”。启动服务，检查状态，再打开工作台并登录。</li>
+<li>在工作台选择张示例、李示例或王示例，点击“登记并报到”；留在本页核对新就诊。</li>
+<li>点击该行“开始接诊”。进入工作区后选开始录音、上传音频或文本输入。</li>
+<li>停止、试听并提交录音；若角色待确认，先确认医生／患者，再继续生成。</li>
+<li>对照原文逐项核对。修改后保存，处理缺失与冲突，审核最新版本。</li>
+<li>导出病历并打开文件核对；回到工作台，重新打开同一次就诊检查保存结果。</li>
+</ol>
+<p class="success">
+<strong>成功后：</strong>工作台完成接诊准备；工作区完成撰写、核对与审核。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>遇到阻断先看具体原因；不要刷新页面清除未保存修改。</p>
+</section>
+<section id="login">
+<h2>01 启动与登录</h2>
+<p class="precondition">
+<strong>使用条件：</strong>本机已由组织者部署；使用自己的医生账号。</p>
+<ol>
+<li>双击桌面入口，点击“启动服务”。等待运行状态更新。</li>
+<li>网页可打开不代表模型就绪。状态未就绪时可以查历史记录，但不能执行真实生成。</li>
+<li>点击“打开工作台”，输入分配的账号和密码，再点击“进入工作台”。</li>
+<li>核对顶栏账号。试用结束点击“退出”，再关闭窗口。关闭窗口不会删除已保存数据。</li>
+</ol>
+<div data-shot="login">
+</div>
+<p class="success">
+<strong>成功后：</strong>进入工作台，显示就诊任务与新建演示就诊入口。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>启动失败时保留状态提示并联系组织者；不要改端口、重复安装或改用旧网址。</p>
+</section>
+<section id="workbench">
+<h2>02 登记与报到</h2>
+<p class="precondition">
+<strong>使用条件：</strong>已登录；三位示例患者均为合成病例，不是真实患者。</p>
+<ol>
+<li>先核对页头环境：展示版选择张示例、李示例或王示例；使用测试版选择“新建匿名患者（自动生成编号）”，也可选择已有测试患者再次就诊。</li>
+<li>点击“登记并报到”。系统建立本次就诊，再完成报到；不会直接跳进工作区。</li>
+<li>在列表核对模拟姓名、“演示”标识、患者标识和本次就诊 E-编号。</li>
+<li>已有“已登记”记录无需再登记，直接点击该行“报到”。</li>
+</ol>
+<div data-shot="worklist">
+</div>
+<div data-shot="checkin">
+</div>
+<p class="success">
+<strong>成功后：</strong>记录显示“已报到”和“开始接诊”。同一模拟患者可有不同就诊编号。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>若“登记已保存，报到未完成”，在原行点“报到”重试；不要重复登记。网络中断后先刷新列表核对。</p>
+</section>
+<section id="entry">
+<h2>03 开始接诊与选择方式</h2>
+<p class="precondition">
+<strong>使用条件：</strong>记录已报到；开始前核对本次就诊编号。</p>
+<ol>
+<li>在工作台点击对应记录的“开始接诊”。</li>
+<li>进入就诊工作区后，先核对顶部患者、演示标识及就诊号。</li>
+<li>现场模拟问诊选择“开始录音”；已有音频选择“上传音频”；已有文字选择“文本输入”。</li>
+<li>已有病历时在工作台点“继续处理”或“查看病历”，恢复原任务，无需重新生成。</li>
+</ol>
+<div data-shot="entry">
+</div>
+<p class="success">
+<strong>成功后：</strong>左栏用于转写，中栏核对病历，右栏查诊疗参考；五步条只说明进度。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>未选就诊时会回工作台；报到在工作台完成。录音或编辑未处理完时禁止切换患者。</p>
+</section>
+<section id="record">
+<h2>04 浏览器录音</h2>
+<p class="precondition">
+<strong>使用条件：</strong>麦克风已连接；浏览器允许本机录音；双方仅模拟问诊。</p>
+<ol>
+<li>点击“开始录音”，首次出现权限提示时允许访问麦克风。</li>
+<li>看到录音计时后开始问诊；需要暂歇点击“暂停”，继续时点“恢复”。</li>
+<li>结束点击“停止”，使用播放器试听声音和完整性。</li>
+<li>确认后点击“上传并生成病历”。需要放弃时点击“取消”；取消后不要再次提交。</li>
+</ol>
+<div data-shot="recording">
+</div>
+<p class="success">
+<strong>成功后：</strong>提交后出现转写和生成进度；角色不确定时进入角色确认。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>无声先检查输入设备；拒绝授权后在浏览器站点权限中恢复。不把历史回放当作本次现场识别。</p>
+</section>
+<section id="upload">
+<h2>05 上传已有音频</h2>
+<p class="precondition">
+<strong>使用条件：</strong>只使用获准的匿名 WAV／MP3 等页面支持格式；音频不包含身份信息。</p>
+<ol>
+<li>在工作区点击“上传音频”。</li>
+<li>选择组织者提供的文件，检查文件名与识别模式；按页面要求提交。</li>
+<li>保持页面打开，等待转写。出现待确认说话人时先完成映射。</li>
+<li>核对转写内容后继续查看病历草稿。上传不等同于重新现场录音。</li>
+</ol>
+<div data-shot="upload">
+</div>
+<p class="success">
+<strong>成功后：</strong>可看到输入音频对应的转写与任务状态。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>文件被拒绝时按页面显示的格式和大小要求更换；转写失败记录失败层，不连续重复上传同一文件。</p>
+</section>
+<section id="text">
+<h2>06 文本输入</h2>
+<p class="precondition">
+<strong>使用条件：</strong>已有匿名问诊文字；请明确医生／患者说话人。</p>
+<ol>
+<li>点击“文本输入”。</li>
+<li>删除默认练习文字，粘贴本次内容。可用“[医生]”“[患者]”区分角色。</li>
+<li>检查是否含姓名、电话等身份信息，核对否定词、数值和单位。</li>
+<li>点击“确认生成”，等待草稿。文本路径不执行语音转写（ASR），不能用于证明录音识别质量。</li>
+</ol>
+<div data-shot="text">
+</div>
+<p class="success">
+<strong>成功后：</strong>中间病历出现待审核字段；模型输出仍须逐项对照原文。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>生成失败保留原输入与错误信息，不通过改写事实来获得成功。</p>
+</section>
+<section id="role">
+<h2>07 角色确认与原文核对</h2>
+<p class="precondition">
+<strong>使用条件：</strong>已完成转写；角色不确定时系统阻止生成。</p>
+<ol>
+<li>出现“确认说话人身份”时打开现有角色确认入口。</li>
+<li>逐个试听或阅读对应说话人片段，确认谁是医生、谁是患者。</li>
+<li>提交映射并检查待确认数量；门禁通过后再生成。无法确定时停止并反馈。</li>
+<li>查看字段的“查看原文证据”，核对说话人、时间定位及引用是否支持该字段。</li>
+</ol>
+<div data-shot="evidence">
+</div>
+<p class="success">
+<strong>成功后：</strong>角色确认后允许继续；患者依据与指南资料分开显示。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>医生提问不能作为患者事实，家属病史不能归给患者；不勾选猜测角色来绕过阻断。</p>
+</section>
+<section id="edit">
+<h2>08 核对与修改病历</h2>
+<p class="precondition">
+<strong>使用条件：</strong>草稿已生成。AI首次结果可能漏提或引用不符。</p>
+<ol>
+<li>依次核对主诉、现病史、既往史、过敏史、检查及候选方向。</li>
+<li>特别检查“没有过敏”、家属事实、症状时间、温度与单位；缺失不表示正常。</li>
+<li>点击“编辑整页病历”或字段“修改”，对照原文修订；原文及知识引用保持只读。</li>
+<li>需要放弃本次编辑时点“取消编辑”；未保存内容不能通过切换患者自动丢弃。</li>
+</ol>
+<div data-shot="edit">
+</div>
+<p class="success">
+<strong>成功后：</strong>字段进入编辑状态；主操作显示保存，审核与导出保持阻断。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>“证据冲突”必须查明；修改动作是医生修订，不能统计成模型首次正确。</p>
+</section>
+<section id="knowledge">
+<h2>09 查看指南与参考</h2>
+<p class="precondition">
+<strong>使用条件：</strong>需要核对医学依据，不向病历自动添加患者事实。</p>
+<ol>
+<li>在字段旁点击“查依据”，或点击右栏诊断／治疗参考名称。</li>
+<li>查看“患者依据”“指南资料”“待核对事项”三个标签。</li>
+<li>核对标题、发布机构、版本、适用人群、章节和页码；展开来源详情核对片段与哈希。</li>
+<li>检索命中只说明找到了参考资料。儿童指南仅适用于其声明人群，不能把相关资料视为已确认诊断。</li>
+<li>完成后点“关闭”或按 Esc，返回原字段；未保存编辑仍保留。</li>
+</ol>
+<div data-shot="knowledge">
+</div>
+<p class="success">
+<strong>成功后：</strong>来源、版本与正文可追踪；病例级参考明确区别于该条直接依据。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>“未关联指南”“检索无结果”“服务不可用”含义不同。没有依据不能假定该诊断已被证实。</p>
+</section>
+<section id="knowledge-admin">
+<h2>09A 管理知识资料（管理员）</h2>
+<p class="precondition"><strong>使用条件：</strong>管理员账号；普通医生通过“查依据”使用当前启用资料，无需进行管理。</p>
+<ol>
+<li>进入“管理后台”，默认先看到知识资料目录。按名称、状态或类型筛选；列表中的版本数不等于启用资料数。</li>
+<li>点击资料名称，核对发布机构、版本、适用范围与使用边界。原始资料通过来源链接打开；编号（ID）、内容校验值（SHA）和索引信息在折叠详情中。</li>
+<li>点击该行“验证”选择一个版本；或进入“检索验证”，默认使用当前医生检索范围。输入问题后查看匹配原文、版本、章节和页码。</li>
+<li>停用候选可被管理员指定检索，但不会因此进入医生结果。“索引状态”显示存储数量和最近查询的实际模式，不能据此推断临床质量。</li>
+<li>导入时点击“导入资料”，填写来源及版本并选择UTF-8 TXT/Markdown文件（最大2 MiB）。导入后保持停用；完成验证后再显式启用。</li>
+<li>“编辑”只能修改来源元数据，标题和适用范围影响同来源所有版本；内容改变应导入新版本。停用不会删除历史内容。</li>
+</ol>
+<p>检索范围：管理员输入问题不带就诊上下文；医生“查依据”还会加入该次就诊的病历信息，所以同样文字的排序可能不同。核对具体来源、版本、章节和原文，不要求排名相同。</p>
+<div data-shot="knowledge-admin"></div>
+<p class="success"><strong>成功后：</strong>管理员测试与医生范围区分明确，医生可核对当前启用资料的来源。</p>
+<p class="recovery"><strong>失败恢复：</strong>“服务不可用”需要重试连接；“没有符合筛选”需要调整筛选；“未命中资料”需要核查查询或索引。未通过页码定位的新版本保持停用，不以修改答案标签获得通过。</p>
+</section>
+<section id="viewer">
+<h2>09B 数据与知识查看器（只读快照）</h2>
+<p class="precondition"><strong>使用条件：</strong>由组织者在当前环境启动器点击“数据与知识查看器”，使用已授权的本机浏览器。锁形图标表示访问受限，不代表病历质量通过。</p>
+<p>这个工具像一份带关联链接的数据目录：可查看匿名患者、就诊、病历版本、审核与导出，也可查看指南版本和检索片段。它不能修改病历、不能执行任意查询语句，也不能下载整个数据库。</p>
+<ol><li>先核对首页的“来源环境”和“采样时间”。这是某一时刻的只读副本，不会随工作台修改实时更新。要查看新记录，请再次从本环境启动器打开入口，明确刷新快照。</li><li>选择“就诊数据→患者”，点击患者编号进入详情；在“关联记录”打开就诊，再进入病历版本、审核或导出记录。修改病历请回医生工作台。</li><li>选择“知识资料→资料来源”，沿关联记录查看文档版本、知识片段和语义索引信息。停用文档仍保留在查看器供历史核对，不能据此认为医生检索会使用它。</li><li>列表选择中文字段和条件，填写原始编号或状态值，点击“应用筛选”。例如“是否启用”等于“1”表示启用。表头可排序，底部“下一页”继续查看；括号中的原名用于识别查询字段。</li><li>长原文可以完整阅读；“查看原文证据”展开片段。技术结构、原始JSON（结构化记录）保留原字段名。请勿把快照内容当作实时运行状态。</li></ol>
+<div data-shot="data-viewer" class="manual-shot"></div>
+<p><strong>成功后：</strong>能沿“患者→就诊记录→病历版本→审核记录→导出记录”，以及“资料来源→文档版本→知识片段→语义索引信息”追踪同一条记录。</p>
+<p><strong>失败恢复：</strong>未授权时，从启动器重新打开，不分享登录链接；查不到记录时先核对环境、采样时间及筛选条件。快照中没有记录不表示原库已删除。刷新失败会保留原查看器。</p>
+<p><strong>术语：</strong>病历版本（Revision）是一次保存形成的记录；语音转写（ASR）将音频变成文字；病历生成服务（LLM Provider）调用本地模型整理草稿；语义向量索引（embedding）用于语义检索；内容校验值（SHA256）用于核对文件或文字是否改变。MediListen是产品名，FunASR是语音转写引擎，Qwen是病历生成所用模型。</p>
+</section>
+
+<section id="save">
+<h2>10 保存与版本冲突</h2>
+<p class="precondition">
+<strong>使用条件：</strong>已核对修改；保持当前患者和就诊不变。</p>
+<ol>
+<li>点击“保存修改”，等待成功提示；核对显示的实际病历版本（Revision）。</li>
+<li>保存将产生新版本，旧批准失效；必须重新审核最新版本。</li>
+<li>若提示版本冲突，保留本地编辑，先查看最新版本与差异，再处理本次修改。</li>
+<li>若提示保存已提交但刷新失败，先加载最新版本核对，不反复点击保存。</li>
+</ol>
+<div data-shot="saved">
+</div>
+<p class="success">
+<strong>成功后：</strong>保存成功后退出编辑，展示更新版本和待审核状态。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>网络失败时不要刷新或关闭；旧版本不能覆盖新版本。将提示和就诊编号交组织者处理。</p>
+</section>
+<section id="review">
+<h2>11 审核与受控导出</h2>
+<p class="precondition">
+<strong>使用条件：</strong>修改已保存；当前显示的是最新版本。</p>
+<ol>
+<li>在病历正文上方找到“医生分项审核”，核对当前版本和待处理数，点击“开始核对”。逐项确认已核对字段；对缺失项选择保留缺失或先补充。</li>
+<li>核对候选诊断与风险项；真实冲突不能仅靠勾选确认消除。</li>
+<li>点击“完成病历审核”，确认状态变为已批准。</li>
+<li>点击“导出已审核病历”，打开下载文件，核对内容、否定词、单位和就诊对应关系。</li>
+</ol>
+<div data-shot="review">
+</div>
+<p class="success">
+<strong>成功后：</strong>最新病历版本（Revision）批准后才可导出；导出文件沿用脱敏规则。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>按钮不可用时查看角色、证据、缺失或版本阻断。不要让组织者直接改数据库解除限制。</p>
+</section>
+<section id="history">
+<h2>12 历史重开与结束试用</h2>
+<p class="precondition">
+<strong>使用条件：</strong>本次修改已经保存；未保存或录音未完成时先处理。</p>
+<ol>
+<li>若导出详情仍打开，先点“关闭”；然后点击左侧“工作台”，按模拟姓名或患者标识搜索。</li>
+<li>同名患者可能有多次就诊，请核对 E-编号与更新时间。</li>
+<li>点击“继续处理”或“查看病历”，核对字段、病历版本（Revision）及审核状态。文本病例左栏显示“输入原文”，音频病例显示“问诊转写”；已批准病例可展开“查看审核记录”。</li>
+<li>结束后退出账号；组织者按需要停止服务，已保存记录不会因关闭窗口消失。</li>
+</ol>
+<div data-shot="history">
+</div>
+<p class="success">
+<strong>成功后：</strong>重开恢复同一次就诊和原任务，而不是生成新的病历。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>历史未知记录仍显示脱敏患者标识；不要猜测或恢复真实身份。</p>
+</section>
+<section id="help">
+<h2>13 故障、反馈与术语</h2>
+<p class="precondition">
+<strong>使用条件：</strong>记录问题时只使用匿名试用编号、版本和合成就诊号。</p>
+<ol>
+<li>启动失败：保留运行状态，联系组织者，不切换旧版本冒充恢复。</li>
+<li>报到失败：刷新确认已有登记，在原行重试报到。切换被阻止：处理录音、未保存修改或冲突。</li>
+<li>转写／字段不符：记录输入、AI首次结果、规则提示与人工修订，分别反馈。</li>
+<li>从桌面入口打开“反馈”，填写任务、预期与实际、是否完成及是否求助，显式下载后交组织者。</li>
+</ol>
+<p class="success">
+<strong>成功后：</strong>反馈不自动上传。病历版本（Revision）是保存版本；候选诊断不是确诊；脱敏标识不是乱码。</p>
+<p class="recovery">
+<strong>失败恢复：</strong>不得在反馈中放密码、真实身份信息、原始患者音频。使用问题与临床判断问题分别记录。</p>
+</section>
+<p class="reference">编写结构参考 OpenEMR 就诊流程与用户指南，未复制其界面或内容。维护命令见独立维护说明。</p>
+</main>
+</div>
+<script src="manual-evidence.js">
+</script>
+<script>const e=window.MRA_MANUAL_EVIDENCE||{};if(e.version)document.querySelector('#version').textContent=e.version;for(const s of e.screenshots||[]){const t=document.querySelector('[data-shot="'+s.key+'"]');if(!t)continue;const f=document.createElement('figure'),im=document.createElement('img'),c=document.createElement('figcaption');im.src=s.path;im.alt=s.caption;c.textContent=s.caption;f.append(im,c);t.append(f);}</script>
+</body>
+</html>

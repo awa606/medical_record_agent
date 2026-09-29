@@ -1,0 +1,206 @@
+{
+  "schema_version": "mra-alpha51-schema-browser-v1",
+  "at": "2026-09-28T00:32:42+08:00",
+  "base_sha": "73cfb6d1fcbb2f2126b59a23f85ab9adb70a75a3",
+  "deployed_app_sha": "ee0b5f0a84461fd7d531cf54de4e16c2ce6588a1",
+  "candidate_deployed": false,
+  "decision": "REJECTED_FOR_DEPLOYMENT",
+  "reason": "ce2e_v1_006: new first-output doctor question in chief complaint; existing validator blocks it; aggregate improvements do not satisfy semantic gate",
+  "comparison": [
+    {
+      "split": "development",
+      "historical_baseline": {
+        "cases": 30,
+        "schema_valid": 30,
+        "nonempty_fields": 58,
+        "grounded_fields": 54,
+        "conflicting_fields": 4,
+        "expected_facts": 72,
+        "recovered_facts": 49,
+        "p95_seconds": 8.918,
+        "max_seconds": 11.668,
+        "mock_fallback_count": 0
+      },
+      "candidate": {
+        "cases": 30,
+        "schema_valid": 30,
+        "nonempty_fields": 58,
+        "grounded_fields": 54,
+        "conflicting_fields": 4,
+        "expected_facts": 72,
+        "recovered_facts": 49,
+        "p95_seconds": 7.273,
+        "max_seconds": 7.978,
+        "mock_fallback_count": 0
+      },
+      "baseline_report_sha256": "12d4937d0737a0cf783a41d644fad42a431847e4619dde460abac74ddc3fa03f",
+      "candidate_report_sha256": "e0ca000ca0dcc5fd6f4c2b99c9c3a90fbc6426a3c8423142665f46430a441b61"
+    },
+    {
+      "split": "validation",
+      "historical_baseline": {
+        "cases": 10,
+        "schema_valid": 10,
+        "nonempty_fields": 18,
+        "grounded_fields": 15,
+        "conflicting_fields": 3,
+        "expected_facts": 21,
+        "recovered_facts": 10,
+        "p95_seconds": 7.073,
+        "max_seconds": 7.073,
+        "mock_fallback_count": 0
+      },
+      "candidate": {
+        "cases": 10,
+        "schema_valid": 10,
+        "nonempty_fields": 18,
+        "grounded_fields": 16,
+        "conflicting_fields": 2,
+        "expected_facts": 21,
+        "recovered_facts": 10,
+        "p95_seconds": 7.476,
+        "max_seconds": 7.476,
+        "mock_fallback_count": 0
+      },
+      "baseline_report_sha256": "8a6a358a46c6f3b386bb4a924d5b7d90ccb86b1ac03d16fad77a71ab2e42df64",
+      "candidate_report_sha256": "050bf655d0c6569a78e3d7db9eeab5b07b87d2e04f8faa0deb2fcd62861e22f0"
+    },
+    {
+      "split": "frozen",
+      "historical_baseline": {
+        "cases": 20,
+        "schema_valid": 20,
+        "nonempty_fields": 38,
+        "grounded_fields": 32,
+        "conflicting_fields": 6,
+        "expected_facts": 43,
+        "recovered_facts": 29,
+        "p95_seconds": 6.72,
+        "max_seconds": 49.782,
+        "mock_fallback_count": 0
+      },
+      "candidate": {
+        "cases": 20,
+        "schema_valid": 20,
+        "nonempty_fields": 35,
+        "grounded_fields": 34,
+        "conflicting_fields": 1,
+        "expected_facts": 43,
+        "recovered_facts": 29,
+        "p95_seconds": 5.08,
+        "max_seconds": 5.546,
+        "mock_fallback_count": 0
+      },
+      "baseline_report_sha256": "55e52fee37d3a41d13f8ea9c2f29c6fff33d6a4dcea953f4b28b0525b5d7caa4",
+      "candidate_report_sha256": "625ffdb04a545ef246413615383f6e8c8463300d534a53de5639abcf4350e7ca"
+    }
+  ],
+  "known_case": {
+    "baseline_correct_runs": 0,
+    "candidate_correct_runs": 3,
+    "repeats": 3,
+    "expected_fields": 4,
+    "minimum_schema_raw_chief_correct_runs": 0,
+    "minimum_schema_note": "raw calls retained; full-record validator rejects intentionally missing required fields; not a production route"
+  },
+  "audio_sha256": "c58c6ff5b5437a2152a2472d2cd8e10be64b42dc213bb3157611ee4333fa732c",
+  "input_sha256": "2b381482e39a4ff2bd44fc78a39100a72d8d8172f3fd2d16c0587000cfaa817c",
+  "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+  "settings": {
+    "temperature": 0,
+    "num_ctx": 8192,
+    "num_predict": 2048,
+    "think": false,
+    "keep_alive": "30m",
+    "retries": 0
+  },
+  "experiment_script_sha256": {
+    "single": "94fbe31df99994ae9fb3419ec7dc34b187fa3bb20631673b65d7938b4a990a9b",
+    "split": "4856deba5ceff7d1a161a6394c59046574b41668ac6ec70ee8255eb8010cf756"
+  },
+  "snapshot": {
+    "schema_version": "mra-readonly-snapshot-v1",
+    "captured_at": "2026-09-27T16:41:31.689822+00:00",
+    "exporter_sha256": "9476e38894165420b3db8d58ee96b6d14214d542e70529b2ea6a9490c1039d1c",
+    "viewer_version": "datasette 0.65.5",
+    "source_label": "8795 / ee0b5f0 / anonymous course demo",
+    "synthetic_only": true,
+    "allowlist_sha256": "498447979b94c7a5ad2a9cff2da8a6b5770875e2e2a4a69bb0d2b779896a8bf9",
+    "database_sha256": "901bbc7c60302b1c8142a1036f67938b67fc8464bdbb8ffa5223a4423e41933a",
+    "table_counts": {
+      "patient": 4,
+      "agent_task": 3,
+      "encounter": 4,
+      "record_revision": 5,
+      "revision_field": 35,
+      "approval": 2,
+      "export_event": 2,
+      "knowledge_source": 5,
+      "knowledge_document": 7,
+      "knowledge_chunk": 116,
+      "knowledge_embedding_metadata": 96
+    },
+    "projection": "column/JSON allowlist; revision_field derived; embedding vectors and authentication data omitted"
+  },
+  "browser": {
+    "url": "http://127.0.0.1:8796/",
+    "status": "PASS",
+    "business_navigation": "patient -> encounter -> revision -> approval -> export",
+    "knowledge_navigation": "source -> document -> chunk -> embedding metadata",
+    "source_unchanged_during_browsing": true,
+    "live_test_sha256": "5486efeb7ed1442a6869637b0b8c8dc767c644cdbfbea93e0c295e423246e35b",
+    "physical_zoom_test": false,
+    "readability": "stock Datasette tables; bounded hash columns and minimum text width; visually reviewed at 1440x900"
+  },
+  "live_api": {
+    "health": 200,
+    "anonymous_knowledge": 401,
+    "ready_first_http": 503,
+    "knowledge_health": {
+      "source_count": 5,
+      "document_count": 7,
+      "active_document_count": 4,
+      "chunk_count": 116,
+      "embedding_count": 96,
+      "audit_count": 3,
+      "index_available": true,
+      "embedding_model": "BAAI/bge-small-zh-v1.5"
+    },
+    "knowledge_response_keys": [
+      "query",
+      "related_fields",
+      "results",
+      "count",
+      "retrieval_mode",
+      "disclaimer"
+    ],
+    "retrieval_mode": "hybrid_v1",
+    "hit_count": 5,
+    "llm_status": {
+      "provider": "ollama",
+      "model": "qwen3:4b",
+      "mode": "edge",
+      "fallback_allowed": false,
+      "configured": true,
+      "reachable": false,
+      "checked": false,
+      "fallback_provider": null,
+      "fallback": false,
+      "fallback_reason": "Reachability not checked. Use POST /api/llm/test."
+    },
+    "resources": {
+      "doctor.html": "1b4eb543965168cfee00081443ec53cc1bf66180573afc4a5a660c1df94553c4",
+      "doctor.js": "83f6ef1e164c37da3c6aa608b48c35b7f756e6743211994be7a4c36162ac922b",
+      "doctor-workspace.css": "e3c46a32c8f363a3d7f5a8d29fe99e9d2580bfc139beb20cfb15b03698800c4b"
+    },
+    "ready_final_http": 200
+  },
+  "tests": {
+    "pytest": "591 passed, 1 skipped (optional Datasette dependency), 1 warning",
+    "isolated_datasette_unittest": "6 passed",
+    "semantic_rule_cases": 240,
+    "semantic_rule_result": "PASS; not Qwen accuracy",
+    "frontend_syntax": "PASS"
+  },
+  "release_gate": "VERIFY; final-version real three paths and offline restore not completed this run"
+}

@@ -129,75 +129,29 @@ def test_recording_entry_guides_to_encounter_selection_and_panel() -> None:
             page = context.new_page()
             _login(page, server.base_url)
 
-            page.click("#inputMethodButton")
-            expect(page.locator("#drawer")).to_have_class(re.compile(r".*\bactive\b.*"))
-            expect(page.locator("#inputMethodMenu")).to_be_hidden()
-            expect(page.locator(".encounter-selection-notice")).to_contain_text("请先选择已报到或问诊中的患者")
-            assert page.evaluate("window.__MRA_APP_STATE__?.pendingInputMethodAfterEncounterSelection") == "record"
-
-            encounter_id = page.evaluate(
-                """
-                async () => {
-                  const encounter = await api('/api/encounters', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      patient_deidentified_id: `REC-GUIDE-${Date.now()}`,
-                      patient_display_name: 'Recording Guide Patient'
-                    })
-                  });
-                  await api(`/api/encounters/${encounter.id}/check-in`, { method: 'POST' });
-                  await api(`/api/encounters/${encounter.id}/start`, { method: 'POST' });
-                  await refreshEncounterWorklist();
-                  return encounter.id;
-                }
-                """
+            page.locator('[data-product-view-target="encounter"]').first.click()
+            expect(page.locator("body")).to_have_attribute("data-product-view", "workbench")
+            expect(page.locator("#workbenchSelectionNotice")).to_contain_text("开始接诊")
+            page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-LIVE")
+            page.click("#createLocalEncounterButton")
+            button = page.locator('#dashboardEncounterList [data-encounter-action="start"]')
+            expect(button).to_be_visible()
+            button.scroll_into_view_if_needed()
+            assert button.evaluate("b => {const r=b.getBoundingClientRect();const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return b===hit||b.contains(hit)}")
+            button.click()
+            expect(page.locator("#patientName")).to_have_text("王示例")
+            page.click('[data-workflow-action="record-audio"]')
+            expect(page.locator("#recordingPanel")).to_be_visible()
+            assert page.locator(".transcript-column #recordingPanel").is_visible()
+            expect(page.locator("#drawer")).not_to_have_class(re.compile(r".*\bactive\b.*"))
+            # The approved one-click flow immediately requests the microphone.
+            # Headless browser errors differ by host: Windows reports
+            # NotSupportedError, while Linux reports NotFoundError. Both must
+            # surface a clear failure instead of proceeding as a recording.
+            page.wait_for_function("window.__MRA_APP_STATE__.browserRecordingStatus === 'error'")
+            expect(page.locator("#browserRecordingMessage")).to_contain_text(
+                re.compile(r"Not supported|未检测到麦克风输入设备")
             )
-            drawer_record_button = page.locator(
-                f'#encounterWorklist [data-restore-encounter="{encounter_id}"][data-after-restore-input="record"]'
-            )
-            expect(drawer_record_button).to_contain_text("选择并开始录音")
-            drawer_metrics = page.evaluate(
-                """
-                (encounterId) => {
-                  const drawer = document.querySelector("#drawer");
-                  const list = document.querySelector("#encounterWorklist");
-                  const button = Array.from(document.querySelectorAll("#encounterWorklist [data-restore-encounter]"))
-                    .find((node) => node.dataset.restoreEncounter === String(encounterId) && node.dataset.afterRestoreInput === "record");
-                  const article = button.closest(".encounter-worklist-item");
-                  const drawerBox = drawer.getBoundingClientRect();
-                  const articleBox = article.getBoundingClientRect();
-                  const buttonBox = button.getBoundingClientRect();
-                  const hitX = Math.floor((buttonBox.left + buttonBox.right) / 2);
-                  const hitY = Math.floor((buttonBox.top + buttonBox.bottom) / 2);
-                  const hit = document.elementFromPoint(hitX, hitY);
-                  return {
-                    bodyOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-                    drawerOverflow: drawer.scrollWidth - drawer.clientWidth,
-                    listOverflow: list.scrollWidth - list.clientWidth,
-                    buttonInsideDrawer: buttonBox.left >= drawerBox.left && buttonBox.right <= drawerBox.right,
-                    buttonInsideArticle: (
-                      buttonBox.left >= articleBox.left
-                      && buttonBox.right <= articleBox.right
-                      && buttonBox.top >= articleBox.top
-                      && buttonBox.bottom <= articleBox.bottom
-                    ),
-                    buttonHitTarget: hit === button || button.contains(hit),
-                  };
-                }
-                """,
-                encounter_id,
-            )
-            assert drawer_metrics["bodyOverflow"] <= 0
-            assert drawer_metrics["drawerOverflow"] <= 1
-            assert drawer_metrics["listOverflow"] <= 1
-            assert drawer_metrics["buttonInsideDrawer"] is True
-            assert drawer_metrics["buttonInsideArticle"] is True
-            assert drawer_metrics["buttonHitTarget"] is True
-            drawer_record_button.click()
-            expect(page.locator("#recordingPanel.active")).to_be_visible()
-            expect(page.locator("#drawerTitle")).to_contain_text("浏览器录音生成病历")
-            expect(page.locator("#browserRecordingMessage")).to_contain_text("点击“开始录音”")
 
             page.evaluate(
                 """
@@ -209,8 +163,8 @@ def test_recording_entry_guides_to_encounter_selection_and_panel() -> None:
                 }
                 """
             )
-            expect(page.locator("#drawer")).to_have_class(re.compile(r".*\bactive\b.*"))
-            expect(page.locator("#browserRecordingMessage")).to_contain_text("录音正在进行")
+            expect(page.locator("#drawer")).not_to_have_class(re.compile(r".*\bactive\b.*"))
+            expect(page.locator("#stopBrowserRecordingButton")).to_be_visible()
             assert page.evaluate("window.__MRA_APP_STATE__?.browserRecordingStatus") == "recording"
             browser.close()
     finally:

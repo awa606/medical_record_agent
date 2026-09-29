@@ -1,0 +1,856 @@
+{
+  "evidence_id": "MRA-ALPHA-5.1-CITATION-ENUM-20260928",
+  "captured_at": "2026-09-28T14:24:23.379125+08:00",
+  "research_gate": "NEEDS_MORE_EVIDENCE",
+  "candidate_disposition": "REJECTED",
+  "production_modified": false,
+  "deployed": false,
+  "git_baseline": "13f62b40b4ba649ec11f399ac1d656c09c5ba7c3",
+  "runtime_git_sha": "a3a5ca8719815007eb22b225ba30893a02157ed6",
+  "model": "qwen3:4b",
+  "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+  "parameters": {
+    "temperature": 0,
+    "num_ctx": 8192,
+    "num_predict": 2048,
+    "think": false,
+    "keep_alive": "30m",
+    "retries": 0
+  },
+  "input_id": "paired-realtek-13s",
+  "audio_sha256": "c58c6ff5b5437a2152a2472d2cd8e10be64b42dc213bb3157611ee4333fa732c",
+  "asr_rerun": false,
+  "known_case": [
+    {
+      "variant": "baseline",
+      "repeat": 1,
+      "status": "completed",
+      "grounded_expected": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 8.642
+    },
+    {
+      "variant": "baseline",
+      "repeat": 2,
+      "status": "completed",
+      "grounded_expected": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 8.392
+    },
+    {
+      "variant": "baseline",
+      "repeat": 3,
+      "status": "completed",
+      "grounded_expected": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 7.314
+    },
+    {
+      "variant": "source_enum",
+      "repeat": 1,
+      "status": "completed",
+      "grounded_expected": [],
+      "raw_citation_valid": [
+        "chief_complaint",
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 6.848
+    },
+    {
+      "variant": "source_enum",
+      "repeat": 2,
+      "status": "completed",
+      "grounded_expected": [],
+      "raw_citation_valid": [
+        "chief_complaint",
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 9.711
+    },
+    {
+      "variant": "source_enum",
+      "repeat": 3,
+      "status": "completed",
+      "grounded_expected": [],
+      "raw_citation_valid": [
+        "chief_complaint",
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 7.964
+    },
+    {
+      "variant": "source_content_enum",
+      "repeat": 1,
+      "status": "completed",
+      "grounded_expected": [
+        "chief_complaint",
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "chief_complaint",
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": true,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 11.68
+    },
+    {
+      "variant": "source_content_enum",
+      "repeat": 2,
+      "status": "completed",
+      "grounded_expected": [
+        "chief_complaint",
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "chief_complaint",
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": true,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 12.024
+    },
+    {
+      "variant": "source_content_enum",
+      "repeat": 3,
+      "status": "completed",
+      "grounded_expected": [
+        "chief_complaint",
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "chief_complaint",
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": true,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 9.051
+    }
+  ],
+  "development": {
+    "baseline": {
+      "cases": 30,
+      "schema_valid": 30,
+      "nonempty_fields": 58,
+      "grounded_fields": 54,
+      "conflicting_fields": 4,
+      "expected_facts": 72,
+      "recovered_facts": 49,
+      "p95_seconds": 8.338,
+      "max_seconds": 9.205,
+      "mock_fallback_count": 0
+    },
+    "candidate": {
+      "cases": 30,
+      "schema_valid": 30,
+      "nonempty_fields": 57,
+      "grounded_fields": 54,
+      "conflicting_fields": 3,
+      "expected_facts": 72,
+      "recovered_facts": 49,
+      "p95_seconds": 6.92,
+      "max_seconds": 6.967,
+      "mock_fallback_count": 0
+    },
+    "per_case_fields": [
+      {
+        "case_id": "ce2e_v1_001_short_fever_temp",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_002_short_fever_headache",
+        "baseline_safe_fields": [
+          "chief_complaint"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": [
+          "present_illness"
+        ]
+      },
+      {
+        "case_id": "ce2e_v1_003_fever_duration",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_004_cough_duration_only",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_005_absent_fever_headache",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_006_question_answer_absent_fever",
+        "baseline_safe_fields": [],
+        "candidate_safe_fields": [],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_007_resolved_fever",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_008_ibuprofen_defervescence",
+        "baseline_safe_fields": [
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_009_fever_cough",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_010_fever_headache_duration",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_011_three_party_child_fever",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "accompanying_symptoms"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint"
+        ],
+        "lost_correct_fields": [
+          "accompanying_symptoms"
+        ],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_012_family_medication_effect",
+        "baseline_safe_fields": [],
+        "candidate_safe_fields": [],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_013_insufficient_hot",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_014_out_of_scope_abdominal",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_015_asr_typo_fever",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_016_asr_cough_temp",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_017_fever_duration_temp_cough",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_018_negative_cough_context",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_019_resolved_after_antipyretic",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_020_fever_chest_tightness",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_021_flu_like",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_022_pulmonary_reference",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_023_insufficient_general",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_024_unspecified_treatment",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_025_temperature_only",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_026_absent_fever_cough",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_027_self_correction_absent",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_028_numeric_duration",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_029_high_fever",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      },
+      {
+        "case_id": "ce2e_v1_030_fever_headache_cough",
+        "baseline_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "candidate_safe_fields": [
+          "chief_complaint",
+          "present_illness"
+        ],
+        "lost_correct_fields": [],
+        "gained_safe_fields": []
+      }
+    ],
+    "lost_correct_fields_total": 1,
+    "gate": "REJECTED",
+    "reason": "dev011 accompanying_symptoms regression; unchanged raw-index pipeline guard gap",
+    "dev-baseline_raw_quote_check": {
+      "total_spans": 58,
+      "invalid_spans": 1,
+      "errors": [
+        {
+          "case_id": "ce2e_v1_002_short_fever_headache",
+          "field": "present_illness"
+        }
+      ]
+    },
+    "dev-enum_raw_quote_check": {
+      "total_spans": 58,
+      "invalid_spans": 0,
+      "errors": []
+    }
+  },
+  "safety_inputs": [
+    {
+      "variant": "baseline",
+      "input_id": "question",
+      "active": [],
+      "safe": [],
+      "seconds": 6.521
+    },
+    {
+      "variant": "baseline",
+      "input_id": "family",
+      "active": [
+        "allergy_history"
+      ],
+      "safe": [],
+      "seconds": 5.863
+    },
+    {
+      "variant": "baseline",
+      "input_id": "negative_allergy",
+      "active": [
+        "allergy_history"
+      ],
+      "safe": [
+        "allergy_history"
+      ],
+      "seconds": 5.532
+    },
+    {
+      "variant": "baseline",
+      "input_id": "treatment",
+      "active": [
+        "present_illness"
+      ],
+      "safe": [
+        "present_illness"
+      ],
+      "seconds": 4.941
+    },
+    {
+      "variant": "baseline",
+      "input_id": "missing",
+      "active": [
+        "chief_complaint",
+        "present_illness"
+      ],
+      "safe": [
+        "chief_complaint",
+        "present_illness"
+      ],
+      "seconds": 4.399
+    },
+    {
+      "variant": "enum",
+      "input_id": "question",
+      "active": [],
+      "safe": [],
+      "seconds": 3.513
+    },
+    {
+      "variant": "enum",
+      "input_id": "family",
+      "active": [
+        "allergy_history"
+      ],
+      "safe": [],
+      "seconds": 5.07
+    },
+    {
+      "variant": "enum",
+      "input_id": "negative_allergy",
+      "active": [
+        "allergy_history"
+      ],
+      "safe": [
+        "allergy_history"
+      ],
+      "seconds": 5.014
+    },
+    {
+      "variant": "enum",
+      "input_id": "treatment",
+      "active": [
+        "present_illness"
+      ],
+      "safe": [
+        "present_illness"
+      ],
+      "seconds": 5.382
+    },
+    {
+      "variant": "enum",
+      "input_id": "missing",
+      "active": [
+        "chief_complaint",
+        "present_illness"
+      ],
+      "safe": [
+        "chief_complaint",
+        "present_illness"
+      ],
+      "seconds": 4.575
+    }
+  ],
+  "model_calls": 79,
+  "mock_or_cloud_fallback_count": 0,
+  "scope_check": {
+    "paired_cases": 30,
+    "equal_prompts": true,
+    "only_changed_property": "$defs.SourceSpan.properties.text.enum",
+    "production_source_unchanged": true
+  },
+  "existing_guard_gap": {
+    "id": "enum-gate-wrong-index",
+    "direct_grounding": "conflicting",
+    "after_existing_audio_reconciliation": "complete",
+    "production_change_made": false,
+    "reason": "reconciliation replaces model index with segment identity before index consistency is checked"
+  },
+  "rule_safety": {
+    "dataset": "data\\semantic_safety\\clinical_assertion_v1.jsonl",
+    "case_count": 240,
+    "expected_fact_count": 206,
+    "matched_fact_count": 206,
+    "exact_case_count": 240,
+    "exact_case_rate": 1.0,
+    "dangerous_polarity_flips": 0,
+    "unsupported_fact_count": 0,
+    "missing_fact_count": 0,
+    "question_leakage_count": 0,
+    "experiencer_errors": 0,
+    "temporality_errors": 0,
+    "certainty_errors": 0,
+    "value_unit_errors": 0,
+    "category_counts": {
+      "allergy_absent": 20,
+      "allergy_double_negative": 20,
+      "allergy_family": 20,
+      "allergy_present": 20,
+      "allergy_question": 20,
+      "allergy_question_answer_absent": 20,
+      "allergy_resolved": 20,
+      "allergy_uncertain": 20,
+      "symptom_absent": 10,
+      "symptom_family": 10,
+      "symptom_present": 10,
+      "symptom_question": 10,
+      "symptom_resolved": 10,
+      "symptom_uncertain": 10,
+      "temperature_question": 10,
+      "temperature_value": 10
+    },
+    "failure_counts": {},
+    "safety_gate_pass": true
+  },
+  "not_executed": [
+    "longest real input: development regression stopped promotion",
+    "validation 31-40",
+    "historical regression 41-60",
+    "production integration/design pass",
+    "candidate deployment",
+    "final-SHA physical microphone/three paths/offline restore",
+    "5.3"
+  ],
+  "verification": {
+    "full_pytest": "609 passed, 1 skipped, 2 warnings in 440.22s",
+    "frontend": "doctor.js, main.js and prototype syntax passed",
+    "snapshot": "178 source hashes matched",
+    "git_diff": "PASS",
+    "runtime_health": 200,
+    "runtime_ready": {
+      "first": 503,
+      "first_reason": "model inference warmup pending or expired",
+      "subsequent": [
+        200,
+        200,
+        200
+      ]
+    },
+    "local_command_corrections": [
+      "Attempted non-existent static/admin.js syntax check; actual static/doctor.js and static/main.js checks both passed. No app file changed."
+    ],
+    "pilot_status": {
+      "phase": "MODEL_NOT_READY",
+      "states": {
+        "ollama": "running",
+        "app": "running",
+        "gateway": "running"
+      },
+      "web_available": true,
+      "model_ready": false,
+      "app_git_sha": "a3a5ca8719815007eb22b225ba30893a02157ed6",
+      "release_status": "CANDIDATE_NOT_RELEASED",
+      "port": 8795
+    },
+    "test_warnings": [
+      "Starlette/httpx deprecation",
+      "Windows subprocess reader UTF-8 decode warning in test_cli_writes_json_report; same test rerun with PYTHONUTF8=1 passed"
+    ],
+    "cli_utf8_rerun": "1 passed"
+  },
+  "local_artifacts": ".artifacts/alpha51-citation-enum-20260928/",
+  "private_manifest_sha256": "5a97596ff5d36d4f0e77ee6092344dc4c40d02e41e2734dc3f61ed9c0a33d35c",
+  "artifact_hashes": {
+    "run_enum.py": "93f9f8d79eca75ee64197aa15a34698ae5e6e5178072c8106b6ab05ea63a782d",
+    "run_content_enum.py": "1b177f9a51d0af59e5da02abe7425eb2b91bb16e2c40283331c71d1bd2d307da",
+    "run_split.py": "10d2a8c58cae66b77987be8fce4de58747228fcdf54e6184f6d1892e156e6c23",
+    "run_negative.py": "86e03913cc7563259bacaf69287400caa917d06c83bf5e1a74fc25fdb825030d",
+    "comparison.json": "e2376586c706d1b6820842bdce11f7da3db3fd669831e092ebb74fa6b6ac7797",
+    "index-guard-probe.json": "d0de0ec02b611c3ef6277efdea481d936a7796c82cfee8c7ed9ec953cf5d7903",
+    "pytest-full.txt": "7980c0554b6c1c6c4a139f0cbfd9a1a0d81859203118db7896e2ceb0e2a0d2a5"
+  },
+  "wbs_status": "VERIFY",
+  "clinical_validity_claim": false,
+  "pm_sync": {
+    "captured_at": "2026-09-28T14:30:49.136723+08:00",
+    "source_hashes_matched": 179,
+    "task_count": 16,
+    "planned_hours": 99,
+    "counts": {
+      "done": 8,
+      "verify": 3,
+      "blocked": 1,
+      "backlog": 4
+    },
+    "controlled_update": "5.1 evidence append only",
+    "formal_fields_unchanged": true,
+    "connection_recovered": "Obsidian process absent at closeout; reopened configured vault and read live API before update",
+    "existing_violations_preserved": [
+      "hardware 1.1 research/design not complete"
+    ]
+  },
+  "execution_window": {
+    "start": "2026-09-28T14:07:00+08:00",
+    "evidence_sync_end": "2026-09-28T14:30:49.136723+08:00",
+    "timebox_minutes": 120,
+    "experiment_stopped_on_development_regression": true,
+    "ci_wait_not_included": true
+  }
+}

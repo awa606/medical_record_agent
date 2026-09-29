@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 
 from playwright.sync_api import expect, sync_playwright
 
@@ -44,7 +44,7 @@ def _set_backend_state(
             current_stage=current_stage,
             result_json=json.dumps(result, ensure_ascii=False),
         )
-        with get_connection() as connection:
+        with closing(get_connection()) as connection:
             connection.execute(
                 "UPDATE encounter SET status = ? WHERE id = ?",
                 (encounter_status, encounter_id),
@@ -82,9 +82,9 @@ def test_backend_aliases_drive_one_consistent_doctor_workflow_state() -> None:
             page = browser.new_page()
             _login(page, server.base_url)
 
-            page.fill("#localPatientDeidentifiedId", "SIM-WORKFLOW-STATE")
-            page.fill("#localPatientDisplayName", "匿名状态流样本")
+            page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
             page.click("#createLocalEncounterButton")
+            page.locator('#dashboardEncounterList [data-encounter-action="start"]').click()
             page.wait_for_function("window.__MRA_APP_STATE__?.currentEncounter?.id")
             encounter_id = int(page.evaluate("window.__MRA_APP_STATE__.currentEncounter.id"))
             owner_id = int(page.evaluate("window.__MRA_APP_STATE__.authUser.id"))

@@ -8,7 +8,7 @@ from zipfile import ZipFile
 from playwright.sync_api import expect, sync_playwright
 
 from tests.auth_helpers import DEFAULT_ADMIN_PASSWORD
-from tests.test_doctor_itemized_approval_playwright import RunningServer, _select_all_review_items
+from tests.test_doctor_itemized_approval_playwright import RunningServer
 
 
 DOCTOR_TEST_PASSWORD = "a1234567"
@@ -68,23 +68,29 @@ def test_doctor_a_local_encounter_flow_is_hidden_from_doctor_b() -> None:
                 display_name="Doctor A",
             )
 
-            page_a.fill("#localPatientDeidentifiedId", "SIM-BROWSER-A")
-            page_a.fill("#localPatientDisplayName", "Browser Patient A")
+            page_a.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
             page_a.click("#createLocalEncounterButton")
-            page_a.wait_for_function("window.__MRA_APP_STATE__?.currentEncounter?.check_in_status === 'registered'")
-            encounter_id = int(page_a.evaluate("window.__MRA_APP_STATE__.currentEncounter.id"))
-
-            page_a.evaluate("(id) => performEncounterAction(id, 'check-in')", encounter_id)
-            page_a.wait_for_function("window.__MRA_APP_STATE__?.currentEncounter?.check_in_status === 'checked_in'")
-            page_a.evaluate("(id) => performEncounterAction(id, 'start')", encounter_id)
-            page_a.wait_for_function("window.__MRA_APP_STATE__?.currentEncounter?.check_in_status === 'in_progress'")
-
-            page_a.evaluate("createRecordTask('患者发热39度，伴咳嗽两天，胸闷气促，青霉素过敏。')")
-            page_a.wait_for_function("window.__MRA_APP_STATE__?.currentRecordFields", timeout=30000)
-            page_a.wait_for_function("window.__MRA_APP_STATE__?.eventSource === null", timeout=30000)
-            page_a.evaluate("refreshExportReadiness()")
-            page_a.wait_for_function("window.__MRA_APP_STATE__?.currentExportReadiness?.revision_id", timeout=15000)
+            row = page_a.locator("#dashboardEncounterList article").filter(has_text="张示例")
+            expect(row).to_contain_text("已报到")
+            expect(page_a.locator("body")).to_have_attribute("data-product-view", "workbench")
+            start = row.get_by_role("button", name="开始接诊", exact=True)
+            encounter_id = int(start.get_attribute("data-encounter-id"))
+            start.click()
+            expect(page_a.locator("#patientName")).to_have_text("张示例")
+            expect(page_a.locator("#patientDemoBadge")).to_be_visible()
+            page_a.locator('#encounterView [data-input-method="text"]').click()
+            page_a.fill("#conversationInput", "患者发热39度，伴咳嗽两天，胸闷气促，青霉素过敏。")
+            page_a.click("#submitTextButton")
+            expect(page_a.locator("#editRecordButton")).to_be_enabled(timeout=30000)
             task_id = int(page_a.evaluate("window.__MRA_APP_STATE__.currentTaskId"))
+            page_a.click("#editRecordButton")
+            editor = page_a.locator('[data-record-field-input="chief_complaint"]')
+            editor.fill("发热伴咳嗽2天")
+            page_a.locator('[data-product-view-target="workbench"]').first.click()
+            expect(editor).to_have_value("发热伴咳嗽2天")
+            expect(page_a.locator("body")).to_have_attribute("data-product-view", "encounter")
+            page_a.click("#saveDraftButton")
+            expect(page_a.locator("#confirmFieldsButton")).to_be_enabled(timeout=15000)
 
             linkage = page_a.evaluate(
                 """async ({encounterId, taskId}) => {
@@ -102,12 +108,18 @@ def test_doctor_a_local_encounter_flow_is_hidden_from_doctor_b() -> None:
             assert linkage["taskEncounterId"] == encounter_id
             assert linkage["checkInStatus"] == "in_progress"
 
-            _select_all_review_items(page_a)
-            page_a.evaluate("confirmFields()")
+            page_a.locator("[data-approval-confirm-regular]").click()
+            for selector in ('[data-approval-action="accept_missing"]', '[data-approval-action="confirm_candidate"]', '[data-approval-risk-key]'):
+                # Capture stable keys, then use real visible clicks despite re-rendering.
+                buttons = page_a.locator(selector + ":visible")
+                for _ in range(buttons.count()):
+                    buttons.first.click()
+                assert buttons.count() == 0
+            page_a.click("#confirmFieldsButton")
             page_a.wait_for_function("window.__MRA_APP_STATE__?.currentTask?.current_stage === 'approved'", timeout=15000)
 
             with page_a.expect_download(timeout=30000) as download_info:
-                page_a.evaluate("exportRecord()")
+                page_a.click("#exportButton")
             download = download_info.value
             docx_path = download_dir / download.suggested_filename
             download.save_as(docx_path)
@@ -125,7 +137,7 @@ def test_doctor_a_local_encounter_flow_is_hidden_from_doctor_b() -> None:
                 password=DOCTOR_TEST_PASSWORD,
                 display_name="Doctor B",
             )
-            expect(page_b.locator("#dashboardEncounterList")).not_to_contain_text("Browser Patient A")
+            expect(page_b.locator("#dashboardEncounterList")).not_to_contain_text("张示例")
             blocked = page_b.evaluate(
                 """async ({encounterId, taskId}) => {
                   const requests = [
@@ -154,7 +166,8 @@ def test_doctor_a_local_encounter_flow_is_hidden_from_doctor_b() -> None:
                 password=DOCTOR_TEST_PASSWORD,
                 display_name="Doctor A",
             )
-            page_a.evaluate("(id) => restoreEncounter(id)", encounter_id)
+            page_a.locator('[data-product-view-target="workbench"]').first.click()
+            page_a.locator(f'#dashboardEncounterList [data-restore-encounter="{encounter_id}"]').click()
             page_a.wait_for_function(
                 "(id) => window.__MRA_APP_STATE__?.currentEncounter?.id === id && window.__MRA_APP_STATE__?.currentTaskId",
                 arg=encounter_id,

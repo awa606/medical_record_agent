@@ -1,0 +1,756 @@
+{
+  "kind": "real_local_model_only_comparison",
+  "models": {
+    "qwen3:4b": {
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "base_sha": "ced860ba3d2bcb50b0e598b4f71aa8b99f5adab7",
+      "code_sha256": {
+        "app/services/llm/ollama_provider.py": "b647530920678bb341cabb731002049160319e667c6c353906d141819687216f",
+        "app/prompts/medical_record_prompts.py": "148e5a608c47474b070ff2dec4c84bf1823388f3cf8241fefe0abbd6082e4ee3",
+        "app/services/llm/llm_record_generator.py": "ffa6d62ef9cfbfa6eabef2b16a17128a0eab606f2745aff9b84362f75d60c8c9",
+        "app/services/field_grounding.py": "8e0d37a7d492ec82d3567bf6540c8d0089a70c3249c4ddaef880350ad3780d51",
+        "app/services/clinical_facts.py": "3ccd44908032460b88692aa927868be688d9c7244461d08d7caf9493627eea83",
+        "scripts/experiments/compare_local_models.py": "8f2f66bb6b997ee5b558799d8b603577ef51ef944224bdd9f80a5ce0baed15ec",
+        "scripts/experiments/run_evidence_selection.py": "4ce8a372a79760973d225aa84e7c9d0f01641805cbd7d53b5665eef05e012e5f"
+      },
+      "started_at": "2026-09-28T09:13:36.082545+00:00",
+      "completed_at": "2026-09-28T09:15:31.655626+00:00",
+      "calls": 21,
+      "passed": 9,
+      "gate": "REJECTED",
+      "groups": {
+        "realtek13": {
+          "n": 3,
+          "raw_pass": 0,
+          "checked_pass": 0,
+          "pipeline_pass": 0
+        },
+        "case11": {
+          "n": 3,
+          "raw_pass": 3,
+          "checked_pass": 0,
+          "pipeline_pass": 0
+        },
+        "question": {
+          "n": 3,
+          "raw_pass": 3,
+          "checked_pass": 3,
+          "pipeline_pass": 3
+        },
+        "family": {
+          "n": 3,
+          "raw_pass": 0,
+          "checked_pass": 0,
+          "pipeline_pass": 0
+        },
+        "negative_allergy": {
+          "n": 3,
+          "raw_pass": 3,
+          "checked_pass": 3,
+          "pipeline_pass": 3
+        },
+        "treatment": {
+          "n": 3,
+          "raw_pass": 0,
+          "checked_pass": 0,
+          "pipeline_pass": 0
+        },
+        "missing": {
+          "n": 3,
+          "raw_pass": 3,
+          "checked_pass": 3,
+          "pipeline_pass": 3
+        }
+      },
+      "median_seconds": 4.974,
+      "sample_p95_seconds": 10.577,
+      "total_call_seconds": 114.958,
+      "device_samples": 30,
+      "host_min_available_GiB": 5.591,
+      "host_max_used_GiB": 25.844,
+      "gpu_max_used_MiB": 6448,
+      "rows": [
+        {
+          "input_id": "realtek13",
+          "run": 1,
+          "first_output_criteria_pass": false,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [
+            "citations_match_input_and_index"
+          ],
+          "conflicting_fields": [
+            "chief_complaint"
+          ],
+          "pipeline_conflicting_fields": [
+            "chief_complaint"
+          ],
+          "exact_quote_discrepancy_fields": [
+            "chief_complaint"
+          ],
+          "seconds": 10.689,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 10572314987,
+            "load_duration": 61291942,
+            "prompt_eval_count": 462,
+            "prompt_eval_duration": 236012000,
+            "eval_count": 488,
+            "eval_duration": 10255828000
+          },
+          "raw_sha256": "4e0c4a75d14ed6f0938705605e2985f25dbadb038b0fbb7e56a850ba09340a1a",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "realtek13",
+          "run": 2,
+          "first_output_criteria_pass": false,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [
+            "citations_match_input_and_index"
+          ],
+          "conflicting_fields": [
+            "chief_complaint"
+          ],
+          "pipeline_conflicting_fields": [
+            "chief_complaint"
+          ],
+          "exact_quote_discrepancy_fields": [
+            "chief_complaint"
+          ],
+          "seconds": 10.577,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 10499343495,
+            "load_duration": 56121376,
+            "prompt_eval_count": 462,
+            "prompt_eval_duration": 75955000,
+            "eval_count": 489,
+            "eval_duration": 10068816000
+          },
+          "raw_sha256": "226a9570ee2206917d524ba8fe3f4b57af5951569e578bd4e0cc919fc7c74909",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "realtek13",
+          "run": 3,
+          "first_output_criteria_pass": false,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [
+            "citations_match_input_and_index"
+          ],
+          "conflicting_fields": [
+            "chief_complaint"
+          ],
+          "pipeline_conflicting_fields": [
+            "chief_complaint"
+          ],
+          "exact_quote_discrepancy_fields": [
+            "chief_complaint"
+          ],
+          "seconds": 8.706,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 8525943014,
+            "load_duration": 121417305,
+            "prompt_eval_count": 462,
+            "prompt_eval_duration": 112968000,
+            "eval_count": 489,
+            "eval_duration": 7978168000
+          },
+          "raw_sha256": "abecfcc7f5167be2275b0f7b0ffe3d34a4af4c557a73515e02d0dd5c3f0efb4b",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "case11",
+          "run": 1,
+          "first_output_criteria_pass": true,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [],
+          "conflicting_fields": [
+            "present_illness"
+          ],
+          "pipeline_conflicting_fields": [
+            "present_illness"
+          ],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 5.368,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 5216984746,
+            "load_duration": 86604523,
+            "prompt_eval_count": 466,
+            "prompt_eval_duration": 60893000,
+            "eval_count": 394,
+            "eval_duration": 5052036000
+          },
+          "raw_sha256": "0c404b8a603bdcedaf7a4976993d146c27bf48d8d432c9aec4c75c10a4ac84f4",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "case11",
+          "run": 2,
+          "first_output_criteria_pass": true,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [],
+          "conflicting_fields": [
+            "present_illness"
+          ],
+          "pipeline_conflicting_fields": [
+            "present_illness"
+          ],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 4.786,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 4732395818,
+            "load_duration": 47265776,
+            "prompt_eval_count": 466,
+            "prompt_eval_duration": 42586000,
+            "eval_count": 394,
+            "eval_duration": 4628478000
+          },
+          "raw_sha256": "27da836a6fd16a75e25813ceaaba809a268b6be10027944e686fc47a5628dfc2",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "case11",
+          "run": 3,
+          "first_output_criteria_pass": true,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [],
+          "conflicting_fields": [
+            "present_illness"
+          ],
+          "pipeline_conflicting_fields": [
+            "present_illness"
+          ],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 5.085,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 5000094265,
+            "load_duration": 87612072,
+            "prompt_eval_count": 466,
+            "prompt_eval_duration": 43828000,
+            "eval_count": 394,
+            "eval_duration": 4853887000
+          },
+          "raw_sha256": "9afb22b1ace1f6cd08cfe1a0f3fb10b343d36e88c8f9b8d726fa7222e57fa551",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "question",
+          "run": 1,
+          "first_output_criteria_pass": true,
+          "checked_pass": true,
+          "pipeline_pass": true,
+          "failed_checks": [],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 3.708,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 3621126066,
+            "load_duration": 73968429,
+            "prompt_eval_count": 440,
+            "prompt_eval_duration": 62206000,
+            "eval_count": 293,
+            "eval_duration": 3468655000
+          },
+          "raw_sha256": "fd8dd9c9b932dbcaabe9f8961b25822a90fc6cbd4a969670f2ebaf0e87051e8c",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "question",
+          "run": 2,
+          "first_output_criteria_pass": true,
+          "checked_pass": true,
+          "pipeline_pass": true,
+          "failed_checks": [],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 3.869,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 3804507326,
+            "load_duration": 62280593,
+            "prompt_eval_count": 440,
+            "prompt_eval_duration": 40339000,
+            "eval_count": 292,
+            "eval_duration": 3684118000
+          },
+          "raw_sha256": "3cff76a64fa7ad9af1a0c9c571668808d1a0e12cd9f216d674bd279a205d9036",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "question",
+          "run": 3,
+          "first_output_criteria_pass": true,
+          "checked_pass": true,
+          "pipeline_pass": true,
+          "failed_checks": [],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 3.732,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 3667987498,
+            "load_duration": 63262286,
+            "prompt_eval_count": 440,
+            "prompt_eval_duration": 45457000,
+            "eval_count": 292,
+            "eval_duration": 3546120000
+          },
+          "raw_sha256": "211170b3cdb62a26ac43499b9a45c2e1feec5af7b6f8d2d7491687dab5dfd116",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "family",
+          "run": 1,
+          "first_output_criteria_pass": false,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [
+            "no_patient_fact"
+          ],
+          "conflicting_fields": [
+            "chief_complaint",
+            "allergy_history"
+          ],
+          "pipeline_conflicting_fields": [
+            "chief_complaint",
+            "allergy_history"
+          ],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 5.131,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 5053747579,
+            "load_duration": 83582242,
+            "prompt_eval_count": 443,
+            "prompt_eval_duration": 51606000,
+            "eval_count": 401,
+            "eval_duration": 4898313000
+          },
+          "raw_sha256": "8eb07ebf42701e0560415c3060a2c04d051e9bc4d138575f694adbc6340b92e2",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "family",
+          "run": 2,
+          "first_output_criteria_pass": false,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [
+            "no_patient_fact"
+          ],
+          "conflicting_fields": [
+            "chief_complaint",
+            "allergy_history"
+          ],
+          "pipeline_conflicting_fields": [
+            "chief_complaint",
+            "allergy_history"
+          ],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 5.388,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 5318210970,
+            "load_duration": 58189300,
+            "prompt_eval_count": 443,
+            "prompt_eval_duration": 41370000,
+            "eval_count": 399,
+            "eval_duration": 5205880000
+          },
+          "raw_sha256": "619156b8f7d74309526a308d198c733f41ce6ed74b17f6017c252adf656d67b2",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "family",
+          "run": 3,
+          "first_output_criteria_pass": false,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [
+            "no_patient_fact"
+          ],
+          "conflicting_fields": [
+            "chief_complaint",
+            "allergy_history"
+          ],
+          "pipeline_conflicting_fields": [
+            "chief_complaint",
+            "allergy_history"
+          ],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 5.513,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 5427407269,
+            "load_duration": 55609586,
+            "prompt_eval_count": 443,
+            "prompt_eval_duration": 42473000,
+            "eval_count": 399,
+            "eval_duration": 5312277000
+          },
+          "raw_sha256": "836b3fa2af7d6d44c906d3a38aba0a430d9e755507b57d468c2b96696cf7c251",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "negative_allergy",
+          "run": 1,
+          "first_output_criteria_pass": true,
+          "checked_pass": true,
+          "pipeline_pass": true,
+          "failed_checks": [],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 4.818,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 4685429829,
+            "load_duration": 105897425,
+            "prompt_eval_count": 441,
+            "prompt_eval_duration": 77740000,
+            "eval_count": 318,
+            "eval_duration": 4486381000
+          },
+          "raw_sha256": "ba37270ed7c065f189e73de43f1bc0f443e5bad4e7d3e7cdf50cc2fa0e5063ff",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "negative_allergy",
+          "run": 2,
+          "first_output_criteria_pass": true,
+          "checked_pass": true,
+          "pipeline_pass": true,
+          "failed_checks": [],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 4.505,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 4399718143,
+            "load_duration": 97848428,
+            "prompt_eval_count": 441,
+            "prompt_eval_duration": 54619000,
+            "eval_count": 318,
+            "eval_duration": 4234443000
+          },
+          "raw_sha256": "04bea73ec84ded93d3c87886c5a2fc50e4978daf38a59ae10b1290623dd0cd1c",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "negative_allergy",
+          "run": 3,
+          "first_output_criteria_pass": true,
+          "checked_pass": true,
+          "pipeline_pass": true,
+          "failed_checks": [],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 4.268,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 4200452116,
+            "load_duration": 56214860,
+            "prompt_eval_count": 441,
+            "prompt_eval_duration": 42694000,
+            "eval_count": 318,
+            "eval_duration": 4090141000
+          },
+          "raw_sha256": "c9b52e0d01965def7d09cabd29ff6960f68e94dacba827b15c9e1fc48a6c9e2d",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "treatment",
+          "run": 1,
+          "first_output_criteria_pass": false,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [
+            "treatment_present",
+            "treatment_and_response"
+          ],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [
+            "present_illness"
+          ],
+          "seconds": 4.355,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 4304017768,
+            "load_duration": 56045405,
+            "prompt_eval_count": 447,
+            "prompt_eval_duration": 57539000,
+            "eval_count": 330,
+            "eval_duration": 4174384000
+          },
+          "raw_sha256": "8b4eb7f05675f9828659a1b319e845dbc0b372d0103583b39c31ed5f5dee275c",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "treatment",
+          "run": 2,
+          "first_output_criteria_pass": false,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [
+            "treatment_present",
+            "treatment_and_response"
+          ],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [
+            "present_illness"
+          ],
+          "seconds": 4.466,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 4403698533,
+            "load_duration": 62613557,
+            "prompt_eval_count": 447,
+            "prompt_eval_duration": 40847000,
+            "eval_count": 330,
+            "eval_duration": 4288532000
+          },
+          "raw_sha256": "a1782035707cad323ccb6e426b765b4300467a214be55058ab68ab3244e4008a",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "treatment",
+          "run": 3,
+          "first_output_criteria_pass": false,
+          "checked_pass": false,
+          "pipeline_pass": false,
+          "failed_checks": [
+            "treatment_present",
+            "treatment_and_response"
+          ],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [
+            "present_illness"
+          ],
+          "seconds": 4.429,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 4367194090,
+            "load_duration": 62588168,
+            "prompt_eval_count": 447,
+            "prompt_eval_duration": 42930000,
+            "eval_count": 330,
+            "eval_duration": 4249442000
+          },
+          "raw_sha256": "c59d9bf375bbaa038463a15f2df138267fe300696914eba68298bfab102342b3",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "missing",
+          "run": 1,
+          "first_output_criteria_pass": true,
+          "checked_pass": true,
+          "pipeline_pass": true,
+          "failed_checks": [],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 5.104,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 5052843982,
+            "load_duration": 44209555,
+            "prompt_eval_count": 441,
+            "prompt_eval_duration": 58154000,
+            "eval_count": 370,
+            "eval_duration": 4939215000
+          },
+          "raw_sha256": "10559a09a792898859bbd735b2594092ed7fa0983ff0b87f195793811f15cace",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "missing",
+          "run": 2,
+          "first_output_criteria_pass": true,
+          "checked_pass": true,
+          "pipeline_pass": true,
+          "failed_checks": [],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 5.487,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 5419956022,
+            "load_duration": 66925193,
+            "prompt_eval_count": 441,
+            "prompt_eval_duration": 55680000,
+            "eval_count": 370,
+            "eval_duration": 5283252000
+          },
+          "raw_sha256": "6b0e8c44e203586d96c1acfb30299022ad6b4d9f5a418522a817849c795dc7d6",
+          "provider_error": null,
+          "error": null
+        },
+        {
+          "input_id": "missing",
+          "run": 3,
+          "first_output_criteria_pass": true,
+          "checked_pass": true,
+          "pipeline_pass": true,
+          "failed_checks": [],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 4.974,
+          "ollama_timing": {
+            "done_reason": "stop",
+            "total_duration": 4915605312,
+            "load_duration": 53189148,
+            "prompt_eval_count": 441,
+            "prompt_eval_duration": 40294000,
+            "eval_count": 370,
+            "eval_duration": 4808941000
+          },
+          "raw_sha256": "7857e01f6335b4f9b1ed74fd669098bd17a6ca558c51ef0f8b6b5d6e9a50edba",
+          "provider_error": null,
+          "error": null
+        }
+      ],
+      "completed_response_count": 21,
+      "quality_status": "MEASURED_SMALL_ENGINEERING_SET"
+    },
+    "qwen3:8b": {
+      "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "base_sha": "ced860ba3d2bcb50b0e598b4f71aa8b99f5adab7",
+      "code_sha256": {
+        "app/services/llm/ollama_provider.py": "b647530920678bb341cabb731002049160319e667c6c353906d141819687216f",
+        "app/prompts/medical_record_prompts.py": "148e5a608c47474b070ff2dec4c84bf1823388f3cf8241fefe0abbd6082e4ee3",
+        "app/services/llm/llm_record_generator.py": "ffa6d62ef9cfbfa6eabef2b16a17128a0eab606f2745aff9b84362f75d60c8c9",
+        "app/services/field_grounding.py": "8e0d37a7d492ec82d3567bf6540c8d0089a70c3249c4ddaef880350ad3780d51",
+        "app/services/clinical_facts.py": "3ccd44908032460b88692aa927868be688d9c7244461d08d7caf9493627eea83",
+        "scripts/experiments/compare_local_models.py": "8f2f66bb6b997ee5b558799d8b603577ef51ef944224bdd9f80a5ce0baed15ec",
+        "scripts/experiments/run_evidence_selection.py": "4ce8a372a79760973d225aa84e7c9d0f01641805cbd7d53b5665eef05e012e5f"
+      },
+      "started_at": "2026-09-28T09:32:49.757938+00:00",
+      "completed_at": "2026-09-28T09:34:49.925163+00:00",
+      "calls": 1,
+      "passed": null,
+      "gate": "REJECTED",
+      "groups": {
+        "realtek13": {
+          "n": 1,
+          "raw_pass": null,
+          "checked_pass": null,
+          "pipeline_pass": null
+        }
+      },
+      "median_seconds": null,
+      "sample_p95_seconds": null,
+      "total_call_seconds": 120.157,
+      "device_samples": 39,
+      "host_min_available_GiB": 6.689,
+      "host_max_used_GiB": 24.746,
+      "gpu_max_used_MiB": 7066,
+      "rows": [
+        {
+          "input_id": "realtek13",
+          "run": 1,
+          "first_output_criteria_pass": null,
+          "checked_pass": null,
+          "pipeline_pass": null,
+          "failed_checks": [],
+          "conflicting_fields": [],
+          "pipeline_conflicting_fields": [],
+          "exact_quote_discrepancy_fields": [],
+          "seconds": 120.157,
+          "ollama_timing": null,
+          "raw_sha256": "96bcd19a151581a81a93b4b67e57fa3d3b7633a17599f4f75f0f37e2437e82a0",
+          "provider_error": "TimeoutError: timed out",
+          "error": "RuntimeError: TimeoutError: timed out"
+        }
+      ],
+      "completed_response_count": 0,
+      "quality_status": "NOT_TESTED",
+      "failed_request_seconds": 120.157
+    }
+  },
+  "request_equality_cases": 0,
+  "production_code_equal": true,
+  "new_calls": 22,
+  "production_changed": false,
+  "input_scope": "reused true 13s ASR transcript plus six synthetic development inputs; no new recording/transcription",
+  "limits": [
+    "first-output criteria are engineering checks, not medical review",
+    "raw, grounding and pipeline reported separately",
+    "source comparator ignores punctuation; exact quote discrepancies additionally reported",
+    "whole-host/device sampled memory is not exclusive model RSS",
+    "4B began warm; 8B first request began cold; load duration kept separately",
+    "4B request traces were captured only after HTTP response; 8B timed out before response so no response/request pair is claimed; shared Provider code hashes verified"
+  ],
+  "candidate_gate": "INCOMPLETE_STARTUP_TIMEOUT",
+  "candidate_identity": {
+    "name": "qwen3:8b",
+    "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+    "license": "Apache-2.0",
+    "license_sha256": "d18a5cc71b84bc4af394a31116bd3932b42241de70c77d2b76d69a314ec8aa12",
+    "source": "https://ollama.com/library/qwen3:8b",
+    "quantization": "Q4_K_M"
+  },
+  "validation": {
+    "pytest_passed": 649,
+    "pytest_skipped": 1,
+    "pytest_warning": 1,
+    "semantic_rule_cases": 240,
+    "semantic_matched_facts": 206,
+    "frontend_syntax": "PASS",
+    "diff_check": "PASS"
+  },
+  "candidate_container_oom_killed": false,
+  "candidate_stop": "Explicit docker stop after request timeout; no retry or deployment",
+  "candidate_peak_runner_VmHWM_KiB": 5274360,
+  "rollout": {
+    "production_app_sha": "a3a5ca8719815007eb22b225ba30893a02157ed6",
+    "new_model_deployed": false,
+    "held_out_run": false,
+    "real_paths_this_run": false,
+    "release_ready": false,
+    "restored_ready_at": "2026-09-28T17:37:40.774186+08:00",
+    "restored_ready_status": 200,
+    "container_identity_unchanged": true,
+    "task_counts_unchanged": true
+  }
+}

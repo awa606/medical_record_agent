@@ -1,0 +1,219 @@
+{
+  "date": "2026-09-28",
+  "status": "COURSE_CANDIDATE_NOT_DOCTOR_PILOT",
+  "runtime_sha": "8afc6bd537e3bccce9989529a6540005236677a4",
+  "wbs": "5.1",
+  "wbs_status": "VERIFY",
+  "model": "qwen3:4b",
+  "rejected_candidate": "qwen3:8b Q4_K_M, quality 9/21",
+  "doctor_url": "http://127.0.0.1:8795/static/doctor.html",
+  "readonly_viewer_port": 18896,
+  "snapshot": {
+    "schema_version": "mra-readonly-snapshot-v1",
+    "captured_at": "2026-09-28T12:13:12.506925+00:00",
+    "exporter_sha256": "2ed161bd087a22d89e3c64ffcc6765c98ad5833b17452e04ac4ec3f4625711d4",
+    "viewer_version": "datasette 0.65.5",
+    "source_label": "8795 / 8afc6bd / source backup 2026-09-28 20:13, E13 revision22 export corrected",
+    "synthetic_only": true,
+    "allowlist_sha256": "498447979b94c7a5ad2a9cff2da8a6b5770875e2e2a4a69bb0d2b779896a8bf9",
+    "database_sha256": "7624d6379c095b968d9e08e73638630492a46b02eac43f3c697e8b420f9f742d",
+    "table_counts": {
+      "patient": 4,
+      "agent_task": 5,
+      "encounter": 8,
+      "record_revision": 12,
+      "revision_field": 84,
+      "approval": 7,
+      "export_event": 8,
+      "knowledge_source": 5,
+      "knowledge_document": 7,
+      "knowledge_chunk": 116,
+      "knowledge_embedding_metadata": 96
+    },
+    "projection": "column/JSON allowlist; revision_field derived; embedding vectors and authentication data omitted"
+  },
+  "workflow": {
+    "at": "2026-09-28T20:13:10.720690+08:00",
+    "runtime_sha": "8afc6bd537e3bccce9989529a6540005236677a4",
+    "encounter_id": 13,
+    "task_id": 9,
+    "revision_id": 22,
+    "revision_no": 5,
+    "status": "exported",
+    "manual_edit": true,
+    "reviewer": "Codex simulated operator; no clinical reviewer",
+    "new_model_inference": false,
+    "source": "historical real Qwen result with explicit manual correction",
+    "export_sha256": "60b6f07a1e3051484d53bd0a03636ce6afd2dcf7914792cdc468ea08b7a4bcb0",
+    "export_checks": {
+      "今天发热伴咳嗽、咽痛": true,
+      "没有药物过敏史": true,
+      "没有胸痛": true,
+      "无保留的候选诊断": true,
+      "excluded_diagnosis_not_confirmed": true
+    },
+    "full_runtime_counts": {
+      "patient": 9,
+      "encounter": 13,
+      "record_revision": 22,
+      "approval": 11,
+      "export_event": 12,
+      "knowledge_document": 7,
+      "knowledge_chunk": 116,
+      "knowledge_embedding": 96
+    },
+    "data_backup_sha256": "b9834523fb05485d6e33e9ceca4e0c3a060ab20ec8e378aa29babca8c75c479d",
+    "historical_reopen": true,
+    "prior_export_rejected_reason": "excluded AI candidates were incorrectly labeled confirmed; old artifact retained only as failed evidence"
+  },
+  "restore": {
+    "at": "2026-09-28T20:28:19+08:00",
+    "status": "COURSE_CHECKPOINT_RESTORED_NOT_PILOT",
+    "package_id": "course-demo-20260928-r1",
+    "manifest_sha256": "a63304e58d4d983f264c63f82a4875516b35e44ec0fa98e8f7d59189912eea79",
+    "file_count": 2626,
+    "bytes": 10770636200,
+    "port": 18898,
+    "external_connections": {
+      "app": "BLOCKED",
+      "gateway": "BLOCKED",
+      "ollama": "BLOCKED"
+    },
+    "health": 200,
+    "ready": 200,
+    "static_resources_match": true,
+    "knowledge": {
+      "mode": "hybrid_v1",
+      "hits": 5
+    },
+    "synthetic_seed": {
+      "patient": 3,
+      "encounter": 3
+    },
+    "after_new_generation": {
+      "patient": 4,
+      "encounter": 4,
+      "knowledge_document": 7,
+      "knowledge_chunk": 116,
+      "knowledge_embedding": 96
+    },
+    "generation": {
+      "task_id": 1,
+      "status": "WAITING_DOCTOR_REVIEW",
+      "provider": "ollama",
+      "model": "qwen3:4b",
+      "fallback": false,
+      "field_statuses": {
+        "chief_complaint": {
+          "status": "conflicting",
+          "missing": false
+        },
+        "present_illness": {
+          "status": "complete",
+          "missing": false
+        },
+        "previous_treatment": {
+          "status": "missing",
+          "missing": true
+        },
+        "accompanying_symptoms": {
+          "status": "complete",
+          "missing": false
+        },
+        "past_history": {
+          "status": "missing",
+          "missing": true
+        },
+        "allergy_history": {
+          "status": "complete",
+          "missing": false
+        },
+        "physical_exam": {
+          "status": "missing",
+          "missing": true
+        }
+      },
+      "manual_correction": false,
+      "approved": false
+    },
+    "export_blocked": true,
+    "readonly_viewer": {
+      "checks": {
+        "anonymous_denied": true,
+        "table_visible": true,
+        "css": true,
+        "sql_denied": true,
+        "whole_db_denied": true,
+        "auth_table_denied": true,
+        "write_denied": true,
+        "unchanged": true
+      },
+      "snapshot_sha": "7624d6379c095b968d9e08e73638630492a46b02eac43f3c697e8b420f9f742d",
+      "pass": true
+    },
+    "historical_records": "readonly projection; no editable history restoration claim",
+    "scope": "DEV-01 isolated network, no external egress; model quality still FAIL",
+    "initial_failure": "r1 root-owned SQLite; fixed in 8afc6bd, r2 fresh directory used",
+    "harness_correction": "The generation endpoint created one synthetic patient/encounter. Original 3/3 seed-count assertion failed; readonly replay verified 3 seeds plus task-linked encounter 4; no repeated inference."
+  },
+  "tests": {
+    "full_pytest": {
+      "passed": 658,
+      "skipped": 1,
+      "warnings": 1,
+      "seconds": 480.85,
+      "runtime_sha": "8afc6bd537e3bccce9989529a6540005236677a4"
+    },
+    "isolated_datasette": {
+      "passed": 9
+    },
+    "syntax": "PASS",
+    "diff_check": "PASS",
+    "ci": "See PR #113 verify for exact pushed HEAD; local results above use runtime 8afc6bd"
+  },
+  "boundaries": [
+    "historical real model result and manual correction, not new inference",
+    "engineering simulated approval, no clinical reviewer",
+    "final same-SHA physical microphone and three input paths pending",
+    "5.3 not started"
+  ],
+  "resumed_original_runtime": {
+    "at": "2026-09-28T20:29:14+08:00",
+    "runtime_sha": "8afc6bd537e3bccce9989529a6540005236677a4",
+    "ready": 200,
+    "health": 200,
+    "counts": {
+      "patient": 9,
+      "encounter": 13,
+      "record_revision": 22,
+      "approval": 11,
+      "export_event": 12,
+      "knowledge_document": 7,
+      "knowledge_chunk": 116,
+      "knowledge_embedding": 96
+    },
+    "data_preserved": true,
+    "static_resources": {
+      "doctor.html": true,
+      "doctor.js": true,
+      "doctor.css": true,
+      "doctor-ui-v2.css": true,
+      "doctor-workspace.css": true,
+      "brand/medilisten-v1.png": true,
+      "brand/medilisten-v1.ico": true
+    },
+    "knowledge_mode": "hybrid_v1",
+    "knowledge_hits": 5
+  },
+  "pm_snapshot": {
+    "captured_at": "2026-09-28T20:31:05.915198+08:00",
+    "counts": {
+      "backlog": 4,
+      "verify": 3,
+      "done": 8,
+      "blocked": 1
+    },
+    "planned_hours": 99,
+    "tasks": 16
+  }
+}

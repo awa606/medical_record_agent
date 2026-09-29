@@ -209,9 +209,10 @@ textarea:focus {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(23, 104, 196, 0.2);
+  border: 0;
   border-radius: 10px;
-  background: linear-gradient(145deg, #edf6ff, #dbeaff);
+  background: transparent;
+  object-fit: contain;
   color: #145da9;
   font-size: 11px;
   font-weight: 900;
@@ -566,7 +567,7 @@ textarea:focus {
 
 .local-registration-form {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(180px, 1fr) auto;
   align-items: end;
   gap: 12px;
   padding: 14px 18px 6px;
@@ -577,7 +578,7 @@ textarea:focus {
   display: grid;
   gap: 6px;
   color: #667891;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -585,8 +586,15 @@ textarea:focus {
   margin: 0;
   padding: 0 18px 14px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
 }
+
+.encounter-patient-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.demo-patient-badge, .anonymous-patient-badge { flex: none; font-size: 12px; font-weight: 500; padding: 2px 7px; border-radius: 4px; color: #775b20; background: #fff7e8; }
+.anonymous-patient-badge { color: #53677b; background: #edf2f6; }
+.dashboard-panel > .worklist-toolbar { padding: 12px 16px; margin: 0; }
+.dashboard-panel > .encounter-selection-notice { margin: 0 16px 12px; }
+.product-dashboard .worklist-toolbar { grid-template-columns: minmax(160px, 1fr) minmax(100px, 160px) auto; }
 
 .panel-header {
   min-height: 62px;
@@ -856,6 +864,7 @@ body.doctor-mode .encounter-view {
   overflow: hidden;
   padding-bottom: var(--action-bar-safe-space);
 }
+
 
 .encounter-patient-banner {
   display: grid;
@@ -2202,8 +2211,8 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
 }
 
 .login-brand-lockup .brand-mark {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.1);
+  border: 0;
+  background: transparent;
   color: #fff;
 }
 

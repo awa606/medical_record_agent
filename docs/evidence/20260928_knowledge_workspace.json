@@ -1,0 +1,268 @@
+{
+  "at": "2026-09-28T13:41:07.882474+08:00",
+  "application_sha": "a3a5ca8719815007eb22b225ba30893a02157ed6",
+  "deployment_port": 8795,
+  "status": "CANDIDATE_NOT_RELEASED",
+  "workflow": {
+    "scope": "real deployed API and local Qwen; explicit synthetic doctor correction; text path only; no ASR or physical recording",
+    "status": "passed",
+    "encounter_id": 13,
+    "task_id": 9,
+    "first_statuses": {
+      "chief_complaint": "conflicting",
+      "present_illness": "complete",
+      "previous_treatment": "missing",
+      "accompanying_symptoms": "complete",
+      "past_history": "missing",
+      "allergy_history": "complete",
+      "physical_exam": "missing"
+    },
+    "first_revision": {
+      "revisionId": null,
+      "revisionNumber": null,
+      "contentHash": ""
+    },
+    "manual_corrections": [
+      "chief_complaint"
+    ],
+    "saved_revision": {
+      "revisionId": 19,
+      "revisionNumber": 2,
+      "contentHash": "d75302456e59a2e7ca591a7ee4dfff9e17fd339a2034527ec0f515a6350defd2"
+    },
+    "script_failure": "'>' not supported between instances of 'int' and 'NoneType'",
+    "restored_saved_revision": {
+      "revisionId": 19,
+      "revisionNumber": 2,
+      "contentHash": "d75302456e59a2e7ca591a7ee4dfff9e17fd339a2034527ec0f515a6350defd2"
+    },
+    "export_negation_checked": true,
+    "export_sha256": "89fd41ff2fdc9bd112d30e477cc0845a9d57f0750913558fb78ae102a6747d35",
+    "reopened_revision": {
+      "revisionId": 19,
+      "revisionNumber": 2,
+      "contentHash": "d75302456e59a2e7ca591a7ee4dfff9e17fd339a2034527ec0f515a6350defd2"
+    }
+  },
+  "persistence": {
+    "record_revision": {
+      "before_rows": 17,
+      "after_rows": 19,
+      "all_old_rows_preserved": true
+    },
+    "approval": {
+      "before_rows": 7,
+      "after_rows": 8,
+      "all_old_rows_preserved": true
+    },
+    "approval_item": {
+      "before_rows": 77,
+      "after_rows": 88,
+      "all_old_rows_preserved": true
+    },
+    "export_event": {
+      "before_rows": 7,
+      "after_rows": 8,
+      "all_old_rows_preserved": true
+    },
+    "knowledge_document": {
+      "before_rows": 7,
+      "after_rows": 7,
+      "all_old_rows_preserved": true
+    },
+    "knowledge_chunk": {
+      "before_rows": 116,
+      "after_rows": 116,
+      "all_old_rows_preserved": true
+    },
+    "knowledge_embedding": {
+      "before_rows": 96,
+      "after_rows": 96,
+      "all_old_rows_preserved": true
+    },
+    "knowledge_sources": 5,
+    "active_documents": 4,
+    "task9_revision_ids": [
+      18,
+      19
+    ],
+    "quick_check": "ok"
+  },
+  "query_comparison": {
+    "query": "主诉：发热伴咳嗽、咽痛",
+    "same_chunk_order": false,
+    "doctor_mode": "hybrid_v1",
+    "admin_mode": "hybrid_v1",
+    "hits": [
+      {
+        "source_id": "nhc-record-standard-2010",
+        "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+        "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c009",
+        "version": "卫医政发〔2010〕11号",
+        "section": "第五章  其他",
+        "page": 1,
+        "content_sha256": "3d22d5b748ce9bb7c18dde51d91cc8478ec35f22efe7039ccf9098439cbd8012",
+        "source_url": "https://www.nhc.gov.cn/wjw/gfxwj/201002/79d42b9c8b3f47ee91000d31de116784.shtml"
+      },
+      {
+        "source_id": "nhc-covid19-trial-v10",
+        "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+        "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p005-c005",
+        "version": "试行第十版 · 完整章节索引v2",
+        "section": "1.一般检查",
+        "page": 5,
+        "content_sha256": "8dbfa10fc8fea046f3b94e340afacd6a430faaaea4a4c4010176456b2141fc20",
+        "source_url": "https://www.nhc.gov.cn/cms-search/downFiles/460b0e7b19bd42f3bba00c1efb9b6811.pdf"
+      },
+      {
+        "source_id": "nhc-influenza-2020",
+        "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+        "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "version": "2020年版",
+        "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+        "page": 8,
+        "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+        "source_url": "https://www.nhc.gov.cn/ylyjs/zcwj/202011/472e0ad873014c168dbe22e19d605e20/files/1733999727528_18271.pdf"
+      },
+      {
+        "source_id": "nhc-child-mpp-2025",
+        "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+        "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003",
+        "version": "2025年版 · 完整章节索引v2",
+        "section": "五、病理表现 成人文献显示轻症患者肺泡腔内有中性粒细胞浸润，重症 患者肺泡腔和肺泡壁还伴有淋巴细胞、浆细",
+        "page": 3,
+        "content_sha256": "049f3a046b326c1515777de280dbd39f69087c021ecac94ceb37158a3c9cdd8c",
+        "source_url": "https://www.nhc.gov.cn/yzygj/c100068/202509/19e7145436b049a68d4ba8c2060dfa56/files/%E5%84%BF%E7%AB%A5%E8%82%BA%E7%82%8E%E6%94%AF%E5%8E%9F%E4%BD%93%E8%82%BA%E7%82%8E%E8%AF%8A%E7%96%97%E6%8C%87%E5%8D%97%EF%BC%882025%E5%B9%B4%E7%89%88%EF%BC%89.pdf"
+      },
+      {
+        "source_id": "nhc-covid19-trial-v10",
+        "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+        "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p020-c020",
+        "version": "试行第十版 · 完整章节索引v2",
+        "section": "新型冠状病毒感染诊疗方案（试行第十版） · 第20页",
+        "page": 20,
+        "content_sha256": "e34f36c5f300c915443b1b60b88a0944dc7c61e924c7541c43f8512a39093aa6",
+        "source_url": "https://www.nhc.gov.cn/cms-search/downFiles/460b0e7b19bd42f3bba00c1efb9b6811.pdf"
+      }
+    ],
+    "admin_chunk_ids": [
+      "nhc-covid19-trial-v10-v2-0d062b0213b1-p005-c005",
+      "nhc-covid19-trial-v10-v2-0d062b0213b1-p020-c020",
+      "nhc-covid19-trial-v10-v2-0d062b0213b1-p022-c022",
+      "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+      "nhc-covid19-trial-v10-v2-0d062b0213b1-p021-c021"
+    ],
+    "common_chunk_ids": [
+      "nhc-covid19-trial-v10-v2-0d062b0213b1-p005-c005",
+      "nhc-covid19-trial-v10-v2-0d062b0213b1-p020-c020"
+    ],
+    "ranking_context": "Doctor query adds task facts and related fields; admin standalone query does not. Same text is not identical effective query."
+  },
+  "layout": {
+    "1366": {
+      "no_horizontal_overflow": true
+    },
+    "1440": {
+      "no_horizontal_overflow": true
+    },
+    "1920": {
+      "no_horizontal_overflow": true
+    }
+  },
+  "handbook": {
+    "pages": 17,
+    "bookmarks": 16,
+    "knowledge_admin_page": 13,
+    "no_orphan_recovery_paragraph": true,
+    "all_pages_have_text": true
+  },
+  "tests": {
+    "pytest_passed": 609,
+    "pytest_skipped": 1,
+    "prototype_checks_passed": 76,
+    "edge_actual_page": true,
+    "chrome_actual_page": true,
+    "actual_browser_zoom_new_evidence": false
+  },
+  "migration": {
+    "gate": "NEEDS VALIDATION",
+    "new_source_recall_at5": 1,
+    "new_page_recall_at5": 0.8,
+    "citation_completeness": 1,
+    "active_version_unchanged": true
+  },
+  "wbs": {
+    "task": "5.1",
+    "status": "VERIFY",
+    "next": "chief complaint citation and final current-version three paths / restore",
+    "planned_tasks": 16,
+    "planned_hours": 99
+  },
+  "local_artifacts": {
+    "predeploy.sqlite3": {
+      "sha256": "e5e43ba6ee7e12dbfc78ccd0837800d3eba3e57fd169e6c4bcf4df020217baba",
+      "bytes": 4943872
+    },
+    "postdeploy.sqlite3": {
+      "sha256": "9c31b2b4e8bf1b2c461b78203d693910379205622abaa7d53b0de800bead71d3",
+      "bytes": 5087232
+    },
+    "workflow-result.json": {
+      "sha256": "323f6dc9d3662f41ef0d149a3da729fc0b5c9f88b3b6e498c67334f471674712",
+      "bytes": 1359
+    },
+    "deployed-1440.png": {
+      "sha256": "b043589d8507eb76ec56e86ab3b833b7f527fcc0d26e9dc08a872587f3d5c9d1",
+      "bytes": 114517
+    },
+    "knowledge-admin.png": {
+      "sha256": "7fa581a94dafe2313b24aa8a1d9e12b1566c4f0efff159c4bddb11ae576d7eed",
+      "bytes": 114936
+    },
+    "doctor-query.png": {
+      "sha256": "57f39b933ebf6fbac6c435a3a4ca2a318758db757d41449773df0a4bae207ffb",
+      "bytes": 97209
+    },
+    "admin-query.png": {
+      "sha256": "f9236c9f9092f0ff59f743e35419db0d553968a11b6a07be4a9198d716cc85ee",
+      "bytes": 112235
+    },
+    "handbook/doctor-manual.pdf": {
+      "sha256": "a0c6a98e2e50b2a3d6d1af3e23e722d0f6506328af31d3d58da130902b3440fc",
+      "bytes": 1385858
+    },
+    "metadata-changes.json": {
+      "sha256": "9d75ef07e150aa3dc496e907383e9d17ae19d000460606e09380f5276d9d740b",
+      "bytes": 2055
+    }
+  },
+  "pm_validation": {
+    "counts": {
+      "verify": 3,
+      "blocked": 1,
+      "backlog": 4,
+      "done": 8
+    },
+    "captured_at": "2026-09-28T13:42:40.611980+08:00",
+    "source_files": 178,
+    "all_task_fields_preserved_except_5_1_evidence": true
+  },
+  "ready_samples": [
+    {
+      "at": "2026-09-28T13:43:44.226835+08:00",
+      "status": 200,
+      "failed_checks": {}
+    },
+    {
+      "at": "2026-09-28T13:43:47.193340+08:00",
+      "status": 200,
+      "failed_checks": {}
+    },
+    {
+      "at": "2026-09-28T13:43:50.056630+08:00",
+      "status": 200,
+      "failed_checks": {}
+    }
+  ],
+  "ready_transient_after_flow": "Controller briefly returned MODEL_NOT_READY; immediate follow-up ready=200. Cause not established; samples do not prove long-term stability."
+}

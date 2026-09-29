@@ -94,7 +94,7 @@ def test_medilisten_productized_shell_copy_and_failure_metadata() -> None:
 
     assert "<title>MediListen - AI 智能病历助手</title>" in html
     assert "<h1>MediListen</h1>" in html
-    assert "LISTEN · TRANSCRIBE · GENERATE · REVIEW" in html
+    assert "聆听 · 转写 · 整理 · 审核" in html
     assert 'id="transcriptionFailureCode"' in html
     assert 'id="transcriptionFailureStage"' in html
     assert 'id="transcriptionFailureAudioState"' in html
@@ -204,8 +204,8 @@ def test_novice_workbench_uses_task_stats_and_recoverable_empty_actions() -> Non
     assert "pendingInput" in js
     assert "exceptions" in js
     assert "dashboard-empty-state" in js
-    assert 'data-input-method="audio"' in js
-    assert 'data-input-method="text"' in js
+    assert 'data-input-method="audio"' in html
+    assert 'data-input-method="text"' in html
     assert ".encounter-worklist-meta" in ui_css
     assert ".empty-state-actions" in ui_css
 

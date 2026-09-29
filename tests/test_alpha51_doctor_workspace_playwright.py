@@ -1,0 +1,110 @@
+"""Approved V3.4 layout wired to the real doctor page and API test server.
+
+The server fixture uses a synthetic patient and Mock provider; these checks prove
+layout and controls, never the three real-provider paths required by WBS 5.1.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import pytest
+from playwright.sync_api import sync_playwright
+
+from tests.test_doctor_itemized_approval_playwright import (
+    RunningServer,
+    _login,
+    _prepare_review_fixture,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.mark.parametrize("width,height", [
+    (1366, 768), (1440, 900), (1920, 1080), (1000, 720),
+    (1093, 614), (910, 512), (800, 600),
+    # Narrow viewport regression only; actual Edge zoom requires separate evidence.
+])
+def test_doctor_workspace_layout_and_real_record_entry(width: int, height: int) -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": width, "height": height})
+            _login(page, server.base_url)
+            page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
+            page.click("#createLocalEncounterButton")
+            page.locator('#dashboardEncounterList [data-encounter-action="start"]').click()
+            if width < 900:
+                page.locator("#showTranscriptButton").click()
+            page.get_by_role("button", name="开始录音", exact=True).wait_for()
+            assert page.get_by_role("button", name="开始录音", exact=True).count() == 1
+            assert page.get_by_text("张示例", exact=True).count() >= 1
+            assert page.locator("#patientProfile").inner_text().startswith("患者标识 SIM-DEMO-0929-FEVER · 本次就诊 E-")
+            assert "active" in (page.locator("#workflowSteps .workflow-step").nth(1).get_attribute("class") or "")
+            assert not page.locator(".encounter-action-bar").is_visible()
+            if width < 900:
+                page.locator("#closeWorkspaceAuxButton").click()
+            layout = page.evaluate(
+                """() => {
+                  const box = (selector) => {
+                    const rect = document.querySelector(selector).getBoundingClientRect();
+                    return {left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom};
+                  };
+                  return {
+                    viewport: innerWidth,
+                    documentWidth: document.documentElement.scrollWidth,
+                    patient: box('.encounter-patient-banner'),
+                    steps: box('.encounter-command-center'),
+                    transcript: box('.transcript-column'),
+                    record: box('.field-column'),
+                    reference: box('.assist-column'),
+                    recordFont: getComputedStyle(document.querySelector('.field-column .field-list')).fontSize,
+                    transcriptFont: getComputedStyle(document.querySelector('.transcript-row-text') || document.querySelector('.transcript-list')).fontSize
+                  };
+                }"""
+            )
+            assert layout["documentWidth"] <= width + 1, layout
+            assert layout["patient"]["bottom"] + 4 <= layout["steps"]["top"], layout
+            assert layout["steps"]["bottom"] + 4 <= layout["record"]["top"], layout
+            if width >= 900:
+                assert layout["transcript"]["right"] - layout["transcript"]["left"] > 170, layout
+                assert layout["record"]["right"] - layout["record"]["left"] > 400, layout
+                assert layout["reference"]["right"] - layout["reference"]["left"] > 160, layout
+                assert layout["transcript"]["right"] + 6 <= layout["record"]["left"], layout
+                assert layout["record"]["right"] + 6 <= layout["reference"]["left"], layout
+            screenshot_dir = os.environ.get("ALPHA51_SCREENSHOT_DIR")
+            if screenshot_dir:
+                target = Path(screenshot_dir)
+                target.mkdir(parents=True, exist_ok=True)
+                page.screenshot(path=str(target / f"doctor-empty-{width}.png"), full_page=True)
+            browser.close()
+    finally:
+        server.close()
+
+
+def test_doctor_workspace_draft_keeps_edit_evidence_and_review_visible() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            _login(page, server.base_url)
+            _prepare_review_fixture(page)
+            assert page.locator(".encounter-action-bar").is_visible()
+            assert page.locator("#recordFields .field-card").count() >= 7
+            assert page.locator("#editRecordButton").is_visible()
+            assert page.locator("#exportButton").is_disabled()
+            assert page.evaluate(
+                "parseFloat(getComputedStyle(document.querySelector('#recordFields .field-value')).fontSize)"
+            ) >= 17
+            screenshot_dir = os.environ.get("ALPHA51_SCREENSHOT_DIR")
+            if screenshot_dir:
+                target = Path(screenshot_dir)
+                target.mkdir(parents=True, exist_ok=True)
+                page.screenshot(path=str(target / "doctor-draft-1440.png"), full_page=True)
+            browser.close()
+    finally:
+        server.close()

@@ -59,6 +59,10 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(page.locator('[data-record-field-input="past_history"]')).to_have_value(original_past_history)
             editor = page.locator('[data-record-field-input="chief_complaint"]')
             editor.fill("患者发热39度，医生补充记录")
+            edited_field = page.evaluate("window.__MRA_APP_STATE__.currentRecordFields.chief_complaint")
+            assert edited_field["status"] == "partial"
+            assert edited_field["source_spans"] == []
+            assert edited_field["confidence"] is None
             expect(page.locator("[data-record-edit-status]")).to_have_text("有未保存修改")
             expect(page.locator("#saveDraftButton")).to_be_enabled()
             expect(page.locator("#confirmFieldsButton")).to_be_disabled()
@@ -74,11 +78,14 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             persisted = page.evaluate(
                 """async (taskId) => {
                   const task = await fetch(`/api/tasks/${taskId}`).then((response) => response.json());
-                  return task.result_json.fields.chief_complaint.value;
+                  return task.result_json.fields.chief_complaint;
                 }""",
                 task_id,
             )
-            assert persisted == "患者发热39度，医生补充记录"
+            assert persisted["value"] == "患者发热39度，医生补充记录"
+            assert persisted["status"] == "partial"
+            assert persisted["source_spans"] == []
+            expect(page.locator('[data-field="chief_complaint"] .doctor-edit-origin')).to_have_text("医生已修改")
 
             page.click('[data-field="chief_complaint"] [data-knowledge-field="chief_complaint"]')
             page.wait_for_function(
@@ -89,7 +96,7 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(detail).to_contain_text("发热病历记录规范")
             expect(detail).to_contain_text("alpha33-test-v1")
             expect(detail).to_contain_text(document_id)
-            expect(detail).to_contain_text("内容 SHA256")
+            expect(detail).to_contain_text("内容校验值（SHA256）")
             expect(detail.locator('a[href^="https://www.nhc.gov.cn/"]')).to_have_count(1)
             browser.close()
     finally:
@@ -129,9 +136,88 @@ def test_stale_revision_keeps_local_edit_until_doctor_loads_latest() -> None:
             expect(page.locator('[data-record-field-input="chief_complaint"]')).to_have_value("本地尚未保存的医生修改")
             expect(page.locator("[data-record-reload-latest]")).to_be_visible()
 
+            # Fail after the task response has arrived: the whole edit snapshot
+            # must survive, including the old revision used for conflict checks.
+            page.route("**/export-readiness", lambda route: route.abort())
+            page.click("[data-record-reload-latest]")
+            expect(page.locator(".record-version")).to_contain_text("加载失败", timeout=15000)
+            expect(page.locator('[data-record-field-input="chief_complaint"]')).to_have_value("本地尚未保存的医生修改")
+            expect(page.locator(".record-edit-notice.conflict")).to_be_visible()
+            page.unroute("**/export-readiness")
             page.click("[data-record-reload-latest]")
             page.wait_for_function("!window.__MRA_APP_STATE__.recordEditMode", timeout=15000)
             expect(page.locator("[data-record-field-input]")).to_have_count(0)
+            page.locator(".record-recovery summary").click()
+            expect(page.locator(".record-recovery")).to_contain_text("本地尚未保存的医生修改")
+            page.click("[data-record-reapply]")
+            expect(page.locator('[data-record-field-input="chief_complaint"]')).to_have_value("本地尚未保存的医生修改")
+            expect(page.locator("#confirmFieldsButton")).to_be_disabled()
+            page.click("#saveDraftButton")
+            page.wait_for_function("!window.__MRA_APP_STATE__.recordEditMode", timeout=15000)
+            expect(page.locator(".record-version")).to_contain_text("修改已保存")
+            expect(page.locator(".record-recovery")).to_have_count(0)
+            browser.close()
+    finally:
+        server.close()
+
+
+def test_field_edit_focus_save_failure_and_completed_review_disclosure() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page()
+            _login(page, server.base_url)
+            _prepare_review_fixture(page)
+            page.click('[data-record-edit-field="past_history"]')
+            editor = page.locator('[data-record-field-input="past_history"]')
+            expect(editor).to_be_focused()
+            editor.fill("医生待保存修改 <script>不可执行</script>")
+            # Focusing another field must not reset the first edited value.
+            page.evaluate("beginRecordEdit('allergy_history')")
+            expect(editor).to_have_value("医生待保存修改 <script>不可执行</script>")
+            page.route("**/review", lambda route: route.fulfill(status=503, json={"detail": "暂时不可用"}))
+            page.click("#saveDraftButton")
+            expect(page.locator(".record-version")).to_contain_text("保存失败", timeout=15000)
+            expect(editor).to_have_value("医生待保存修改 <script>不可执行</script>")
+            expect(page.locator("#recordFields script")).to_have_count(0)
+            page.unroute("**/review")
+            page.click("#cancelRecordEditButton")
+            page.click("[data-approval-confirm-regular]")
+            expect(page.locator(".review-completed")).not_to_have_attribute("open", "")
+            expect(page.locator("[data-approval-confirm-regular]")).not_to_be_visible()
+            page.locator(".review-completed summary").click()
+            expect(page.locator("[data-approval-confirm-regular]")).to_be_visible()
+            browser.close()
+    finally:
+        server.close()
+
+
+def test_committed_save_with_failed_refresh_requires_verification_not_resubmit() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page()
+            _login(page, server.base_url)
+            task_id = _prepare_review_fixture(page)
+            page.click('[data-record-edit-field="past_history"]')
+            editor = page.locator('[data-record-field-input="past_history"]')
+            editor.fill("医生确认既往史本次未详细采集")
+            page.route("**/export-readiness", lambda route: route.abort())
+            page.click("#saveDraftButton")
+            expect(page.locator(".record-version")).to_contain_text("服务器已接受保存", timeout=15000)
+            expect(page.locator("#saveDraftButton")).to_be_disabled()
+            editor.fill("读取失败后的本地追加内容")
+            expect(page.locator("#saveDraftButton")).to_be_disabled()
+            expect(page.locator("#cancelRecordEditButton")).to_be_disabled()
+            page.unroute("**/export-readiness")
+            page.click("[data-record-reload-latest]")
+            page.wait_for_function("!appState.recordEditMode", timeout=15000)
+            persisted = page.evaluate("async id => (await api(`/api/tasks/${id}`)).result_json.fields.past_history.value", task_id)
+            assert persisted == "医生确认既往史本次未详细采集"
+            page.locator(".record-recovery summary").click()
+            expect(page.locator(".record-recovery")).to_contain_text("读取失败后的本地追加内容")
             browser.close()
     finally:
         server.close()

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}退出授权{% endblock %}
+
+{% block content %}
+
+<h1>退出授权</h1>
+
+<p>当前授权身份： <strong>本机授权用户 <small>({{ display_actor(actor) }})</small></strong></p>
+
+<form action="{{ urls.logout() }}" method="post">
+    <div>
+        <input type="hidden" name="csrftoken" value="{{ csrftoken() }}">
+        <input type="submit" value="退出授权">
+    </div>
+</form>
+
+{% endblock %}

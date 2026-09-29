@@ -1,0 +1,61 @@
+{
+  "schema_version": "mra-alpha51-preview-evidence-v3.1",
+  "recorded_at": "2026-09-23T16:59:33+08:00",
+  "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
+  "branch": "codex/alpha51-demo-visual-e2e",
+  "previous_version_commit": "8bf700c",
+  "user_feedback": "病历部分稍微字小，其他部分堆积，希望增加中间留白、布局更合理美观",
+  "visual_review": "NEEDS_ADJUSTMENT",
+  "baseline_approved": false,
+  "research_gate": "NEEDS_MORE_EVIDENCE",
+  "design_gate": "NEEDS_VALIDATION",
+  "changes": [
+    "病历正文17px，转写16px，按钮14px",
+    "保持三栏骨架，栏间20–24px",
+    "增加转写轮次、病历章节和核对参考的分组留白"
+  ],
+  "tests": {
+    "command": "npm test --prefix tests/visual",
+    "stats": {
+      "startTime": "2026-09-23T08:54:20.297Z",
+      "duration": 31433.925000000003,
+      "expected": 68,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "report_sha256": "1b8efe70511aa05d6528b5f08ff888ae1ebbdd3b8cf4303aa0db8e3f2918af13",
+    "viewports": [
+      [
+        1366,
+        768
+      ],
+      [
+        1440,
+        900
+      ],
+      [
+        1920,
+        1080
+      ],
+      [
+        1000,
+        720
+      ]
+    ]
+  },
+  "source_sha256": {
+    "docs/prototypes/doctor-workspace-v3/index.html": "5f2956bf2b63b250632d2b0c70ba944ee8b2d3ab840a9c5815c8a8542083cbf8",
+    "docs/prototypes/doctor-workspace-v3/README.md": "63e12eec3f0813954be1a29f478fb4d8b182ce5597b30f494f52ec89d667e5e1",
+    "docs/prototypes/doctor-workspace-v3/workspace.css": "e01142084b5015e87e16c6449f085033cba64d85a8ad2c3332b89a86e33cd33f",
+    "docs/prototypes/doctor-workspace-v3/workspace.js": "197fadf000ea156bd4a1f93829b1438437cda6e14b44734cee393f4e01b72276"
+  },
+  "test_source_sha256": "aac22214d98df5ba9b113be5e33d93dc65ab030736b8a7651720350e9f7e52bd",
+  "visual_inspection": "1440x900开发测试截图已检查；Edge已重新加载并确认V3.1页面标题。尚不代表实际Edge缩放或Chrome验收。",
+  "production_files_changed": false,
+  "real_model_e2e": "NOT_TESTED",
+  "offline_restore": "NOT_TESTED",
+  "official_wbs_status": "backlog",
+  "next_task": "确认V3.1具体版式；认可后才固定截图和接入业务",
+  "user_feedback_on_v31": "三栏目前问题不大，三栏上方，模拟患者上下这个部分需要调整"
+}

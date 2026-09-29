@@ -1,0 +1,177 @@
+{
+  "recorded_at": "2026-09-27T12:25:26+08:00",
+  "wbs": "5.1",
+  "branch": "codex/alpha51-demo-visual-e2e",
+  "pr": 113,
+  "base_sha": "6a1390aa4ca1f5c2b9169f10d707efecc5411378",
+  "status": "VERIFY",
+  "layout_approval": "排版认可，缩放待检查",
+  "visual_gate": "NEEDS_VALIDATION: actual Edge 125%/150% pending",
+  "deployment_gate": "BLOCKED: Docker engine named pipe unavailable; 2626 current mounts not inspected",
+  "release_gate": "NEEDS_VALIDATION: final SHA three real paths and recovery not run",
+  "tests": {
+    "full_pytest": "567 passed, 8 subtests passed in 383.19s (0:06:23)",
+    "edge_headless": 20,
+    "chrome_headless": 12,
+    "prototype": 76,
+    "syntax": "PASS",
+    "git_diff_check": "PASS",
+    "health_readiness": "200/200 isolated demo/mock service only"
+  },
+  "knowledge": {
+    "scope": "current code + isolated copy; not 2626 runtime verification",
+    "integrity": "ok",
+    "health": {
+      "source_count": 4,
+      "document_count": 4,
+      "active_document_count": 4,
+      "chunk_count": 39,
+      "embedding_count": 0,
+      "audit_count": 2,
+      "index_available": true,
+      "embedding_model": "BAAI/bge-small-zh-v1.5"
+    },
+    "retrieval_mode": "fts5_v1",
+    "query_count": 5,
+    "anonymous_status": 401,
+    "doctor_admin_status": 403,
+    "original_sha256": "b729c1ed3693b9e0fad084269e234f88dfe21b9ca6f0c103e2fc610a6a675abc",
+    "original_unchanged": true,
+    "source_open": "https://www.nhc.gov.cn/wjw/gfxwj/201002/79d42b9c8b3f47ee91000d31de116784.shtml",
+    "source_open_verified": true,
+    "embedding_runtime_verified": false
+  },
+  "changes": {
+    "api": false,
+    "database_schema": false,
+    "provider": false,
+    "safety_thresholds": false,
+    "deploy_2626": false,
+    "legacy_containers": false,
+    "freeze_package": false,
+    "task_done": false,
+    "start_5_3": false
+  },
+  "source_sha256": {
+    "static/doctor.js": "bf98047073b1705cea5aa51d739a1b10787b048771cf4cc655d0c74c37aa70ea",
+    "static/doctor.html": "24659c654f7309d7e76dc6825909817a1c151faea60549393a8792c860d4aa10",
+    "static/doctor-workspace.css": "d32481fbf729b1ca17b50504fdd40c765da9d8ed56b0f93bf5fdd68fa7fce364",
+    "tests/fixtures/alpha51_workspace_review.js": "f9d2c40e948b6bae60d17c44a19a058ccbc676720cd88028379bd6e40fddf759",
+    "tests/test_reference_detail_tabs_playwright.py": "ca693b16042c9fd533addefc425f8a8c3c501a1c38e8d360a731e899808c6f47",
+    "tests/test_doctor_reference_sidebar_playwright.py": "957e800b38c881746931f07aaabd1b5942a58fec515a74dd8d835f79ac240c88",
+    "tests/test_alpha51_clinical_layout_playwright.py": "890c3b9bd4a30ec3431562aecd3ad036b2e90820b328a5f19e5a0f89effb6e91"
+  },
+  "local_artifacts": ".artifacts/alpha51-reference-tabs-20260927",
+  "logs_sha256": {
+    "targeted-tests.txt": "0bcfc9841a369d9f173a65be2483a7fe6e8cbe5d3290e502a1731c6d20b029ea",
+    "full-tests.txt": "431f8b98bdceeeaec11a9377e60d4f93d2da26b3dbdac8c3acc6ba9da79b92bf",
+    "final-tests.txt": "2135a62caf96a1f18cfaffeb3f8274dd11bc03e258eed3a91c6550f7efdb4997",
+    "edge-tests.txt": "67fe8b15bf54f3648caee95e6b108b0841ff58d9bd62d76125af49eeb5f0313e",
+    "chrome-tests.txt": "6b747bb9d4513499d8ff51545b2a53048241ced66e8d49c9eeb0204bf83ab0d9",
+    "prototype-tests.txt": "9bc473731983f1398133200c57554364b1ea4106a03fc4590f1d448cda8aa015",
+    "knowledge-api-check.json": "ed3f2a1151e1c4fd3add4bc6a85a25ee65b7fd9705e54b6de4ff6a07bb8fd6a9",
+    "knowledge-original-audit.json": "2a807c19948bf81ffe64ff4fa3e255592550c9ba2cfcb30d574fe7157e0554ec",
+    "browser-observations.json": "b50edd32ab0e5e757c7ed5aa068d242ff470d1e7386feedcc521fea496aedead",
+    "health-smoke.json": "cc11f034e8e3e810d92fa233d797a44ca1336d9f5436bc8fba8660e84be83621"
+  },
+  "screenshots": {
+    "1366-待核对事项.png": {
+      "sha256": "cd273c9d9116981ba8d1bd36ccc6756a6d9a68d4873b275f4bf593685c05c434",
+      "bytes": 155997
+    },
+    "1366-患者依据.png": {
+      "sha256": "0cb4e7b52d69c91a5a74bada119d2b5a7e48e5dd641a111d405a65d3f038e618",
+      "bytes": 167225
+    },
+    "1366-指南资料.png": {
+      "sha256": "111c94141ec8a9e7d36068f4952a1141beceff879802595c3a48c5a690d1ab4f",
+      "bytes": 164492
+    },
+    "1440-待核对事项.png": {
+      "sha256": "8319f6ff7a18e81f02519932c7bb50b9e409b74a9f7a12b0859fcb136480b94c",
+      "bytes": 173142
+    },
+    "1440-患者依据.png": {
+      "sha256": "44a4a2cd1d119d90b3b76d3db9a6660ccc22ff4429dbdf7833289e819c2b40f0",
+      "bytes": 179104
+    },
+    "1440-指南资料.png": {
+      "sha256": "96c3c50183a6e0f60d0814271280cf7628f369b443483b1303817ef1fb55367e",
+      "bytes": 177025
+    },
+    "1920-待核对事项.png": {
+      "sha256": "e01aef272c8b59fe8f664f09c3c85d9d9bb0883d5b2b0c3445d803d1fe89b060",
+      "bytes": 207024
+    },
+    "1920-患者依据.png": {
+      "sha256": "6248b8755a4f4186d5bde3792c8bd9efa593cff507cb05206dfb1b32c650b836",
+      "bytes": 206994
+    },
+    "1920-指南资料.png": {
+      "sha256": "ca7d675728a6d9304d737054450dc71e2035711a7ac19eaeb1e29cc217997248",
+      "bytes": 204440
+    },
+    "390-待核对事项.png": {
+      "sha256": "56604a04728c9b8609596ba6146c972183b1f664d946e37b470e53ea4f2a0fb3",
+      "bytes": 43158
+    },
+    "390-患者依据.png": {
+      "sha256": "5ec42d89476e5ad267fd4df4e0c847ae9418f5a3f3280259653e02c80466b46e",
+      "bytes": 36437
+    },
+    "390-指南资料.png": {
+      "sha256": "c48cabf6f4654448daefb47ea99a66504fa803af22a3a5bbb5e8b048c9cb3c38",
+      "bytes": 47124
+    },
+    "910-待核对事项.png": {
+      "sha256": "a3401e4adef58d57bc08b249f6e8c3740c9a96d736efbb7bc9b06847b803315b",
+      "bytes": 75688
+    },
+    "910-患者依据.png": {
+      "sha256": "6bc3009b693228ee86c9a857ece95c59e9087a08f4143cd2345a4a9875ff4157",
+      "bytes": 90299
+    },
+    "910-指南资料.png": {
+      "sha256": "03f284891c8bac5d23cdb557c54564fe80bb2d09589d8bb0f4a127320be67fba",
+      "bytes": 77706
+    },
+    "after-same-case.png": {
+      "sha256": "573e308958e540b617c32b40f931f28b557ba611c69e75525b9e8d5ea2e7974d",
+      "bytes": 191681
+    },
+    "after-待核对事项.png": {
+      "sha256": "a0daa0f0119315b1dec965ac94130fdd49079579bacde662da5880ca47e0e6bf",
+      "bytes": 204992
+    },
+    "after-指南资料.png": {
+      "sha256": "5c0249188f64000445d06b20afc21b3d114c78a4a04888eda9e5e5622f744375",
+      "bytes": 190268
+    },
+    "before-same-case.png": {
+      "sha256": "a9530e13e651dc68cd24e06a093e30907b92d0b357de7c4fc111977c44efd1a3",
+      "bytes": 236339
+    },
+    "initial-animation-after-same-case.png": {
+      "sha256": "0a53e1404abd6fe1ac4232bc76ffbd172781a0335971fd0fb314c579e007e72b",
+      "bytes": 206586
+    },
+    "initial-animation-after-待核对事项.png": {
+      "sha256": "e5cc866883654030a35532be9fcaec3750ece9c08e25997583959c2c5c9e734c",
+      "bytes": 204979
+    },
+    "initial-animation-after-指南资料.png": {
+      "sha256": "f722a0857fd6af0bc3612d440575fcd6b576f7f3fe533db955e0fcbccb3124b4",
+      "bytes": 190281
+    },
+    "initial-animation-before-same-case.png": {
+      "sha256": "830c65791b1e6efc03d575ca8a160ccfa25b1d18638713cccf5ce8a426032e3e",
+      "bytes": 236014
+    }
+  },
+  "retained_failures": [
+    "First targeted run: 24 pass, 1 obsolete focus assertion. After selecting a tab focus correctly belongs to that tab; test now asserts initial close focus and subsequent tab focus.",
+    "Initial same-case screenshots captured during drawer animation; preserved locally, recaptured after right boundary settled.",
+    "Browser Ctrl+plus and Ctrl+equal did not change viewport/DPR; no zoom PASS claimed.",
+    "Obsidian CLI became unavailable when application was closed; reopened existing vault and obtained fresh API snapshot."
+  ]
+}

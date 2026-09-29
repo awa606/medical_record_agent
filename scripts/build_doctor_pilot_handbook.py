@@ -30,8 +30,12 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
     if manifest.get("synthetic_only") is not True:
         raise ValueError("Only reviewed synthetic screenshots may be packaged")
     output.mkdir(parents=True, exist_ok=True)
-    for name in ("manual.html", "guide.css", "manual.css", "feedback.html", "feedback.js", "maintenance.html"):
+    for name in ("manual.html", "guide.css", "manual.css", "feedback.html", "feedback.js", "maintenance.html", "dual-environment.html", "course-demo.html"):
         shutil.copyfile(source / name, output / name)
+    # Supplementary HTML keeps its reviewed historical figures; current captures
+    # below replace only their matching keys, never erase the earlier package.
+    if (source / "images").is_dir():
+        shutil.copytree(source / "images", output / "images", dirs_exist_ok=True)
     brand = source.parents[2] / "static/brand/medilisten-v1.png"
     shutil.copyfile(brand, output / "medilisten-v1.png")
     html = output / "manual.html"
@@ -114,7 +118,7 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
             elif element.get("data-shot") in images:
                 shot = images[element["data-shot"]]
                 im = Image(str(output / shot["path"]))
-                max_height = 260 if shot["key"] == "knowledge-admin" else 350
+                max_height = 225 if shot["key"] == "data-viewer" else 260 if shot["key"] == "knowledge-admin" else 350
                 scale = min(width / im.imageWidth, max_height / im.imageHeight)
                 im.drawWidth, im.drawHeight = im.imageWidth * scale, im.imageHeight * scale
                 im.hAlign = "LEFT"
@@ -125,11 +129,11 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
         canvas.saveState()
         canvas.setFont("MRA-CJK", 8)
         canvas.setFillColor(colors.HexColor("#53697c"))
-        canvas.drawString(44, 26, "MediListen v1.1 · 合成病例 / 候选操作手册")
+        canvas.drawString(44, 26, "MediListen v1.2 · 合成病例 / 候选操作手册")
         canvas.drawRightString(A4[0]-44, 26, str(doc.page))
         canvas.restoreState()
     GuideDoc(str(pdf), pagesize=A4, leftMargin=44, rightMargin=44,
-             topMargin=40, bottomMargin=46, title="MediListen 医生操作手册 v1.1").build(
+             topMargin=40, bottomMargin=46, title="MediListen 医生操作手册 v1.2").build(
                  story, onFirstPage=footer, onLaterPages=footer)
     package = dict(manifest, screenshots=shots, release_status="CANDIDATE_NOT_RELEASED")
     package["files"] = {p.relative_to(output).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()

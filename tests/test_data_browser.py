@@ -136,6 +136,49 @@ class SnapshotTests(unittest.TestCase):
 
 @unittest.skipUnless(importlib.util.find_spec("datasette"), "isolated Datasette tool dependency")
 class ViewerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_chinese_controls_keep_raw_filters_json_evidence_and_snapshot(self):
+        seed = SnapshotTests()
+        seed.setUp()
+        self.addCleanup(seed.doCleanups)
+        with database(seed.source) as connection:
+            connection.execute("UPDATE record_revision SET draft_text=?", ('SourceSpan patient denied peanut allergy <not-html>',))
+            connection.execute("INSERT INTO record_revision(id,encounter_id,task_id,revision_no,draft_text) VALUES(2,1,1,2,'第二版')")
+        seed.export()
+        directory = seed.root / "out"
+        ds = make_datasette(directory, "chinese-test-secret")
+        headers = {"cookie": "ds_actor=" + ds.sign({"a": {"id": "root"}}, "actor")}
+        before = (directory / "mra_snapshot.sqlite3").read_bytes()
+        home = (await ds.client.get("/", headers=headers)).text
+        self.assertIn("数据与知识查看器", home)
+        self.assertIn("不是实时数据库", home)
+        self.assertIn("病历版本", home)
+        redirect = await ds.client.get("/mra_snapshot/record_revision?_filter_column=revision_no&_filter_op=exact&_filter_value=2", headers=headers)
+        self.assertEqual(redirect.status_code, 302)
+        self.assertIn("revision_no__exact=2", redirect.headers["location"])
+        # The in-process client does not retain a manually supplied actor header
+        # on redirect; a browser has its normal same-origin cookie jar.
+        filtered = await ds.client.get(redirect.headers["location"], headers=headers)
+        self.assertEqual(filtered.status_code, 200)
+        html = filtered.text
+        self.assertIn('value="revision_no" selected', html)
+        self.assertIn("版本序号 (revision_no)", html)
+        self.assertIn("应用筛选", html)
+        self.assertIn("第二版", html)
+        self.assertNotIn("SourceSpan patient denied", html)
+        detail = (await ds.client.get("/mra_snapshot/record_revision/1", headers=headers)).text
+        self.assertIn('SourceSpan patient denied peanut allergy &lt;not-html&gt;', detail)
+        self.assertIn("关联记录", detail)
+        field = (await ds.client.get("/mra_snapshot/revision_field", headers=headers)).text
+        self.assertIn("主诉", field)
+        self.assertIn("有原文支持", field)
+        self.assertIn("查看 1 项原文证据", field)
+        payload = (await ds.client.get("/mra_snapshot/revision_field.json?_shape=array", headers=headers)).json()
+        self.assertEqual(payload[0]["field_key"], "chief_complaint")
+        self.assertEqual(payload[0]["status"], "supported")
+        self.assertEqual(json.loads(payload[0]["evidence_json"])[0]["text"], "发热")
+        self.assertIn("需要本机授权", (await ds.client.get("/")).text)
+        self.assertEqual(before, (directory / "mra_snapshot.sqlite3").read_bytes())
+
     async def test_auth_readonly_and_foreign_key_navigation(self):
         seed = SnapshotTests()
         seed.setUp()

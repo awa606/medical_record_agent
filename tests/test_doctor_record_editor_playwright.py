@@ -96,7 +96,7 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(detail).to_contain_text("发热病历记录规范")
             expect(detail).to_contain_text("alpha33-test-v1")
             expect(detail).to_contain_text(document_id)
-            expect(detail).to_contain_text("内容 SHA256")
+            expect(detail).to_contain_text("内容校验值（SHA256）")
             expect(detail.locator('a[href^="https://www.nhc.gov.cn/"]')).to_have_count(1)
             browser.close()
     finally:

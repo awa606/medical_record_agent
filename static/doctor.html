@@ -6,9 +6,9 @@
     <title>MediListen - AI 智能病历助手</title>
     <link rel="icon" href="./brand/medilisten-v1.ico" sizes="any" />
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
-    <link rel="stylesheet" href="./doctor.css?v=alpha51-dual-20260929" />
-    <link rel="stylesheet" href="./doctor-ui-v2.css?v=alpha51-dual-20260929" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-dual-20260929" />
+    <link rel="stylesheet" href="./doctor.css?v=alpha51-zh-20260929" />
+    <link rel="stylesheet" href="./doctor-ui-v2.css?v=alpha51-zh-20260929" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-zh-20260929" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -17,7 +17,7 @@
           <img class="brand-mark" src="./brand/medilisten-v1.png" alt="" aria-hidden="true" />
           <div class="brand-copy">
             <h1>MediListen</h1>
-            <p>LISTEN · TRANSCRIBE · GENERATE · REVIEW</p>
+            <p>聆听 · 转写 · 整理 · 审核</p>
           </div>
           <span id="deploymentBadge" class="deployment-badge" role="status">正在核验环境</span>
         </div>
@@ -29,7 +29,7 @@
               <button type="button" data-input-method="record">录音生成</button>
               <button type="button" data-input-method="audio">音频生成</button>
               <button type="button" data-input-method="text">文本生成</button>
-              <button type="button" data-input-method="mock">Mock 演示</button>
+              <button type="button" data-input-method="mock">模拟数据演示</button>
             </div>
           </div>
           <div class="display-settings-menu">
@@ -68,8 +68,8 @@
             <summary>调试工具</summary>
             <div class="debug-tool-menu">
               <button type="button" id="openAudioTranscribeButton">上传转写</button>
-              <button type="button" id="openEvaluationButton">ASR评测</button>
-              <button type="button" id="testLlmButton">LLM自检</button>
+              <button type="button" id="openEvaluationButton">语音转写评测</button>
+              <button type="button" id="testLlmButton">病历生成自检</button>
               <button type="button" id="openDebugButton">调试详情</button>
               <a href="./debug.html">打开调试页</a>
             </div>
@@ -210,15 +210,15 @@
           </div>
           <span id="asrModelStatus" class="model-status neutral debug-only">模型状态未知</span>
           <div class="debug-only">
-            <span class="meta-label">LLM Provider</span>
+            <span class="meta-label">病历生成服务（LLM）</span>
             <strong id="llmProvider">-</strong>
           </div>
           <div class="debug-only">
-            <span class="meta-label">LLM Model</span>
+            <span class="meta-label">病历生成模型</span>
             <strong id="llmModel">-</strong>
           </div>
           <div class="debug-only">
-            <span class="meta-label">LLM Fallback</span>
+            <span class="meta-label">模型回退状态</span>
             <strong id="llmFallback">-</strong>
           </div>
         </section>
@@ -250,7 +250,7 @@
               </div>
               <div>
                 <dt>错误编号</dt>
-                <dd id="transcriptionFailureCode">ASR_FAILED</dd>
+                <dd id="transcriptionFailureCode">语音转写失败（ASR_FAILED）</dd>
               </div>
               <div>
                 <dt>音频状态</dt>
@@ -267,11 +267,11 @@
 
       <section class="run-context debug-only" aria-label="当前运行与保存信息">
         <div>
-          <span class="meta-label">当前 task_id</span>
+          <span class="meta-label">当前任务编号（task_id）</span>
           <strong id="currentTaskIdValue">-</strong>
         </div>
         <div>
-          <span class="meta-label">当前 audio_id</span>
+          <span class="meta-label">当前音频编号（audio_id）</span>
           <strong id="currentAudioIdValue">-</strong>
         </div>
         <div class="run-command-box">
@@ -389,11 +389,11 @@
                 aria-label="音量"
               >
               <select id="audioPlaybackRate" class="audio-rate-select" aria-label="播放倍速">
-                <option value="0.75">0.75x</option>
-                <option value="1" selected>1.0x</option>
-                <option value="1.25">1.25x</option>
-                <option value="1.5">1.5x</option>
-                <option value="2">2.0x</option>
+                <option value="0.75">0.75倍速</option>
+                <option value="1" selected>1.0倍速</option>
+                <option value="1.25">1.25倍速</option>
+                <option value="1.5">1.5倍速</option>
+                <option value="2">2.0倍速</option>
               </select>
             </div>
             <div class="audio-player-secondary">
@@ -498,18 +498,18 @@
               <header><h2 id="knowledgeImportTitle">导入知识资料</h2><button type="button" data-close-knowledge-dialog>关闭</button></header>
               <p class="knowledge-note">新资料默认停用；测试后再启用。内容变化必须导入新版本，不覆盖历史引用。</p>
               <form id="knowledgeImportForm" class="knowledge-admin-form">
-              <label>来源ID<input id="knowledgeSourceId" required pattern="[A-Za-z0-9._-]+" placeholder="nhc-record-standard"></label>
+              <label>来源编号（ID）<input id="knowledgeSourceId" required pattern="[A-Za-z0-9._-]+" placeholder="nhc-record-standard"></label>
               <label>标题<input id="knowledgeTitle" required placeholder="病历书写基本规范"></label>
               <label>发布机构<input id="knowledgePublisher" required placeholder="国家卫生健康委员会"></label>
               <label>版本<input id="knowledgeVersion" required placeholder="卫医政发〔2010〕11号"></label>
               <label>资料类型<select id="knowledgeDocumentType" required><option value="clinical-reference">临床参考</option><option value="record-standard">病历规范</option></select></label>
               <label>适用范围<input id="knowledgeDiseaseScope" placeholder="发热/呼吸或通用病历书写"></label>
-              <label class="span-2">来源URL<input id="knowledgeSourceUrl" type="url" required placeholder="https://..."></label>
+              <label class="span-2">来源链接（URL）<input id="knowledgeSourceUrl" type="url" required placeholder="https://..."></label>
               <label class="span-2">使用边界<input id="knowledgeUsageScope" required value="仅供医生人工参考，不参与自动批准、诊断或处方。"></label>
-              <label class="span-2">TXT / Markdown文件<input id="knowledgeFileInput" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" required></label>
+              <label class="span-2">文本文件（TXT / Markdown）<input id="knowledgeFileInput" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" required></label>
               <div class="span-2 knowledge-admin-actions">
                 <button type="submit" class="primary-action">导入为停用版本</button>
-                <small>UTF-8，最大2 MiB；内容变更必须导入新版本。</small>
+                <small>采用UTF-8文本编码，最大2 MiB（约2兆字节）；内容变更必须导入新版本。</small>
               </div>
               </form>
             </dialog>
@@ -535,7 +535,7 @@
       </header>
 
       <section id="textImportPanel" class="drawer-panel">
-        <p class="form-help">粘贴人工问诊文本后调用 <code>POST /api/records/generate</code> 生成病历。</p>
+        <p class="form-help">粘贴人工问诊文本，生成待医生核对的病历草稿。</p>
         <textarea id="conversationInput">[医生] 你好，哪里不舒服？
 [患者] 我发热三天了，最高到40度，还有咳嗽和铁锈色痰，吃了布洛芬后还是反复发热。
 [医生] 有没有胸痛、气促？以前有类似情况吗？
@@ -546,7 +546,7 @@
       <section id="audioPanel" class="drawer-panel">
         <p id="audioPanelHint" class="form-help">上传已录好的 MP3/WAV 问诊音频，选择识别模式后系统自动转写并推定医患角色。</p>
         <input id="audioFileInput" type="file" accept=".wav,.mp3,.m4a,.flac,.ogg,audio/wav,audio/mpeg,audio/mp4,audio/flac,audio/ogg" />
-        <p class="form-help">支持 WAV、MP3、M4A、FLAC、OGG，最大 200 MiB。请使用合成或已获授权的去标识音频。</p>
+        <p class="form-help">支持 WAV、MP3、M4A、FLAC、OGG，最大 200 MiB（约200兆字节）。请使用合成或已获授权的去标识音频。</p>
         <label class="recognition-mode-control" for="recognitionModeSelect">识别模式
           <select id="recognitionModeSelect">
             <option value="fast">尽快识别</option>
@@ -563,16 +563,16 @@
             <input id="doctorProfileAudioInput" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" aria-label="医生声纹注册音频">
             <button type="button" id="enrollDoctorProfileButton">注册 10-30 秒声纹</button>
           </div>
-          <small>注册音频提取 CAM++ 向量后立即删除，只在本机保存声纹向量。</small>
+          <small>注册音频提取声纹特征（CAM++）后立即删除，只在本机保存声纹向量。</small>
         </div>
         <button type="button" class="primary-action wide-action" id="submitAudioButton">上传</button>
       </section>
 
       <section id="evaluationPanel" class="drawer-panel">
-        <p class="form-help">调用 <code>POST /api/audio/{audio_id}/evaluate</code>，展示 CER、keyword_recall、recognized、missing。</p>
+        <p class="form-help">核对人工转写后运行评测，查看字错误率（CER）、关键词召回率、已识别和遗漏内容。</p>
         <textarea id="groundTruthInput" placeholder="人工标注文本"></textarea>
         <textarea id="keywordsInput" placeholder="期望关键词，可用逗号或换行分隔；为空时后端会尝试使用样本 manifest"></textarea>
-        <button type="button" class="primary-action wide-action" id="submitEvaluationButton">运行 ASR 评测</button>
+        <button type="button" class="primary-action wide-action" id="submitEvaluationButton">运行语音转写评测</button>
         <div id="evaluationDrawerResult" class="drawer-result"></div>
       </section>
 
@@ -582,23 +582,23 @@
           <pre id="debugRunLogCommand">python scripts/save_run_log.py --task-id xxx --audio-id xxx --title fever_01_demo</pre>
         </details>
         <details open>
-          <summary>ASRResult JSON</summary>
+          <summary>转写原始结果（ASRResult JSON）</summary>
           <pre id="debugAsrJson">-</pre>
         </details>
         <details open>
-          <summary>Agent Trace JSON</summary>
+          <summary>处理轨迹（Agent Trace JSON）</summary>
           <pre id="debugAgentTraceJson">-</pre>
         </details>
         <details>
-          <summary>Task JSON</summary>
+          <summary>任务数据（Task JSON）</summary>
           <pre id="debugTaskJson">-</pre>
         </details>
         <details>
-          <summary>Steps JSON</summary>
+          <summary>处理步骤（Steps JSON）</summary>
           <pre id="debugStepsJson">-</pre>
         </details>
         <details>
-          <summary>Safety JSON</summary>
+          <summary>安全检查（Safety JSON）</summary>
           <pre id="debugSafetyJson">-</pre>
         </details>
       </section>
@@ -615,7 +615,7 @@
             <img class="brand-mark" src="./brand/medilisten-v1.png" alt="" aria-hidden="true" />
             <div>
               <strong>MediListen</strong>
-              <span>LISTEN · TRANSCRIBE · GENERATE · REVIEW</span>
+              <span>聆听 · 转写 · 整理 · 审核</span>
             </div>
           </div>
           <div class="login-product-copy">
@@ -652,6 +652,6 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=alpha51-dual-20260929"></script>
+    <script src="./doctor.js?v=alpha51-zh-20260929"></script>
   </body>
 </html>

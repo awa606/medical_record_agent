@@ -151,16 +151,16 @@ def export_snapshot(source: Path, output: Path, allowlist: Path, source_label: s
                 "allowlist_sha256": sha256(allowlist), "database_sha256": sha256(database), "table_counts": counts,
                 "projection": "column/JSON allowlist; revision_field derived; embedding vectors and authentication data omitted"}
     description = f"只读匿名数据快照 · {source_label} · 采样 {stamp}。不是实时数据库。手动刷新生成新版本；停用知识仍保留供版本检查，不表示医生检索会使用。"
-    metadata = {"title": "MediListen 数据库与知识库浏览器", "description": description,
+    metadata = {"title": "MediListen 数据与知识查看器（只读快照）", "description": description,
                 "allow": {"id": "root"}, "allow_sql": False,
-                "databases": {"mra_snapshot": {"title": "业务数据与知识资料（白名单投影）",
+                "databases": {"mra_snapshot": {"title": "匿名就诊数据与知识资料",
                     "description": description, "tables": {
                         "patient": {"label_column": "deidentified_id"},
                         "knowledge_source": {"label_column": "title"},
                         "knowledge_document": {"label_column": "version"},
                         "knowledge_chunk": {"label_column": "section"},
-                        "revision_field": {"description": "从record_revision.fields_json白名单提取；原文证据只读，不能在此修改病历。"},
-                        "knowledge_embedding_metadata": {"description": "仅展示embedding模型、维度与片段关联；数量不等于混合检索验收通过。"},
+                        "revision_field": {"description": "从病历版本提取的字段及原文证据；这里只能查看，修改请回到医生工作台。"},
+                        "knowledge_embedding_metadata": {"description": "仅展示语义向量索引（embedding）的模型、维度与片段关联；数量不等于混合检索验收通过。"},
                     }}}}
     (output / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
     # Manifest is the publish marker: failures before it must not be served.
@@ -177,9 +177,15 @@ def make_datasette(directory: Path, secret: str):
     metadata = json.loads((directory / "metadata.json").read_text(encoding="utf-8"))
     # Enforce, not just trust user-editable metadata defaults.
     metadata["allow"], metadata["allow_sql"] = {"id": "root"}, False
-    assets = Path(__file__).resolve().parents[1] / "tools/data-browser/assets"
+    tool = Path(__file__).resolve().parents[1] / "tools/data-browser"
+    assets = tool / "assets"
+    metadata["title"] = "MediListen 数据与知识查看器（只读快照）"
+    metadata["mra_context"] = {"source_label": manifest["source_label"],
+                               "captured_at": manifest["captured_at"], "counts": manifest["table_counts"]}
     metadata["extra_css_urls"] = ["/mra-tools/readability.css"]
+    metadata["extra_js_urls"] = ["/mra-tools/chinese-controls.js"]
     return Datasette(immutables=[str(database)], metadata=metadata, secret=secret,
+                     template_dir=str(tool / "templates"), plugins_dir=str(tool / "plugins"),
                      static_mounts=[("mra-tools", str(assets))],
                      settings={"default_allow_sql": False, "allow_download": False, "allow_csv_stream": False,
                                "default_page_size": 25, "max_returned_rows": 100, "sql_time_limit_ms": 1000})

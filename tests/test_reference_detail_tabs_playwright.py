@@ -134,7 +134,7 @@ def test_demo_identity_and_runtime_modes_do_not_claim_unverified_hybrid(page):
     }""")
     expect(page.locator('#patientName')).to_have_text('李示例')
     expect(page.locator('#patientDemoBadge')).to_be_visible()
-    expect(page.locator('#settingsKnowledgeRuntimeStatus')).to_have_text('本次知识检索：FTS5全文检索')
+    expect(page.locator('#settingsKnowledgeRuntimeStatus')).to_have_text('本次知识检索：关键词全文检索（FTS5）')
     page.evaluate("window.__MRA_APP_STATE__.knowledgeEvidenceStatus='failed';renderAll()")
     expect(page.locator('#settingsKnowledgeRuntimeStatus')).to_have_text('知识检索不可用')
     assert page.evaluate("syntheticDemoLabel({patient_deidentified_id:'NORMAL-001'})") == ''

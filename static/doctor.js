@@ -372,15 +372,46 @@ const ENGINE_LABELS = {
   funasr: "FunASR",
   sensevoice: "SenseVoice Small",
   whisper: "Whisper Base",
-  mock: "Mock ASR",
+  mock: "模拟转写（Mock ASR）",
   qwen3: "Qwen3-ASR 0.6B",
-  online: "Online ASR",
+  online: "在线语音转写（Online ASR）",
   "funasr-local": "FunASR",
   "sensevoice-small": "SenseVoice Small",
   "whisper-base": "Whisper Base",
-  "mock-asr-v0.2": "Mock ASR",
+  "mock-asr-v0.2": "模拟转写（Mock ASR）",
   "qwen3-asr-0.6b": "Qwen3-ASR 0.6B",
 };
+
+// Display-only vocabulary. Never use translated text as an API value or code.
+function technicalLabel(value) {
+  if (value == null || value === "" || value === "-") return "未提供";
+  const code = String(value);
+  const labels = {
+    ollama: "本地模型服务", deepseek: "在线模型服务", mock: "模拟服务", demo: "演示模式",
+    local: "本地模式", edge: "本地生成模式", real: "真实模型模式", online: "在线模式", production: "正式配置模式",
+    hybrid_v1: "关键词与语义混合检索", fts5_v1: "关键词全文检索", deterministic_demo: "固定演示参考",
+    text: "文本输入", text_input: "文本输入", audio: "音频输入", none: "未配置", unknown: "未知",
+    clinical_reference: "临床参考", "clinical-reference": "临床参考", "record-standard": "病历规范",
+    markdown: "标记文本", plain_text: "纯文本", pdf_text: "PDF文字提取", ocr: "图像文字识别",
+    pypdf: "PDF文字提取", rapidocr: "图像文字识别", browser_utf8_markdown_v1: "网页文字提取",
+    manual: "人工整理", doctor_review_required: "需要医生审核", doctor_review: "医生核对",
+    waiting_doctor_review: "等待医生审核", waiting_review: "等待审核", pending_review: "待审核",
+    approved: "已批准", exported: "已导出", failed: "失败", created: "已创建",
+    transcribing: "语音转写中", extracting_fields: "提取字段中", generating_draft: "生成草稿中",
+    safety_checking: "安全校验中", degraded: "降级处理中", completed: "已完成",
+    perceive: "处理输入", extract: "提取字段", generate: "生成草稿", validate: "证据校验",
+    safety: "安全校验", review: "医生核对", single_segment_needs_review: "单片段需人工确认角色",
+    rules: "规则策略", manual_mapping: "人工角色映射", diarization: "说话人分离",
+  };
+  return `${labels[code] || labels[code.toLowerCase()] || "未配置中文释义"}（${code}）`;
+}
+
+function userFacingError(message) {
+  const text = String(message || "操作未完成，请重试。");
+  if (/[\u3400-\u9fff]/.test(text)) return text;
+  const descriptions = { "Failed to fetch": "无法连接服务，请检查本版启动状态。", "Unauthorized": "登录已失效，请重新登录。", "Forbidden": "当前账号无权执行此操作。", "Not Found": "未找到对应记录，请刷新列表后重试。" };
+  return `${descriptions[text] || "操作未完成，请查看原始提示并记录当前就诊编号。"} 原始提示：${text}`;
+}
 
 const ROLE_OPTIONS = [
   ["", "请选择角色"],
@@ -523,11 +554,11 @@ async function api(path, options = {}) {
       renderAuthPanel();
     }
     const detail = data.detail;
-    if (typeof detail === "string") throw new Error(detail);
+    if (typeof detail === "string") throw new Error(userFacingError(detail));
     const errorMessage = detail?.message
       || (Array.isArray(detail?.errors) ? detail.errors.join(" ") : "")
       || JSON.stringify(detail || data);
-    const error = new Error(errorMessage);
+    const error = new Error(userFacingError(errorMessage));
     error.detail = detail || data;
     throw error;
   }
@@ -1219,7 +1250,7 @@ function doctorSafeErrorMessage(error) {
     }
     return "系统暂时无法完成操作，请稍后重试或联系管理员查看技术详情。";
   }
-  return message || "操作失败";
+  return userFacingError(message || "操作失败");
 }
 
 function applyAsrFailureDetail(detail = {}) {
@@ -1293,7 +1324,7 @@ function runtimeServiceLabel(key) {
     provider: "AI生成服务",
     ready: "服务可用性",
   };
-  return labels[key] || key;
+  return labels[key] || `其他运行服务（${key}）`;
 }
 
 function runtimeServiceSummary(key, value) {
@@ -1375,7 +1406,7 @@ function renderAdminHome() {
         `).join("")}
         <div class="admin-list-row technical-detail-row">
           <strong>技术详情</strong>
-          <span>服务器路径和原始 JSON 已隐藏，可在需要排障时查看。</span>
+          <span>服务器路径和原始结构化数据（JSON）已隐藏，可在需要排障时查看。</span>
         </div>
       `;
     } else {
@@ -1389,7 +1420,7 @@ function knowledgeDocumentEnabled(doc) {
   return Boolean(doc.is_active && doc.is_current);
 }
 function knowledgeTypeLabel(value) {
-  return ({ "clinical-reference": "临床参考", "record-standard": "病历规范" })[value] || value || "未分类";
+  return ({ "clinical-reference": "临床参考", "record-standard": "病历规范" })[value] || (value ? technicalLabel(value) : "未分类");
 }
 function selectKnowledgeTab(name, focus = false) {
   document.querySelectorAll("[data-knowledge-tab]").forEach((button) => {
@@ -1456,25 +1487,25 @@ function renderAdminKnowledge() {
   } else if (!search) {
     searchPanel.innerHTML = '<p class="knowledge-empty">输入一个问题，核对命中内容与来源。结果不会写入患者病历。</p>';
   } else {
-    searchPanel.innerHTML = '<p class="knowledge-search-summary">测试搜索：' + escapeHtml(search.query) + ' · ' + (search.results?.length || 0) + ' 条 · 实际模式：' + escapeHtml(search.retrieval_mode || "未报告") + ' · ' + (search.administrative_test_only ? "指定版本，仅管理员验证" : "当前医生检索范围") + '</p>' +
+    searchPanel.innerHTML = '<p class="knowledge-search-summary">测试搜索：' + escapeHtml(search.query) + ' · ' + (search.results?.length || 0) + ' 条 · 实际模式：' + escapeHtml(technicalLabel(search.retrieval_mode)) + ' · ' + (search.administrative_test_only ? "指定版本，仅管理员验证" : "当前医生检索范围") + '</p>' +
       (!search.results?.length ? '<p class="knowledge-empty">检索已完成，未命中资料。请调整问题或资料范围。</p>' : search.results.map((item) =>
         '<article class="knowledge-search-hit"><h3>' + escapeHtml(item.title || item.source_id) + '</h3><p class="knowledge-note">' + escapeHtml(item.publisher) + ' · ' + escapeHtml(item.version) + ' · 第 ' + escapeHtml(item.page) + ' 页 · ' + escapeHtml(item.section) + '</p>' +
         '<p class="knowledge-passage-preview">' + escapeHtml(compactText(item.excerpt || item.content || item.snippet || "", 180)) + '</p><details><summary>查看完整命中片段</summary><p class="knowledge-passage">' + escapeHtml(item.excerpt || item.content || item.snippet || "") + '</p></details><p>' + knowledgeSourceLink(item.source_url) + '</p>' +
-        '<details><summary>引用技术信息</summary><dl class="knowledge-metadata"><dt>文档</dt><dd>' + escapeHtml(item.document_id) + '</dd><dt>片段</dt><dd>' + escapeHtml(item.chunk_id) + '</dd><dt>内容 SHA256</dt><dd>' + escapeHtml(item.content_sha256) + '</dd></dl></details></article>').join(""));
+        '<details><summary>引用技术信息</summary><dl class="knowledge-metadata"><dt>文档</dt><dd>' + escapeHtml(item.document_id) + '</dd><dt>片段</dt><dd>' + escapeHtml(item.chunk_id) + '</dd><dt>内容校验值（SHA256）</dt><dd>' + escapeHtml(item.content_sha256) + '</dd></dl></details></article>').join(""));
   }
   $("knowledgeHealthSummary").innerHTML = !health
     ? '<p class="safety-strip warning">知识健康信息未取得，请刷新后重试。</p>'
     : '<dl class="knowledge-health-list"><dt>启用 / 总版本</dt><dd>' + health.active_document_count + ' / ' + health.document_count + '</dd>' +
-      '<dt>已存储片段</dt><dd>' + health.chunk_count + '（包含历史及停用版本）</dd><dt>已存储 embedding</dt><dd>' + health.embedding_count + '（数量不代表当前查询使用混合检索）</dd>' +
+      '<dt>已存储片段</dt><dd>' + health.chunk_count + '（包含历史及停用版本）</dd><dt>已存储语义向量索引（embedding）</dt><dd>' + health.embedding_count + '（数量不代表当前查询使用混合检索）</dd>' +
       '<dt>配置模型</dt><dd>' + escapeHtml(health.embedding_model || "未配置") + '</dd><dt>最近一次查询模式</dt><dd>' +
-      escapeHtml(appState.adminKnowledgeSearchError ? "最近查询失败，未确认" : search?.retrieval_mode || "尚未实测") + '</dd></dl>' +
+      escapeHtml(appState.adminKnowledgeSearchError ? "最近查询失败，未确认" : search?.retrieval_mode ? technicalLabel(search.retrieval_mode) : "尚未实测") + '</dd></dl>' +
       '<p class="knowledge-note">索引计数不证明检索质量。请在“检索验证”查看本次真实结果；儿童资料仅适用于其声明人群。</p>';
 }
 function openKnowledgeDocument(doc, edit = false) {
   const dialog = $("knowledgeDetailDialog");
   $("knowledgeDetailTitle").textContent = edit ? "编辑资料元数据" : "资料详情";
   $("knowledgeDetailContent").innerHTML = edit
-    ? '<p class="safety-strip warning">标题与适用范围属于来源级元数据，保存将影响同来源的所有版本。内容、版本与 SHA 不可在此改写。</p>' +
+    ? '<p class="safety-strip warning">标题与适用范围属于来源级元数据，保存将影响同来源的所有版本。内容、版本与校验值（SHA）不可在此改写。</p>' +
       '<form id="knowledgeMetadataForm" class="knowledge-admin-form" data-document-id="' + escapeHtml(doc.document_id) + '">' +
       '<label class="span-2">资料标题<input id="knowledgeEditTitle" required value="' + escapeHtml(doc.title) + '"></label>' +
       '<label class="span-2">适用范围<input id="knowledgeEditScope" value="' + escapeHtml(doc.disease_scope || "") + '"></label>' +
@@ -1484,7 +1515,7 @@ function openKnowledgeDocument(doc, edit = false) {
       '<dt>适用范围</dt><dd>' + escapeHtml(doc.disease_scope || "未登记，请核对原文") + '</dd><dt>使用 / 索引范围</dt><dd>' + escapeHtml(doc.usage_scope || "未登记") + '</dd>' +
       '<dt>页数 / 片段数</dt><dd>' + doc.page_count + ' / ' + doc.chunk_count + '（不表示原始文档全部内容均已索引）</dd></dl><p>' + knowledgeSourceLink(doc.source_url) + '</p>' +
       '<details><summary>来源与索引技术详情</summary><dl class="knowledge-metadata"><dt>来源 ID</dt><dd>' + escapeHtml(doc.source_id) + '</dd><dt>文档 ID</dt><dd>' + escapeHtml(doc.document_id) +
-      '</dd><dt>内容 SHA256</dt><dd>' + escapeHtml(doc.content_sha256) + '</dd><dt>提取方式</dt><dd>' + escapeHtml(doc.extraction_method) + '</dd><dt>embedding 数</dt><dd>' + (doc.embedding_count || 0) + '</dd></dl></details>' +
+      '</dd><dt>内容校验值（SHA256）</dt><dd>' + escapeHtml(doc.content_sha256) + '</dd><dt>提取方式</dt><dd>' + escapeHtml(technicalLabel(doc.extraction_method)) + '</dd><dt>语义向量索引数量</dt><dd>' + (doc.embedding_count || 0) + '</dd></dl></details>' +
       '<p class="knowledge-note">原始资料通过来源链接打开；索引正文可在检索验证中查看命中片段。本页不提供未经核验的全文。</p>';
   dialog.showModal();
 }
@@ -1503,7 +1534,7 @@ async function saveKnowledgeMetadata(event) {
     await refreshAdminHome();
     showToast("来源元数据已保存；历史内容与版本保持不变");
   } catch (error) {
-    $("knowledgeMetadataError").textContent = error.message || "保存失败，输入已保留，请重试。";
+    $("knowledgeMetadataError").textContent = userFacingError(error.message || "保存失败，输入已保留，请重试。");
   } finally { button.disabled = false; }
 }
 async function runKnowledgeTestSearch(event) {
@@ -2524,7 +2555,7 @@ function renderPatientBar() {
         ? `A-${appState.currentAudioId}`
         : "未创建";
   $("recordingStatus").textContent = displayState.inputStatus;
-  $("llmProvider").textContent = `${llm.provider} / ${llm.mode || "demo"}`;
+  $("llmProvider").textContent = `${technicalLabel(llm.provider)} / ${technicalLabel(llm.mode || "demo")}`;
   $("llmModel").textContent = llm.model;
   $("llmFallback").textContent = llm.fallbackLabel;
   if ($("patientDataStatus")) $("patientDataStatus").textContent = displayState.dataStatus;
@@ -2538,14 +2569,14 @@ function renderModelAndKnowledgeStatus() {
   const trace = appState.currentAgentTrace?.llm;
   const target = $("settingsLlmRuntimeStatus");
   if (target) target.textContent = appState.currentLlmStatus || trace
-    ? `${trace ? "本次病历引擎" : "配置的病历引擎"}：${llm.provider} / ${llm.model}${llm.fallback ? "（发生回退，请核查）" : ""}`
+    ? `${trace ? "本次病历引擎" : "配置的病历引擎"}：${technicalLabel(llm.provider)} / ${llm.model}${llm.fallback ? "（发生回退，请核查）" : ""}`
     : "病历引擎尚未核验";
   const knowledge = $("settingsKnowledgeRuntimeStatus");
   const mode = appState.currentKnowledgeEvidence?.retrieval_mode;
   if (knowledge) knowledge.textContent = appState.knowledgeEvidenceStatus === "failed"
     ? "知识检索不可用"
-    : mode === "hybrid_v1" ? "本次知识检索：FTS5 + BGE混合检索"
-    : mode === "fts5_v1" ? "本次知识检索：FTS5全文检索"
+    : mode === "hybrid_v1" ? "本次知识检索：关键词与语义混合检索（FTS5 + BGE）"
+    : mode === "fts5_v1" ? "本次知识检索：关键词全文检索（FTS5）"
     : mode === "deterministic_demo" ? "本次知识检索：演示参考，非正式知识索引"
     : "知识检索尚未执行";
 }
@@ -2934,7 +2965,7 @@ function renderKnowledgeResultDetails(result = {}) {
     <div class="detail-kv"><span>版本</span><strong>${escapeHtml(result.version || "-")}</strong></div>
     <div class="detail-kv"><span>章节 / 页码</span><strong>${escapeHtml(result.section || "-")} / ${escapeHtml(result.page ?? "-")}</strong></div>
     <div class="detail-kv"><span>文档 / 片段</span><strong>${escapeHtml(result.document_id || "-")} / ${escapeHtml(result.chunk_id || "-")}</strong></div>
-    <div class="detail-kv"><span>内容 SHA256</span><strong class="hash-value">${escapeHtml(result.content_sha256 || "-")}</strong></div>
+    <div class="detail-kv"><span>内容校验值（SHA256）</span><strong class="hash-value">${escapeHtml(result.content_sha256 || "-")}</strong></div>
     <div class="detail-text">${escapeHtml(result.excerpt || result.match_reason || "暂无摘要。")}</div>
     ${sourceUrl ? `<a class="knowledge-source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">打开官方来源</a>` : ""}
   `;
@@ -3156,7 +3187,7 @@ function renderReferenceSources(references = []) {
     const url = safeKnowledgeUrl(r.source_url || r.url || r.link);
     const meta = [r.publisher || r.organization || r.institution || r.source, r.version || r.year || r.published_at,
       r.section, r.page != null ? `第${r.page}页` : ''].filter(Boolean);
-    const ids = [['文档ID', r.document_id], ['片段ID', r.chunk_id], ['内容SHA256', r.content_sha256]];
+    const ids = [['文档ID', r.document_id], ['片段ID', r.chunk_id], ['内容校验值（SHA256）', r.content_sha256]];
     return `<article class="reference-source">
       <h4>${escapeHtml(r.title || r.name || r.source_id || '未命名来源')}</h4>
       ${meta.length ? `<p class="reference-meta">${escapeHtml(meta.join(' · '))}</p>` : ''}
@@ -3662,7 +3693,7 @@ function renderFields() {
     <div class="record-edit-notice ${appState.recordEditConflict ? "conflict" : ""}">
       <div>
         <strong data-record-edit-status>${appState.recordEditDirty ? "有未保存修改" : "编辑模式"}</strong>
-        <span>只修改病历字段；原始证据和知识来源保持只读。保存会创建新 Revision，并使旧批准失效。</span>
+        <span>只修改病历字段；原始证据和知识来源保持只读。保存会创建新病历版本，并使旧批准失效。</span>
       </div>
       ${appState.recordEditConflict ? `<button type="button" data-record-reload-latest>加载最新版本</button>` : ""}
     </div>` : "";
@@ -4806,22 +4837,22 @@ function renderAgentTraceSummary({ open = false } = {}) {
   const llm = trace.llm || {};
   const decision = trace.decision || {};
   const perceptionText = trace.input_type === "audio"
-    ? `${perception.asr_engine || "ASR"} / role_strategy=${perception.role_strategy || "none"}`
-    : `${perception.source || "text_input"} / length=${perception.text_length || 0}`;
+    ? `语音模型：${perception.asr_engine || "未提供"} / 角色策略：${technicalLabel(perception.role_strategy || "none")}`
+    : `${technicalLabel(perception.source || "text_input")} / 文本长度：${perception.text_length || 0}`;
   return assistDetails({
-    title: "Agent 决策轨迹",
+    title: "系统处理轨迹（Agent）",
     badgeClass: "info",
-    badgeText: "Trace",
+    badgeText: "处理记录",
     open,
     body: `
-        <div class="safety-strip"><strong>输入类型</strong><br>${escapeHtml(trace.input_type)}</div>
+        <div class="safety-strip"><strong>输入类型</strong><br>${escapeHtml(technicalLabel(trace.input_type))}</div>
         <div class="safety-strip"><strong>感知结果</strong><br>${escapeHtml(perceptionText)}</div>
-        <div class="safety-strip ${llm.fallback ? "warning" : "success"}"><strong>LLM Provider</strong><br>${escapeHtml(llm.llm_provider || "mock")} / ${escapeHtml(llm.model || "mock-deterministic-extractor")} / ${escapeHtml(llm.mode || "demo")}</div>
-        <div class="safety-strip ${llm.fallback ? "warning" : ""}"><strong>LLM Fallback</strong><br>${llm.fallback ? `已兜底：${escapeHtml(llm.fallback_reason || "unknown")}` : `未触发，latency=${escapeHtml(String(llm.latency_ms ?? "-"))}ms`}</div>
-        <div class="safety-strip"><strong>计划步骤</strong><br>${escapeHtml((trace.plan || []).join(" -> "))}</div>
-        <div class="safety-strip"><strong>当前状态</strong><br>${escapeHtml(decision.next_state || "-")}</div>
-        <div class="safety-strip danger"><strong>导出决策</strong><br>禁止自动导出：${escapeHtml(decision.reason || "doctor_review_required")}</div>
-        <div class="safety-strip warning"><strong>医生审核边界</strong><br>Human-in-the-loop required before final export</div>
+        <div class="safety-strip ${llm.fallback ? "warning" : "success"}"><strong>病历生成服务（LLM）</strong><br>${escapeHtml(technicalLabel(llm.llm_provider || "mock"))} / ${escapeHtml(llm.model || "mock-deterministic-extractor")} / ${escapeHtml(technicalLabel(llm.mode || "demo"))}</div>
+        <div class="safety-strip ${llm.fallback ? "warning" : ""}"><strong>模型回退状态</strong><br>${llm.fallback ? `已兜底：${escapeHtml(llm.fallback_reason || "unknown")}` : `未触发，耗时${escapeHtml(String(llm.latency_ms ?? "-"))}毫秒`}</div>
+        <div class="safety-strip"><strong>计划步骤</strong><br>${escapeHtml((trace.plan || []).map(technicalLabel).join(" → "))}</div>
+        <div class="safety-strip"><strong>当前状态</strong><br>${escapeHtml(technicalLabel(decision.next_state))}</div>
+        <div class="safety-strip danger"><strong>导出决策</strong><br>禁止自动导出：${escapeHtml(technicalLabel(decision.reason || "doctor_review_required"))}</div>
+        <div class="safety-strip warning"><strong>医生审核边界</strong><br>最终导出前必须由医生审核确认</div>
     `,
   });
 }
@@ -5733,7 +5764,7 @@ function renderFooter() {
     exportButton.dataset.disabledReason = "请先保存或取消当前修改";
     exportButton.title = "请先保存或取消当前修改";
     $("currentTaskHint").textContent = appState.recordEditDirty
-      ? "有未保存修改；保存将创建新Revision并使旧批准失效。"
+      ? "有未保存修改；保存将创建新病历版本并使旧批准失效。"
       : "整页编辑模式；原始证据和知识来源保持只读。";
   } else {
     cancelEditButton.hidden = true;

@@ -94,7 +94,7 @@ def test_medilisten_productized_shell_copy_and_failure_metadata() -> None:
 
     assert "<title>MediListen - AI 智能病历助手</title>" in html
     assert "<h1>MediListen</h1>" in html
-    assert "LISTEN · TRANSCRIBE · GENERATE · REVIEW" in html
+    assert "聆听 · 转写 · 整理 · 审核" in html
     assert 'id="transcriptionFailureCode"' in html
     assert 'id="transcriptionFailureStage"' in html
     assert 'id="transcriptionFailureAudioState"' in html

@@ -118,7 +118,7 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
             elif element.get("data-shot") in images:
                 shot = images[element["data-shot"]]
                 im = Image(str(output / shot["path"]))
-                max_height = 225 if shot["key"] == "data-viewer" else 260 if shot["key"] == "knowledge-admin" else 350
+                max_height = 190 if shot["key"] == "data-viewer" else 260 if shot["key"] == "knowledge-admin" else 350
                 scale = min(width / im.imageWidth, max_height / im.imageHeight)
                 im.drawWidth, im.drawHeight = im.imageWidth * scale, im.imageHeight * scale
                 im.hAlign = "LEFT"

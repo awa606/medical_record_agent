@@ -9,6 +9,31 @@ from playwright.sync_api import expect, sync_playwright
 from tests.test_browser_recording_playwright import RunningServer, _login
 
 
+def test_readiness_503_uses_chinese_summary_and_keeps_raw_detail_collapsed() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            page.route("**/ready", lambda route: route.fulfill(status=503, json={
+                "status": "not_ready", "checks": {
+                    "asr_models": {"ok": False, "status": "warming", "error": "FunASR model prewarm has not completed"},
+                    "provider": {"ok": True, "status": {"provider": "ollama", "mode": "edge"}},
+                }}))
+            _login(page, server.base_url)
+            page.click('[data-product-view-target="admin"]')
+            panel = page.locator("#adminRuntimePanel")
+            expect(panel).to_contain_text("语音转写模型预热中")
+            expect(panel).to_contain_text("本地模型服务（ollama）")
+            expect(panel.locator("pre")).not_to_be_visible()
+            panel.locator("summary").click()
+            expect(panel.locator("pre")).to_be_visible()
+            expect(panel.locator("pre")).to_contain_text("FunASR model prewarm has not completed")
+            browser.close()
+    finally:
+        server.close()
+
+
 def test_admin_import_test_search_and_enable_use_live_api() -> None:
     server = RunningServer()
     try:

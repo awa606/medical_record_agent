@@ -402,6 +402,7 @@ function technicalLabel(value) {
     perceive: "处理输入", extract: "提取字段", generate: "生成草稿", validate: "证据校验",
     safety: "安全校验", review: "医生核对", single_segment_needs_review: "单片段需人工确认角色",
     rules: "规则策略", manual_mapping: "人工角色映射", diarization: "说话人分离",
+    admin: "管理员", doctor: "医生", warming: "模型预热中", ready: "已就绪", not_ready: "尚未就绪",
   };
   return `${labels[code] || labels[code.toLowerCase()] || "未配置中文释义"}（${code}）`;
 }
@@ -1322,6 +1323,7 @@ function runtimeServiceLabel(key) {
     outputs: "病历输出服务",
     speaker_profiles: "声纹资料服务",
     provider: "AI生成服务",
+    asr_models: "语音转写模型",
     ready: "服务可用性",
   };
   return labels[key] || `其他运行服务（${key}）`;
@@ -1335,13 +1337,14 @@ function runtimeServiceSummary(key, value) {
     const mode = status.mode || "demo";
     if (provider === "mock" && mode === "demo") return "演示模式可用";
     if (value.ok === false || status.reachable === false) return "服务不可用";
-    return `${provider} · ${mode}`;
+    return `${technicalLabel(provider)} · ${technicalLabel(mode)}`;
   }
-  if (key === "ready") return value.status || (value.ok === false ? "服务不可用" : "可用");
-  if (value.ok === false) return value.error || "服务不可用";
+  if (key === "ready") return value.ok === false || value.status !== "ready" ? "未能完成就绪检查，请稍后刷新；原始原因见技术详情。" : "可用";
+  if (key === "asr_models" && value.status === "warming") return "语音转写模型预热中，请稍后刷新；真实生成保持阻断。";
+  if (value.ok === false) return "服务尚未就绪，请在技术详情核对失败原因。";
   if (key === "sqlite") return "数据库可读写";
   if (["uploads", "outputs", "speaker_profiles"].includes(key)) return `${runtimeServiceLabel(key)}可用`;
-  return value.status || "可用";
+  return value.status ? technicalLabel(value.status) : "可用";
 }
 
 function renderDashboardSummary() {
@@ -1380,7 +1383,7 @@ function renderAdminHome() {
       usersPanel.innerHTML = appState.adminUsers.map((user) => `
         <div class="admin-list-row">
           <strong>${escapeHtml(friendlyUserName(user))}</strong>
-          <span>${escapeHtml(user.username)} · ${escapeHtml(user.role || "-")} · ${user.is_active ? "已启用" : "已停用"}</span>
+          <span>${escapeHtml(user.username)} · ${escapeHtml(technicalLabel(user.role))} · ${user.is_active ? "已启用" : "已停用"}</span>
         </div>
       `).join("");
     }
@@ -1404,10 +1407,9 @@ function renderAdminHome() {
             <span>${escapeHtml(runtimeServiceSummary(key, value))}</span>
           </div>
         `).join("")}
-        <div class="admin-list-row technical-detail-row">
-          <strong>技术详情</strong>
-          <span>服务器路径和原始结构化数据（JSON）已隐藏，可在需要排障时查看。</span>
-        </div>
+        <details class="technical-detail-row"><summary>运行技术详情（JSON，原始返回）</summary>
+          <pre>${escapeHtml(JSON.stringify(runtime, null, 2))}</pre>
+        </details>
       `;
     } else {
       runtimePanel.innerHTML = `<div class="empty-state">尚未检查运行状态。</div>`;
@@ -1606,7 +1608,12 @@ async function refreshAdminHome() {
     if (readyResult.status === "fulfilled") {
       appState.adminRuntimeStatus = readyResult.value;
     } else {
-      appState.adminRuntimeStatus = { status: "not_ready", ready: false, checks: { ready: { status: readyResult.reason?.message || "检查失败" } } };
+      // A 503 readiness response still contains useful per-service checks.
+      // Keep those checks for Chinese summaries; raw response stays in details.
+      const detail = readyResult.reason?.detail;
+      appState.adminRuntimeStatus = detail?.checks && typeof detail.checks === "object"
+        ? detail
+        : { status: "not_ready", ready: false, checks: { ready: { ok: false, status: "not_ready", error: readyResult.reason?.message || "检查失败" } } };
     }
     if (usersResult.status === "fulfilled") {
       appState.adminUsers = usersResult.value.users || [];

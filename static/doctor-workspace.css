@@ -9,6 +9,7 @@ body.doctor-mode .topbar { min-height: 48px; padding: 6px 16px; margin: 0; box-s
 body.doctor-mode .brand-mark { width: 30px; height: 30px; font-size: 12px; border-radius: 6px; }
 body.doctor-mode .brand-copy h1 { font-size: 20px; line-height: 1.3; }
 body.doctor-mode .brand-copy p { display: none; }
+body.doctor-mode .deployment-badge { font-size: 12px; line-height: 1.4; color: var(--muted); padding: 4px 8px; border-left: 1px solid var(--border); white-space: nowrap; }
 body.doctor-mode .top-actions { gap: 8px; }
 body.doctor-mode .top-actions button { min-height: 32px; font-size: 14px; padding: 5px 10px; }
 body.doctor-mode .top-actions .input-method-menu { display: none; }
@@ -90,6 +91,15 @@ body.doctor-mode .alpha51-workspace .field-card.record-field-updated { animation
 body.doctor-mode .alpha51-workspace .field-meta { margin-top: 0; }
 body.doctor-mode .alpha51-workspace .record-version { padding: 10px 0; border-bottom: 1px solid var(--ws-border); color: var(--ws-muted); font-size: 14px; line-height: 1.6; }
 body.doctor-mode .alpha51-workspace .record-version span { display: block; color: var(--text); }
+body.doctor-mode .alpha51-workspace .approval-checklist { flex: none; margin: 12px 0; padding: 0; background: #f7fafc; border: 1px solid #bdcddb; border-radius: 6px; }
+body.doctor-mode .alpha51-workspace .approval-checklist-head { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; }
+body.doctor-mode .alpha51-workspace .approval-checklist-head strong { font-size: 16px; color: #173d61; }
+body.doctor-mode .alpha51-workspace .approval-checklist-head p { font-size: 13px; line-height: 1.5; margin: 4px 0 0; color: #526477; }
+.approval-entry-label { flex: none; color: #145d9c; font-size: 14px; font-weight: 600; }
+.approval-disclosure > .approval-section, .approval-disclosure > .review-completed { margin: 0 12px 12px; }
+.approval-readonly-record { padding: 0 12px 12px; }
+.approval-readonly-record > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid #dce3e9; font-size: 14px; }
+.approval-readonly-record > div span { color: #526477; }
 body.doctor-mode .alpha51-workspace .record-recovery { padding: 12px 0; border-bottom: 1px solid var(--ws-border); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 body.doctor-mode .alpha51-workspace .record-recovery summary,
 body.doctor-mode .alpha51-workspace .review-completed summary { cursor: pointer; padding: 8px 0; font-size: 14px; color: var(--ws-muted); }

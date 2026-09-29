@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import socket
+import sqlite3
 import shutil
 import subprocess
 import sys
@@ -18,6 +19,7 @@ from urllib import error, request
 SERVICES = ("ollama", "app", "gateway")
 RESOURCES = ("doctor.html", "doctor.js", "doctor.css", "doctor-ui-v2.css", "doctor-workspace.css")
 BRAND_RESOURCES = ("brand/medilisten-v1.png", "brand/medilisten-v1.ico")
+DEPLOYMENT_RESOURCE = "deployment.json"
 MODEL_DIGEST = "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7"
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -115,13 +117,23 @@ def configure(project: str, port: int, path: Path) -> dict:
         if status != 200:
             raise PilotError("RESOURCE_MISSING: 医生页面资源不完整。")
         resources[resource] = hashlib.sha256(content).hexdigest()
+    code, descriptor = fetch(port, "/static/deployment.json")
+    deployment = json.loads(descriptor) if code == 200 else {}
+    if deployment.get("mode") in ("showcase", "test"):
+        if deployment.get("version") != revision:
+            raise PilotError("VERSION_MISMATCH: 页面环境标识与镜像版本不同。")
+        resources[DEPLOYMENT_RESOURCE] = hashlib.sha256(descriptor).hexdigest()
     config = {"schema_version": 1, "release_status": "CANDIDATE_NOT_RELEASED",
               "project": project, "port": port, "app_git_sha": revision,
+              "backend_git_sha": labels.get("org.medilisten.backend.revision", revision),
               "model_digest": MODEL_DIGEST, "model_manifest": str(manifest),
               "runtime": mount(app, "/app/runtime"), "resources": resources,
               "containers": {s: {"id": i["Id"], "image": i["Image"],
                                   "mounts": {m["Destination"]: str(Path(m["Source"]).resolve()) for m in i["Mounts"]}}
                              for s, i in items.items()}}
+    if deployment.get("mode") in ("showcase", "test"):
+        config.update(environment=deployment["mode"], environment_label=deployment["label"],
+                      cookie_name=env(app).get("MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME"))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf8")
     return config
@@ -131,10 +143,12 @@ def validate(config: dict) -> dict:
     if config.get("schema_version") != 1 or set(config.get("containers", {})) != set(SERVICES):
         raise PilotError("INVALID_CONFIG: 配置版本或服务不完整。")
     # Previous registrations stay valid; a new registration pins both brand assets.
-    if set(config.get("resources", {})) not in (set(RESOURCES), set(RESOURCES) | set(BRAND_RESOURCES)):
+    if set(config.get("resources", {})) not in (set(RESOURCES), set(RESOURCES) | set(BRAND_RESOURCES), set(RESOURCES) | set(BRAND_RESOURCES) | {DEPLOYMENT_RESOURCE}):
         raise PilotError("INVALID_CONFIG: 网页资源指纹不完整，需要维护人员重新登记。")
     items = {s: inspect(config["containers"][s]["id"]) for s in SERVICES}
     check_real(items, config["project"], config["port"])
+    if config.get("cookie_name") and env(items["app"]).get("MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME") != config["cookie_name"]:
+        raise PilotError("COOKIE_MISMATCH: 登录环境与登记配置不同。")
     for service, item in items.items():
         pinned = config["containers"][service]
         actual_mounts = {m["Destination"]: str(Path(m["Source"]).resolve()) for m in item["Mounts"]}
@@ -152,6 +166,7 @@ def web_status(config: dict, items: dict) -> dict:
     states = {s: i["State"]["Status"] for s, i in items.items()}
     result = {"phase": "STOPPED", "states": states, "web_available": False,
               "model_ready": False, "app_git_sha": config["app_git_sha"],
+              "backend_git_sha": config.get("backend_git_sha", config["app_git_sha"]),
               "release_status": config["release_status"], "port": config["port"]}
     if not all(i["State"]["Running"] for i in items.values()):
         return result
@@ -169,9 +184,9 @@ def web_status(config: dict, items: dict) -> dict:
     return result
 
 
-def data_browser_status() -> dict:
+def data_browser_status(config: dict | None = None) -> dict:
     """Inspect the separately authenticated snapshot; never expose its token."""
-    state_path = ROOT / ".artifacts/data-browser/state.private.json"
+    state_path = Path(config["viewer_directory"]) / "state.private.json" if config and config.get("viewer_directory") else ROOT / ".artifacts/data-browser/state.private.json"
     if not state_path.is_file():
         return {"available": False, "phase": "STOPPED"}
     try:
@@ -181,6 +196,8 @@ def data_browser_status() -> dict:
             raise ValueError("invalid port")
         directory = Path(state["snapshot_dir"])
         manifest = json.loads((directory / "manifest.json").read_text(encoding="utf8"))
+        if config and config.get("environment") and not manifest.get("source_label", "").startswith(config["environment_label"] + " · " + config["app_git_sha"]):
+            raise ValueError("snapshot environment mismatch")
         if (manifest.get("synthetic_only") is not True
                 or sha(directory / "mra_snapshot.sqlite3") != manifest["database_sha256"]):
             raise ValueError("invalid snapshot")
@@ -208,7 +225,7 @@ def entrypoint_status(config: dict, result: dict) -> dict:
         "doctor": {"available": result["web_available"], "url": base},
         "knowledge": {"available": result["web_available"], "url": base + "#admin",
                       "requires": "admin login; doctor uses field evidence search"},
-        "data_browser": data_browser_status(),
+        "data_browser": data_browser_status(config) if config.get("viewer_directory") else data_browser_status(),
         "manual": {"available": (documents / "manual.html").is_file(), "path": str(documents / "manual.html")},
     }}
 
@@ -216,22 +233,41 @@ def entrypoint_status(config: dict, result: dict) -> dict:
 def open_data_browser(config: dict) -> dict:
     # Verify this launcher still belongs to the pinned deployment before opening
     # any ancillary entry. Start is idempotent and retains the saved backup date.
-    validate(config)
+    items = validate(config)
+    viewer_arguments = []
+    if config.get("viewer_directory"):
+        backup = Path(config["runtime"]) / "viewer-source.sqlite3"
+        if not items["app"]["State"]["Running"]:
+            raise PilotError("VIEWER_SOURCE_STOPPED: 请先启动本环境，确保快照来源和版本明确。")
+        command("docker", "exec", items["app"]["Id"], "python", "-c",
+                "import sqlite3; from contextlib import closing; "
+                "s=sqlite3.connect('file:/app/runtime/medical_record_agent.sqlite3?mode=ro',uri=True); "
+                "d=sqlite3.connect('/app/runtime/viewer-source.sqlite3'); s.backup(d); d.close(); s.close()")
+        if config.get("environment") == "test":
+            with sqlite3.connect(backup.as_uri() + "?mode=ro", uri=True) as connection:
+                identifiers = [row[0] for row in connection.execute("SELECT deidentified_id FROM patient")
+                               if re.fullmatch(r"SIM-TEST-[A-Z0-9-]+", row[0])]
+            Path(config["viewer_allowlist"]).write_text(json.dumps({
+                "confirmed_synthetic": True, "reviewed_by": "User-authorized synthetic/deidentified test environment; only explicit SIM-TEST identifiers",
+                "synthetic_patient_ids": identifiers}, ensure_ascii=False, indent=2), encoding="utf8")
+        viewer_arguments = ["-Action", "Refresh", "-StateDirectory", config["viewer_directory"],
+                            "-AllowlistPath", config["viewer_allowlist"], "-SourceDb", str(backup),
+                            "-SourceLabel", config["environment_label"] + " · " + config["app_git_sha"]]
     shell = shutil.which("pwsh")
     if not shell:
         raise PilotError("VIEWER_SHELL_MISSING: 数据浏览器需要现有PowerShell 7；医生服务未改动。")
     # A newly detached Windows process/browser may inherit a captured pipe and
     # keep communicate() waiting after PowerShell exits. Use a local log file.
-    log = ROOT / ".artifacts/data-browser/launcher.private.log"
+    log = Path(config["viewer_directory"]) / "launcher.private.log" if config.get("viewer_directory") else ROOT / ".artifacts/data-browser/launcher.private.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("w", encoding="utf8") as output:
         process = subprocess.run([shell, "-NoProfile", "-File", str(ROOT / "scripts/Start-MRADataBrowser.ps1"),
-                                  "-Action", "Start", "-OpenBrowser"],
+                                  *(viewer_arguments or ["-Action", "Start"]), "-OpenBrowser"],
                                  stdout=output, stderr=output, timeout=60,
                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     if process.returncode:
         raise PilotError("VIEWER_START_FAILED: 数据浏览器未启动；检查备份、端口或独立工具环境，医生服务保持原样。")
-    result = data_browser_status()
+    result = data_browser_status(config) if config.get("viewer_directory") else data_browser_status()
     if not result["available"]:
         raise PilotError("VIEWER_NOT_READY: 本地快照尚未通过认证入口检查。")
     return {"phase": "VIEWER_READY", "entrypoints": {"data_browser": result}}
@@ -252,14 +288,83 @@ def operation_lock(path: Path):
         lock.unlink()
 
 
-def start(config: dict, config_path: Path, timeout: int = 600) -> dict:
-    with operation_lock(config_path):
+def peer_configuration(config: dict) -> tuple[dict, Path] | None:
+    if not config.get("peer_config"):
+        return None
+    path = Path(config["peer_config"])
+    peer = json.loads(path.read_text(encoding="utf-8-sig"))
+    if (peer["project"] == config["project"] or Path(peer["runtime"]).resolve() == Path(config["runtime"]).resolve()
+            or not peer.get("cookie_name") or peer["cookie_name"] == config.get("cookie_name")):
+        raise PilotError("ISOLATION_MISMATCH: 两版项目、数据目录和 Cookie 必须独立。")
+    return peer, path
+
+
+def assert_idle(config: dict, items: dict, confirmed_saved: bool) -> None:
+    if not any(item["State"]["Running"] for item in items.values()):
+        return
+    if not confirmed_saved:
+        raise PilotError("SAVE_CONFIRMATION_REQUIRED: 请先保存或取消编辑、停止录音并退出页面，再确认切换。")
+    if not items["app"]["State"]["Running"]:
+        raise PilotError("IDLE_UNKNOWN: 应用未运行，无法确认任务状态，请维护人员核查。")
+    script = """import sqlite3,json,pathlib
+c=sqlite3.connect('file:/app/runtime/medical_record_agent.sqlite3?mode=ro',uri=True)
+n=c.execute("SELECT count(*) FROM agent_task WHERE status NOT IN ('WAITING_DOCTOR_REVIEW','DONE','FAILED')").fetchone()[0]
+c.close()
+active=[]
+for p in pathlib.Path('/app/runtime/uploads').rglob('session.json'):
+ d=json.loads(p.read_text()); status=d.get('status')
+ if status not in ('completed','failed','cancelled'): active.append(status)
+print(json.dumps({'tasks':n,'sessions':len(active)}))"""
+    result = json.loads(command("docker", "exec", items["app"]["Id"], "python", "-c", script))
+    if result["tasks"] or result["sessions"]:
+        raise PilotError("ACTIVE_WORK: 存在生成、转写或录音任务；请在页面完成或取消后再切换。")
+
+
+def switch_environment(config: dict, config_path: Path, timeout: int, confirmed_saved: bool) -> dict:
+    pair = peer_configuration(config)
+    if not pair:
+        raise PilotError("PEER_MISSING: 尚未登记另一个环境。")
+    peer, peer_path = pair
+    lock_path = Path(config["switch_lock"])
+    with operation_lock(lock_path):
+        validate(config)
+        peer_items = validate(peer)
+        assert_idle(peer, peer_items, confirmed_saved)
+        # Check destination port before stopping the current environment.
+        target = validate(config)
+        if not target["gateway"]["State"]["Running"]:
+            with socket.socket() as probe:
+                if probe.connect_ex(("127.0.0.1", config["port"])) == 0:
+                    raise PilotError("PORT_OCCUPIED: 目标端口被占用；当前环境保持运行。")
+        stop(peer, peer_path, confirmed_saved=confirmed_saved)
+        try:
+            return start(config, config_path, timeout, pair_lock_held=True)
+        except PilotError as exc:
+            # A newly started target has not been opened by this action. Stop only
+            # its registered containers, then restore the previous environment.
+            failed = validate(config)
+            for service in reversed(SERVICES):
+                if failed[service]["State"]["Running"]:
+                    command("docker", "stop", "--time", "30", failed[service]["Id"])
+            try:
+                start(peer, peer_path, timeout, pair_lock_held=True)
+            except PilotError:
+                raise PilotError("SWITCH_AND_ROLLBACK_FAILED: 两版数据保留；请维护人员检查启动日志。") from exc
+            raise PilotError("SWITCH_FAILED_RESTORED: 新环境未就绪，已恢复原环境；请查看失败日志。") from exc
+
+
+def start(config: dict, config_path: Path, timeout: int = 600, *, pair_lock_held: bool = False) -> dict:
+    pair_lock = operation_lock(Path(config["switch_lock"])) if config.get("peer_config") and not pair_lock_held else nullcontext()
+    with pair_lock, operation_lock(config_path):
         items = validate(config)
+        pair = peer_configuration(config)
+        if pair and any(i["State"]["Running"] for i in validate(pair[0]).values()):
+            raise PilotError("PEER_RUNNING: 另一环境正在运行；请使用“切换到本版”，不能同时加载模型。")
         if not items["gateway"]["State"]["Running"]:
             with socket.socket() as probe:
                 if probe.connect_ex(("127.0.0.1", config["port"])) == 0:
                     raise PilotError("PORT_OCCUPIED: 端口已有其他程序；不会停止它或切到旧版本。")
-        command("docker", "update", "--restart", "unless-stopped", *(items[s]["Id"] for s in SERVICES))
+        command("docker", "update", "--restart", "no" if pair else "unless-stopped", *(items[s]["Id"] for s in SERVICES))
         for service in SERVICES:
             if not items[service]["State"]["Running"]:
                 command("docker", "start", items[service]["Id"])
@@ -277,9 +382,11 @@ def start(config: dict, config_path: Path, timeout: int = 600) -> dict:
             time.sleep(3)
 
 
-def stop(config: dict, config_path: Path) -> dict:
+def stop(config: dict, config_path: Path, confirmed_saved: bool = False) -> dict:
     with operation_lock(config_path):
         items = validate(config)
+        if config.get("peer_config"):
+            assert_idle(config, items, confirmed_saved)
         for service in reversed(SERVICES):
             if items[service]["State"]["Running"]:
                 command("docker", "stop", "--time", "30", items[service]["Id"])
@@ -305,11 +412,12 @@ def open_workspace(config: dict, *, view: str = "workbench") -> dict:
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("action", choices=("configure", "status", "start", "stop", "open", "open-knowledge", "open-data"))
+    p.add_argument("action", choices=("configure", "status", "start", "switch", "stop", "open", "open-knowledge", "open-data"))
     p.add_argument("--config", type=Path, required=True)
     p.add_argument("--project", default="mra51repair8795")
     p.add_argument("--port", type=int, default=8795)
     p.add_argument("--timeout", type=int, default=600)
+    p.add_argument("--confirm-saved", action="store_true")
     a = p.parse_args()
     try:
         if a.action == "configure":
@@ -319,7 +427,8 @@ def main():
             config = json.loads(a.config.read_text(encoding="utf-8-sig"))
             result = {"status": lambda: entrypoint_status(config, web_status(config, validate(config))),
                       "start": lambda: entrypoint_status(config, start(config, a.config, a.timeout)),
-                      "stop": lambda: stop(config, a.config),
+                      "switch": lambda: entrypoint_status(config, switch_environment(config, a.config, a.timeout, a.confirm_saved)),
+                      "stop": lambda: stop(config, a.config, a.confirm_saved),
                       "open": lambda: open_workspace(config),
                       "open-knowledge": lambda: open_workspace(config, view="admin"),
                       "open-data": lambda: open_data_browser(config)}[a.action]()

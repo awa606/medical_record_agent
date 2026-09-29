@@ -3,15 +3,17 @@ param(
     [string]$SourceDb,
     [string]$SourceLabel = '8795 candidate',
     [string]$PythonPath,
+    [string]$StateDirectory,
+    [string]$AllowlistPath,
     [ValidateRange(0,65535)][int]$Port = 0,
     [switch]$OpenBrowser
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = Split-Path -Parent $PSScriptRoot
-$toolDir = Join-Path $repoDir '.artifacts/data-browser'
+$toolDir = if ($StateDirectory) { [IO.Path]::GetFullPath($StateDirectory) } else { Join-Path $repoDir '.artifacts/data-browser' }
 $statePath = Join-Path $toolDir 'state.private.json'
 $scriptPath = Join-Path $PSScriptRoot 'data_browser.py'
-$policyPath = Join-Path $repoDir 'tools/data-browser/synthetic-allowlist.json'
+$policyPath = if ($AllowlistPath) { (Resolve-Path -LiteralPath $AllowlistPath).Path } else { Join-Path $repoDir 'tools/data-browser/synthetic-allowlist.json' }
 if (-not $PythonPath) { $PythonPath = Join-Path $repoDir '.artifacts/alpha51-data-browser-20260928/venv/Scripts/python.exe' }
 if (-not (Test-Path -LiteralPath $PythonPath)) { throw 'Install the isolated tool environment from the runbook first.' }
 $PythonPath = (Resolve-Path -LiteralPath $PythonPath).Path
@@ -30,6 +32,9 @@ function Get-OwnedProcess($saved) {
 }
 
 $saved = if (Test-Path -LiteralPath $statePath) { Get-Content -Raw -LiteralPath $statePath | ConvertFrom-Json } else { $null }
+if ($saved -and $SourceDb -and ([IO.Path]::GetFullPath($SourceDb) -ne [IO.Path]::GetFullPath($saved.source_db))) {
+    throw 'Snapshot belongs to another source database. Use its own StateDirectory.'
+}
 if ($Action -eq 'Stop') {
     if ($saved -and (Get-OwnedProcess $saved)) { Stop-Process -Id $saved.pid }
     Write-Output 'Data browser stopped; snapshots and 8795 preserved.'

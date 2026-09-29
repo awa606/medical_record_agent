@@ -50,7 +50,7 @@ def _wait_for_health(base_url: str) -> None:
 
 
 class RunningServer:
-    def __init__(self) -> None:
+    def __init__(self, env_overrides: dict | None = None) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.temp_dir.name)
         self.port = _free_port()
@@ -61,6 +61,7 @@ class RunningServer:
         env["MEDICAL_RECORD_AGENT_UPLOAD_DIR"] = str(self.root / "uploads")
         env["MEDICAL_RECORD_AGENT_OUTPUT_DIR"] = str(self.root / "outputs")
         env["LLM_PROVIDER"] = "mock"
+        env.update(env_overrides or {})
         self.process = subprocess.Popen(
             [
                 sys.executable,

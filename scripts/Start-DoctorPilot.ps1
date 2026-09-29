@@ -7,10 +7,12 @@ $pythonPath = (Get-Command $Python).Source
 $controller = Join-Path $PSScriptRoot 'doctor_pilot.py'
 $documents = Join-Path $root 'docs\pilot\doctor-v1'
 $iconPath = Join-Path $root 'static\brand\medilisten-v1.ico'
+$version = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$environmentLabel = if ($version.environment_label) { $version.environment_label } else { '医生试用入口' }
 
 if ($InstallShortcut) {
     $desktop = [Environment]::GetFolderPath('Desktop')
-    $link = Join-Path $desktop 'MediListen 医生试用入口.lnk'
+    $link = Join-Path $desktop ("MediListen $environmentLabel.lnk")
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($link)
     $shortcut.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
@@ -27,7 +29,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 $form = New-Object System.Windows.Forms.Form
-$form.Text = 'MediListen · 医生试用入口'
+$form.Text = "MediListen · $environmentLabel"
 if (Test-Path -LiteralPath $iconPath) { $form.Icon = New-Object System.Drawing.Icon($iconPath) }
 $form.Size = New-Object System.Drawing.Size(800,590)
 $form.MinimumSize = New-Object System.Drawing.Size(780,570)
@@ -41,10 +43,9 @@ $layout.ColumnCount=1; $layout.RowCount=5
 [void]$layout.RowStyles.Add((New-Object System.Windows.Forms.RowStyle('Percent',100)))
 $form.Controls.Add($layout)
 $title = New-Object System.Windows.Forms.Label
-$title.Text = 'MediListen  医生试用'; $title.Dock='Fill'
+$title.Text = "MediListen  $environmentLabel"; $title.Dock='Fill'
 $title.Font=New-Object System.Drawing.Font('Microsoft YaHei UI',19,[System.Drawing.FontStyle]::Bold)
 $layout.Controls.Add($title,0,0)
-$version = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($version.handbook_dir -and (Test-Path -LiteralPath $version.handbook_dir)) { $documents=$version.handbook_dir }
 $context = New-Object System.Windows.Forms.Label
 $context.Dock='Fill'
@@ -70,18 +71,25 @@ function Add-ActionButton($panel,$text,$handler) {
     return $button
 }
 
-function Invoke-Pilot($action) {
+function Invoke-Pilot($action, [bool]$confirmedSaved=$false) {
     if ($script:worker -and -not $script:worker.HasExited) { return }
     $stamp=[Guid]::NewGuid().ToString('N')
     $script:logPath=Join-Path ([IO.Path]::GetDirectoryName($configPath)) ("launch-$stamp.jsonl")
     $script:errPath=Join-Path ([IO.Path]::GetDirectoryName($configPath)) ("launch-$stamp.error.log")
     $args='-X utf8 "'+$controller+'" '+$action+' --config "'+$configPath+'"'
+    if ($confirmedSaved) { $args += ' --confirm-saved' }
     $script:worker=Start-Process -FilePath $pythonPath -ArgumentList $args -PassThru -WindowStyle Hidden -RedirectStandardOutput $script:logPath -RedirectStandardError $script:errPath
     foreach($b in $script:buttons){$b.Enabled=$false}
     $status.Text='正在检查登记版本与本地服务，请稍候……'
 }
 
 $script:buttons += Add-ActionButton $actions '启动服务' { Invoke-Pilot 'start' }
+if ($version.peer_config) {
+    $script:buttons += Add-ActionButton $actions '切换到本版' {
+        $answer=[System.Windows.Forms.MessageBox]::Show('请先在另一版本中保存或取消编辑、停止并提交录音，退出账号并关闭页面。确认后只停止另一登记环境，数据保留；任务未结束时会拒绝切换。','切换环境','YesNo','Warning')
+        if($answer -eq 'Yes'){Invoke-Pilot 'switch' $true}
+    }
+}
 $openButton = Add-ActionButton $actions '打开工作台' {
     if ($script:worker -and -not $script:worker.HasExited) {
         $args='-X utf8 "'+$controller+'" open --config "'+$configPath+'"'
@@ -94,7 +102,7 @@ $script:buttons += Add-ActionButton $actions '数据／知识浏览器' { Invoke
 $script:buttons += Add-ActionButton $actions '检查状态' { Invoke-Pilot 'status' }
 $script:buttons += Add-ActionButton $actions '停止服务' {
     $answer=[System.Windows.Forms.MessageBox]::Show('请确认已经停止录音、等待任务结束并保存病历。只停止本版本，数据保留。','停止MediListen','YesNo','Warning')
-    if($answer -eq 'Yes'){Invoke-Pilot 'stop'}
+    if($answer -eq 'Yes'){Invoke-Pilot 'stop' $true}
 }
 [void](Add-ActionButton $help '快速开始／操作手册' { Start-Process (Join-Path $documents 'manual.html') })
 [void](Add-ActionButton $help '填写试用反馈' { Start-Process (Join-Path $documents 'feedback.html') })

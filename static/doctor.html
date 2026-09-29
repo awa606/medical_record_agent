@@ -6,9 +6,9 @@
     <title>MediListen - AI 智能病历助手</title>
     <link rel="icon" href="./brand/medilisten-v1.ico" sizes="any" />
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
-    <link rel="stylesheet" href="./doctor.css?v=alpha51-reference-tabs-20260927" />
-    <link rel="stylesheet" href="./doctor-ui-v2.css?v=2026092803" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-review-quality-20260927" />
+    <link rel="stylesheet" href="./doctor.css?v=alpha51-dual-20260929" />
+    <link rel="stylesheet" href="./doctor-ui-v2.css?v=alpha51-dual-20260929" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-dual-20260929" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -19,6 +19,7 @@
             <h1>MediListen</h1>
             <p>LISTEN · TRANSCRIBE · GENERATE · REVIEW</p>
           </div>
+          <span id="deploymentBadge" class="deployment-badge" role="status">正在核验环境</span>
         </div>
         <nav class="top-actions" aria-label="全局操作">
           <button type="button" id="openWorklistButton">查找就诊</button>
@@ -141,13 +142,13 @@
         <section class="dashboard-panel local-registration-panel" aria-label="本地患者登记">
           <div class="panel-header">
             <div>
-              <h2>新建演示就诊</h2>
-              <p>选择合成患者，完成报到后开始接诊。此入口不代替医院挂号系统。</p>
+              <h2 id="localRegistrationTitle">新建演示就诊</h2>
+              <p id="localRegistrationHelp">选择合成患者，完成报到后开始接诊。此入口不代替医院挂号系统。</p>
             </div>
           </div>
           <form id="localEncounterForm" class="local-registration-form">
             <label>
-              <span>模拟患者 · 仅演示</span>
+              <span id="localPatientLabel">模拟患者 · 仅演示</span>
               <select id="localSyntheticPatient" required>
                 <option value="SIM-DEMO-0929-FEVER">张示例 · 发热咳嗽</option>
                 <option value="SIM-DEMO-0929-NEGATION">李示例 · 否定与家属病史</option>
@@ -312,7 +313,7 @@
         <section class="column transcript-column">
           <div class="panel-header">
             <div>
-              <h2>问诊转写</h2>
+              <h2 id="transcriptHeading">问诊转写</h2>
               <p>核对说话人和原文，点击转写可定位对应音频。</p>
             </div>
             <div class="transcript-header-actions">
@@ -544,7 +545,8 @@
 
       <section id="audioPanel" class="drawer-panel">
         <p id="audioPanelHint" class="form-help">上传已录好的 MP3/WAV 问诊音频，选择识别模式后系统自动转写并推定医患角色。</p>
-        <input id="audioFileInput" type="file" accept=".wav,.mp3,audio/wav,audio/mpeg" />
+        <input id="audioFileInput" type="file" accept=".wav,.mp3,.m4a,.flac,.ogg,audio/wav,audio/mpeg,audio/mp4,audio/flac,audio/ogg" />
+        <p class="form-help">支持 WAV、MP3、M4A、FLAC、OGG，最大 200 MiB。请使用合成或已获授权的去标识音频。</p>
         <label class="recognition-mode-control" for="recognitionModeSelect">识别模式
           <select id="recognitionModeSelect">
             <option value="fast">尽快识别</option>
@@ -650,6 +652,6 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=alpha51-export-disposition-20260928"></script>
+    <script src="./doctor.js?v=alpha51-dual-20260929"></script>
   </body>
 </html>

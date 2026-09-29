@@ -18,6 +18,8 @@ const appState = {
   currentAgentTrace: null,
   currentLlmStatus: null,
   currentInputText: "",
+  transcriptRestoreStatus: "idle",
+  encounterRestoreVersion: 0,
   productView: "workbench",
   adminUsers: [],
   adminRuntimeStatus: null,
@@ -425,12 +427,49 @@ const SYNTHETIC_PATIENTS = Object.freeze({
   "SIM-DEMO-0929-LIVE": { name: "王示例", topic: "现场模拟问诊" },
 });
 
+let deployment = { mode: "development", label: "开发候选", version: "unregistered" };
+
+async function loadDeployment() {
+  try {
+    const response = await fetch("./deployment.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("配置加载失败");
+    const value = await response.json();
+    if (!["development", "showcase", "test"].includes(value.mode)) throw new Error("环境无效");
+    deployment = value;
+  } catch (_) {
+    deployment = { mode: "development", label: "环境未登记", version: "unknown" };
+  }
+  $("deploymentBadge").textContent = `${deployment.label} · ${String(deployment.version).slice(0, 8)}`;
+  $("deploymentBadge").title = "功能测试候选；模型质量与独立医生试用尚未放行";
+  if (deployment.mode === "test") {
+    $("localRegistrationTitle").textContent = "新建匿名就诊";
+    $("localRegistrationHelp").textContent = "新建匿名患者，或选择已有测试患者再次就诊。请勿输入真实身份信息。";
+    $("localPatientLabel").textContent = "测试患者 · 合成或授权去标识资料";
+    renderTestPatientOptions();
+  }
+}
+
+function testPatientLabel(encounter) {
+  return /^SIM-TEST-[A-Z0-9-]+$/.test(encounter?.patient_deidentified_id || "")
+    ? `测试患者 ${encounter.patient_id || "新建"}` : "";
+}
+
+function renderTestPatientOptions() {
+  if (deployment.mode !== "test" || !$("localSyntheticPatient")) return;
+  const select = $("localSyntheticPatient");
+  const previous = select.value;
+  const patients = new Map((appState.encounterWorklist || []).filter(testPatientLabel).map(item => [item.patient_deidentified_id, item]));
+  select.innerHTML = '<option value="__new__">新建匿名患者（自动生成编号）</option>'
+    + [...patients.values()].map(item => `<option value="${escapeHtml(item.patient_deidentified_id)}">${escapeHtml(testPatientLabel(item))} · ${escapeHtml(item.patient_deidentified_id)}</option>`).join("");
+  if (patients.has(previous)) select.value = previous;
+}
+
 function syntheticDemoLabel(encounter) {
   return SYNTHETIC_PATIENTS[encounter?.patient_deidentified_id]?.name || "";
 }
 
 function encounterPatientLabel(encounter) {
-  return syntheticDemoLabel(encounter) || `脱敏患者 ${encounter?.patient_id || ""}`.trim();
+  return syntheticDemoLabel(encounter) || testPatientLabel(encounter) || `脱敏患者 ${encounter?.patient_id || ""}`.trim();
 }
 
 function encounterSwitchBlocked() {
@@ -598,6 +637,7 @@ async function refreshExportReadiness() {
 }
 
 async function refreshKnowledgeEvidence(taskId = appState.currentTaskId) {
+  const restoreVersion = appState.encounterRestoreVersion;
   if (!taskId) {
     appState.currentKnowledgeEvidence = null;
     appState.knowledgeEvidenceStatus = "idle";
@@ -608,12 +648,14 @@ async function refreshKnowledgeEvidence(taskId = appState.currentTaskId) {
   appState.knowledgeEvidenceError = "";
   try {
     const evidence = await api(`/api/tasks/${encodeURIComponent(taskId)}/evidence`);
+    if (restoreVersion !== appState.encounterRestoreVersion) return null;
     appState.currentKnowledgeEvidence = evidence;
     appState.knowledgeEvidenceStatus = "ready";
     renderModelAndKnowledgeStatus();
     if ($("assistPanels")) renderAssist();
     return evidence;
   } catch (error) {
+    if (restoreVersion !== appState.encounterRestoreVersion) return null;
     appState.currentKnowledgeEvidence = null;
     appState.knowledgeEvidenceStatus = "failed";
     appState.knowledgeEvidenceError = error?.message || "相关知识参考加载失败";
@@ -843,6 +885,7 @@ function encounterStatusLabel(status) {
 }
 
 function renderEncounterWorklistPanel() {
+  renderTestPatientOptions();
   if ($("localSyntheticPatient")) $("localSyntheticPatient").disabled = Boolean(appState.pendingRegisteredEncounterId);
   if ($("createLocalEncounterButton")) $("createLocalEncounterButton").textContent = appState.pendingRegisteredEncounterId ? "重试报到" : "登记并报到";
   const notice = $("workbenchSelectionNotice");
@@ -890,6 +933,18 @@ async function openEncounterWorklist() {
   $("encounterSearchInput")?.focus();
 }
 
+function restoreTaskSource(task) {
+  const result = task?.result_json || {};
+  const source = result.asr_source;
+  // Original input is independent of the editable draft and its revisions.
+  appState.currentInputText = result.conversation_text || task?.input_text || "";
+  appState.currentAsrResult = source && (source.segments?.length || source.text || source.conversation_text) ? source : null;
+  appState.currentAudioId = source?.audio_id && source.audio_id !== "text-import" ? source.audio_id : null;
+  appState.liveTranscriptSegments = [];
+  appState.provisionalTranscriptSegments = [];
+  appState.transcriptRestoreStatus = appState.currentInputText || appState.currentAsrResult ? "ready" : task?.id ? "missing" : "idle";
+}
+
 function applyEncounterDetail(detail) {
   resetTaskState();
   appState.currentEncounter = detail;
@@ -904,7 +959,7 @@ function applyEncounterDetail(detail) {
   appState.currentQualityReport = result.quality_report || null;
   appState.currentExports = result.exports || null;
   appState.currentExportReadiness = null;
-  appState.currentInputText = "";
+  restoreTaskSource(task);
 }
 
 function selectedEncounterId() {
@@ -934,14 +989,18 @@ async function restoreEncounter(encounterId, { nextInputMethod = "" } = {}) {
     return;
   }
   if (encounterSwitchBlocked()) return;
+  const restoreVersion = ++appState.encounterRestoreVersion;
   setBusy(true, "正在恢复就诊草稿...");
   try {
     const detail = await api(`/api/encounters/${encodeURIComponent(encounterId)}`);
+    if (restoreVersion !== appState.encounterRestoreVersion) return;
     applyEncounterDetail(detail);
     if (appState.currentTaskId) {
-      await refreshTask(appState.currentTaskId, appState.currentTask);
+      await refreshTask(appState.currentTaskId);
+      if (restoreVersion !== appState.encounterRestoreVersion) return;
       await refreshExportReadiness();
     }
+    if (restoreVersion !== appState.encounterRestoreVersion) return;
     await refreshEncounterWorklist();
     closeDrawer();
     setProductView("encounter");
@@ -956,10 +1015,14 @@ async function restoreEncounter(encounterId, { nextInputMethod = "" } = {}) {
       openTextImport();
     }
   } catch (error) {
+    if (restoreVersion !== appState.encounterRestoreVersion) return;
+    appState.transcriptRestoreStatus = "error";
     reportActionError(error);
   } finally {
-    setBusy(false);
-    renderAll();
+    if (restoreVersion === appState.encounterRestoreVersion) {
+      setBusy(false);
+      renderAll();
+    }
   }
 }
 
@@ -972,6 +1035,7 @@ async function performEncounterAction(encounterId, action) {
       method: "POST",
     });
     if (action === "start") {
+      appState.encounterRestoreVersion += 1;
       applyEncounterDetail(detail);
       closeDrawer();
       setProductView("encounter");
@@ -999,8 +1063,15 @@ async function performEncounterAction(encounterId, action) {
 async function createLocalEncounterFromForm(event) {
   event?.preventDefault();
   if (appState.busy || encounterSwitchBlocked()) return;
-  const deidentifiedId = $("localSyntheticPatient")?.value || "";
-  const patient = SYNTHETIC_PATIENTS[deidentifiedId];
+  let deidentifiedId = $("localSyntheticPatient")?.value || "";
+  let patient = SYNTHETIC_PATIENTS[deidentifiedId];
+  if (deployment.mode === "test") {
+    if (deidentifiedId === "__new__") deidentifiedId = `SIM-TEST-${crypto.randomUUID().toUpperCase()}`;
+    else if (!(appState.encounterWorklist || []).some(item => item.patient_deidentified_id === deidentifiedId && testPatientLabel(item))) {
+      showToast("请选择已有测试患者或新建匿名患者。"); return;
+    }
+    patient = { name: "匿名测试患者" };
+  }
   if (!patient) { showToast("请选择一位演示患者。"); return; }
   setBusy(true, "正在登记并报到...");
   try {
@@ -2437,7 +2508,10 @@ function renderPatientBar() {
   const llm = llmDisplayState();
   const displayState = doctorDisplayState();
   $("patientName").textContent = appState.currentEncounter ? encounterPatientLabel(appState.currentEncounter) : "未选择患者";
-  if ($("patientDemoBadge")) $("patientDemoBadge").hidden = !syntheticDemoLabel(appState.currentEncounter);
+  if ($("patientDemoBadge")) {
+    $("patientDemoBadge").hidden = !(syntheticDemoLabel(appState.currentEncounter) || testPatientLabel(appState.currentEncounter));
+    $("patientDemoBadge").textContent = testPatientLabel(appState.currentEncounter) ? "匿名测试" : "演示";
+  }
   const encounterId = selectedEncounterId();
   $("patientProfile").textContent = encounterId
     ? `患者标识 ${appState.currentEncounter?.patient_deidentified_id || "未登记"} · 本次就诊 E-${encounterId}`
@@ -3322,6 +3396,7 @@ function renderApprovalChecklist(fields) {
   const diagnoses = fields.candidate_diagnoses || [];
   const risks = highRiskReviewItems(fields);
   const pending = pendingApprovalCount(fields);
+  const approved = isApprovedForExport();
   const regularDone = regularFields.length === 0
     || regularFields.every(({ field }) => fieldReviewComplete(field))
     || appState.approvalRegularFieldsConfirmed;
@@ -3382,14 +3457,15 @@ function renderApprovalChecklist(fields) {
   }).join("");
   return `
     <section class="approval-checklist" aria-label="分项审核">
-      <div class="approval-checklist-head">
+      <details class="approval-disclosure" ${pending && !approved ? "open" : ""}>
+      <summary class="approval-checklist-head">
         <div>
-          <span class="eyebrow">医生分项审核</span>
-          <h3>当前版本 #${escapeHtml(revision.revisionNumber || revision.revisionId || "-")}</h3>
-          <p>${pending ? `还有 ${pending} 项未处理，完成后才能导出。` : "所有审核项已处理，可完成病历审核。"}</p>
+          <strong>医生分项审核 · 版本 #${escapeHtml(revision.revisionNumber || revision.revisionId || "-")}</strong>
+          <p>${approved ? "已完成审核；内容确认、未询问和接受缺失分别留痕。" : pending ? `还有 ${pending} 项待处理；证据冲突必须修正。` : "核对项已处理，仍需点击“审核病历”提交。"}</p>
         </div>
-        <span class="status-badge ${pending ? "missing" : "confirmed"}">${pending ? `${pending}项待处理` : "可完成审核"}</span>
-      </div>
+        <span class="approval-entry-label">${approved ? "查看审核记录" : "开始核对"}</span>
+      </summary>
+      ${approved ? `<div class="approval-readonly-record">${fieldItems.map(({title,field}) => `<div><strong>${escapeHtml(title)}</strong><span>${escapeHtml({content_confirmed:"内容已确认",not_asked_confirmed:"确认本次未询问",missing_accepted:"接受本次缺失"}[field?.doctor_review_status] || "未记录分项确认")}</span></div>`).join("")}${diagnoses.map(d => `<div><strong>${escapeHtml(d.name)}</strong><span>${escapeHtml({candidate_confirmed:"候选已确认",ai_candidate_deleted:"医生已排除"}[d.doctor_review_status] || "未确认")}</span></div>`).join("")}</div>` : `
       ${outstanding(`<div class="approval-section">
         <div class="approval-section-title">
           <strong>普通字段</strong>
@@ -3402,7 +3478,8 @@ function renderApprovalChecklist(fields) {
       ${missingRows ? `<div class="approval-section"><div class="approval-section-title"><strong>缺失项处理</strong></div>${missingRows}</div>` : ""}
       ${diagnosisRows ? `<div class="approval-section"><div class="approval-section-title"><strong>候选诊断处理</strong></div>${diagnosisRows}</div>` : ""}
       ${riskRows ? `<div class="approval-section"><div class="approval-section-title"><strong>高风险与冲突确认</strong></div>${riskRows}</div>` : ""}
-      ${completedRows.length ? `<details class="review-completed"><summary>已处理 ${completedRows.length} 项 · 展开复核</summary>${completedRows.join("")}</details>` : ""}
+      ${completedRows.length ? `<details class="review-completed"><summary>已处理 ${completedRows.length} 项 · 展开复核</summary>${completedRows.join("")}</details>` : ""}`}
+      </details>
     </section>
   `;
 }
@@ -3595,8 +3672,8 @@ function renderFields() {
   const recovery = appState.recordEditRecovery;
   const recoveryNotice = recovery && recovery.taskId === appState.currentTaskId && !isEditing
     ? `<details class="record-recovery"><summary>本次冲突前的本地修改 · 尚未保存</summary><p>当前显示服务器最新版本。下面仅保留您修改过的字段，请与最新内容核对。</p>${EDITABLE_FIELD_DEFS.filter(([key]) => String(recovery.fields[key]?.value || "") !== String(recovery.baseline?.[key]?.value || "")).map(([key, title]) => `<p><strong>${escapeHtml(title)}</strong>：${escapeHtml(recovery.fields[key]?.value || "（留空）")}</p>`).join("")}<button type="button" data-record-reapply>将这些修改带入当前版本继续编辑</button></details>` : "";
-  $("recordFields").innerHTML = previewNotice + versionNotice + editNotice + recoveryNotice + cards + diagnoses
-    + (isEditing ? "" : renderApprovalChecklist(fields)) + summaryFooter + draftLegend;
+  $("recordFields").innerHTML = previewNotice + versionNotice + editNotice + recoveryNotice
+    + (isEditing ? "" : renderApprovalChecklist(fields)) + cards + diagnoses + summaryFooter + draftLegend;
 }
 
 function classifySpeaker(line, segment = {}) {
@@ -4453,10 +4530,13 @@ function renderTranscript() {
   const friendlyIssue = doctorFacingTranscriptionIssue();
   const progressPercent = asrProgressPercent();
   renderAudioPlayer();
+  if ($("transcriptHeading")) $("transcriptHeading").textContent = !asr && appState.currentInputText ? "输入原文" : "问诊转写";
 
   if (!rows.length && !asr && !appState.currentAsrSessionId) {
-    $("transcriptBadge").textContent = "待转写";
-    $("transcriptList").innerHTML = `<div class="empty-state transcript-empty">暂无对话转写。</div>`;
+    const restoreStatus = appState.transcriptRestoreStatus;
+    $("transcriptBadge").textContent = restoreStatus === "error" ? "加载失败" : restoreStatus === "missing" ? "原文未保存" : "待输入";
+    const message = restoreStatus === "error" ? "原文加载失败，请重新打开该就诊；已保存病历保持不变。" : restoreStatus === "missing" ? "该历史记录未保存原始输入，不能从病历反推转写。" : "尚未输入，可开始录音、上传音频或输入文本。";
+    $("transcriptList").innerHTML = `<div class="empty-state transcript-empty" role="status">${escapeHtml(message)}</div>`;
     return;
   }
 
@@ -4747,6 +4827,7 @@ function renderAgentTraceSummary({ open = false } = {}) {
 }
 
 async function refreshAgentTrace(taskId) {
+  const restoreVersion = appState.encounterRestoreVersion;
   if (!taskId) {
     appState.currentAgentTrace = buildLocalAgentTrace();
     return;
@@ -4755,8 +4836,11 @@ async function refreshAgentTrace(taskId) {
     ? `?audio_id=${encodeURIComponent(appState.currentAudioId)}`
     : "";
   try {
-    appState.currentAgentTrace = await api(`/api/tasks/${taskId}/trace${suffix}`);
+    const trace = await api(`/api/tasks/${taskId}/trace${suffix}`);
+    if (restoreVersion !== appState.encounterRestoreVersion) return;
+    appState.currentAgentTrace = trace;
   } catch (_error) {
+    if (restoreVersion !== appState.encounterRestoreVersion) return;
     appState.currentAgentTrace = buildLocalAgentTrace();
   }
 }
@@ -5774,6 +5858,7 @@ function resetRecordPreview() {
 }
 
 function resetTaskState({ keepAsr = false, keepEncounter = false } = {}) {
+  appState.transcriptRestoreStatus = "idle";
   const preservedEncounter = keepEncounter ? appState.currentEncounter : null;
   appState.currentTaskId = null;
   appState.currentEvaluation = null;
@@ -5841,13 +5926,16 @@ function resetTaskState({ keepAsr = false, keepEncounter = false } = {}) {
 
 async function refreshTask(taskId, taskFromEvent = null) {
   const previousApprovalRevisionKey = appState.approvalRevisionId;
+  const restoreVersion = appState.encounterRestoreVersion;
   const task = taskFromEvent || await api(`/api/tasks/${taskId}`);
   const steps = await api(`/api/tasks/${taskId}/steps`);
+  if (restoreVersion !== appState.encounterRestoreVersion) return;
   appState.currentTask = task;
   appState.currentSteps = steps;
   appState.currentTaskId = task.id || task.task_id || taskId;
   appState.taskStatus = task.current_stage || task.status || appState.taskStatus;
   const result = task.result_json || {};
+  if (!appState.roleReviewDirty && (result.conversation_text || result.asr_source || task.input_text)) restoreTaskSource(task);
   appState.currentRecordFields = result.fields || appState.currentRecordFields;
   appState.currentDraft = result.draft || appState.currentDraft;
   appState.currentSafetyCheck = result.safety_check || appState.currentSafetyCheck;
@@ -5867,10 +5955,13 @@ async function refreshTask(taskId, taskFromEvent = null) {
   const encounterId = selectedEncounterId();
   if (encounterId && Number(appState.currentEncounter?.task_id) === Number(appState.currentTaskId)) {
     const encounter = await api(`/api/encounters/${encodeURIComponent(encounterId)}`);
+    if (restoreVersion !== appState.encounterRestoreVersion) return;
     if (selectedEncounterId() === encounterId) appState.currentEncounter = encounter;
   }
   await refreshKnowledgeEvidence(appState.currentTaskId);
+  if (restoreVersion !== appState.encounterRestoreVersion) return;
   await refreshAgentTrace(appState.currentTaskId);
+  if (restoreVersion !== appState.encounterRestoreVersion) return;
   renderAll();
 }
 
@@ -9223,6 +9314,7 @@ function bindEvents() {
 
 async function init() {
   appState.productView = productViewFromHash() || "workbench";
+  await loadDeployment();
   bindEvents();
   await refreshAuth();
   renderAll();

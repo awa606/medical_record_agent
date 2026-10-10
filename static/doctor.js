@@ -2233,12 +2233,21 @@ function nextActionState() {
   }
 
   if (displayState.key === "failed") {
+    const generationFailed = Boolean(appState.currentTaskId && (appState.currentInputText || appState.currentAsrResult));
+    const message = appState.currentTask?.error_message || "";
+    const reason = message.includes("LLM_OUTPUT_CONTRADICTION")
+      ? "模型输出矛盾，未采纳；未生成可审核病历。请核对原文后修改输入或主动重新生成。"
+      : message.includes("LLM_NO_SUPPORTED_FACTS")
+        ? "未找到可用病历信息。请补充患者陈述，或人工修改输入后生成。"
+        : "病历生成未完成，输入原文仍保留。可检查输入后主动重新生成；未经核对不能审核导出。";
     return {
       tone: "danger",
-      title: "流程中断",
-      detail: "智能转写失败，音频已保存时可直接重新转写；也可以改用文本输入。",
+      title: generationFailed ? "病历生成中断" : "转写中断",
+      detail: generationFailed ? reason : "智能转写失败，音频已保存时可直接重新转写；也可以改用文本输入。",
       stages: true,
-      actions: singlePrimaryAction({ key: "retry-transcription", label: appState.currentAudioId ? "重试转写" : "重新上传" }),
+      actions: generationFailed
+        ? [workflowAction({key: "generate-record", label: "重新生成病历", tone: "primary"}), workflowAction({key: "text-input", label: "修改输入", tone: "secondary"})]
+        : singlePrimaryAction({ key: "retry-transcription", label: appState.currentAudioId ? "重试转写" : "重新上传" }),
     };
   }
 
@@ -5747,14 +5756,14 @@ function renderFooter() {
     exportButton.setAttribute("aria-disabled", exportButton.disabled ? "true" : "false");
     exportButton.dataset.disabledReason = exportButton.disabled ? "暂无可导出的病历任务" : "";
   } else if (displayState.key === "failed") {
-    regenerateButton.disabled = true;
+    regenerateButton.disabled = appState.busy || !(appState.currentInputText || appState.currentAsrResult);
     saveButton.disabled = true;
     confirmButton.disabled = true;
     exportButton.disabled = true;
     exportButton.classList.add("blocked-action");
     exportButton.setAttribute("aria-disabled", "true");
-    exportButton.dataset.disabledReason = "转写失败，需先恢复流程";
-    exportButton.title = "转写失败，需先恢复流程";
+    exportButton.dataset.disabledReason = "流程未完成，不能审核导出";
+    exportButton.title = "流程未完成，不能审核导出";
   }
   if (appState.recordEditMode) {
     regenerateButton.hidden = true;
@@ -7021,6 +7030,8 @@ async function runEvaluation() {
 
 async function regenerateRecord() {
   try {
+    if (appState.recordEditMode) throw new Error("请先保存或取消当前修改，再重新生成病历。");
+    clearActionError();
     if (appState.roleReviewDirty) {
       await saveRoleReview({ silent: true });
     }
@@ -7335,6 +7346,11 @@ async function handleWorkflowAction(action) {
     await regenerateRecord();
     return;
   }
+  if (action === "text-input") {
+    if (appState.recordEditMode) throw new Error("请先保存或取消当前修改。");
+    openTextImport();
+    return;
+  }
   if (action === "save-draft") {
     await saveDraftReview();
     return;
@@ -7371,6 +7387,9 @@ function handleInputMethod(method) {
 function openTextImport() {
   if (!requireEncounterBeforeInput("text")) return;
   clearActionError();
+  if (doctorDisplayState().key === "failed" && appState.currentInputText) {
+    $("conversationInput").value = appState.currentInputText;
+  }
   openDrawer("textImportPanel", "文本导入生成病历");
 }
 

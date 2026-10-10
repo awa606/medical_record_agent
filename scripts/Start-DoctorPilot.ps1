@@ -104,7 +104,7 @@ $script:buttons += Add-ActionButton $actions '停止服务' {
     $answer=[System.Windows.Forms.MessageBox]::Show('请确认已经停止录音、等待任务结束并保存病历。只停止本版本，数据保留。','停止MediListen','YesNo','Warning')
     if($answer -eq 'Yes'){Invoke-Pilot 'stop' $true}
 }
-[void](Add-ActionButton $help '快速开始／操作手册' { Start-Process (Join-Path $documents 'manual.html') })
+[void](Add-ActionButton $help '快速开始／操作手册' { Invoke-Pilot 'open-help' })
 [void](Add-ActionButton $help '填写试用反馈' { Start-Process (Join-Path $documents 'feedback.html') })
 if ($version.account_note -and (Test-Path -LiteralPath $version.account_note)) {
     [void](Add-ActionButton $help '本机测试账号' { Start-Process -FilePath notepad.exe -ArgumentList ('"' + $version.account_note + '"') })
@@ -119,7 +119,7 @@ $timer.Add_Tick({
         foreach($line in $lines){
             try {
                 $s=$line | ConvertFrom-Json
-                $label=switch($s.phase){'READY'{'运行就绪：可以打开工作台；模型质量和医生试用尚未放行。'} 'VIEWER_READY'{'数据与知识查看器已打开：仅供查看已采样的匿名记录，不能编辑病历。'} 'MODEL_NOT_READY'{'网页可用，真实模型预热中；生成保持阻断。'} 'WEB_STARTING'{'服务启动中。'} 'STOPPED'{'服务已停止，数据保留。'} 'CONFIGURED'{'本版入口已登记。'} 'ERROR'{if($s.message -match '^([A-Z_]+):\s*(.+)$'){"$($Matches[2])（故障代码：$($Matches[1])）"}else{"操作未完成。原始提示：$($s.message)"}} default {"状态尚无中文释义（$($s.phase)）"}}
+                $label=switch($s.phase){'READY'{'运行就绪：可以打开工作台；模型质量和医生试用尚未放行。'} 'VIEWER_READY'{'数据与知识查看器已打开：仅供查看已采样的匿名记录，不能编辑病历。'} 'HELP_OPENED'{'已打开当前环境的使用帮助。'} 'HELP_OFFLINE'{'服务暂不可用，已打开离线手册；请核对手册版本。'} 'MODEL_NOT_READY'{'网页可用，真实模型预热中；生成保持阻断。'} 'WEB_STARTING'{'服务启动中。'} 'STOPPED'{'服务已停止，数据保留。'} 'CONFIGURED'{'本版入口已登记。'} 'ERROR'{if($s.message -match '^([A-Z_]+):\s*(.+)$'){"$($Matches[2])（故障代码：$($Matches[1])）"}else{"操作未完成。原始提示：$($s.message)"}} default {"状态尚无中文释义（$($s.phase)）"}}
                 $readable += $label
                 if($s.entrypoints){
                     foreach($key in @('doctor','knowledge','data_browser','manual')){

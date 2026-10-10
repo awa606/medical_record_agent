@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import time
+import copy
 from typing import Any
 
 from pydantic import ValidationError
@@ -30,6 +31,10 @@ FIELD_ATTRS = ["value", "missing", "hint", "confidence", "source_spans"]
 DIAGNOSIS_STATUS = "候选/待医生确认"
 
 
+class ExtractionOutputError(ValueError):
+    """Non-retryable extraction contract failure; never promote discarded facts."""
+
+
 def _env_float(name: str, default: float) -> float:
     try:
         return float(os.environ.get(name, default))
@@ -51,6 +56,8 @@ def _safe_reason(exc: BaseException | str) -> str:
 
 class LLMRecordGenerator:
     """Unified clinical extraction, draft generation, and safety adapter."""
+
+    manages_extraction_retries = True
 
     def __init__(
         self,
@@ -78,9 +85,19 @@ class LLMRecordGenerator:
         self.field_validation: dict[str, Any] | None = None
         self.field_repairs: dict[str, dict[str, Any]] = {}
         self.payload_repairs: dict[str, str] = {}
+        # Explicit opt-in for synthetic experiments only. Raw data is never
+        # included in get_trace() or persisted by the application.
+        self.diagnostics_enabled = False
+        self.diagnostic_attempts: list[dict[str, Any]] = []
+        self.attempt_count = 0
 
     def extract_fields(self, conversation: str) -> MedicalRecordFields:
         conversation = anonymize_text(conversation)
+        self.diagnostic_attempts = []
+        self.attempt_count = 0
+        self.field_validation = None
+        self.field_repairs = {}
+        self.payload_repairs = {}
         if self.init_fallback_reason:
             return self._fallback_extract(conversation, self.init_fallback_reason)
 
@@ -101,11 +118,18 @@ class LLMRecordGenerator:
         start = time.perf_counter()
         last_error: BaseException | None = None
         for _attempt in range(1, self.max_retries + 2):
+            self.attempt_count = _attempt
+            if self.diagnostics_enabled:
+                self.diagnostic_attempts.append({"attempt": _attempt, "input": conversation})
             try:
+                if hasattr(self.provider, "diagnostics_enabled"):
+                    self.provider.diagnostics_enabled = self.diagnostics_enabled
                 response = self.provider.generate_fields_json(
                     conversation,
                     timeout_seconds=self.timeout_seconds,
                 )
+                self._diagnostic("raw_response", response.content)
+                self._diagnostic("response_metadata", getattr(self.provider, "response_metadata", {}))
                 safe_source_segments = [
                     {**segment, "text": anonymize_text(str(segment.get("text") or ""))}
                     for segment in (self.source_segments or [])
@@ -116,12 +140,28 @@ class LLMRecordGenerator:
                     safe_source_segments,
                     source=conversation,
                 )
+                self._diagnostic("reconciled", fields.model_dump())
                 fields = validate_field_evidence(
                     fields,
                     conversation,
                     strict_text_match=True,
                 )
+                self._diagnostic("evidence_validated", fields.model_dump())
                 fields = ground_fields(fields, conversation, safe_source_segments)
+                # Preserve the rejection, but distinguish it from a question
+                # that was genuinely not asked. No discarded value is restored.
+                contradictions = [key for key, reason in self.payload_repairs.items()
+                                  if reason == "discarded_content_marked_missing"]
+                for key in contradictions:
+                    field = getattr(fields, key)
+                    field.missing = False
+                    field.status = "conflicting"
+                    field.hint = "模型输出矛盾，未采纳；请核对原文后修改。"
+                self._diagnostic("grounded", fields.model_dump())
+                if not any(getattr(fields, key).value for key in FIELD_KEYS):
+                    if contradictions:
+                        raise ExtractionOutputError("LLM_OUTPUT_CONTRADICTION: 模型输出矛盾，未采纳；未生成可审核病历。")
+                    raise ExtractionOutputError("LLM_NO_SUPPORTED_FACTS: 未找到可用病历信息，请补充输入或人工编辑。")
                 # The language model extracts patient fields only. Candidate diagnoses
                 # remain deterministic, disease-pack scoped, evidence backed, and linked
                 # to reviewed clinical references instead of being invented by the model.
@@ -143,6 +183,11 @@ class LLMRecordGenerator:
                 return fields
             except Exception as exc:  # noqa: BLE001 - fallback is required for demo stability.
                 last_error = exc
+                self._diagnostic("error", _safe_reason(exc))
+                self._diagnostic("response_metadata", getattr(self.provider, "response_metadata", {}))
+                self._diagnostic("provider_response", getattr(self.provider, "last_diagnostic_response", None))
+                if isinstance(exc, ExtractionOutputError):
+                    break
 
         return self._fallback_extract(
             conversation,
@@ -197,7 +242,13 @@ class LLMRecordGenerator:
         trace["field_validation"] = self.field_validation
         trace["field_repairs"] = self.field_repairs
         trace["payload_repairs"] = self.payload_repairs
+        trace["attempt_count"] = self.attempt_count
+        trace["response_metadata"] = dict(getattr(self.provider, "response_metadata", {}))
         return trace
+
+    def _diagnostic(self, stage: str, value: Any) -> None:
+        if self.diagnostics_enabled and self.diagnostic_attempts:
+            self.diagnostic_attempts[-1][stage] = copy.deepcopy(value)
 
     def _fields_from_response(self, raw_text: str) -> MedicalRecordFields:
         data = parse_json_object(raw_text)
@@ -205,8 +256,11 @@ class LLMRecordGenerator:
         if not isinstance(fields_payload, dict):
             raise ValueError("LLM response fields payload must be an object")
         normalized = self._normalize_fields_payload(fields_payload)
+        self._diagnostic("normalized", normalized)
         try:
-            return MedicalRecordFields.model_validate(normalized)
+            fields = MedicalRecordFields.model_validate(normalized)
+            self._diagnostic("schema_validated", fields.model_dump())
+            return fields
         except ValidationError as exc:
             raise ValueError(f"LLM fields JSON does not match MedicalRecordFields schema: {exc}") from exc
 
@@ -247,7 +301,7 @@ class LLMRecordGenerator:
                 "value": raw_value,
                 "missing": is_missing,
                 "status": value.get("status") or ("missing" if is_missing else "complete"),
-                "hint": value.get("hint"),
+                "hint": self._normalize_hint(value.get("hint")),
                 "confidence": value.get("confidence"),
                 "source_spans": source_spans,
                 "missing_elements": self._normalize_string_list(value.get("missing_elements")),
@@ -262,6 +316,13 @@ class LLMRecordGenerator:
             self._normalize_diagnosis(item) for item in diagnoses
         ]
         return normalized
+
+    @staticmethod
+    def _normalize_hint(value: Any) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return None if not text or text.casefold() == "null" else text
 
     def _normalize_spans(self, spans: Any) -> list[dict[str, Any]]:
         if spans is None:

@@ -156,7 +156,7 @@ def test_backend_aliases_drive_one_consistent_doctor_workflow_state() -> None:
                     "with_fields": False,
                     "state": "failed",
                     "phase": "异常待处理",
-                    "next_action": "流程中断",
+                    "next_action": "病历生成中断",
                     "step": "AI处理",
                 },
             ]

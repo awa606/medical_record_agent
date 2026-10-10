@@ -15,7 +15,7 @@ import shutil
 from xml.sax.saxutils import escape
 
 
-def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
+def build(source: Path, manifest_path: Path, output: Path, font: Path, *, text_only: bool = False) -> Path:
     from bs4 import BeautifulSoup
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
@@ -58,6 +58,8 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
         shots.append({"key": key, "path": target.relative_to(output).as_posix(),
                       "caption": item["caption"], "sha256": sha})
     version = f"内部候选操作手册 · 应用 {manifest['app_git_sha'][:12]} · {manifest['captured_at']} · 尚未放行独立试用"
+    if text_only:
+        version += " · 文字操作指南，本轮未配齐截图"
     evidence = {"version": version, "app_git_sha": manifest["app_git_sha"], "screenshots": shots}
     (output / "manual-evidence.js").write_text("window.MRA_MANUAL_EVIDENCE=" + json.dumps(evidence, ensure_ascii=False) + ";\n", encoding="utf8")
     pdfmetrics.registerFont(TTFont("MRA-CJK", str(font), subfontIndex=0))
@@ -71,7 +73,7 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
     sections = soup.select("main > section")
     images = {s["key"]: s for s in shots}
     required = {e["data-shot"] for e in soup.select("[data-shot]")}
-    if not required.issubset(images):
+    if not text_only and not required.issubset(images):
         raise ValueError("Missing current-version screenshots: " + str(sorted(required - images.keys())))
 
     class GuideDoc(SimpleDocTemplate):
@@ -97,8 +99,10 @@ def build(source: Path, manifest_path: Path, output: Path, font: Path) -> Path:
     story.append(Spacer(1, 40))
     paragraph(soup.select_one("main > aside").get_text(" ", strip=True))
     paragraph(soup.select_one(".revision-note").get_text(" ", strip=True))
-    paragraph("每项任务按使用条件、编号步骤、实际界面、成功结果与失败恢复组织。维护说明与医生正文分开。")
-    paragraph("界面截图使用合成病例，图注标明沿用的历史截图。本次知识章节来自当前候选；未通过最终三路径、模型质量及恢复验收前，不将本手册视为临床或稳定发布证明。", small)
+    paragraph("每项任务按使用条件、编号步骤、成功结果与失败恢复组织。维护说明与医生正文分开。")
+    paragraph("本版为文字操作指南，尚未配齐当前版本截图。" if text_only else
+              "界面截图使用合成病例，图注标明沿用的历史截图。", small)
+    paragraph("知识章节来自当前候选；未通过最终三路径、模型质量及恢复验收前，不将本手册视为临床或稳定发布证明。", small)
     story.append(PageBreak())
     paragraph("操作目录", heading, "contents")
     for n, section in enumerate(sections):
@@ -147,5 +151,6 @@ if __name__ == "__main__":
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--font", type=Path, default=Path("C:/Windows/Fonts/msyh.ttc"))
+    parser.add_argument("--text-only", action="store_true", help="Explicitly label a text-only guide without claiming current screenshots")
     args = parser.parse_args()
-    print(build(Path(__file__).resolve().parents[1] / "docs/pilot/doctor-v1", args.manifest, args.output, args.font))
+    print(build(Path(__file__).resolve().parents[1] / "docs/pilot/doctor-v1", args.manifest, args.output, args.font, text_only=args.text_only))

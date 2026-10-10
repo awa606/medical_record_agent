@@ -226,7 +226,10 @@ def entrypoint_status(config: dict, result: dict) -> dict:
         "knowledge": {"available": result["web_available"], "url": base + "#admin",
                       "requires": "admin login; doctor uses field evidence search"},
         "data_browser": data_browser_status(config) if config.get("viewer_directory") else data_browser_status(),
-        "manual": {"available": (documents / "manual.html").is_file(), "path": str(documents / "manual.html")},
+        "manual": {"available": fetch(config["port"], "/static/help/index.html")[0] == 200,
+                   "url": f"http://127.0.0.1:{config['port']}/static/help/index.html",
+                   "offline_available": (documents / "manual.html").is_file(),
+                   "path": str(documents / "manual.html")},
     }}
 
 
@@ -410,9 +413,23 @@ def open_workspace(config: dict, *, view: str = "workbench") -> dict:
     return result
 
 
+def open_help(config: dict) -> dict:
+    import webbrowser
+    url = f"http://127.0.0.1:{config['port']}/static/help/index.html"
+    if fetch(config["port"], "/static/help/index.html")[0] == 200:
+        webbrowser.open(url)
+        return {"phase": "HELP_OPENED", "url": url, "message": "已打开当前环境的使用帮助。"}
+    path = Path(config.get("handbook_dir") or ROOT / "docs/pilot/doctor-v1") / "manual.html"
+    if not path.is_file():
+        raise PilotError("HELP_UNAVAILABLE: 在线帮助和离线手册均不可用，请联系维护人员。")
+    webbrowser.open(path.resolve().as_uri())
+    return {"phase": "HELP_OFFLINE", "path": str(path),
+            "message": "服务暂不可用，已打开离线手册；截图版本可能早于当前环境。"}
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("action", choices=("configure", "status", "start", "switch", "stop", "open", "open-knowledge", "open-data"))
+    p.add_argument("action", choices=("configure", "status", "start", "switch", "stop", "open", "open-knowledge", "open-data", "open-help"))
     p.add_argument("--config", type=Path, required=True)
     p.add_argument("--project", default="mra51repair8795")
     p.add_argument("--port", type=int, default=8795)
@@ -431,6 +448,7 @@ def main():
                       "stop": lambda: stop(config, a.config, a.confirm_saved),
                       "open": lambda: open_workspace(config),
                       "open-knowledge": lambda: open_workspace(config, view="admin"),
+                      "open-help": lambda: open_help(config),
                       "open-data": lambda: open_data_browser(config)}[a.action]()
         print(json.dumps(result, ensure_ascii=False), flush=True)
     except (PilotError, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:

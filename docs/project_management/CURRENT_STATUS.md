@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-29T11:45:29.718385+08:00`
-- Source hash: `1bcd8872e03cf279b92ea409be99bf1f55a2eb50fd39a4737768e7b56190b9f2`
+- Updated at: `2026-10-10T15:29:49.551954+08:00`
+- Source hash: `b13d58a9b08125ab58115fc233be22b9427155f33e40cfc307a051804f8b9de7`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@43dfef1075ba37ea9133761d5a7e68ad9af73bfe`
+- Repo: `codex/alpha51-demo-visual-e2e@02af90b87ce1bd59cb6c5457a12de65109efe2ca`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **Software Lane baseline 2026-10-07; course checkpoint 2026-09-29; rework/restore impact pending; Full M4 TBD / HARDWARE DEPENDENT**
+- Forecast Alpha Exit: **Software Lane baseline 2026-10-07 has elapsed; software release date TBD pending model and final acceptance; Full M4 TBD / HARDWARE DEPENDENT**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 使用界面与数据查看器中文化已交付；模型质量和最终发布待验收** — `VERIFY`
+**5.1 · 8798生成失败处理与产品帮助已接通；模型质量及最终发布未通过** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1：修复主诉引用、漏提与过敏史/既往处理归属；通过后验收最终真实三路径、现场显示及恢复，不放宽门禁
+- Single next task: 5.1：定位P01首次输出漏提及B01/I01引用错误；质量门通过后完成最终三路径、实际显示和恢复，再进入5.3
 - Parallel waiting task: 无；训练数据与资源Gate未通过，5.3不启动
 
 ## Manual Actions
 
-- 当前无需补数据或购买；模型门通过后配合最终物理录音与外屏检查，再组织3–5名医生合成病例试用
+- 当前无需补数据或采购；最终候选通过后配合物理麦克风与实际展示设备验收
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

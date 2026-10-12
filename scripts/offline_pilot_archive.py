@@ -7,6 +7,7 @@ from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
 import json
+import re
 from pathlib import Path
 import secrets
 import shutil
@@ -150,6 +151,19 @@ def assert_models_idle(project):
             raise ValueError('another model environment is running; save/exit and switch explicitly')
 
 
+def merge_runtime_environment(compose, values):
+    """Replace existing fixed keys instead of creating duplicate YAML mappings."""
+    extra = '      MEDICAL_RECORD_AGENT_AUTH_COOKIE_NAME: mra_offline_pilot\n'
+    for key, value in sorted(values.items()):
+        pattern = re.compile(r'^      ' + re.escape(key) + r':.*$', re.MULTILINE)
+        line = f'      {key}: {json.dumps(str(value))}'
+        if pattern.search(compose):
+            compose = pattern.sub(lambda _: line, compose)
+        else:
+            extra += line + '\n'
+    return compose.replace('      PYTHONPATH: /app\n', '      PYTHONPATH: /app\n' + extra)
+
+
 def create(args):
     from alpha51_release_archive import COMPOSE
     package = args.package.resolve()
@@ -258,9 +272,7 @@ def create(args):
     compose = compose.replace('    depends_on: [ollama]', '    pull_policy: never\n    depends_on: [ollama]')
     compose = compose.replace('    gpus: all', '    pull_policy: never\n    gpus: all')
     compose = compose.replace('    depends_on: [app]', '    pull_policy: never\n    depends_on: [app]')
-    extra = '      MEDICAL_RECORD_AGENT_AUTH_COOKIE_NAME: mra_offline_pilot\n' + ''.join(
-        f'      {k}: {json.dumps(v)}\n' for k, v in sorted(safe_env.items()))
-    compose = compose.replace('      PYTHONPATH: /app\n', '      PYTHONPATH: /app\n' + extra)
+    compose = merge_runtime_environment(compose, safe_env)
     (package / 'compose.offline.yml').write_text(compose, encoding='utf-8')
     for action in ('start', 'stop', 'open', 'help', 'viewer'):
         (package / f'{action}.cmd').write_text(

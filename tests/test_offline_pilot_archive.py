@@ -11,6 +11,8 @@ from app.services.auth import verify_password
 from scripts.offline_pilot_archive import (TABLES, fingerprints, file_inventory, verify,
                                            sanitize_database, restore_credentials,
                                            assert_models_idle, choose_port)
+from scripts.offline_pilot_archive import merge_runtime_environment
+from scripts.alpha51_release_archive import COMPOSE
 
 
 class OfflineDeliveryTests(unittest.TestCase):
@@ -107,6 +109,14 @@ class OfflineDeliveryTests(unittest.TestCase):
             with self.assertRaises(ValueError): choose_port((port,))
             with socket.create_connection(('127.0.0.1', port), timeout=1):
                 pass
+
+    def test_runtime_environment_replaces_fixed_values_without_duplicate_yaml(self):
+        content = merge_runtime_environment(COMPOSE, {'FUNASR_DEVICE': 'cpu', 'LLM_TIMEOUT_SECONDS': '180', 'LLM_TEMPERATURE': '0'})
+        for key in ('FUNASR_DEVICE', 'LLM_TIMEOUT_SECONDS', 'LLM_TEMPERATURE', 'MEDICAL_RECORD_AGENT_AUTH_COOKIE_NAME'):
+            self.assertEqual(content.count('      ' + key + ':'), 1)
+        import yaml
+        parsed = yaml.safe_load(content)
+        self.assertEqual(parsed['services']['app']['environment']['FUNASR_DEVICE'], 'cpu')
 
 
 if __name__ == '__main__':

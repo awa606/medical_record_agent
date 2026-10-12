@@ -1,5 +1,6 @@
 """Exercise the complete extraction pipeline, before source canonicalization."""
 import pytest
+from app.services.clinical_facts import split_clinical_segments
 
 from app.schemas import MedicalField, MedicalRecordFields, SourceSpan
 from app.services.llm.base import LLMProviderResponse
@@ -7,7 +8,16 @@ from app.services.llm.llm_record_generator import LLMRecordGenerator
 
 
 def extract(value, spans, source, trusted, *, key="chief_complaint"):
-    payload = MedicalRecordFields(**{key: MedicalField(value=value, source_spans=spans)})
+    # Keep an independently supported field so these tests exercise a partial
+    # draft. All-conflict extraction is tested as a failure separately.
+    control = "既往身体健康"
+    control_index = len(split_clinical_segments(source))
+    source += "\n患者：" + control + "。"
+    trusted = [*trusted, {"segment_id": "control", "text": control, "role": "患者"}] if trusted else []
+    payload = MedicalRecordFields(**{
+        key: MedicalField(value=value, source_spans=spans),
+        "past_history": MedicalField(value=control, source_spans=[SourceSpan(text=control, index=control_index)]),
+    })
 
     class RecordedProvider:
         name = "recorded-test-response"
@@ -22,6 +32,7 @@ def extract(value, spans, source, trusted, *, key="chief_complaint"):
     generator = LLMRecordGenerator(provider=RecordedProvider(), allow_mock_fallback=False)
     generator.max_retries = 0
     generator.source_segments = trusted
+    generator.test_source = source
     return generator, generator.extract_fields(source)
 
 
@@ -140,6 +151,8 @@ def test_generator_conflict_survives_revision_and_blocks_approval_and_export(tmp
     segments = [{"segment_id": "p1", "text": "发热38.2℃", "role": "患者"},
                 {"segment_id": "d1", "text": "有没有胸痛？", "role": "医生"}]
     generator, _ = extract("发热38.2℃", [SourceSpan(text="发热38.2℃", index=1)], source, segments)
+    source = generator.test_source
+    segments = generator.source_segments
     orchestrator = MedicalRecordOrchestrator(llm=generator)
     task_id = orchestrator.create_text_task(source)
     result = orchestrator.run_existing_text_task(task_id, source, asr_source={"segments": segments})

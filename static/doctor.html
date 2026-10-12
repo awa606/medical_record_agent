@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
     <link rel="stylesheet" href="./doctor.css?v=alpha51-zh-20260929" />
     <link rel="stylesheet" href="./doctor-ui-v2.css?v=alpha51-zh-20260929" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-zh-20260929" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-partial-help-20261012" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -22,7 +22,7 @@
           <span id="deploymentBadge" class="deployment-badge" role="status">正在核验环境</span>
         </div>
         <nav class="top-actions" aria-label="全局操作">
-          <a href="./help/index.html" target="_blank" rel="noopener">帮助</a>
+          <button type="button" id="openEmbeddedHelpButton">帮助</button>
           <button type="button" id="openWorklistButton">查找就诊</button>
           <div class="input-method-menu">
             <button type="button" class="primary-action" id="inputMethodButton" aria-expanded="false" aria-controls="inputMethodMenu">新建问诊</button>
@@ -647,12 +647,17 @@
           </label>
           <button type="submit" class="primary-action login-submit">进入工作台</button>
           <div id="loginMessage" class="login-message"></div>
-          <p class="login-help">登录问题请联系试点环境管理员。</p>
+          <p class="login-help">登录问题请联系试点环境管理员。<button type="button" id="loginHelpButton">使用帮助</button></p>
         </form>
       </div>
     </section>
 
+    <dialog id="helpDialog" class="help-drawer" aria-labelledby="helpDialogTitle">
+      <header class="help-drawer-header"><h2 id="helpDialogTitle">使用帮助</h2><button type="button" id="closeEmbeddedHelpButton">关闭</button></header>
+      <p class="help-drawer-caption">帮助在本窗口内打开；关闭后继续当前操作。</p>
+      <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
+    </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=alpha51-zh-20260929"></script>
+    <script src="./doctor.js?v=alpha51-partial-help-20261012"></script>
   </body>
 </html>

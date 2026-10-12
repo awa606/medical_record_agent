@@ -13,7 +13,7 @@ from app.services.llm.base import LLMProvider, LLMProviderUnavailableError
 from app.services.llm.json_repair import parse_json_object
 from app.services.llm.mock_provider import MockLLMProvider
 from app.services.mock_llm import MockLLM
-from app.services.record_rules import render_draft, check_draft_safety
+from app.services.record_rules import render_draft, check_draft_safety, supported_field_keys
 from app.services.field_grounding import ground_fields, reconcile_extractive_fields
 from app.services.privacy import anonymize_text
 
@@ -158,8 +158,10 @@ class LLMRecordGenerator:
                     field.status = "conflicting"
                     field.hint = "模型输出矛盾，未采纳；请核对原文后修改。"
                 self._diagnostic("grounded", fields.model_dump())
-                if not any(getattr(fields, key).value for key in FIELD_KEYS):
-                    if contradictions:
+                self.field_validation = {key: {"status": getattr(fields, key).status, "reason": getattr(fields, key).hint,
+                    "source_segment_ids": [s.segment_id for s in getattr(fields, key).source_spans]} for key in FIELD_KEYS}
+                if not supported_field_keys(fields):
+                    if contradictions or any(getattr(fields, key).status == "conflicting" for key in FIELD_KEYS):
                         raise ExtractionOutputError("LLM_OUTPUT_CONTRADICTION: 模型输出矛盾，未采纳；未生成可审核病历。")
                     raise ExtractionOutputError("LLM_NO_SUPPORTED_FACTS: 未找到可用病历信息，请补充输入或人工编辑。")
                 # The language model extracts patient fields only. Candidate diagnoses
@@ -169,8 +171,6 @@ class LLMRecordGenerator:
                 fields.candidate_diagnoses = (
                     fact_fields.candidate_diagnoses if fact_fields is not None else []
                 )
-                self.field_validation = {key: {"status": getattr(fields, key).status, "reason": getattr(fields, key).hint,
-                    "source_segment_ids": [s.segment_id for s in getattr(fields, key).source_spans]} for key in FIELD_KEYS}
                 self._set_trace(
                     operation="field_extraction",
                     provider=response.provider,

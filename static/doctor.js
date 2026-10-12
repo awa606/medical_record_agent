@@ -169,6 +169,7 @@ const appState = {
   recordEditBaseline: null,
   recordEditConflict: null,
   recordEditRecovery: null,
+  recordFieldResolutionModes: {},
   recordSaveNotice: "",
   fieldKnowledgeSearch: {},
   currentKnowledgeEvidence: null,
@@ -2477,6 +2478,57 @@ function renderTranscriptionFailurePanel() {
 }
 
 let detailReturnFocus = null;
+let helpReturnFocus = null;
+
+function openEmbeddedHelp() {
+  const dialog = $("helpDialog");
+  if (!dialog.open) {
+    helpReturnFocus = document.activeElement;
+    if (!$("embeddedHelpFrame").getAttribute("src")) $("embeddedHelpFrame").src = "./help/index.html";
+    dialog.showModal();
+    $("closeEmbeddedHelpButton").focus();
+  }
+}
+
+function closeEmbeddedHelp() {
+  $("helpDialog").close();
+  if (helpReturnFocus?.isConnected) helpReturnFocus.focus({preventScroll: true});
+  helpReturnFocus = null;
+  if (window.location.hash === "#help") history.replaceState(null, "", `#${appState.productView || "workbench"}`);
+}
+
+function wireEmbeddedHelp() {
+  const frame = $("embeddedHelpFrame");
+  let doc;
+  try { doc = frame.contentDocument; } catch { return; }
+  if (!doc || doc.documentElement.dataset.helpWired) return;
+  doc.documentElement.dataset.helpWired = "true";
+  doc.addEventListener("click", (event) => {
+    const link = event.target.closest("a[href]");
+    if (!link) return;
+    const url = new URL(link.href, frame.src);
+    if (url.origin !== location.origin) {
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      return;
+    }
+    if (url.pathname === "/static/doctor.html") {
+      event.preventDefault();
+      closeEmbeddedHelp();
+      if (url.hash === "#admin") setProductView("admin");
+      return;
+    }
+    if (!url.pathname.startsWith("/static/help/")) event.preventDefault();
+  });
+  doc.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") { event.preventDefault(); closeEmbeddedHelp(); return; }
+    if (event.key !== "Tab") return;
+    const focusable = [...doc.querySelectorAll('a[href],button,input,textarea,select,summary,[tabindex="0"]')]
+      .filter(node => !node.disabled && node.getClientRects().length);
+    const boundary = event.shiftKey ? focusable[0] : focusable[focusable.length - 1];
+    if (doc.activeElement === boundary) { event.preventDefault(); $("closeEmbeddedHelpButton").focus(); }
+  });
+}
 let workspaceAuxiliary = null;
 
 function closeWorkspaceAuxiliary() {
@@ -2780,6 +2832,7 @@ function fieldValue(fields, key) {
       || (activeDraftText() ? "暂无明确处理建议，需医生结合问诊、查体和检查结果确认。" : "待医生补充处理建议");
   }
   const field = fields?.[key];
+  if (field?.status === "conflicting") return "待核对（模型内容未采纳）";
   return field?.value || field?.hint || "暂无内容";
 }
 
@@ -2851,6 +2904,7 @@ function recordEditableSnapshot(fields = appState.currentRecordFields) {
     {
       value: fields[key]?.value || "",
       missing: Boolean(fields[key]?.missing),
+      source_spans: fields[key]?.source_spans || [],
     },
   ])));
 }
@@ -2860,6 +2914,7 @@ function resetRecordEditState() {
   appState.recordEditDirty = false;
   appState.recordEditBaseline = null;
   appState.recordEditConflict = null;
+  appState.recordFieldResolutionModes = {};
 }
 
 function beginRecordEdit(fieldKey) {
@@ -2897,7 +2952,7 @@ function updateRecordFieldValue(key, value) {
   if (!field || !EDITABLE_FIELD_DEFS.some(([itemKey]) => itemKey === key)) return;
   const normalized = String(value || "").trim();
   const baseline = appState.recordEditBaseline?.[key];
-  if (baseline && normalized === String(baseline.value || "").trim()) {
+  if (baseline && !appState.recordFieldResolutionModes[key] && normalized === String(baseline.value || "").trim()) {
     appState.currentRecordFields[key] = cloneRecordFields(baseline);
     appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
     if (appState.recordEditConflict?.error_code !== "saved_revision_refresh_failed") appState.recordEditConflict = null;
@@ -2910,7 +2965,7 @@ function updateRecordFieldValue(key, value) {
   field.missing = !normalized;
   field.status = normalized ? "partial" : "missing";
   field.hint = normalized ? "医生手工修改；原始转写证据仅供对照，需重新审核" : "医生编辑后标记为本次未采集";
-  field.source_spans = [];
+  if (appState.recordFieldResolutionModes[key] !== "source_correction") field.source_spans = [];
   field.fact_ids = [];
   field.confidence = null;
   field.confirmed_by_doctor = false;
@@ -2921,6 +2976,56 @@ function updateRecordFieldValue(key, value) {
   renderFooter();
   const notice = document.querySelector("[data-record-edit-status]");
   if (notice) notice.textContent = appState.recordEditDirty ? "有未保存修改" : "编辑模式";
+}
+
+function sourceCorrectionOptions() {
+  const segments = appState.currentAsrResult?.segments || [];
+  if (segments.length) return segments.map(segment => ({
+    text: String(segment.text || ""), index: null, segment_id: segment.segment_id || null,
+    start_time: segment.start_time ?? null, end_time: segment.end_time ?? null,
+  })).filter(span => span.text);
+  const source = appState.currentInputText || appState.currentTask?.input_text || appState.currentTask?.result_json?.conversation_text || "";
+  return String(source).split(/[。！？!?\n]+/).map(s => s.replace(/^[ ，,；;]+|[ ，,；;]+$/g, ""))
+    .filter(Boolean).map((text, index) => ({text, index}));
+}
+
+function beginFieldResolution(key, method) {
+  if (!["doctor_entry", "source_correction"].includes(method)) return;
+  beginRecordEdit(key);
+  if (!appState.recordEditMode || !appState.currentRecordFields?.[key]) return;
+  appState.recordFieldResolutionModes[key] = method;
+  const field = appState.currentRecordFields[key];
+  field.source_spans = [];
+  field.confirmed_by_doctor = false;
+  field.doctor_review_status = "pending";
+  appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
+  renderAll();
+  document.querySelector(`[data-record-field-input="${key}"]`)?.focus();
+}
+
+function updateFieldCorrectionSource(key, choice) {
+  const field = appState.currentRecordFields?.[key];
+  if (!field || appState.recordFieldResolutionModes[key] !== "source_correction") return;
+  const span = sourceCorrectionOptions()[Number(choice)];
+  field.source_spans = choice !== "" && span ? [span] : [];
+  appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
+  renderFooter();
+}
+
+function fieldResolutionMarkup(key, field, isEditing) {
+  const original = appState.recordEditBaseline?.[key] || field;
+  if (original?.status !== "conflicting" && !appState.recordFieldResolutionModes[key]) return "";
+  const mode = appState.recordFieldResolutionModes[key];
+  const sourceSelect = isEditing && mode === "source_correction" ? `
+    <label class="source-correction-select">选择本次输入的原文片段
+      <select data-record-source-field="${escapeHtml(key)}"><option value="">请选择原文，保存时重新校验</option>
+      ${sourceCorrectionOptions().map((span, i) => `<option value="${i}" ${JSON.stringify(span) === JSON.stringify(field?.source_spans?.[0]) ? "selected" : ""}>${escapeHtml(span.text)}</option>`).join("")}</select>
+    </label>` : "";
+  return `<div class="field-resolution-controls">
+    <button type="button" data-field-resolution="source_correction" data-resolution-key="${escapeHtml(key)}" aria-pressed="${mode === "source_correction"}">根据原文修正</button>
+    <button type="button" data-field-resolution="doctor_entry" data-resolution-key="${escapeHtml(key)}" aria-pressed="${mode === "doctor_entry"}">医生补录</button>
+    ${isEditing && mode ? `<p>${mode === "doctor_entry" ? "请修改内容；本次以医生录入保存，原模型错误留在旧版本，保存后需重新审核。" : "请修改内容并选择正确原文；引用、主体、否定及数值仍须通过校验。"}</p>` : ""}
+    ${sourceSelect}</div>`;
 }
 
 function sourceSpanSegment(span = {}) {
@@ -3180,6 +3285,8 @@ function renderFieldDetailContent(key) {
       <div class="detail-text">${escapeHtml(qualityItem.reason || qualityItem.suggested_action || "暂无进一步说明。")}</div>
     `) : ""}
     ${detailSection("原始转写证据（只读）", renderFieldEvidenceDetails(field))}
+    ${field?.status === "conflicting" ? detailSection("未采纳的模型内容", `<p class="detail-text">${escapeHtml(field.value || "（无可用内容）")}</p><p>${escapeHtml(field.hint || "证据校验未通过")}</p>`) : ""}
+    ${(appState.currentTask?.result_json?.llm_trace?.field_resolution_history || []).filter(item => item.field === key).map(item => detailSection("医生处置前的模型记录（只读对照）", `<p>原版本 ${escapeHtml(String(item.previous_revision_id))} · ${item.method === "doctor_entry" ? "医生补录" : "根据原文修正"}</p><p class="detail-text">${escapeHtml(item.previous_value || "（空）")}</p><p class="detail-text">${escapeHtml((item.previous_source_spans || []).map(s => s.text).join("\n") || "（无模型引用）")}</p>`)).join("")}
     ${field?.doctor_review_note ? detailSection("医生修改记录", `<div class="detail-text">${escapeHtml(field.doctor_review_note)}</div>`) : ""}
   `;
 }
@@ -3631,7 +3738,7 @@ function renderFields() {
       ? appState.viewMode === "doctor"
         ? `
         <div class="field-meta compact-field-meta">
-          ${String(fields?.[key]?.doctor_review_note || "").startsWith("manual_doctor_edit_v1:") ? '<span class="doctor-edit-origin">医生已修改</span>' : ""}
+          ${String(fields?.[key]?.doctor_review_note || "").startsWith("manual_doctor_edit_v1:") ? `<span class="doctor-edit-origin">${String(fields?.[key]?.doctor_review_note || "").includes("医生补录") ? "医生补录" : "医生已修改"}</span>` : String(fields?.[key]?.doctor_review_note || "").startsWith("doctor_source_correction_v1:") ? '<span class="doctor-edit-origin">医生根据原文修正</span>' : ""}
           ${detailButton(`field:${key}`, "查看原文证据")}
           ${!isPreview && !isEditing && EDITABLE_FIELD_DEFS.some(([item]) => item === key) ? `<button type="button" data-record-edit-field="${escapeHtml(key)}">修改</button>` : ""}
           ${key !== "preliminary_diagnosis" && key !== "treatment_plan" ? `<button type="button" data-knowledge-field="${escapeHtml(key)}">查依据</button>` : ""}
@@ -3658,6 +3765,7 @@ function renderFields() {
             : `<span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>${qualityLabel ? `<span class="status-badge ${fieldQualityBadgeClass(qualityLabel)}">${escapeHtml(qualityLabel)}</span>` : ""}`}
         </div>
         ${valueMarkup}
+        ${!isPreview ? fieldResolutionMarkup(key, fields?.[key], isEditing) : ""}
         ${meta}
       </article>
     `;
@@ -3702,9 +3810,13 @@ function renderFields() {
         : allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
     $("fieldCountBadge").className = `status-badge ${isApprovedDisplay ? "confirmed" : isPreview ? "info" : allMissingCount ? "missing" : "confirmed"}`;
   }
+  const supportedCount = EDITABLE_FIELD_DEFS.filter(([key]) => fields?.[key]?.value && !fields[key].missing && fields[key].status !== "conflicting").length;
+  const conflictCount = EDITABLE_FIELD_DEFS.filter(([key]) => fields?.[key]?.status === "conflicting").length;
+  const partialNotice = fields && !isPreview && !isApprovedDisplay && conflictCount
+    ? `<div class="partial-draft-summary">${supportedCount}项已有可核对内容，${conflictCount}项证据冲突已隔离。可继续编辑和保存；冲突处理后才能批准导出。</div>` : "";
   const previewNotice = isPreview
     ? `<div class="preview-notice">${escapeHtml(previewNoticeText())}；正式生成病历后会替换为审核版结果。</div>`
-    : "";
+    : partialNotice;
   const editNotice = isEditing ? `
     <div class="record-edit-notice ${appState.recordEditConflict ? "conflict" : ""}">
       <div>
@@ -7119,6 +7231,8 @@ async function saveDraftReview() {
         fields: appState.currentRecordFields,
         expected_revision_id: revision.revision_id,
         expected_content_hash: revision.content_hash,
+        manual_takeover_fields: Object.entries(appState.recordFieldResolutionModes).filter(([, mode]) => mode === "doctor_entry").map(([key]) => key),
+        source_corrected_fields: Object.entries(appState.recordFieldResolutionModes).filter(([, mode]) => mode === "source_correction").map(([key]) => key),
       }),
     });
     committed = true;
@@ -7157,7 +7271,7 @@ async function reloadLatestRecordRevision() {
   const taskId = appState.currentTaskId;
   const keys = ["currentRecordFields", "currentTask", "currentExportReadiness", "currentSteps",
     "currentDraft", "currentSafetyCheck", "currentQualityReport", "currentExports", "taskStatus",
-    "recordEditMode", "recordEditDirty", "recordEditBaseline", "recordEditConflict",
+    "recordEditMode", "recordEditDirty", "recordEditBaseline", "recordEditConflict", "recordFieldResolutionModes",
     "approvalRevisionId", "approvalRegularFieldsConfirmed", "approvalMissingDecisions",
     "approvalDiagnosisDecisions", "approvalHighRiskConfirmations"];
   const local = Object.fromEntries(keys.map((key) => [key, structuredClone(appState[key])]));
@@ -7167,7 +7281,7 @@ async function reloadLatestRecordRevision() {
     if (!await refreshExportReadiness()) throw new Error("最新版本状态读取失败");
     if (appState.currentTaskId !== taskId) return;
     appState.recordEditRecovery = local.recordEditDirty ? {
-      taskId, fields: local.currentRecordFields, baseline: local.recordEditBaseline,
+      taskId, fields: local.currentRecordFields, baseline: local.recordEditBaseline, resolutions: local.recordFieldResolutionModes,
     } : appState.recordEditRecovery;
     resetRecordEditState();
     appState.recordSaveNotice = "已加载最新版本；冲突前的本地修改可展开核对。";
@@ -7189,9 +7303,12 @@ function reapplyLocalRecordChanges() {
   if (!recovery || recovery.taskId !== appState.currentTaskId || appState.busy) return;
   beginRecordEdit();
   EDITABLE_FIELD_DEFS.forEach(([key]) => {
+    if (recovery.resolutions?.[key]) appState.recordFieldResolutionModes[key] = recovery.resolutions[key];
     const value = recovery.fields[key]?.value || "";
     if (String(value) !== String(recovery.baseline?.[key]?.value || "")) updateRecordFieldValue(key, value);
+    if (recovery.resolutions?.[key] === "source_correction") appState.currentRecordFields[key].source_spans = structuredClone(recovery.fields[key].source_spans || []);
   });
+  appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
   appState.recordEditRecovery = null;
   renderAll();
 }
@@ -8826,6 +8943,11 @@ async function testLlmConnection() {
 }
 
 function bindEvents() {
+  $("openEmbeddedHelpButton").addEventListener("click", openEmbeddedHelp);
+  $("loginHelpButton").addEventListener("click", openEmbeddedHelp);
+  $("closeEmbeddedHelpButton").addEventListener("click", closeEmbeddedHelp);
+  $("helpDialog").addEventListener("cancel", (event) => { event.preventDefault(); closeEmbeddedHelp(); });
+  $("embeddedHelpFrame").addEventListener("load", wireEmbeddedHelp);
   document.querySelectorAll("[data-workspace-panel]").forEach(button => {
     button.addEventListener("click", () => openWorkspaceAuxiliary(button.dataset.workspacePanel));
   });
@@ -8894,6 +9016,7 @@ function bindEvents() {
     button.addEventListener("click", () => setProductView(button.dataset.productViewTarget));
   });
   window.addEventListener("hashchange", () => {
+    if (window.location.hash === "#help") { openEmbeddedHelp(); return; }
     const view = productViewFromHash();
     if (view) setProductView(view, { updateHash: false });
   });
@@ -9106,6 +9229,8 @@ function bindEvents() {
     appState.recognitionMode = $("recognitionModeSelect").value || "fast";
   });
   $("recordFields").addEventListener("click", (event) => {
+    const resolve = event.target.closest("[data-field-resolution]");
+    if (resolve) { beginFieldResolution(resolve.dataset.resolutionKey, resolve.dataset.fieldResolution); return; }
     const editField = event.target.closest("[data-record-edit-field]");
     if (editField) { beginRecordEdit(editField.dataset.recordEditField); return; }
     const focusField = event.target.closest("[data-review-focus]");
@@ -9159,6 +9284,10 @@ function bindEvents() {
     if (event.target.matches("[data-evidence-toggle]")) {
       event.target.closest(".field-card").classList.toggle("open");
     }
+  });
+  $("recordFields").addEventListener("change", (event) => {
+    const select = event.target.closest("[data-record-source-field]");
+    if (select) updateFieldCorrectionSource(select.dataset.recordSourceField, select.value);
   });
   $("recordFields").addEventListener("input", (event) => {
     const editor = event.target.closest("[data-record-field-input]");
@@ -9375,6 +9504,7 @@ async function init() {
   bindEvents();
   await refreshAuth();
   renderAll();
+  if (window.location.hash === "#help") openEmbeddedHelp();
   if (appState.authUser) {
     refreshEncounterWorklist().catch(reportActionError);
     processPendingBrowserRecordingCleanups().catch(reportActionError);

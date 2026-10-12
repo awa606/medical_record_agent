@@ -268,13 +268,12 @@ def test_itemized_approval_invalidates_after_edit_and_downloads_docx() -> None:
               })).status;
             }""")
             assert blocked == 409
-            page.evaluate("""async () => {
-              // Patient symptoms are not a clinician's physical examination.
-              const field = window.__MRA_APP_STATE__.currentRecordFields.physical_exam;
-              field.value = null; field.missing = true; field.status = 'missing';
-              field.source_spans = []; field.fact_ids = []; field.hint = '查体未采集';
-              await saveDraftReview(); await refreshExportReadiness();
-            }""")
+            # Explicit doctor disposition, through visible controls: patient
+            # symptoms aren't a clinician's physical examination.
+            page.locator('[data-field="physical_exam"] [data-field-resolution="doctor_entry"]').click()
+            page.locator('[data-record-field-input="physical_exam"]').fill("")
+            page.click("#saveDraftButton")
+            page.wait_for_function("!window.__MRA_APP_STATE__.recordEditMode", timeout=15000)
             _select_all_review_items(page)
             stale_payload = page.evaluate("buildTaskApprovalPayload()")
             page.evaluate("confirmFields()")

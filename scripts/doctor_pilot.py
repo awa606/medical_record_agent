@@ -406,29 +406,32 @@ def open_workspace(config: dict, *, view: str = "workbench") -> dict:
     result = web_status(config, validate(config))
     if not result["web_available"]:
         raise PilotError("WEB_NOT_READY: 请先启动本版本。")
+    suffix = "#admin" if view == "admin" else "#help" if view == "help" else ""
+    _open_app_window(config, f"http://127.0.0.1:{config['port']}/static/doctor.html{suffix}")
+    return result
+
+
+def _open_app_window(config: dict, url: str) -> None:
     edge = next((Path(os.environ.get(k, "")) / "Microsoft/Edge/Application/msedge.exe"
                  for k in ("PROGRAMFILES(X86)", "PROGRAMFILES", "LOCALAPPDATA")
                  if (Path(os.environ.get(k, "")) / "Microsoft/Edge/Application/msedge.exe").is_file()), None)
     if edge is None:
         raise PilotError("EDGE_MISSING: 请维护人员安装Microsoft Edge。")
     # Separate cookies from the maintainer's ordinary Edge/admin session.
-    profile = Path(config["runtime"]).parent / "doctor-browser-profile"
-    suffix = "#admin" if view == "admin" else ""
+    profile = Path(config.get("runtime") or ROOT / ".runtime/help").parent / "doctor-browser-profile"
     subprocess.Popen([str(edge), f"--user-data-dir={profile}", "--no-first-run",
-                      f"--app=http://127.0.0.1:{config['port']}/static/doctor.html{suffix}"])
-    return result
+                      f"--app={url}"])
 
 
 def open_help(config: dict) -> dict:
-    import webbrowser
     url = f"http://127.0.0.1:{config['port']}/static/help/index.html"
     if fetch(config["port"], "/static/help/index.html")[0] == 200:
-        webbrowser.open(url)
-        return {"phase": "HELP_OPENED", "url": url, "message": "已打开当前环境的使用帮助。"}
+        open_workspace(config, view="help")
+        return {"phase": "HELP_OPENED", "url": url, "message": "已在当前软件窗口打开使用帮助。"}
     path = Path(config.get("handbook_dir") or ROOT / "docs/pilot/doctor-v1") / "manual.html"
     if not path.is_file():
         raise PilotError("HELP_UNAVAILABLE: 在线帮助和离线手册均不可用，请联系维护人员。")
-    webbrowser.open(path.resolve().as_uri())
+    _open_app_window(config, path.resolve().as_uri() + "?offline=1")
     return {"phase": "HELP_OFFLINE", "path": str(path),
             "message": "服务暂不可用，已打开离线手册；截图版本可能早于当前环境。"}
 

@@ -495,7 +495,11 @@ class TaskApiTests(unittest.TestCase):
         with self.assertRaises(HTTPException) as blocked:
             approve_task(task_id, TaskApprovalRequest.model_validate(payload))
         self.assertEqual(blocked.exception.status_code, 409)
-        review_task(task_id, self._review_request(task_id, self._custom_fields()))
+        corrected = self._custom_fields()
+        corrected.chief_complaint.value = "发热3天，医生核对补充记录"
+        request = self._review_request(task_id, corrected)
+        request.manual_takeover_fields = ["chief_complaint"]
+        review_task(task_id, request)
         approved = approve_task(task_id, TaskApprovalRequest.model_validate(self._minimal_payload(task_id)))
         self.assertTrue(approved["result_json"]["fields"]["chief_complaint"]["confirmed_by_doctor"])
 
@@ -562,7 +566,11 @@ class TaskApiTests(unittest.TestCase):
         )
         with self.assertRaises(HTTPException):
             approve_task(task_id, TaskApprovalRequest.model_validate(self._minimal_payload(task_id, include_high_risk=True)))
-        review_task(task_id, self._review_request(task_id, self._custom_fields(candidate_high_risk=True)))
+        corrected = self._custom_fields(candidate_high_risk=True)
+        corrected.chief_complaint.value = "发热3天，医生核对补充记录"
+        request = self._review_request(task_id, corrected)
+        request.manual_takeover_fields = ["chief_complaint"]
+        review_task(task_id, request)
         payload = self._minimal_payload(task_id, include_high_risk=True)
         payload["fields"].append({"key": "chief_complaint", "action": "confirm_content"})
         approve_task(task_id, TaskApprovalRequest.model_validate(payload))

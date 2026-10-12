@@ -20,18 +20,18 @@ def test_help_only_packages_allowlisted_public_documents(tmp_path):
 
 def test_launcher_opens_help_for_its_own_environment(monkeypatch):
     opened = []
-    monkeypatch.setattr(webbrowser, "open", opened.append)
+    monkeypatch.setattr(doctor_pilot, "open_workspace", lambda config, *, view: opened.append((config["port"], view)))
     monkeypatch.setattr(doctor_pilot, "fetch", lambda *args: (200, b"help"))
     result = doctor_pilot.open_help({"port": 8798})
-    assert opened == ["http://127.0.0.1:8798/static/help/index.html"]
+    assert opened == [(8798, "help")]
     assert result["phase"] == "HELP_OPENED"
 
 
 def test_launcher_reports_offline_help_explicitly(tmp_path, monkeypatch):
     (tmp_path / "manual.html").write_text("offline")
     opened = []
-    monkeypatch.setattr(webbrowser, "open", opened.append)
+    monkeypatch.setattr(doctor_pilot, "_open_app_window", lambda config, url: opened.append(url))
     monkeypatch.setattr(doctor_pilot, "fetch", lambda *args: (0, b""))
     result = doctor_pilot.open_help({"port": 8798, "handbook_dir": str(tmp_path)})
     assert result["phase"] == "HELP_OFFLINE"
-    assert opened == [(tmp_path / "manual.html").as_uri()]
+    assert opened == [(tmp_path / "manual.html").as_uri() + "?offline=1"]

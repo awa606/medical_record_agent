@@ -53,4 +53,4 @@ python -B -X utf8 -m scripts.experiments.run_clinical_fact_selection offline --a
 
 提交84cb603的[首次CI](https://github.com/awa606/medical_record_agent/actions/runs/38200548764)失败：755通过、2失败、2跳过、1警告、8 subtests通过。两个失败均为窗口内帮助回归无法找到手册的`#edit`，不是语义规则失败。干净检出仅有帮助首页与样式，生成手册被Git忽略；Docker已有白名单打包，CI遗漏该步骤。本地生成文件掩盖了该构建前提。
 
-在CI Python测试前添加已有`package_help.py`，没有放宽测试断言。隔离空目录探针复现手册HTTP 404，打包后200且原有编辑章节和医生补录内容齐备；帮助相关7项回归通过、1弃用警告、0模型调用。首次失败保留，修复后的完整CI按新提交另行核对，不替代模型门或发布验收。
+在CI Python测试前添加已有`package_help.py`，没有放宽测试断言。隔离空目录探针复现手册HTTP 404，打包后200且原有编辑章节和医生补录内容齐备；帮助相关7项回归通过、1弃用警告、0模型调用。首次失败保留，修复后的[完整CI](https://github.com/awa606/medical_record_agent/actions/runs/38201570004)已通过（提交ed2a5f8：757通过、2跳过、1警告、8 subtests；原型76项通过，其余构建/隔离查看器/健康检查通过）。这是锁定提交的工程回归，不替代模型门或发布验收。

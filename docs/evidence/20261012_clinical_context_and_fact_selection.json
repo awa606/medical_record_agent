@@ -342,7 +342,19 @@
       "passed": 7,
       "warnings": 1
     },
-    "postfix_full_ci": "PENDING",
+    "postfix_full_ci": {
+      "commit": "ed2a5f816c94805fe2bd0d68b1c0c625d3ae2fcd",
+      "run": "https://github.com/awa606/medical_record_agent/actions/runs/38201570004",
+      "status": "PASSED",
+      "python_tests": {
+        "passed": 757,
+        "skipped": 2,
+        "warnings": 1,
+        "subtests_passed": 8
+      },
+      "prototype_tests_passed": 76,
+      "remaining_steps": "PASSED"
+    },
     "additional_model_calls": 0
   }
 }

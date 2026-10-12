@@ -28,6 +28,9 @@ jobs:
           python -m pip install -r requirements.txt -r requirements-dev.txt
           python -m playwright install --with-deps chromium
 
+      - name: Build allowlisted help bundle
+        run: python scripts/package_help.py
+
       - name: Run Python tests
         env:
           PYTHONPATH: ${{ github.workspace }}

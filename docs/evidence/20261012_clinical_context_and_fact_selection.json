@@ -316,5 +316,33 @@
     "P01-candidate-r1.private.json": "1c984968e32227c4e6258aaa356e272d6d6ca225633d1b381eae84924b97ce99",
     "P01-candidate-r2.private.json": "e856689738aef3c8ae8a6c409e16daaed356b5813eb89bf7de7b17f495e2e5d8",
     "P01-candidate-r3.private.json": "c74c22b521f8cc997e4c40fd68028b47f48a85825e30c601f6c32cd5f383cfff"
+  },
+  "ci_followup": {
+    "initial_commit": "84cb603ff2312f2081dba84dc459d38f211ab5fc",
+    "initial_run": "https://github.com/awa606/medical_record_agent/actions/runs/38200548764",
+    "initial_status": "FAILED",
+    "initial_tests": {
+      "passed": 755,
+      "failed": 2,
+      "skipped": 2,
+      "warnings": 1,
+      "subtests_passed": 8
+    },
+    "failed_test_module": "tests/test_partial_draft_help_playwright.py",
+    "cause": "Clean checkout lacked ignored generated help bundle; CI did not run existing allowlisted packaging step",
+    "fix": "Build allowlisted help bundle before Python tests",
+    "clean_probe": {
+      "clean_checkout_before_status": 404,
+      "after_allowlisted_build_status": 200,
+      "edit_anchor_and_doctor_entry_text": true,
+      "file_count": 12,
+      "network_model_calls": 0
+    },
+    "local_targeted_tests": {
+      "passed": 7,
+      "warnings": 1
+    },
+    "postfix_full_ci": "PENDING",
+    "additional_model_calls": 0
   }
 }

@@ -1,0 +1,320 @@
+{
+  "base_sha": "381b747229a8d8fd53f31f2dfdec5ad9e32a9ced",
+  "comparison": {
+    "actual_calls": 18,
+    "passed": {
+      "baseline": 0,
+      "candidate": 6
+    },
+    "gate": "REJECTED",
+    "candidate_source_unchanged": true
+  },
+  "by_case": {
+    "B01": {
+      "baseline": 0,
+      "candidate": 3
+    },
+    "I01": {
+      "baseline": 0,
+      "candidate": 0
+    },
+    "P01": {
+      "baseline": 0,
+      "candidate": 3
+    }
+  },
+  "median_seconds": {
+    "baseline": 7.618,
+    "candidate": 4.567
+  },
+  "citation_and_subject_errors": {
+    "baseline": {
+      "cases_with_quote_errors": 2,
+      "cases_with_subject_errors": 3
+    },
+    "candidate": {
+      "cases_with_quote_errors": 0,
+      "cases_with_subject_errors": 0
+    }
+  },
+  "historical_unchanged": true,
+  "experiment_protocol": {
+    "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+    "server": {
+      "version": "0.34.0"
+    },
+    "options": {
+      "temperature": 0,
+      "num_ctx": 8192,
+      "num_predict": 2048
+    },
+    "think": false,
+    "retries": 0,
+    "manual_corrections": 0,
+    "expected": {
+      "B01": {
+        "chief": [
+          "发热",
+          "两天"
+        ],
+        "present": [
+          "发热",
+          "两天",
+          "咳嗽",
+          "咽痛",
+          "三十八点二",
+          "没有胸痛"
+        ],
+        "accompanying": [
+          "咳嗽",
+          "咽痛"
+        ],
+        "allergy": "没有药物过敏"
+      },
+      "I01": {
+        "chief": [
+          "发热",
+          "两天"
+        ],
+        "present": [
+          "发热",
+          "两天",
+          "咳嗽",
+          "咽痛",
+          "三十八点二",
+          "没有胸痛"
+        ],
+        "accompanying": [
+          "咳嗽",
+          "咽痛"
+        ],
+        "allergy": "没有药物过敏"
+      },
+      "P01": {
+        "chief": [
+          "咳嗽",
+          "两天"
+        ],
+        "present": [
+          "孩子",
+          "咳嗽",
+          "两天",
+          "咽痛",
+          "三十八点二"
+        ],
+        "accompanying": [
+          "咽痛"
+        ],
+        "allergy": "不清楚"
+      }
+    },
+    "input_sha256": {
+      "B01": "3efc3aa3b97dd1187d6244b3112d42b5742e37938e4446b249f3d982db4c9a99",
+      "I01": "0ee70fabbf7519618d6c80453db7d9561d9c453b6f82c534a6e96d45cca244ad",
+      "P01": "d6a5bbce0a059603aab8c099ba63418be90489a1e47edb19cdb78792b2bfca68"
+    },
+    "source_sha256": {
+      "app/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "app/agents/__init__.py": "7e8776709a3dcf415da85b19bd53eef4edc44220aa2e6071f550533123294c02",
+      "app/agents/medical_record_orchestrator.py": "448931fb42a74c47006350d5ffdecb7940fdf4f2d26c1e48e09c569a3c46c693",
+      "app/api/__init__.py": "0c2343027c3bec204dbd244c98f50bfc9fec9398c2fa2ab749c4b4b50667dcaa",
+      "app/api/asr_prewarm.py": "918c82b47af1c8cdef5b64adb7f4ba2a0b69e6b1d740f0decd0fb39432d3daa4",
+      "app/api/asr_sessions.py": "484050a6c35c32aaf94b4159ea4ea3b50eb587ff91fb7723612e72cf51ce41f3",
+      "app/api/audio.py": "d98a0eb501d669e76359b7ad0d96ab05e1f3587d42ec45dd35abb37b818103f1",
+      "app/api/auth.py": "d03257cd7c15b581d223839ca30ef0f492fefbf9a75364d684f7355e19b4383a",
+      "app/api/capabilities.py": "2af1ccfc4898ff559bb77fe691992ceabfd85fffdb2916f8f203927319fc5ea9",
+      "app/api/encounters.py": "75132ed362fbd22000fc7fe450684bbcf4bf310dadbca13310869c0c4a5e5b15",
+      "app/api/knowledge.py": "7736a61c784ad4d661d5137a23ca4464e1dbf4279fd7c6f682f62152eee50396",
+      "app/api/llm.py": "7994b196d7f6ced30325dd2bd7ff3aec11492a2791832627c049e35deacf18a8",
+      "app/api/records.py": "2daba0fadfeeddacbc91de6c8ac82071e34230ea56cfa1afe7f190f9b7dad32a",
+      "app/api/runtime.py": "2cf62d26db61de49da1024d827c577acc4092de8aa4b39c3ad88b31beac98e47",
+      "app/api/speaker_profiles.py": "580a73f1d2ed2e41a7c08047f9b0a113b0907a5e64affed52c9469b901a6c77f",
+      "app/api/tasks.py": "ff425d67d347dad84a7fc5d94a81cf14022adabadaa4e02d3e23cf3ac4b12cf5",
+      "app/core/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "app/data_builder/__init__.py": "4bd1521c9714d7b99b6ac9319a69d7899026c5532d5c30435922ce6031997c8f",
+      "app/data_builder/dialogue_generator.py": "fae32bb07b5ce94f44ede360f8d260f93562903cd6b3612d7e0fb784127854c5",
+      "app/data_builder/evaluator.py": "9dbc40f983771abe51e56fe71e7ebc7256dd8b4f8b1330e833fb42d8a74b8a10",
+      "app/data_builder/excel_io.py": "1b130b791d9f09fe18e13a582b52aca028090d3fda441d597ee218db86bf7a80",
+      "app/data_builder/kb_builder.py": "ffcdd14ffd444a4e0b7438c0bb89bdfe3c701810b45e885eb8a8191fccc9cb67",
+      "app/data_builder/paths.py": "288315fa2866e4092a3ebe7213734fa2b96cd74c3b06a044c82865163755cd71",
+      "app/data_builder/template_data.py": "47b5fd0ed7f1e91c06cb52bf91aadee5faaebc5a22d1a4dfae1d76f53915959e",
+      "app/dataset_pipeline/__init__.py": "1c34c6eb18bf0f2012846b03355200394863fcd711a046a6db084864f8c4a710",
+      "app/dataset_pipeline/annotation.py": "5d2e4dbb61b62f418481b2a66ec990aea843c3b6125073895be9e4d6af952b2d",
+      "app/dataset_pipeline/filtering.py": "04b58a557350fb44cbc105c7665b186462115ad158f0f313de95cd8a078de38c",
+      "app/dataset_pipeline/gold_eval.py": "0126b5f11744129e17421cc10dbfbdb19f14a019bbdba43dcc1a7d192206c273",
+      "app/dataset_pipeline/ingest.py": "16856648a40d6091d6e747020a2313bfe7247e8077af5526f714fe8e0bcb0031",
+      "app/dataset_pipeline/jsonl.py": "ce273bffe9c0eb0ca72e53d35266fc7585fecff9244a949aa0dd28c69772a3c0",
+      "app/dataset_pipeline/paths.py": "0362a065431c5ad0ac19d00eb54a45a73b6fd037f3003c13c65ce1a97fb2013e",
+      "app/dataset_pipeline/pseudo_emr.py": "1f9db301fccf079a3f4a3e92248f14ee6ff1198c381ec9ba8f4f69b13959d6e2",
+      "app/db/__init__.py": "e088d5104b487da987c19c80add0046d57e9f0e07366d54d2d87378730c22cc1",
+      "app/db/sqlite.py": "7a6829a08ba8226fb75745b05bc4ae9c48f047287c2c55a6ec02862b92b03382",
+      "app/main.py": "e765f91fadbe0cf59f8991834a7f10425b1fed6f848afc3dda4f78db6c59e501",
+      "app/prompts/__init__.py": "c44143950747916b177391282b58c0cbeb4af27b7809cdbd99ca9736f386c98f",
+      "app/prompts/extract_fields_prompt.py": "cf2c9a4d3858386336ffb5068cf8d4d9aeb7211336aa0ded06fbd2d2e1829f79",
+      "app/prompts/generate_draft_prompt.py": "eb891643f815c7e90f94cb561a7d2ee280051d0f6fd499f5d581b4a4be968fc6",
+      "app/prompts/medical_record_prompts.py": "148e5a608c47474b070ff2dec4c84bf1823388f3cf8241fefe0abbd6082e4ee3",
+      "app/prompts/safety_check_prompt.py": "a6006f9cf33b33b611779f46892de33d388c3f013e2bda972419e3ad58f45638",
+      "app/schemas/__init__.py": "d25d8ed587c71e310aa33c859b54ab188f1305dab65b9d6764c78f348e2448ce",
+      "app/schemas/asr.py": "22b41ff77a49a13fa17444b30171f402c7cf6e19ca3536d342ee662d2dd87ee6",
+      "app/schemas/auth.py": "3a3f8ea1d2aedc945efc0dff7fcc726e2efdffc7c77c3c33b644e128afab2b3d",
+      "app/schemas/medical_record.py": "cf0aa20874d8b27c2fcde8b9422a9e17a5a642ce1cab555090ba96d56ed26723",
+      "app/schemas/speaker_profile.py": "c94e24dda80ceca9b384af218306f85344a9d3c4f0b8e3e9ad03e55993603268",
+      "app/schemas/task.py": "9068c01f2cbeaa3d208dc33a7486345e737d193e794495c37ebc974da205032d",
+      "app/services/__init__.py": "945ab1569e103279f146afd48b29e7e468cb980f15928710495c5c2a441a71e9",
+      "app/services/agent_trace.py": "013de35ebf74cf0e0b8f25b2c63adea983da9a74c25a389c714a284f2f2a73ac",
+      "app/services/asr/__init__.py": "4abf3ef8380adb6e838750ade8b9b8c1b0b0267c835817f879253807ca758d7b",
+      "app/services/asr/auto_roles.py": "18189b4bf7a95a98d0f228ce0d45ae3eb427adc8212008716f897aec39e956b5",
+      "app/services/asr/base.py": "9332345ee3fb7a30dd3dd0e79786a993fc281ef5783ecde89a5afd1c13e3f603",
+      "app/services/asr/chunking.py": "484a5e70a01dc10f9dfd6052bc0af94e16c321c0b5e69f89f77398341da1d50e",
+      "app/services/asr/config.py": "1c178aaea3e1660bd01bf4d9a5f802455c02bea8a813b521a542cf9e042e5f48",
+      "app/services/asr/evaluator.py": "f902b964b56e749e4174b7f010a59e9cc1ef7b042cadd148fffeb5f4d2b0b387",
+      "app/services/asr/factory.py": "58d8bbfd9847b7d3dfced8ac935ab3294ee63981f91a06bef019ddff4659875c",
+      "app/services/asr/ffmpeg_utils.py": "7f007d6498f0f754c2b406fa54f00382a993ea888da16fe95ea296b74f6af247",
+      "app/services/asr/funasr_engine.py": "5289483d79cf545653b371b74814351434aa76887da91cca97ae75b2e2aaa769",
+      "app/services/asr/funasr_reliability.py": "2747b7c196b4aa155916900b398e4898f55bfb7de10ae2b229e71ee501ce581d",
+      "app/services/asr/funasr_streaming_engine.py": "b78831023380b18d46b49a7316925fffa2cc750e43db261b97470e77a3f87657",
+      "app/services/asr/local_models.py": "5393335e238d692c079d6b97985cb0b48bd8646767b9ab9b58eab351539893e0",
+      "app/services/asr/mock_engine.py": "0a9b47128d67f0d6edbd26de3abf09925bed3958caf5c06d98072ebc28a6a89f",
+      "app/services/asr/online_engine.py": "0bf3317b88230a31e22a21dc6c4ac940a6608b106705954f0c9e32e7e0f160b3",
+      "app/services/asr/prewarm.py": "10a1358139f45b367f45eeeff48e85383d7c6e2a33b47a22bfb75101444fc097",
+      "app/services/asr/qwen3_engine.py": "7aa57b4601064a3929deb759c2bebf2fb2be468b70357f72efd2e93033a78747",
+      "app/services/asr/role_quality.py": "82f22cac194a926cd2c83d7760f1eff7f59f7ed89977001af920add9e15ca74e",
+      "app/services/asr/role_strategy.py": "731c2c45664428161f48eb398f08e0889216eed4f0986d2d2cf18bac15ac121c",
+      "app/services/asr/sensevoice_engine.py": "1989f6e74830aab0578155689314aae017f0c4779704e21964a0850ccccd6c43",
+      "app/services/asr/speaker_diarization.py": "f791aa172888b1380b2ef64c04edb193388c05d70517b54651b49bdfbf822569",
+      "app/services/asr/speaker_profiles.py": "359be8f746b67934f7fbf8c67309a26d85abb1551d4f672a14faf4b8193281e6",
+      "app/services/asr/speaker_role_classifier.py": "ce2c9b598b7aa1f636dd1b09c70926515aee7a98311cc7be4dd5c4cf4fba847e",
+      "app/services/asr/speaker_role_policy.py": "34e368f0de65c9f2f86e0185d07a3d73f5e4f8502932b2bc29ab826c9d5264bc",
+      "app/services/asr/whisper_engine.py": "1c5b90f0623d2cca0210b6b9a1975ecf7e6432b90c1be46ec37ad4dc4da992d4",
+      "app/services/auth.py": "7072eb0103e1e3382cc4b6caa77ae2f2c1983c1e8179e83ea301bf43e9452be4",
+      "app/services/clinical_facts.py": "79cdb7c1fd04863a966c4393e1c7725b8ab57f48355dfafb7c47f20f3c8cad33",
+      "app/services/demo_knowledge.py": "79fab0ac3a31d14ab8eb54d113b3724c6bb8a31621cae5c4e441d7e56e7cd31b",
+      "app/services/diarization/__init__.py": "7721d50ff67dee1d329ee4c10e1d44acdc9a90261bb8a5c8c7f806370e02c4e5",
+      "app/services/diarization/base.py": "c86aa1f294e95afbecc3fb87b1b776171383c442b0ef6a6392cbc9ae7634b28c",
+      "app/services/diarization/factory.py": "c8123db97a3b910f6872416d286a647abc897611b79bb2d9c3c95f7fc2bd0ef5",
+      "app/services/diarization/funasr_campp.py": "86562cf56d882ff5c0c8b84f6dabda07364569c03268650ab4ae8e42be3adef3",
+      "app/services/diarization/pyannote_adapter.py": "513b04da37fe66d0d086e7b5bc6e73cd1c03e8b9e10c011fb910243ab1af0ba0",
+      "app/services/diarization/three_d_speaker_adapter.py": "32bdf3aa06c467eea850c35f5563ac15bb2ca0d86b581e92e2c086d75ed00cda",
+      "app/services/exporter.py": "eb222c8ecff06316fdb9d82e1016adbe8c3de93f5768dd85fde1c254c3ab0e77",
+      "app/services/fever_respiratory_pack.py": "5b137eab0fec18d518985c5678356ee021baff39dfd28e58aca4d565dc49dc46",
+      "app/services/field_grounding.py": "ef02a1e8b92794e228fb30415ce12c5c935a7f837a9909b2ac0469f71475a4f7",
+      "app/services/knowledge_rules.py": "a4fed64cab8dc3ef1a771b1a1d2309666b4b1993ba8e72016c12aee8212c2d85",
+      "app/services/knowledge_store.py": "1d516c4985c287a69aa5d81bd64b6cf6c6c05b42d0ddaf3e0e80bf7991bde49e",
+      "app/services/live_clinical.py": "902ccfde98f210f9805854204c4e7fef5c9b0bffc85adbbe934609f14d1ed861",
+      "app/services/llm/__init__.py": "92be95e99d548bb58e242cdb608738a98551705b3ef17ecba6f9a0ea2a4f1162",
+      "app/services/llm/base.py": "dbe487f7eab047db3a2b6c9e7c566e0c0f328102d7ab72a7c487c58bdc408db9",
+      "app/services/llm/factory.py": "01fdef0631b6bfb1f0203a78f12e210965f992b02983ad6fa5641f1d947083d9",
+      "app/services/llm/json_repair.py": "ed93cd3b36fad72585a6fe20a29769683c962b8c2aaf55d42ae8ef88e25d693a",
+      "app/services/llm/llm_record_generator.py": "7b64ef2162b9dde525effd3fa7c455f0dcaa23d717038ac61ce7400cfcc85710",
+      "app/services/llm/mock_provider.py": "32812611d72b6094a7e5a100f292db63a2b0f810ce13cb2e6ee7afbd2f7695f1",
+      "app/services/llm/ollama_provider.py": "bc325c0650ea4007521803f80dc2d8b9bc793d7d9261df9a57be7f773ae3f9ff",
+      "app/services/llm/online_provider.py": "398ce299c1f22d28751e0309dcaf2eb6398a93c5daac5f86792b3bc4f834b392",
+      "app/services/llm/readiness.py": "1e9df8ad64c4c14265f2a9d350120d3f223a445c369ca9407c63f7bbd0f50a15",
+      "app/services/mock_llm.py": "3cf7ca73a723253587b126ab6fdc41759180dc4717ee9c2b870f21675e744ff3",
+      "app/services/privacy.py": "b2bba33ec54967498901a042ff4c1b746aef4beb1c99542cbd72cc8a594b91ce",
+      "app/services/record_quality.py": "62de988dc798e94d4e0b7db75a0651a266e5e5d6ed3680d971482f59ffebb028",
+      "app/services/record_rules.py": "cf7b5e37a17a17909a750ebcd8fca3e1dd1ac3c0f881f8de80bd608125b70a8e",
+      "app/services/runtime_limits.py": "a402d821c74f8dabc81cb124e4703a5d991c620f77a391796a83064f5f600684",
+      "app/utils/__init__.py": "02efa14519ff49093ea33e4846e3b5b3d9406abaea5af95cc9aac7a105286300",
+      "app/utils/retry.py": "87a0974cf3b26963b57d37f5e5e645d37bd3343d3eab9f51c641f15225618335",
+      "scripts/experiments/clinical_fact_selection.py": "478932087c39342a3bbd2a42070a836be58c824e2fe8ab7f853002c15e4ac327",
+      "scripts/experiments/compare_local_models.py": "8f2f66bb6b997ee5b558799d8b603577ef51ef944224bdd9f80a5ce0baed15ec",
+      "scripts/experiments/evidence_selection.py": "14fd183740be396be5010c0a9c2df5bd96f9e4fd8e1f33f9aee915c701f68af2",
+      "scripts/experiments/run_clinical_fact_selection.py": "e05e55782d9e2a50d4f6677110b53417205e58f7e43d0324c99fc6585f37957b",
+      "scripts/experiments/run_evidence_selection.py": "4ce8a372a79760973d225aa84e7c9d0f01641805cbd7d53b5665eef05e012e5f"
+    },
+    "scope": "Synthetic text only; no new ASR, audio, clinical DB, production-provider change or deployment"
+  },
+  "rules": {
+    "new_regressions": 22,
+    "targeted_passed": 131,
+    "contract_passed": 8,
+    "safety": {
+      "dataset": "data\\semantic_safety\\clinical_assertion_v1.jsonl",
+      "case_count": 240,
+      "expected_fact_count": 206,
+      "matched_fact_count": 206,
+      "exact_case_count": 240,
+      "exact_case_rate": 1.0,
+      "dangerous_polarity_flips": 0,
+      "unsupported_fact_count": 0,
+      "missing_fact_count": 0,
+      "question_leakage_count": 0,
+      "experiencer_errors": 0,
+      "temporality_errors": 0,
+      "certainty_errors": 0,
+      "value_unit_errors": 0,
+      "category_counts": {
+        "allergy_absent": 20,
+        "allergy_double_negative": 20,
+        "allergy_family": 20,
+        "allergy_present": 20,
+        "allergy_question": 20,
+        "allergy_question_answer_absent": 20,
+        "allergy_resolved": 20,
+        "allergy_uncertain": 20,
+        "symptom_absent": 10,
+        "symptom_family": 10,
+        "symptom_present": 10,
+        "symptom_question": 10,
+        "symptom_resolved": 10,
+        "symptom_uncertain": 10,
+        "temperature_question": 10,
+        "temperature_value": 10
+      },
+      "failure_counts": {},
+      "safety_gate_pass": true
+    }
+  },
+  "full_pytest": {
+    "passed": 756,
+    "skipped": 2,
+    "warnings": 2,
+    "seconds": 546.74,
+    "warning_types": [
+      "StarletteDeprecationWarning",
+      "PytestUnhandledThreadExceptionWarning: Windows subprocess UTF-8 decode"
+    ]
+  },
+  "offline": {
+    "runs": 18,
+    "real_model_calls": 0,
+    "raw_passed": 0,
+    "saved_pipeline_passed": 0,
+    "fixed_pipeline_passed": 0
+  },
+  "not_executed": [
+    "6 boundary model cases",
+    "40 development + 20 frozen model regression",
+    "candidate production integration",
+    "deployment",
+    "final E2E and recovery"
+  ],
+  "research_gate": "NEEDS MORE EVIDENCE",
+  "production_provider_changed": false,
+  "database_migration": false,
+  "phase_51": "VERIFY",
+  "phase_53": "NOT STARTED",
+  "private_evidence": ".artifacts/fact-selection-20261012-110022",
+  "protocol_sha256": "6b3abc34e39a228f30bbb5fe8fcbd0ad11a19885b87555fa17cc82f443a82400",
+  "raw_file_sha256": {
+    "B01-baseline-r1.private.json": "6a41595477da8300c68b19075d55b39bd86f48672b37c02a14272f88dd7fd492",
+    "B01-baseline-r2.private.json": "3f0715cb12b65d84eb6ae2b9e0408ce9ae00d55b1bfe58b60efe432c5150921d",
+    "B01-baseline-r3.private.json": "1f89489753854aa38ac996b158f3e7cbb7e553b1a3445690f3225ef454b7bd88",
+    "B01-candidate-r1.private.json": "43a0b7b22c38d63a135ddcbbb53440c605f91ddc54b526322c87773794e8468b",
+    "B01-candidate-r2.private.json": "7912e62b8b44c0d21e53a39c219b2b54a17fd753bfa7bfd4124d0abbd7746786",
+    "B01-candidate-r3.private.json": "c19de3282404d1202ddd9c1ca8cdfbda942e42ee907e5342162a91018f7c823a",
+    "I01-baseline-r1.private.json": "3d1abf193491b0cfb6bdf3effee2cb6e5b8f68fd838acf2a26f97a1bb116fe9e",
+    "I01-baseline-r2.private.json": "c9587e51cce254eee68ea5864a4b1c1b7ae55941322f1f6c21a219d15e96a22a",
+    "I01-baseline-r3.private.json": "2ac33ffb7c7543532675c0257b06661f447161f1f2d9b7411c5bce1cfb6715a7",
+    "I01-candidate-r1.private.json": "eac5dcb9ca9284c944dbdf4283c82cffb222896eaf1eca5da375389aad8c155a",
+    "I01-candidate-r2.private.json": "ff07474b1a02668a79fc586a89163aa9cde0bcc38d844c348956b1cc323a535e",
+    "I01-candidate-r3.private.json": "f27336a09775163eebaea14e404b3e4b961bbbbc174b5d3609672604d005a57d",
+    "P01-baseline-r1.private.json": "22a723e93ecbd4e70ed3c1e1a5b762d7e8acb04d8479b5490b096ae66b932401",
+    "P01-baseline-r2.private.json": "c412a09684c5c40fe62606015d5d07b942d2bdd1af8252aeb1843a5ef8a688c2",
+    "P01-baseline-r3.private.json": "eb406c52329faf41498f753e40966c7c6532884db5deeaeb8a13bc576f9e95b0",
+    "P01-candidate-r1.private.json": "1c984968e32227c4e6258aaa356e272d6d6ca225633d1b381eae84924b97ce99",
+    "P01-candidate-r2.private.json": "e856689738aef3c8ae8a6c409e16daaed356b5813eb89bf7de7b17f495e2e5d8",
+    "P01-candidate-r3.private.json": "c74c22b521f8cc997e4c40fd68028b47f48a85825e30c601f6c32cd5f383cfff"
+  }
+}

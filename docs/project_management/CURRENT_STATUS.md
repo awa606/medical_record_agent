@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-10T15:29:49.551954+08:00`
-- Source hash: `b13d58a9b08125ab58115fc233be22b9427155f33e40cfc307a051804f8b9de7`
+- Updated at: `2026-10-12T01:52:31.224Z`
+- Source hash: `7243cd13c71d6d4235e69fd93bdfd2c65c10975dea9ae5a038386458924cf002`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@02af90b87ce1bd59cb6c5457a12de65109efe2ca`
+- Repo: `codex/alpha51-demo-visual-e2e@b6c8158132746ab3571e29eff6885cd597e4bbf3`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798生成失败处理与产品帮助已接通；模型质量及最终发布未通过** — `VERIFY`
+**5.1 · 8798单活动运行、就绪刷新及数据/知识/帮助核验；温度候选拒绝，模型质量与最终发布未通过** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1：定位P01首次输出漏提及B01/I01引用错误；质量门通过后完成最终三路径、实际显示和恢复，再进入5.3
-- Parallel waiting task: 无；训练数据与资源Gate未通过，5.3不启动
+- Single next task: 5.1：依据已保存B01/I01/P01首次响应定位漏提、字段归属和引用损坏；温度候选不晋级。质量门通过后完成最终三路径、实际显示、离线恢复，再进入5.3
+- Parallel waiting task: 无；模型质量未通过，5.3不启动
 
 ## Manual Actions
 
-- 当前无需补数据或采购；最终候选通过后配合物理麦克风与实际展示设备验收
+- 当前无需补数据或采购；最终质量候选通过后再集中配合物理麦克风和实际显示验收
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

@@ -28,12 +28,20 @@ class OllamaLLMProvider:
         self.response_metadata: dict = {}
         self.diagnostics_enabled = False
         self.last_diagnostic_response = None
+        self.readiness_probe = False
 
     def generate_fields_json(
         self,
         conversation_text: str,
         *,
         timeout_seconds: float,
+    ) -> LLMProviderResponse:
+        from app.services.llm.readiness import inference_slot
+        with inference_slot(self.base_url, self.model, probe=self.readiness_probe):
+            return self._generate_fields_json(conversation_text, timeout_seconds=timeout_seconds)
+
+    def _generate_fields_json(
+        self, conversation_text: str, *, timeout_seconds: float,
     ) -> LLMProviderResponse:
         from app.services.llm.readiness import model_digest
         digest = model_digest(self.base_url, self.model)

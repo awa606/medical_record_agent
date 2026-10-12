@@ -50,6 +50,31 @@ def test_start_refuses_running_peer(registered, tmp_path, monkeypatch):
     assert not commands
 
 
+@pytest.mark.parametrize("policy", [None, "unless-stopped", "invalid"])
+def test_pair_disarms_peer_before_enabling_active_restart(registered, tmp_path, monkeypatch, policy):
+    config, items = registered
+    config.update(peer_config="peer.json", switch_lock=str(tmp_path / "pair.json"))
+    if policy is not None:
+        config["active_restart_policy"] = policy
+    peer = {s: {"Id": "peer-" + s, "State": {"Running": False}} for s in pilot.SERVICES}
+    peer_config = {"project": "peer"}
+    monkeypatch.setattr(pilot, "peer_configuration", lambda _: (peer_config, tmp_path / "peer.json"))
+    monkeypatch.setattr(pilot, "validate", lambda c: peer if c is peer_config else items)
+    monkeypatch.setattr(pilot, "web_status", lambda *a: {"model_ready": True, "phase": "READY"})
+    calls = []
+    monkeypatch.setattr(pilot, "command", lambda *a: calls.append(a) or "")
+    if policy == "invalid":
+        with pytest.raises(pilot.PilotError, match="RESTART_POLICY_INVALID"):
+            pilot.start(config, tmp_path / "target.json")
+        assert not calls
+    else:
+        pilot.start(config, tmp_path / "target.json")
+        assert calls == [
+            ("docker", "update", "--restart", "no", *("peer-" + s for s in pilot.SERVICES)),
+            ("docker", "update", "--restart", policy or "no", *(items[s]["Id"] for s in pilot.SERVICES)),
+        ]
+
+
 def test_environment_cookie_pinning_cannot_silently_change(registered):
     config, items = registered
     config["cookie_name"] = "expected"

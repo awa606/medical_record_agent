@@ -361,13 +361,19 @@ def start(config: dict, config_path: Path, timeout: int = 600, *, pair_lock_held
     with pair_lock, operation_lock(config_path):
         items = validate(config)
         pair = peer_configuration(config)
-        if pair and any(i["State"]["Running"] for i in validate(pair[0]).values()):
+        peer_items = validate(pair[0]) if pair else None
+        if peer_items and any(i["State"]["Running"] for i in peer_items.values()):
             raise PilotError("PEER_RUNNING: 另一环境正在运行；请使用“切换到本版”，不能同时加载模型。")
         if not items["gateway"]["State"]["Running"]:
             with socket.socket() as probe:
                 if probe.connect_ex(("127.0.0.1", config["port"])) == 0:
                     raise PilotError("PORT_OCCUPIED: 端口已有其他程序；不会停止它或切到旧版本。")
-        command("docker", "update", "--restart", "no" if pair else "unless-stopped", *(items[s]["Id"] for s in SERVICES))
+        policy = config.get("active_restart_policy", "no" if pair else "unless-stopped")
+        if policy not in {"no", "unless-stopped"}:
+            raise PilotError("RESTART_POLICY_INVALID: 未识别的活动环境恢复策略；未修改容器。")
+        if peer_items:
+            command("docker", "update", "--restart", "no", *(peer_items[s]["Id"] for s in SERVICES))
+        command("docker", "update", "--restart", policy, *(items[s]["Id"] for s in SERVICES))
         for service in SERVICES:
             if not items[service]["State"]["Running"]:
                 command("docker", "start", items[service]["Id"])

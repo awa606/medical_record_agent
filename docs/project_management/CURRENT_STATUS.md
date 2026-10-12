@@ -8,8 +8,8 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-12T11:53:33+08:00`
-- Source hash: `baae21fd45ef9c942dc13fbf20b64bb5388444b743db0e33c19f6815207e8c8d`
+- Updated at: `2026-10-12T12:02:15+08:00`
+- Source hash: `63dd7f94c0f419a16075ef8b340b92f7994bb734f024f8f2b1397571d3f18658`
 - Phase: **Alpha**
 - Repo: `codex/alpha51-demo-visual-e2e@13cf3f4c0195f73adfd8f2d810e2b594a7022cdc`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 语义规则修复已验证；4B细粒度候选6/9拒绝，未部署，模型质量门未通过** — `VERIFY`
+**5.1 · 语义规则与CI已通过；4B细粒度候选6/9拒绝，未部署，模型质量门未通过** — `VERIFY`
 
 ## Hardware Gate
 

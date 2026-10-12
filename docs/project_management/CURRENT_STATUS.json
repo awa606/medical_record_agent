@@ -6,8 +6,8 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-10-12T11:53:33+08:00",
-  "source_hash": "baae21fd45ef9c942dc13fbf20b64bb5388444b743db0e33c19f6815207e8c8d",
+  "updated_at": "2026-10-12T12:02:15+08:00",
+  "source_hash": "63dd7f94c0f419a16075ef8b340b92f7994bb734f024f8f2b1397571d3f18658",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
@@ -38,7 +38,7 @@
   "planned_hours": 99,
   "current_task": {
     "wbs": "5.1",
-    "title": "语义规则修复已验证；4B细粒度候选6/9拒绝，未部署，模型质量门未通过",
+    "title": "语义规则与CI已通过；4B细粒度候选6/9拒绝，未部署，模型质量门未通过",
     "status": "VERIFY"
   },
   "milestones": [
@@ -101,7 +101,7 @@
   "forecast_alpha_exit": "Software Lane baseline 2026-10-07 has elapsed; software release date TBD pending model and final acceptance; Full M4 TBD / HARDWARE DEPENDENT",
   "source_files": {
     "Projects/Medical_Record_Agent/0 Alpha工程版交付包.md": "4bbfbde20927f571d673cf59c31b172af0fa742c4825695eb13682f4dff2231d",
-    "Projects/Medical_Record_Agent/00_Project_Home.md": "9847b692c9fe3944929a278ff907c42c0597b40c6b3b8b6d0751f7f08d85f895",
+    "Projects/Medical_Record_Agent/00_Project_Home.md": "410d61d7021e18af64fd1cf30a5f56153ac3ebb9ff39fcbe3d0d1ec94a229b03",
     "Projects/Medical_Record_Agent/01_Project_Charter.md": "a4f99c0402a0eb280d477a24b9276e41d372bef50ac4e9b5dd7e6aef620e3440",
     "Projects/Medical_Record_Agent/02_PBS.md": "b7639872df85c6d9de9bcc22407d48de9a97ecc4a5921b335aaf50ea6ca6af36",
     "Projects/Medical_Record_Agent/03_Architecture.md": "08ddf9216a9772fe3ae225489535b8095a43b56aeb481966db4a06a4594a522d",
@@ -163,7 +163,7 @@
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_知识目录与就诊联通_20260928.md": "bdc660c2c2dd7150c9b99799cf8c9fec80daa9775c9b49369667bfb0b045ef83",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_简洁三栏V3待视觉认可_20260923.md": "8d7ffac2eb511a753d7d9990b9077a1ceb6c74646dbcf8f689b29128ebadaba1",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_视觉样稿V1否决与PR112收口_20260923.md": "defde93e20d8c027b2cd833f854d039c92f1d3225876d8ba5cde38efa4d98303",
-    "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_语义规则与事实选择失败_20261012.md": "0b0f47765b93cbb83aee030074653ffbaee9e5c1f6c81432f9be3d44986741a0",
+    "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_语义规则与事实选择失败_20261012.md": "1824fe7d837b8480917869cc4383c223081c574bd6caf0a8ce272a64628887ed",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_课程展示冲刺与真实知识模型_20260927.md": "ee40abc1688e6c29b8699ee043c7f5767fffd7fb8f6d940d967aebe4dd6522e9",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_部署候选与知识表修复_20260927.md": "2449793485e0c072e32998a93de8f0292a8cc3da0b151c7806c3e38c2a7ad949",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA_真实本地闭环与安全_20260914.md": "39c7ad980126dd17326792f95e40e9611a8d9c13500d554425707ac9dbae6a51",
@@ -215,7 +215,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "034511d60b95ee2f7d8777ac2d78843c6e0fecff12f6bf5a28afbcb9fafc06d4",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "7789d9b55dc31cb76e79da2d725520de46d60496b7725dff52b727e99f2f650d",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -292,7 +292,7 @@
   "extra_source_files": {
     ".artifacts/project-status/hardware_gates_deferred.json": "369afa7b5b4b262098c983555453ce260acb2b30b7a05553b648bc814818d2f9",
     "docs/engineering/20261012_context_and_fact_selection_research.md": "c28d57770c498e621b362aec0a5697ef8ca6845b51d72eb840ca7ee80711f21a",
-    "docs/evidence/20261012_clinical_context_and_fact_selection.json": "3a8de12ae9cc27e720f112489adc323e36163d97703c4b8e01591ec567b1958f"
+    "docs/evidence/20261012_clinical_context_and_fact_selection.json": "c4339ab12928296e5fd1ae0c32c8cc0187af8f6276d6168e8403dc1ea46db6ff"
   },
   "snapshot_verification": {
     "result": "PASS",

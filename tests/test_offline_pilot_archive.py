@@ -12,6 +12,7 @@ from scripts.offline_pilot_archive import (TABLES, fingerprints, file_inventory,
                                            sanitize_database, restore_credentials,
                                            assert_models_idle, choose_port)
 from scripts.offline_pilot_archive import merge_runtime_environment, run_launcher
+from scripts.offline_pilot_archive import viewer, stop, write_json
 from scripts.alpha51_release_archive import COMPOSE
 
 
@@ -126,6 +127,27 @@ class OfflineDeliveryTests(unittest.TestCase):
         self.assertNotIn('capture_output', kwargs)
         self.assertEqual(kwargs['stderr'], __import__('subprocess').STDOUT)
         self.assertTrue(kwargs['stdout'].closed)
+
+    def test_viewer_reads_only_a_container_backup_not_the_live_host_database(self):
+        write_json(self.root / 'restore.private.json', {'project': 'mraoffline18999', 'viewer_port': 18997, 'app_sha': 'fixed'})
+        with patch('scripts.offline_pilot_archive.sqlite3.connect', side_effect=AssertionError('live host access')), \
+             patch('scripts.offline_pilot_archive.run', return_value='') as commands, \
+             patch('scripts.offline_pilot_archive.run_launcher') as launcher:
+            viewer(self.root)
+        backup = commands.call_args_list[0].args
+        self.assertEqual(backup[:4], ('docker', 'exec', 'mraoffline18999-app-1', 'python'))
+        self.assertIn('s.backup(d)', backup[-1])
+        self.assertIn('journal_mode=DELETE', backup[-1])
+        invocation = launcher.call_args.args[0]
+        self.assertEqual(invocation[invocation.index('-SourceDb') + 1], str(self.root / 'viewer-source.private.sqlite3'))
+
+    def test_stop_queries_idle_inside_container_and_refuses_active_generation(self):
+        write_json(self.root / 'restore.private.json', {'project': 'mraoffline18999'})
+        with patch('scripts.offline_pilot_archive.sqlite3.connect', side_effect=AssertionError('live host access')), \
+             patch('scripts.offline_pilot_archive.run', side_effect=['true', '1']) as commands:
+            with self.assertRaisesRegex(ValueError, 'generation is active'):
+                stop(self.root)
+        self.assertEqual(commands.call_count, 2)
 
 
 if __name__ == '__main__':

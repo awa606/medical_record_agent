@@ -34,4 +34,6 @@ ASSUMPTION A01：默认平台使用已安装Python 3.11与Docker Desktop，包�
 
 Design Review Gate：PASS（工具边界及最小Spike通过，允许实施已批准交付适配）。产品Gate继续VERIFY，恢复结果另行记录，不预写PASS。
 
+恢复验证补充：Windows测试进程直接打开容器活动WAL库后，出现共享内存/日志I/O错误；停止读取进程并关闭应用后，容器内quick_check为ok，19个Revision保留。所有活动库读取、空闲核验及查看器备份改在容器内部执行。宿主查看器只接收已关闭的DELETE模式独立备份，不直接打开活动WAL库。依据[SQLite WAL共享内存约束](https://www.sqlite.org/wal.html)和[Python Backup API](https://docs.python.org/3.11/library/sqlite3.html#sqlite3.Connection.backup)。此修复改变交付工具边界，不改业务SQLite结构或生产WAL配置。
+
 参考：[pip离线依赖](https://pip.pypa.io/en/stable/cli/pip_download/)、[Docker镜像导出](https://docs.docker.com/reference/cli/docker/image/save/)。

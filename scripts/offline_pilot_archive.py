@@ -381,8 +381,23 @@ def restore(args):
 def viewer(target, open_browser=False):
     state = json.loads((target / 'restore.private.json').read_text(encoding='utf-8'))
     py = target / 'viewer-venv' / 'Scripts' / 'python.exe'
+    # Never let Windows SQLite open the Linux application's active WAL files.
+    # Backup in the writer's kernel, then copy a closed DELETE-mode snapshot out.
+    temporary = '/tmp/mra-viewer-' + secrets.token_hex(8) + '.sqlite3'
+    backup_code = (
+        "import sqlite3; s=sqlite3.connect('file:/app/runtime/medical_record_agent.sqlite3?mode=ro',uri=True);"
+        f" d=sqlite3.connect({temporary!r}); s.backup(d);"
+        " d.execute('PRAGMA journal_mode=DELETE'); d.close(); s.close()"
+    )
+    container = state['project'] + '-app-1'
+    run('docker', 'exec', container, 'python', '-c', backup_code)
+    source = target / 'viewer-source.private.sqlite3'
+    try:
+        run('docker', 'cp', container + ':' + temporary, str(source))
+    finally:
+        run('docker', 'exec', container, 'python', '-c', f'import pathlib; pathlib.Path({temporary!r}).unlink()')
     run_launcher(('powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(target / 'scripts' / 'Start-MRADataBrowser.ps1'),
-        '-Action', 'Start', '-SourceDb', str(target / 'runtime' / 'medical_record_agent.sqlite3'),
+        '-Action', 'Start', '-SourceDb', str(source),
         '-SourceLabel', f'离线恢复 {state["app_sha"][:8]}', '-PythonPath', str(py),
         '-StateDirectory', str(target / 'viewer-state'), '-AllowlistPath', str(target / 'synthetic-allowlist.json'),
         '-Port', str(state['viewer_port'])), target / 'viewer-launch.private.log')
@@ -395,8 +410,12 @@ def viewer(target, open_browser=False):
 
 def stop(target):
     state = json.loads((target / 'restore.private.json').read_text(encoding='utf-8'))
-    with closing(sqlite3.connect(f'file:{(target / "runtime" / "medical_record_agent.sqlite3").as_posix()}?mode=ro', uri=True)) as c:
-        active = c.execute("SELECT COUNT(*) FROM agent_task WHERE status IN ('CREATED','ASR_RUNNING','LLM_RUNNING','GENERATING','PROCESSING')").fetchone()[0]
+    container = state['project'] + '-app-1'
+    running = run('docker', 'inspect', container, '--format', '{{.State.Running}}')
+    if running == 'true':
+        active = int(run('docker', 'exec', container, 'python', '-c',
+                         "import sqlite3; c=sqlite3.connect('file:/app/runtime/medical_record_agent.sqlite3?mode=ro',uri=True); "
+                         "print(c.execute(\"SELECT COUNT(*) FROM agent_task WHERE status IN ('CREATED','ASR_RUNNING','LLM_RUNNING','GENERATING','PROCESSING')\").fetchone()[0]); c.close()"))
         if active:
             raise ValueError('generation is active; stop refused, finish it in the page first')
     if (target / 'viewer-state' / 'state.private.json').exists():

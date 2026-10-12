@@ -66,9 +66,14 @@ $ready = $false
 for ($attempt = 0; $attempt -lt 30; $attempt++) {
     if ($proc.HasExited) { break }
     try {
-        $response = Invoke-WebRequest "http://127.0.0.1:$port/" -SkipHttpErrorCheck -TimeoutSec 1
+        $response = Invoke-WebRequest "http://127.0.0.1:$port/" -UseBasicParsing -TimeoutSec 1
         if ($response.StatusCode -eq 403 -and (Test-Path -LiteralPath (Join-Path $snapshotDir 'login.private.json'))) { $ready = $true; break }
-    } catch { }
+    } catch {
+        # Both Windows PowerShell 5.1 and PowerShell 7 throw on expected 403.
+        # A protected root plus a generated login marker means the viewer is up.
+        if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 403 -and
+            (Test-Path -LiteralPath (Join-Path $snapshotDir 'login.private.json'))) { $ready = $true; break }
+    }
     Start-Sleep -Milliseconds 300
 }
 if (-not $ready) {

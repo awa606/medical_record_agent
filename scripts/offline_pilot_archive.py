@@ -153,7 +153,7 @@ def assert_models_idle(project):
 
 def merge_runtime_environment(compose, values):
     """Replace existing fixed keys instead of creating duplicate YAML mappings."""
-    extra = '      MEDICAL_RECORD_AGENT_AUTH_COOKIE_NAME: mra_offline_pilot\n'
+    extra = '      MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME: mra_offline_pilot\n'
     for key, value in sorted(values.items()):
         pattern = re.compile(r'^      ' + re.escape(key) + r':.*$', re.MULTILINE)
         line = f'      {key}: {json.dumps(str(value))}'
@@ -269,11 +269,13 @@ def create(args):
     compose = compose.replace('./models/ollama:/root/.ollama/models', './models/ollama:/root/.ollama/models:ro')
     compose = compose.replace('./models/modelscope:/app/model_cache/modelscope', './models/modelscope:/app/model_cache/modelscope:ro')
     compose = compose.replace('./models/hf:/app/model_cache/hf', './models/hf:/app/model_cache/hf:ro')
+    compose = compose.replace('      - ./runtime:/app/runtime\n', '      - ./runtime:/app/runtime\n      - ./deployment.json:/app/static/deployment.json:ro\n')
     compose = compose.replace('    depends_on: [ollama]', '    pull_policy: never\n    depends_on: [ollama]')
     compose = compose.replace('    gpus: all', '    pull_policy: never\n    gpus: all')
     compose = compose.replace('    depends_on: [app]', '    pull_policy: never\n    depends_on: [app]')
     compose = merge_runtime_environment(compose, safe_env)
     (package / 'compose.offline.yml').write_text(compose, encoding='utf-8')
+    write_json(package / 'deployment.json', {'mode': 'test', 'label': '离线审核候选（使用测试版）', 'version': source_sha})
     for action in ('start', 'stop', 'open', 'help', 'viewer'):
         (package / f'{action}.cmd').write_text(
             f'@echo off\r\ncd /d "%~dp0"\r\npython -X utf8 scripts\\offline_pilot_archive.py {action} --target "%~dp0"\r\nif errorlevel 1 pause\r\n', encoding='ascii')
@@ -335,7 +337,12 @@ def restore(args):
     admin = next(u for u in credentials if u['role'] == 'admin')
     (target / '.env').write_text(f'MRA_PORT={port}\nMRA_BOOTSTRAP_PASSWORD={admin["password"]}\n', encoding='utf-8')
     for label in ('app', 'ollama'):
-        run('docker', 'image', 'load', '-i', str(target / 'images' / f'{label}.tar'))
+        try:
+            loaded = run('docker', 'image', 'inspect', m['images'][label]['name'], '--format', '{{.Id}}')
+        except RuntimeError:
+            loaded = None
+        if loaded != m['images'][label]['id']:
+            run('docker', 'image', 'load', '-i', str(target / 'images' / f'{label}.tar'))
         if run('docker', 'image', 'inspect', m['images'][label]['name'], '--format', '{{.Id}}') != m['images'][label]['id']:
             raise ValueError('loaded image ID mismatch')
     run(sys.executable, '-m', 'venv', str(target / 'viewer-venv'))

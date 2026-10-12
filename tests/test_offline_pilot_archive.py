@@ -112,7 +112,7 @@ class OfflineDeliveryTests(unittest.TestCase):
 
     def test_runtime_environment_replaces_fixed_values_without_duplicate_yaml(self):
         content = merge_runtime_environment(COMPOSE, {'FUNASR_DEVICE': 'cpu', 'LLM_TIMEOUT_SECONDS': '180', 'LLM_TEMPERATURE': '0'})
-        for key in ('FUNASR_DEVICE', 'LLM_TIMEOUT_SECONDS', 'LLM_TEMPERATURE', 'MEDICAL_RECORD_AGENT_AUTH_COOKIE_NAME'):
+        for key in ('FUNASR_DEVICE', 'LLM_TIMEOUT_SECONDS', 'LLM_TEMPERATURE', 'MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME'):
             self.assertEqual(content.count('      ' + key + ':'), 1)
         import yaml
         parsed = yaml.safe_load(content)

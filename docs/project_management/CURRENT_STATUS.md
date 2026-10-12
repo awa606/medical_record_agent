@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-12T01:52:31.224Z`
-- Source hash: `7243cd13c71d6d4235e69fd93bdfd2c65c10975dea9ae5a038386458924cf002`
+- Updated at: `2026-10-12T11:37:31.097767+08:00`
+- Source hash: `7867411d5386776b476b85b1686a0972f855b02fa14eaf633309d6705645794f`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@b6c8158132746ab3571e29eff6885cd597e4bbf3`
+- Repo: `codex/alpha51-demo-visual-e2e@656ccad621d4a3e5b31868e546dd455a7d4bb445`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798单活动运行、就绪刷新及数据/知识/帮助核验；温度候选拒绝，模型质量与最终发布未通过** — `VERIFY`
+**5.1 · 语义规则修复已验证；4B细粒度候选6/9拒绝，未部署，模型质量门未通过** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1：依据已保存B01/I01/P01首次响应定位漏提、字段归属和引用损坏；温度候选不晋级。质量门通过后完成最终三路径、实际显示、离线恢复，再进入5.3
-- Parallel waiting task: 无；模型质量未通过，5.3不启动
+- Single next task: 5.1：预注册I01跨字段事实覆盖的单变量契约；不自动补写，不追加失败重试。候选通过质量门后再进行边界、开发/冻结与最终验收
+- Parallel waiting task: 无；5.3未启动，硬件仍延期
 
 ## Manual Actions
 
-- 当前无需补数据或采购；最终质量候选通过后再集中配合物理麦克风和实际显示验收
+- 本轮不需要用户操作；质量门通过后再集中核验物理麦克风和实际显示
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

@@ -2478,6 +2478,7 @@ function renderTranscriptionFailurePanel() {
 }
 
 let detailReturnFocus = null;
+let detailDrawerVersion = 0;
 let helpReturnFocus = null;
 
 function openEmbeddedHelp() {
@@ -2555,6 +2556,7 @@ function openWorkspaceAuxiliary(kind) {
 
 
 function openDrawer(panelId, title) {
+  detailDrawerVersion += 1;
   closeWorkspaceAuxiliary();
   closeInputMethodMenu();
   closeDisplaySettingsMenu();
@@ -2576,6 +2578,7 @@ function closeDrawer() {
     return false;
   }
   $("drawerBackdrop").classList.remove("active");
+  detailDrawerVersion += 1;
   $("drawer").classList.remove("active");
   $("drawer").setAttribute("aria-hidden", "true");
   $("drawer").inert = true;
@@ -3104,20 +3107,23 @@ function renderFieldKnowledgeSearch(key) {
 }
 
 async function retrieveKnowledgeForField(key) {
+  const taskId = appState.currentTaskId;
   const title = FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1] || key;
   const value = appState.currentRecordFields?.[key]?.value || "";
   appState.fieldKnowledgeSearch[key] = { status: "loading", results: [], error: "" };
   openDetailDrawer(`查依据 · ${title}`, renderFieldKnowledgeSearch(key));
+  const drawerVersion = detailDrawerVersion;
   try {
     const payload = await api("/api/knowledge/retrieve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        task_id: appState.currentTaskId,
+        task_id: taskId,
         query: [title, value].filter(Boolean).join("："),
         related_fields: [key],
       }),
     });
+    if (taskId !== appState.currentTaskId) return;
     appState.fieldKnowledgeSearch[key] = {
       status: "ready",
       results: payload.results || [],
@@ -3125,13 +3131,16 @@ async function retrieveKnowledgeForField(key) {
       retrievalMode: payload.retrieval_mode || "",
     };
   } catch (error) {
+    if (taskId !== appState.currentTaskId) return;
     appState.fieldKnowledgeSearch[key] = {
       status: "failed",
       results: [],
       error: doctorSafeErrorMessage(error),
     };
   }
-  openDetailDrawer(`查依据 · ${title}`, renderFieldKnowledgeSearch(key));
+  if (drawerVersion === detailDrawerVersion && $("drawer").classList.contains("active")) {
+    openDetailDrawer(`查依据 · ${title}`, renderFieldKnowledgeSearch(key));
+  }
 }
 
 function diagnosisList(items) {

@@ -105,3 +105,43 @@ def test_help_before_login_and_return_to_workspace():
             browser.close()
     finally:
         server.close()
+
+
+def test_closed_knowledge_search_does_not_reopen_over_edit_and_help():
+    """A late response must respect the doctor's closed panel, without retries."""
+    server = RunningServer()
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            _login(page, server.base_url)
+            seed_partial(page, server)
+            page.route("**/api/knowledge/retrieve", lambda route: route.fulfill(
+                status=200, content_type="application/json", body='{"results": []}'))
+            # Hold the response at the page boundary to reproduce delayed retrieval.
+            page.evaluate("""() => {
+              const original = window.fetch;
+              window.fetch = async (...args) => {
+                const response = await original(...args);
+                if (String(args[0]).includes('/api/knowledge/retrieve')) {
+                  await new Promise(resolve => { window.releaseKnowledgeResponse = resolve; });
+                }
+                return response;
+              };
+            }""")
+            page.locator('[data-field="chief_complaint"] [data-knowledge-field]').click()
+            page.wait_for_function("Boolean(window.releaseKnowledgeResponse)")
+            page.click("#closeDrawerButton")
+            page.locator('[data-field="allergy_history"] [data-field-resolution="doctor_entry"]').click()
+            editor = page.locator('[data-record-field-input="allergy_history"]')
+            editor.fill("没有药物过敏")
+            page.click("#openEmbeddedHelpButton")
+            page.evaluate("window.releaseKnowledgeResponse()")
+            page.wait_for_function("window.__MRA_APP_STATE__.fieldKnowledgeSearch.chief_complaint.status === 'ready'")
+            expect(page.locator("#drawer")).to_have_attribute("aria-hidden", "true")
+            expect(page.locator("#helpDialog")).to_be_visible()
+            page.click("#closeEmbeddedHelpButton")
+            expect(editor).to_have_value("没有药物过敏")
+            browser.close()
+    finally:
+        server.close()

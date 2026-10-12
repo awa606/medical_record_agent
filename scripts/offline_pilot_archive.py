@@ -45,6 +45,15 @@ def write_json(path, obj):
     Path(path).write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding='utf-8')
 
 
+def run_launcher(command, log):
+    # Windows background children can retain inherited pipe handles after the
+    # PowerShell parent exits. A file sink avoids communicate() waiting forever.
+    with Path(log).open('w', encoding='utf-8') as stream:
+        result = subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT)
+    if result.returncode:
+        raise RuntimeError('viewer launcher failed; inspect ' + str(log))
+
+
 def file_inventory(root):
     return {p.relative_to(root).as_posix(): {'sha256': sha(p), 'bytes': p.stat().st_size}
             for p in sorted(root.rglob('*')) if p.is_file()
@@ -277,8 +286,9 @@ def create(args):
     (package / 'compose.offline.yml').write_text(compose, encoding='utf-8')
     write_json(package / 'deployment.json', {'mode': 'test', 'label': '离线审核候选（使用测试版）', 'version': source_sha})
     for action in ('start', 'stop', 'open', 'help', 'viewer'):
+        option = ' --open-browser' if action == 'viewer' else ''
         (package / f'{action}.cmd').write_text(
-            f'@echo off\r\ncd /d "%~dp0"\r\npython -X utf8 scripts\\offline_pilot_archive.py {action} --target "%~dp0"\r\nif errorlevel 1 pause\r\n', encoding='ascii')
+            f'@echo off\r\ncd /d "%~dp0"\r\npython -X utf8 scripts\\offline_pilot_archive.py {action} --target "%~dp0"{option}\r\nif errorlevel 1 pause\r\n', encoding='ascii')
     (package / 'restore.cmd').write_text('@echo off\r\ncd /d "%~dp0"\r\npython -X utf8 scripts\\offline_pilot_archive.py restore --package "%~dp0" --target "%~dp0..\\MediListen_restore_%RANDOM%"\r\npause\r\n', encoding='ascii')
     (package / '使用与恢复说明.md').write_text(RUNBOOK, encoding='utf-8')
     images = {}
@@ -368,15 +378,19 @@ def restore(args):
     raise ValueError('readiness timed out; keep failed replica and inspect logs')
 
 
-def viewer(target):
+def viewer(target, open_browser=False):
     state = json.loads((target / 'restore.private.json').read_text(encoding='utf-8'))
     py = target / 'viewer-venv' / 'Scripts' / 'python.exe'
-    run('powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(target / 'scripts' / 'Start-MRADataBrowser.ps1'),
+    run_launcher(('powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(target / 'scripts' / 'Start-MRADataBrowser.ps1'),
         '-Action', 'Start', '-SourceDb', str(target / 'runtime' / 'medical_record_agent.sqlite3'),
         '-SourceLabel', f'离线恢复 {state["app_sha"][:8]}', '-PythonPath', str(py),
         '-StateDirectory', str(target / 'viewer-state'), '-AllowlistPath', str(target / 'synthetic-allowlist.json'),
-        '-Port', str(state['viewer_port']))
+        '-Port', str(state['viewer_port'])), target / 'viewer-launch.private.log')
     print(f'数据与知识查看器：http://127.0.0.1:{state["viewer_port"]}/（从本包授权入口打开）')
+    if open_browser:
+        saved = json.loads((target / 'viewer-state' / 'state.private.json').read_text(encoding='utf-8-sig'))
+        run(sys.executable, '-X', 'utf8', str(target / 'scripts' / 'data_browser.py'), 'open',
+            '--snapshot-dir', saved['snapshot_dir'])
 
 
 def stop(target):
@@ -386,8 +400,8 @@ def stop(target):
         if active:
             raise ValueError('generation is active; stop refused, finish it in the page first')
     if (target / 'viewer-state' / 'state.private.json').exists():
-        run('powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(target / 'scripts' / 'Start-MRADataBrowser.ps1'),
-            '-Action', 'Stop', '-PythonPath', str(target / 'viewer-venv' / 'Scripts' / 'python.exe'), '-StateDirectory', str(target / 'viewer-state'))
+        run_launcher(('powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(target / 'scripts' / 'Start-MRADataBrowser.ps1'),
+            '-Action', 'Stop', '-PythonPath', str(target / 'viewer-venv' / 'Scripts' / 'python.exe'), '-StateDirectory', str(target / 'viewer-state')), target / 'viewer-stop.private.log')
     run(*compose_command(target, state), 'stop', cwd=target)
     print('本恢复副本已停止，数据及镜像保留。')
 
@@ -442,8 +456,11 @@ def main():
     r.add_argument('--timeout', type=int, default=600)
     v = sub.add_parser('verify')
     v.add_argument('--package', type=Path, required=True)
-    for name in ('start', 'stop', 'open', 'help', 'viewer'):
+    for name in ('start', 'stop', 'open', 'help'):
         sub.add_parser(name).add_argument('--target', type=Path, required=True)
+    v = sub.add_parser('viewer')
+    v.add_argument('--target', type=Path, required=True)
+    v.add_argument('--open-browser', action='store_true')
     a = p.parse_args()
     if a.action == 'create-current':
         create(a)
@@ -452,10 +469,20 @@ def main():
     elif a.action == 'verify':
         verify(a.package)
         print('完整校验通过')
-    elif a.action in ('start', 'stop', 'viewer'):
+    elif a.action == 'viewer':
+        viewer(a.target.resolve(), a.open_browser)
+    elif a.action in ('start', 'stop'):
         globals()[a.action](a.target.resolve())
     else:
         import webbrowser
+        if a.action == 'help':
+            try:
+                saved = json.loads((a.target / 'restore.private.json').read_text(encoding='utf-8'))
+                with urlopen(f'http://127.0.0.1:{saved["port"]}/health', timeout=2):
+                    pass
+            except (OSError, ValueError):
+                webbrowser.open((a.target.resolve() / 'handbook' / 'manual.html').as_uri())
+                return
         state = json.loads((a.target / 'restore.private.json').read_text(encoding='utf-8'))
         page = '/static/help/index.html' if a.action == 'help' else '/static/doctor.html'
         webbrowser.open(f'http://127.0.0.1:{state["port"]}{page}')

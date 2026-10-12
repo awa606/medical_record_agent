@@ -11,7 +11,7 @@ from app.services.auth import verify_password
 from scripts.offline_pilot_archive import (TABLES, fingerprints, file_inventory, verify,
                                            sanitize_database, restore_credentials,
                                            assert_models_idle, choose_port)
-from scripts.offline_pilot_archive import merge_runtime_environment
+from scripts.offline_pilot_archive import merge_runtime_environment, run_launcher
 from scripts.alpha51_release_archive import COMPOSE
 
 
@@ -117,6 +117,15 @@ class OfflineDeliveryTests(unittest.TestCase):
         import yaml
         parsed = yaml.safe_load(content)
         self.assertEqual(parsed['services']['app']['environment']['FUNASR_DEVICE'], 'cpu')
+
+    def test_background_launcher_uses_files_instead_of_inherited_capture_pipes(self):
+        from types import SimpleNamespace
+        with patch('scripts.offline_pilot_archive.subprocess.run', return_value=SimpleNamespace(returncode=0)) as launch:
+            run_launcher(('powershell', '-File', 'viewer.ps1'), self.root / 'launcher.log')
+        kwargs = launch.call_args.kwargs
+        self.assertNotIn('capture_output', kwargs)
+        self.assertEqual(kwargs['stderr'], __import__('subprocess').STDOUT)
+        self.assertTrue(kwargs['stdout'].closed)
 
 
 if __name__ == '__main__':

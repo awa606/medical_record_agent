@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-12T12:02:15+08:00`
-- Source hash: `63dd7f94c0f419a16075ef8b340b92f7994bb734f024f8f2b1397571d3f18658`
+- Updated at: `2026-10-12T16:55:36.945139+08:00`
+- Source hash: `ae59f076eee1a924627d43fcadbb3646e1418356fcc33236a1418a0caa10c0f3`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@13cf3f4c0195f73adfd8f2d810e2b594a7022cdc`
+- Repo: `codex/alpha51-demo-visual-e2e@8b09f3f49b2218d4a7d848eb2acabf68c1be1264`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **Software Lane baseline 2026-10-07 has elapsed; software release date TBD pending model and final acceptance; Full M4 TBD / HARDWARE DEPENDENT**
+- Forecast Alpha Exit: **原软件预测2026-10-07已超期；实际软件放行待剩余验收，完整M4仍受硬件延期影响**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 语义规则与CI已通过；4B细粒度候选6/9拒绝，未部署，模型质量门未通过** — `VERIFY`
+**5.1 · 完整离线候选恢复核心通过；音频刷新、现场录音及显示待验收** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1：预注册I01跨字段事实覆盖的单变量契约；不自动补写，不追加失败重试。候选通过质量门后再进行边界、开发/冻结与最终验收
-- Parallel waiting task: 无；5.3未启动，硬件仍延期
+- Single next task: 5.1：定位音频自动刷新时会话与病历版本恢复顺序；修复后补最终麦克风、实际显示及完整流程，未通过不启动5.3
+- Parallel waiting task: 物理麦克风及100%/125%/150%缩放待用户稍后配合；硬件继续延期
 
 ## Manual Actions
 
-- 本轮不需要用户操作；质量门通过后再集中核验物理麦克风和实际显示
+- 当前无需录音；候选刷新缺陷修复后集中配合现场验收
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

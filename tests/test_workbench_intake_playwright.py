@@ -15,9 +15,13 @@ def test_check_in_retry_preserves_one_registration_and_unknown_identity():
             page.route("**/api/encounters/*/check-in", lambda route: route.fulfill(
                 status=503, content_type="application/json", body=json.dumps({"detail":"test check-in outage"})), times=1)
             page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-NEGATION")
-            page.click("#createLocalEncounterButton")
+            with page.expect_response(lambda response:
+                                      "/api/encounters?" in response.url
+                                      and response.request.method == "GET", timeout=30000) as refreshed:
+                page.click("#createLocalEncounterButton")
+            assert refreshed.value.status == 200
             row = page.locator("#dashboardEncounterList article").filter(has_text="李示例")
-            expect(row).to_contain_text("已登记")
+            expect(row).to_contain_text("已登记", timeout=15000)
             expect(page.locator("#workbenchSelectionNotice")).to_contain_text("登记已保存")
             expect(page.locator("#localSyntheticPatient")).to_be_disabled()
             assert page.request.get(server.base_url + "/api/encounters?mine=false").json()["encounters"].__len__() == 1

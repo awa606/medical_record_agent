@@ -28,6 +28,13 @@ function Get-OwnedProcess($saved) {
         Write-Warning '旧查看器进程编号已被其他程序使用，已保留该程序。'
         return $null
     }
+    # Python's Windows venv redirector can be a parent of the actual server.
+    # Stop the verified server child so its launcher exits as well; never stop
+    # an unrelated child or a process that only reuses the saved PID.
+    $serverChild = Get-CimInstance Win32_Process -Filter "ParentProcessId = $($saved.pid)" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -and $_.CommandLine.Contains($scriptPath) -and $_.CommandLine.Contains($saved.run_id) } |
+        Select-Object -First 1
+    if ($serverChild) { return $serverChild }
     return $proc
 }
 

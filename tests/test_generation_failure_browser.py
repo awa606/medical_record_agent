@@ -25,7 +25,8 @@ def test_failed_generation_preserves_input_and_exposes_explicit_recovery():
                 update_task(task, error_message="LLM_OUTPUT_CONTRADICTION: 模型输出矛盾，未采纳。",
                             result_json=json.dumps({"conversation_text": source, "fields": None}))
             page.reload()
-            page.get_by_role("button", name="继续处理", exact=True).first.click()
+            # Refresh now restores the selected encounter directly.
+            expect(page.locator("#patientName")).to_have_text("张示例")
             expect(page.locator("#nextActionPanel")).to_contain_text("病历生成中断")
             expect(page.locator("#nextActionPanel")).to_contain_text("模型输出矛盾")
             expect(page.get_by_role("button", name="重新生成病历", exact=True)).to_be_enabled()

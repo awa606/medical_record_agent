@@ -189,9 +189,10 @@ def test_doctor_live_clinical_reference_summary_is_bounded_and_detailed() -> Non
     assert ".slice(0, 3)" in script
     assert "data-evidence-segment-id" in script
     assert "实时草稿为临时内容" in script
-    assert "data-live-clinical-action=\"mark-asked\"" in script
-    assert "data-live-clinical-action=\"add-question\"" in script
-    assert "data-live-clinical-action=\"adopt-candidate\"" in script
+    assert "data-live-clinical-action=\"mark-asked\"" not in script
+    assert "data-live-clinical-action=\"add-question\"" not in script
+    assert "data-live-clinical-action=\"adopt-candidate\"" not in script
+    assert "此处仅供查看，不会写入病历" in script
     assert "live-clinical-actions" in stylesheet
 
 

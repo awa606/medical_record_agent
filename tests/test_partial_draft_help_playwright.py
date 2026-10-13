@@ -34,7 +34,7 @@ def seed_partial(page, server):
         result = orchestrator.run_existing_text_task(task_id, source)
         assert result["status"] == "WAITING_DOCTOR_REVIEW"
     page.reload()
-    page.get_by_role("button", name="继续处理", exact=True).first.click()
+    expect(page.locator("#patientName")).to_have_text("张示例")
     expect(page.locator("#recordFields")).to_contain_text("发热两天")
     return result["task_id"]
 

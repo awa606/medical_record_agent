@@ -20,6 +20,10 @@ const appState = {
   currentInputText: "",
   transcriptRestoreStatus: "idle",
   encounterRestoreVersion: 0,
+  encounterReadController: null,
+  encounterRestoreError: "",
+  encounterRestoreTarget: null,
+  taskReadSequence: 0,
   productView: "workbench",
   adminUsers: [],
   adminRuntimeStatus: null,
@@ -567,6 +571,53 @@ async function api(path, options = {}) {
   return data;
 }
 
+// History reads are bounded independently of model generation and writes.
+async function readApi(path, { signal = appState.encounterReadController?.signal } = {}) {
+  const controller = new AbortController();
+  let timer;
+  let onAbort;
+  const deadline = new Promise((_, reject) => {
+    onAbort = () => { controller.abort(); reject(new Error("已取消上一就诊的读取。")); };
+    if (signal?.aborted) onAbort();
+    else signal?.addEventListener("abort", onAbort, { once: true });
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error("读取超过15秒，请重试加载；不会重新生成病历。"));
+    }, 15000);
+  });
+  try {
+    return await Promise.race([api(path, { signal: controller.signal }), deadline]);
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", onAbort);
+  }
+}
+
+function captureReadContext(taskId = appState.currentTaskId) {
+  return {
+    version: appState.encounterRestoreVersion,
+    ownerId: appState.authUser?.id,
+    encounterId: selectedEncounterId(),
+    taskId,
+    revisionId: appState.currentTask?.current_record_revision_id,
+  };
+}
+
+function isCurrentRead(context) {
+  return context.version === appState.encounterRestoreVersion
+    && context.ownerId === appState.authUser?.id
+    && String(context.encounterId || "") === String(selectedEncounterId() || "")
+    && String(context.taskId || "") === String(appState.currentTaskId || "")
+    && context.revisionId === appState.currentTask?.current_record_revision_id;
+}
+
+function beginEncounterRead() {
+  appState.encounterReadController?.abort();
+  appState.encounterReadController = new AbortController();
+  appState.encounterRestoreError = "";
+  return ++appState.encounterRestoreVersion;
+}
+
 async function refreshAuth() {
   try {
     const response = await fetch("/api/auth/me");
@@ -635,6 +686,7 @@ async function submitLogin(event) {
     refreshEncounterWorklist().catch(reportActionError);
     refreshLlmStatus();
     showToast("登录成功");
+    await restoreAsrSessionFromUrl();
   } catch (error) {
     appState.authUser = null;
     appState.authStatus = "required";
@@ -647,6 +699,8 @@ async function logout() {
   try {
     await fetch("/api/auth/logout", { method: "POST" });
   } finally {
+    beginEncounterRead();
+    resetTaskState();
     appState.authUser = null;
     appState.authStatus = "required";
     appState.authMessage = "已退出登录。";
@@ -654,23 +708,28 @@ async function logout() {
   }
 }
 
-async function refreshExportReadiness() {
+async function refreshExportReadiness({ raiseOnError = false } = {}) {
   if (!appState.currentTaskId) return null;
+  const context = captureReadContext();
+  const revisionId = appState.currentTask?.current_record_revision_id;
   try {
-    const readiness = await api(`/api/tasks/${appState.currentTaskId}/export-readiness`);
+    const readiness = await readApi(`/api/tasks/${context.taskId}/export-readiness`);
+    if (!isCurrentRead(context) || revisionId !== appState.currentTask?.current_record_revision_id) return null;
     appState.currentExportReadiness = readiness;
     if (readiness?.exports) {
       appState.currentExports = readiness.exports;
     }
     return readiness;
   } catch (error) {
+    if (!isCurrentRead(context) || revisionId !== appState.currentTask?.current_record_revision_id) return null;
     appState.currentExportReadiness = null;
+    if (raiseOnError) throw error;
     return null;
   }
 }
 
 async function refreshKnowledgeEvidence(taskId = appState.currentTaskId) {
-  const restoreVersion = appState.encounterRestoreVersion;
+  const context = captureReadContext(taskId);
   if (!taskId) {
     appState.currentKnowledgeEvidence = null;
     appState.knowledgeEvidenceStatus = "idle";
@@ -680,15 +739,15 @@ async function refreshKnowledgeEvidence(taskId = appState.currentTaskId) {
   appState.knowledgeEvidenceStatus = "loading";
   appState.knowledgeEvidenceError = "";
   try {
-    const evidence = await api(`/api/tasks/${encodeURIComponent(taskId)}/evidence`);
-    if (restoreVersion !== appState.encounterRestoreVersion) return null;
+    const evidence = await readApi(`/api/tasks/${encodeURIComponent(taskId)}/evidence`);
+    if (!isCurrentRead(context)) return null;
     appState.currentKnowledgeEvidence = evidence;
     appState.knowledgeEvidenceStatus = "ready";
     renderModelAndKnowledgeStatus();
     if ($("assistPanels")) renderAssist();
     return evidence;
   } catch (error) {
-    if (restoreVersion !== appState.encounterRestoreVersion) return null;
+    if (!isCurrentRead(context)) return null;
     appState.currentKnowledgeEvidence = null;
     appState.knowledgeEvidenceStatus = "failed";
     appState.knowledgeEvidenceError = error?.message || "相关知识参考加载失败";
@@ -1013,8 +1072,8 @@ function requireEncounterBeforeInput(method = "") {
   return false;
 }
 
-async function restoreEncounter(encounterId, { nextInputMethod = "" } = {}) {
-  if (!encounterId) return;
+async function restoreEncounter(encounterId, { nextInputMethod = "", sessionId = "" } = {}) {
+  if (!encounterId || !appState.authUser) return;
   // Reopening the current recovered recording must not reset its queue.
   if (String(encounterId) === String(selectedEncounterId()) && appState.browserRecordingSessionId
       && ["recording", "paused", "recorded"].includes(appState.browserRecordingStatus)) {
@@ -1022,21 +1081,34 @@ async function restoreEncounter(encounterId, { nextInputMethod = "" } = {}) {
     return;
   }
   if (encounterSwitchBlocked()) return;
-  const restoreVersion = ++appState.encounterRestoreVersion;
+  const restoreVersion = beginEncounterRead();
+  const ownerId = appState.authUser.id;
+  const stillCurrent = () => restoreVersion === appState.encounterRestoreVersion && ownerId === appState.authUser?.id;
+  appState.encounterRestoreTarget = { encounterId, sessionId };
   setBusy(true, "正在恢复就诊草稿...");
   try {
-    const detail = await api(`/api/encounters/${encodeURIComponent(encounterId)}`);
-    if (restoreVersion !== appState.encounterRestoreVersion) return;
+    const detail = await readApi(`/api/encounters/${encodeURIComponent(encounterId)}`);
+    if (!stillCurrent()) return;
     applyEncounterDetail(detail);
     if (appState.currentTaskId) {
-      await refreshTask(appState.currentTaskId);
-      if (restoreVersion !== appState.encounterRestoreVersion) return;
-      await refreshExportReadiness();
+      await refreshTask(appState.currentTaskId, null, { refreshEncounter: false });
+      if (!stillCurrent()) return;
     }
-    if (restoreVersion !== appState.encounterRestoreVersion) return;
-    await refreshEncounterWorklist();
+    // Render persisted record first. Auxiliary knowledge/trace reads never hold it.
     closeDrawer();
     setProductView("encounter");
+    updateSessionUrl(sessionId);
+    if (appState.currentAudioId) applyUploadedAudioMetadata({
+      media_url: `/api/audio/${encodeURIComponent(appState.currentAudioId)}/media`,
+      duration_seconds: appState.currentAsrResult?.duration,
+    });
+    renderAll();
+    if (sessionId) await restoreAsrSession(sessionId, captureReadContext());
+    if (!stillCurrent()) return;
+    const revisionId = appState.currentTask?.current_record_revision_id || appState.currentTask?.result_json?.record_revision?.id;
+    if (appState.currentTaskId && revisionId) await refreshExportReadiness({ raiseOnError: true });
+    if (!stillCurrent()) return;
+    refreshEncounterWorklist().catch(() => {});
     appState.pendingInputMethodAfterEncounterSelection = "";
     appState.encounterSelectionNotice = "";
     showToast("已恢复就诊草稿");
@@ -1048,11 +1120,12 @@ async function restoreEncounter(encounterId, { nextInputMethod = "" } = {}) {
       openTextImport();
     }
   } catch (error) {
-    if (restoreVersion !== appState.encounterRestoreVersion) return;
-    appState.transcriptRestoreStatus = "error";
+    if (!stillCurrent()) return;
+    if (!appState.currentInputText && !appState.currentAsrResult) appState.transcriptRestoreStatus = "error";
+    appState.encounterRestoreError = error?.message || "历史就诊加载失败。";
     reportActionError(error);
   } finally {
-    if (restoreVersion === appState.encounterRestoreVersion) {
+    if (stillCurrent()) {
       setBusy(false);
       renderAll();
     }
@@ -1068,8 +1141,9 @@ async function performEncounterAction(encounterId, action) {
       method: "POST",
     });
     if (action === "start") {
-      appState.encounterRestoreVersion += 1;
+      beginEncounterRead();
       applyEncounterDetail(detail);
+      updateSessionUrl("");
       closeDrawer();
       setProductView("encounter");
     } else if (appState.currentEncounter?.id === detail.id) {
@@ -1434,7 +1508,7 @@ function selectKnowledgeTab(name, focus = false) {
     if (selected && focus) button.focus();
   });
 }
-function knowledgeSourceLink(url, label = "打开原始资料") {
+function knowledgeSourceLink(url, label = "打开原始资料（需联网）") {
   const safe = safeKnowledgeUrl(url);
   return safe ? '<a href="' + escapeHtml(safe) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(label) + ' ↗</a>' : "未登记可用来源链接";
 }
@@ -1516,10 +1590,10 @@ function openKnowledgeDocument(doc, edit = false) {
     : '<h3>' + escapeHtml(doc.title) + '</h3><p class="knowledge-note">' + escapeHtml(doc.version) + ' · ' + (knowledgeDocumentEnabled(doc) ? "当前启用" : "停用／历史版本") + '</p>' +
       '<dl class="knowledge-metadata"><dt>发布机构</dt><dd>' + escapeHtml(doc.publisher) + '</dd><dt>类型</dt><dd>' + escapeHtml(knowledgeTypeLabel(doc.document_type)) + '</dd>' +
       '<dt>适用范围</dt><dd>' + escapeHtml(doc.disease_scope || "未登记，请核对原文") + '</dd><dt>使用 / 索引范围</dt><dd>' + escapeHtml(doc.usage_scope || "未登记") + '</dd>' +
-      '<dt>页数 / 片段数</dt><dd>' + doc.page_count + ' / ' + doc.chunk_count + '（不表示原始文档全部内容均已索引）</dd></dl><p>' + knowledgeSourceLink(doc.source_url) + '</p>' +
+      '<dt>已索引页数 / 片段数</dt><dd>' + doc.page_count + ' / ' + doc.chunk_count + '（索引页数不是原始文档总页数）</dd></dl><p>' + knowledgeSourceLink(doc.source_url) + '</p>' +
       '<details><summary>来源与索引技术详情</summary><dl class="knowledge-metadata"><dt>来源 ID</dt><dd>' + escapeHtml(doc.source_id) + '</dd><dt>文档 ID</dt><dd>' + escapeHtml(doc.document_id) +
       '</dd><dt>内容校验值（SHA256）</dt><dd>' + escapeHtml(doc.content_sha256) + '</dd><dt>提取方式</dt><dd>' + escapeHtml(technicalLabel(doc.extraction_method)) + '</dd><dt>语义向量索引数量</dt><dd>' + (doc.embedding_count || 0) + '</dd></dl></details>' +
-      '<p class="knowledge-note">原始资料通过来源链接打开；索引正文可在检索验证中查看命中片段。本页不提供未经核验的全文。</p>';
+      '<p class="knowledge-note">已索引片段可离线查询；官网原文链接需要联网。本页不提供未经核验的全文。</p>';
   dialog.showModal();
 }
 async function saveKnowledgeMetadata(event) {
@@ -2172,6 +2246,11 @@ function nextActionState() {
   const risk = riskSummary();
   const displayState = doctorDisplayState();
 
+  if (appState.encounterRestoreError) {
+    return { tone: "warning", title: "历史就诊未完整加载", detail: appState.encounterRestoreError,
+      actions: singlePrimaryAction({ key: "retry-history", label: "重试加载", disabled: appState.busy }) };
+  }
+
   if (appState.fixedDemoStatus === "ready_to_finalize" && appState.fixedDemoSessionId && !appState.currentTaskId) {
     return {
       tone: "ready",
@@ -2396,7 +2475,7 @@ function nextActionState() {
 
 function renderNextActionPanel() {
   const state = nextActionState();
-  const exceptional = roleReviewRequired() || doctorDisplayState().key === "failed" || appState.lastActionError;
+  const exceptional = appState.encounterRestoreError || roleReviewRequired() || doctorDisplayState().key === "failed" || appState.lastActionError;
   const inlineRecording = !$("recordingPanel")?.hidden;
   $("nextActionPanel").hidden = !exceptional && (Boolean(appState.currentRecordFields) || inlineRecording);
   $("showTranscriptButton").textContent = roleReviewRequired() ? "确认说话人身份" : "转写与录音";
@@ -3091,7 +3170,7 @@ function renderKnowledgeResultDetails(result = {}) {
     <div class="detail-kv"><span>文档 / 片段</span><strong>${escapeHtml(result.document_id || "-")} / ${escapeHtml(result.chunk_id || "-")}</strong></div>
     <div class="detail-kv"><span>内容校验值（SHA256）</span><strong class="hash-value">${escapeHtml(result.content_sha256 || "-")}</strong></div>
     <div class="detail-text">${escapeHtml(result.excerpt || result.match_reason || "暂无摘要。")}</div>
-    ${sourceUrl ? `<a class="knowledge-source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">打开官方来源</a>` : ""}
+    ${sourceUrl ? `<a class="knowledge-source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">打开官方来源（需联网）</a>` : ""}
   `;
 }
 
@@ -3326,7 +3405,7 @@ function renderReferenceSources(references = []) {
       <p class="reference-meta">${escapeHtml(referenceStatusLabel(r))}</p>
       ${r.evidence_scope ? referenceText(`适用范围：${r.evidence_scope}`) : ''}
       ${r.excerpt || r.summary || r.match_reason ? referenceText(r.excerpt || r.summary || r.match_reason) : ''}
-      ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">打开来源</a>` : '<p class="reference-meta">未提供来源链接</p>'}
+      ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">打开来源（需联网）</a>` : '<p class="reference-meta">未提供来源链接</p>'}
       ${ids.some(([,v]) => v) ? `<details class="reference-metadata"><summary>来源详情</summary><dl>${ids.filter(([,v]) => v).map(([k,v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl></details>` : ''}
     </article>`;
   }).join('');
@@ -4407,6 +4486,8 @@ function releaseAudioPlayerSource() {
 
 function updateSessionUrl(sessionId = "") {
   const url = new URL(window.location.href);
+  if (selectedEncounterId()) url.searchParams.set("encounter_id", selectedEncounterId());
+  else url.searchParams.delete("encounter_id");
   if (sessionId) {
     url.searchParams.set("session_id", sessionId);
     if (selectedEncounterId() && appState.authUser?.id) {
@@ -4444,19 +4525,33 @@ function applyUploadedAudioMetadata(uploaded = {}) {
 }
 
 async function restoreAsrSessionFromUrl() {
-  const sessionId = new URLSearchParams(window.location.search).get("session_id");
+  if (!appState.authUser) return;
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get("session_id") || "";
+  let encounterId = params.get("encounter_id");
+  if (!encounterId && sessionId) {
+    let context = null;
+    try { context = JSON.parse(sessionStorage.getItem(`mra-session-encounter:${sessionId}`)); } catch (_) {}
+    if (context?.ownerId === appState.authUser.id) encounterId = context.encounterId;
+  }
+  if (encounterId && (sessionId || productViewFromHash() === "encounter")) {
+    // The endpoint verifies access; URL/storage hints never authorize a record.
+    await restoreEncounter(encounterId, { sessionId });
+    return;
+  }
   if (!sessionId) return;
-  try {
-    const session = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}`);
-    if (!selectedEncounterId()) {
-      let context = null;
-      try { context = JSON.parse(sessionStorage.getItem(`mra-session-encounter:${sessionId}`)); } catch (_) {}
-      if (context?.ownerId === appState.authUser?.id && context.encounterId) {
-        // The local hint is never authorization: the existing endpoint checks ownership.
-        appState.currentEncounter = await api(`/api/encounters/${encodeURIComponent(context.encounterId)}`);
-        appState.productView = "encounter";
-      }
-    }
+  appState.encounterSelectionNotice = "无法确定录音所属就诊，请从工作台重新打开该就诊。";
+  appState.productView = "workbench";
+  renderAll();
+}
+
+async function restoreAsrSession(sessionId, context) {
+  const current = () => isCurrentRead(context);
+  const session = await readApi(`/api/asr/sessions/${encodeURIComponent(sessionId)}`);
+  if (!current()) return;
+  if (appState.currentTaskId && (!appState.currentAudioId || String(appState.currentAudioId) !== String(session.audio_id))) {
+    throw new Error("录音与当前病历不对应。已保留病历，请从工作台重新打开该就诊。");
+  }
     appState.currentAsrSessionId = session.session_id;
     appState.currentAudioId = session.audio_id;
     appState.uploadedFilename = session.filename || "已恢复音频";
@@ -4468,28 +4563,34 @@ async function restoreAsrSessionFromUrl() {
       audio.load();
     }
     if (["stream_ready", "reviewed"].includes(session.status)) {
-      const result = await api(`/api/asr/sessions/${encodeURIComponent(sessionId)}/result`);
-      appState.currentAsrResult = result;
-      appState.liveTranscriptSegments = result.segments || [];
+      const result = await readApi(`/api/asr/sessions/${encodeURIComponent(sessionId)}/result`);
+      if (!current()) return;
+      // A saved task carries the evidence bound to its revision, including roles.
+      if (!appState.currentTaskId) {
+        appState.currentAsrResult = result;
+        appState.liveTranscriptSegments = result.segments || [];
+      }
       appState.audioDurationSeconds = Number(result.duration || 0);
       appState.asrAudioDurationSeconds = Number(result.duration || 0);
       appState.asrProcessedAudioSeconds = Number(result.duration || 0);
       appState.asrStreamProgress = 1;
       appState.asrProgressKind = "actual";
       appState.asrPhase = "completed";
-      appState.taskStatus = "TRANSCRIBED";
-    } else if (session.status === "transcribing") {
+      if (!appState.currentTaskId) appState.taskStatus = "TRANSCRIBED";
+    } else if (!appState.currentTaskId && session.status === "transcribing") {
       appState.taskStatus = "TRANSCRIBING";
       appState.asrPhase = "model_loading";
       listenForAsrEvents(session.events_url || `/api/asr/sessions/${sessionId}/events`);
-    } else if (["created", "recording", "finalizing", "recorded"].includes(session.status)) {
+    } else if (!appState.currentTaskId && ["created", "recording", "finalizing", "recorded"].includes(session.status)) {
       const localRows = await listBrowserRecordingQueueEntries(session.session_id).catch(() => []);
+      if (!current()) return;
       if (session.status === "created" && !localRows.length) {
         renderAll();
         return;
       }
       appState.browserRecordingSessionId = session.session_id;
       const chunkStatus = await reconcileBrowserRecordingQueue(session.session_id);
+      if (!current()) return;
       appState.browserRecordingStatus = chunkStatus?.status === "recorded" ? "recorded" : "paused";
       appState.browserRecordingChunkIndex = Number(chunkStatus?.next_chunk_index || 0);
       appState.browserRecordingRecordedChunks = Math.max(
@@ -4515,10 +4616,6 @@ async function restoreAsrSessionFromUrl() {
       appState.taskStatus = "CREATED";
     }
     renderAll();
-  } catch (error) {
-    appState.asrLastError = `会话恢复失败：${error?.message || error}`;
-    renderAll();
-  }
 }
 
 function seekConsultationAudio(seconds, { autoplay = false } = {}) {
@@ -4995,7 +5092,7 @@ function renderAgentTraceSummary({ open = false } = {}) {
 }
 
 async function refreshAgentTrace(taskId) {
-  const restoreVersion = appState.encounterRestoreVersion;
+  const context = captureReadContext(taskId);
   if (!taskId) {
     appState.currentAgentTrace = buildLocalAgentTrace();
     return;
@@ -5004,11 +5101,11 @@ async function refreshAgentTrace(taskId) {
     ? `?audio_id=${encodeURIComponent(appState.currentAudioId)}`
     : "";
   try {
-    const trace = await api(`/api/tasks/${taskId}/trace${suffix}`);
-    if (restoreVersion !== appState.encounterRestoreVersion) return;
+    const trace = await readApi(`/api/tasks/${taskId}/trace${suffix}`);
+    if (!isCurrentRead(context)) return;
     appState.currentAgentTrace = trace;
   } catch (_error) {
-    if (restoreVersion !== appState.encounterRestoreVersion) return;
+    if (!isCurrentRead(context)) return;
     appState.currentAgentTrace = buildLocalAgentTrace();
   }
 }
@@ -5235,14 +5332,9 @@ function renderLiveClinicalDetailContent() {
     ${listRows(draft.next_questions || [], "建议继续询问", (item) => `<div class="assist-evidence-quote">${escapeHtml(item.question || "")}</div>`)}
     ${detailSection("医生操作", `
       <div class="live-clinical-actions">
-        <button type="button" data-live-clinical-action="mark-asked">标记已询问</button>
-        <button type="button" data-live-clinical-action="add-question">加入待问</button>
-        <button type="button" data-live-clinical-action="adopt-candidate">采纳为候选</button>
-        <button type="button" data-live-clinical-action="defer">暂不采纳</button>
-        <button type="button" data-live-clinical-action="ignore">忽略提示</button>
         <button type="button" data-live-clinical-action="close">关闭详情</button>
       </div>
-      <div class="summary-note">采纳仅写入医生可编辑草稿或候选状态，不形成已审核诊断或正式医嘱。</div>
+      <div class="summary-note">此处仅供查看，不会写入病历。需要修改时请使用病历编辑器，保存后仍须医生审核。</div>
     `)}
   `;
 }
@@ -6026,6 +6118,8 @@ function resetRecordPreview() {
 }
 
 function resetTaskState({ keepAsr = false, keepEncounter = false } = {}) {
+  appState.eventSource?.close();
+  appState.eventSource = null;
   appState.transcriptRestoreStatus = "idle";
   const preservedEncounter = keepEncounter ? appState.currentEncounter : null;
   appState.currentTaskId = null;
@@ -6092,15 +6186,15 @@ function resetTaskState({ keepAsr = false, keepEncounter = false } = {}) {
   }
 }
 
-async function refreshTask(taskId, taskFromEvent = null) {
+async function refreshTask(taskId, taskFromEvent = null, { refreshEncounter = true } = {}) {
   const previousApprovalRevisionKey = appState.approvalRevisionId;
-  const restoreVersion = appState.encounterRestoreVersion;
-  const task = taskFromEvent || await api(`/api/tasks/${taskId}`);
-  const steps = await api(`/api/tasks/${taskId}/steps`);
-  if (restoreVersion !== appState.encounterRestoreVersion) return;
+  const context = captureReadContext();
+  const sequence = ++appState.taskReadSequence;
+  const task = taskFromEvent || await readApi(`/api/tasks/${taskId}`);
+  if (!isCurrentRead(context) || sequence !== appState.taskReadSequence) return;
   appState.currentTask = task;
-  appState.currentSteps = steps;
   appState.currentTaskId = task.id || task.task_id || taskId;
+  const loadedContext = captureReadContext();
   appState.taskStatus = task.current_stage || task.status || appState.taskStatus;
   const result = task.result_json || {};
   if (!appState.roleReviewDirty && (result.conversation_text || result.asr_source || task.input_text)) restoreTaskSource(task);
@@ -6121,26 +6215,35 @@ async function refreshTask(taskId, taskFromEvent = null) {
   // Reload that state before rendering; a cached 'exported' encounter must not
   // hide the review action for the newly saved revision.
   const encounterId = selectedEncounterId();
-  if (encounterId && Number(appState.currentEncounter?.task_id) === Number(appState.currentTaskId)) {
-    const encounter = await api(`/api/encounters/${encodeURIComponent(encounterId)}`);
-    if (restoreVersion !== appState.encounterRestoreVersion) return;
+  if (refreshEncounter && encounterId && Number(appState.currentEncounter?.task_id) === Number(appState.currentTaskId)) {
+    const encounter = await readApi(`/api/encounters/${encodeURIComponent(encounterId)}`);
+    if (!isCurrentRead(loadedContext) || sequence !== appState.taskReadSequence) return;
     if (selectedEncounterId() === encounterId) appState.currentEncounter = encounter;
   }
-  await refreshKnowledgeEvidence(appState.currentTaskId);
-  if (restoreVersion !== appState.encounterRestoreVersion) return;
-  await refreshAgentTrace(appState.currentTaskId);
-  if (restoreVersion !== appState.encounterRestoreVersion) return;
   renderAll();
+  // Evidence and execution traces are independent, read-only enhancements.
+  void Promise.allSettled([
+    refreshKnowledgeEvidence(taskId),
+    refreshAgentTrace(taskId),
+    readApi(`/api/tasks/${taskId}/steps`).then(steps => {
+      if (isCurrentRead(loadedContext) && sequence === appState.taskReadSequence) appState.currentSteps = steps;
+    }),
+  ]).then(() => {
+    if (isCurrentRead(loadedContext) && sequence === appState.taskReadSequence) renderAll();
+  });
 }
 
 function listenForEvents(taskId, eventsUrl) {
   if (appState.eventSource) appState.eventSource.close();
   const source = new EventSource(eventsUrl);
   appState.eventSource = source;
+  const version = appState.encounterRestoreVersion;
+  const current = () => appState.eventSource === source && version === appState.encounterRestoreVersion;
   let terminalReceived = false;
 
   ["CREATED", "EXTRACTING_FIELDS", "GENERATING_DRAFT", "SAFETY_CHECKING", "DEGRADED"].forEach((status) => {
     source.addEventListener(status, (event) => {
+      if (!current()) return;
       const data = JSON.parse(event.data);
       appState.currentTaskId = data.task_id;
       appState.taskStatus = data.status;
@@ -6150,10 +6253,12 @@ function listenForEvents(taskId, eventsUrl) {
   });
 
   source.addEventListener("WAITING_DOCTOR_REVIEW", async (event) => {
+    if (!current()) return;
     const data = JSON.parse(event.data);
     terminalReceived = true;
     appState.taskStatus = "WAITING_DOCTOR_REVIEW";
     await refreshTask(data.task_id, data.task);
+    if (!current()) return;
     appState.recordHighlightUntil = Date.now() + 2800;
     source.close();
     appState.eventSource = null;
@@ -6164,10 +6269,12 @@ function listenForEvents(taskId, eventsUrl) {
   });
 
   source.addEventListener("FAILED", async (event) => {
+    if (!current()) return;
     const data = JSON.parse(event.data);
     terminalReceived = true;
     appState.taskStatus = "FAILED";
     await refreshTask(data.task_id, data.task);
+    if (!current()) return;
     source.close();
     appState.eventSource = null;
     setBusy(false);
@@ -6175,6 +6282,7 @@ function listenForEvents(taskId, eventsUrl) {
   });
 
   source.onerror = () => {
+    if (!current()) { source.close(); return; }
     if (!terminalReceived) {
       appState.taskStatus = "FAILED";
       showToast("SSE 连接异常，请到调试页查看任务日志");
@@ -7431,6 +7539,11 @@ async function exportRecord() {
 }
 
 async function handleWorkflowAction(action) {
+  if (action === "retry-history") {
+    const target = appState.encounterRestoreTarget;
+    if (target) await restoreEncounter(target.encounterId, { sessionId: target.sessionId });
+    return;
+  }
   if (action === "open-worklist") {
     await openEncounterWorklist();
     return;
@@ -9453,18 +9566,7 @@ function bindEvents() {
     }
     const liveClinicalAction = event.target.closest("[data-live-clinical-action]");
     if (liveClinicalAction) {
-      const labels = {
-        "mark-asked": "已标记为已询问",
-        "add-question": "已加入待问清单",
-        "adopt-candidate": "已采纳为候选，仍需医生保存并审核",
-        defer: "已暂不采纳",
-        ignore: "已忽略该提示",
-      };
-      if (liveClinicalAction.dataset.liveClinicalAction === "close") {
-        closeDrawer();
-      } else {
-        showToast(labels[liveClinicalAction.dataset.liveClinicalAction] || "操作已记录");
-      }
+      if (liveClinicalAction.dataset.liveClinicalAction === "close") closeDrawer();
       return;
     }
     const saveButton = event.target.closest("[data-save-role-review]");

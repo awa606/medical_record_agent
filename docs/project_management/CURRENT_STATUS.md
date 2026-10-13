@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-13T03:41:59.073Z`
-- Source hash: `e4a5cdeea766c4d32b42e1793b72c9d6c09b3cdf5bab63a0eb3087c2bc2814be`
+- Updated at: `2026-10-13T04:40:33.283Z`
+- Source hash: `958e7879677d2ad9267f38184fc67b71710765ecbac5ea1acf906b58dd530adb`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@31788984db1d97e6b6ed7a9de09bbd13171f3fa5`
+- Repo: `codex/alpha51-demo-visual-e2e@7702a6e16bf555bb36131f7096ddf1ae866e141d`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 历史恢复与旧响应隔离已修复；独立发布候选正在完整回归** — `VERIFY`
+**5.1 · 8798已运行920c3c9；历史恢复、文本/授权音频及完整离线恢复通过，仍为候选** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1：完成基线770bd920叠加前端修复候选的真实页面及独立恢复验证；未完成物理录音和显示验收前不启动5.3
+- Single next task: 5.1：定位ASR计算期间登录/历史读取延迟，测量阻塞层；保留模型首次质量、物理录音与实际显示待验，5.3尚不启动
 - Parallel waiting task: 物理麦克风及100%/125%/150%缩放待用户稍后配合；硬件继续延期
 
 ## Manual Actions
 
-- 本批无需物理麦克风；最终版本确定后集中补现场验收
+- 当前无需录音；物理麦克风与实际缩放按用户稍后安排集中补验
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

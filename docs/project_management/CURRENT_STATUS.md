@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-12T16:55:36.945139+08:00`
-- Source hash: `ae59f076eee1a924627d43fcadbb3646e1418356fcc33236a1418a0caa10c0f3`
+- Updated at: `2026-10-13T03:41:59.073Z`
+- Source hash: `e4a5cdeea766c4d32b42e1793b72c9d6c09b3cdf5bab63a0eb3087c2bc2814be`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@8b09f3f49b2218d4a7d848eb2acabf68c1be1264`
+- Repo: `codex/alpha51-demo-visual-e2e@31788984db1d97e6b6ed7a9de09bbd13171f3fa5`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 完整离线候选恢复核心通过；音频刷新、现场录音及显示待验收** — `VERIFY`
+**5.1 · 历史恢复与旧响应隔离已修复；独立发布候选正在完整回归** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1：定位音频自动刷新时会话与病历版本恢复顺序；修复后补最终麦克风、实际显示及完整流程，未通过不启动5.3
+- Single next task: 5.1：完成基线770bd920叠加前端修复候选的真实页面及独立恢复验证；未完成物理录音和显示验收前不启动5.3
 - Parallel waiting task: 物理麦克风及100%/125%/150%缩放待用户稍后配合；硬件继续延期
 
 ## Manual Actions
 
-- 当前无需录音；候选刷新缺陷修复后集中配合现场验收
+- 本批无需物理麦克风；最终版本确定后集中补现场验收
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

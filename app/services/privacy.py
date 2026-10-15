@@ -9,6 +9,7 @@ import uuid
 import logging
 import traceback
 from pathlib import Path
+from starlette.concurrency import run_in_threadpool
 
 def enabled() -> bool:
     flag = os.getenv("MRA_ANONYMIZE")
@@ -116,6 +117,10 @@ def install_anonymous_logging() -> None:
     factory.anonymous_records = True
     logging.setLogRecordFactory(factory)
 
+def _anonymous_json_body(body: bytes) -> bytes:
+    return json.dumps(anonymize_payload(json.loads(body)), ensure_ascii=False).encode()
+
+
 class AnonymousResponses:
     """Sanitize JSON and SSE at the final ASGI boundary without buffering streams."""
     def __init__(self, app):
@@ -143,7 +148,8 @@ class AnonymousResponses:
                 buffer += message.get("body", b"")
                 if not message.get("more_body"):
                     try:
-                        body = json.dumps(anonymize_payload(json.loads(buffer)), ensure_ascii=False).encode()
+                        # Identity-map SQLite I/O must not block other ASGI requests.
+                        body = await run_in_threadpool(_anonymous_json_body, buffer)
                     except (ValueError, UnicodeError):
                         body = b'{"detail":"anonymous response serialization failed"}'
                         start["status"] = 500
@@ -153,9 +159,11 @@ class AnonymousResponses:
                 buffer += message.get("body", b"")
                 while match := re.search(rb"\r?\n\r?\n", buffer):
                     frame, buffer = buffer[:match.start()], buffer[match.end():]
-                    await send({"type":"http.response.body", "body":anonymous_sse_frame(frame)+b"\n\n", "more_body":True})
+                    safe_frame = await run_in_threadpool(anonymous_sse_frame, frame)
+                    await send({"type":"http.response.body", "body":safe_frame+b"\n\n", "more_body":True})
                 if not message.get("more_body"):
-                    await send({**message,"body":anonymous_sse_frame(buffer)})
+                    safe_tail = await run_in_threadpool(anonymous_sse_frame, buffer)
+                    await send({**message,"body":safe_tail})
             else:
                 await send(message)
         await self.app(scope, receive, wrapped)

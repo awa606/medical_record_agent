@@ -72,8 +72,8 @@ def test_doctor_audio_workflow_does_not_send_engine_parameter() -> None:
     assert 'sessionParams.set("engine"' not in script
     assert 'transcribeParams.set("engine"' not in script
     assert 'uploadParams.set("engine"' not in script
-    assert 'new URLSearchParams({ recognition_mode: "fast" })' in script
-    assert 'new URLSearchParams({ recognition_mode: "follow", diarization_engine: "auto" })' in script
+    assert 'new URLSearchParams({ recognition_mode: recognitionMode, diarization_engine: "auto" })' in script
+    assert 'appState.recognitionMode === "follow" ? "follow" : "fast"' in script
 
 
 def test_transcript_auto_follow_and_role_warning_are_visible() -> None:

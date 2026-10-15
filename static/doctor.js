@@ -7068,15 +7068,13 @@ async function uploadAndTranscribe(file, engine) {
   appState.asrChunkStatus = "";
   appState.asrChunkLastError = "";
   appState.asrRetryHint = "";
-  if (appState.recognitionMode === "fast") {
-    renderAll();
-    return uploadAndTranscribeFast(file, engine);
-  }
-  await refreshAsrPrewarmStatus();
+  const recognitionMode = appState.recognitionMode === "follow" ? "follow" : "fast";
+  if (recognitionMode === "follow") await refreshAsrPrewarmStatus();
   renderAll();
 
-  setBusy(true, "正在创建 ASR 实时转写会话...");
-  const sessionParams = new URLSearchParams({ recognition_mode: "follow", diarization_engine: "auto" });
+  // Both modes need a persisted session for role confirmation and history recovery.
+  setBusy(true, "正在创建转写会话...");
+  const sessionParams = new URLSearchParams({ recognition_mode: recognitionMode, diarization_engine: "auto" });
   if (selectedEncounterId()) sessionParams.set("encounter_id", selectedEncounterId());
   if (appState.selectedDoctorProfileId) {
     sessionParams.set("doctor_profile_id", appState.selectedDoctorProfileId);
@@ -7095,7 +7093,7 @@ async function uploadAndTranscribe(file, engine) {
   appState.taskStatus = "TRANSCRIBING";
   renderAll();
 
-  setBusy(true, "正在跟随识别音频...");
+  setBusy(true, recognitionMode === "follow" ? "正在跟随识别音频..." : "正在尽快识别完整音频...");
   return new Promise((resolve, reject) => {
     listenForAsrEvents(uploaded.events_url, { resolve, reject });
   });
@@ -7169,37 +7167,6 @@ async function runAudioWorkflowFromFile(file, engine, mode = appState.audioMode)
   if (mode === "generate") {
     return continueGeneratingFromTranscription(transcribed);
   }
-  setBusy(false);
-  renderAll();
-  return transcribed;
-}
-
-async function uploadAndTranscribeFast(file, engine) {
-  const form = new FormData();
-  form.append("file", file);
-  const uploadParams = new URLSearchParams({ recognition_mode: "fast" });
-  if (selectedEncounterId()) uploadParams.set("encounter_id", selectedEncounterId());
-  setBusy(true, "正在上传音频并准备尽快识别...");
-  const uploaded = await api(`/api/audio/upload?${uploadParams.toString()}`, { method: "POST", body: form });
-  appState.currentAudioId = uploaded.audio_id;
-  appState.uploadedFilename = uploaded.filename || uploaded.audio_id;
-  applyUploadedAudioMetadata(uploaded);
-  appState.taskStatus = "TRANSCRIBING";
-  renderAll();
-
-  const transcribeParams = new URLSearchParams({ recognition_mode: "fast" });
-  setBusy(true, "正在尽快识别完整音频...");
-  const transcribed = await api(`/api/audio/${encodeURIComponent(uploaded.audio_id)}/transcribe?${transcribeParams.toString()}`, {
-    method: "POST",
-  });
-  appState.currentAsrResult = transcribed.asr_result;
-  appState.liveTranscriptSegments = transcribed.asr_result?.segments || [];
-  appState.provisionalTranscriptSegments = [];
-  appState.speakerAssignments = transcribed.asr_result?.speaker_assignments || [];
-  appState.speakerMappingRequired = false;
-  appState.taskStatus = "TRANSCRIBED";
-  appState.asrProcessedAudioSeconds = Number(transcribed.audio_duration_seconds || 0);
-  appState.asrAudioDurationSeconds = Number(transcribed.audio_duration_seconds || 0);
   setBusy(false);
   renderAll();
   return transcribed;

@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-16T10:31:47.598Z`
-- Source hash: `f26753df6548d3db682c936b7212034c3a3fd31c49f2468ff462062b83bb0f3a`
+- Updated at: `2026-10-16T12:35:59.620Z`
+- Source hash: `a9ccecab5dab17add0088ae8de0b0c6d7ec35d0cca045df51fa47446a3b83040`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@d6c91512c816366944b665b09e8c9b5d573d94a7`
+- Repo: `codex/alpha51-demo-visual-e2e@02c14cee863cc4a8867e7530ac346a716c5a5f7e`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798仍为a5c480bc；18016界面与确定性修复候选待认可，模型、流式与知识新版未晋级** — `VERIFY`
+**5.1 · 20px标题版式已认可；用药校验局部修复，独立恢复与8798升级待验** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1：确认18016界面后，将通过的共享修复组成独立发布候选，补同SHA真实三路径、实际显示与恢复；未过门研究独立保留，5.3不启动
+- Single next task: 唯一下一工作：通过完整工程回归后，在新目录恢复已认可界面与用药校验候选；完成文本、授权音频、数据知识及持久化后升级8798。物理录音与实际缩放待补，5.1仍VERIFY，5.3不启动。
 - Parallel waiting task: 物理麦克风及100%/125%/150%实际缩放待用户稍后配合；模型质量、实时资源和新版流感检索未过门；硬件继续延期
 
 ## Manual Actions
 
-- 确认18016病历标题与正文层级；物理录音和实际缩放按用户稍后安排集中补验
+- 界面已认可；物理录音和实际缩放按用户稍后安排集中补验
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

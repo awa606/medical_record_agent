@@ -3,7 +3,8 @@
   const s = window.__MRA_APP_STATE__;
   const copy = value => JSON.parse(JSON.stringify(value));
   const text = '发热伴咳嗽、咽痛两天，最高体温38.2℃。没有胸痛，也没有药物过敏史。';
-  s.currentEncounter = {id: 'SIM-VISUAL-001', patient_display_name: '模拟患者', patient_deidentified_id: 'SIM-VISUAL-001', check_in_status: 'checked_in'};
+  // Retain the real synthetic encounter ID created in the isolated review database.
+  s.currentEncounter = {...s.currentEncounter, check_in_status: 'in_progress'};
   const values = {chief_complaint: '发热伴咳嗽、咽痛2天', present_illness: '患者自述两天前出现发热，最高体温38.2℃，伴咳嗽和咽痛。否认胸痛。症状变化、接触史及自行用药情况需继续核对。', past_history: '本次未采集既往疾病史，待医生补充。', allergy_history: '患者否认药物过敏史。', physical_exam: '患者自测体温38.2℃；现场查体尚未完成。', auxiliary_exams: '本次尚无检查结果。'};
   for (const [key, value] of Object.entries(values)) {
     if (!s.currentRecordFields[key]) continue;
@@ -18,7 +19,7 @@
     role_quality: {status: 'passed'}, speaker_assignments: [{speaker_id: 's0', role: '医生', confirmed_by_doctor: true}, {speaker_id: 's1', role: '患者', confirmed_by_doctor: true}]};
   s.currentKnowledgeEvidence = {results: []}; s.knowledgeEvidenceStatus = 'idle';
   s.recordHighlightUntil = 0; s.lastActionError = ''; s.recordEditMode = false;
-  const keys = ['currentRecordFields','currentEncounter','currentAsrResult','currentTask','taskStatus','currentTaskId','currentExportReadiness','currentInputText'];
+  const keys = ['currentRecordFields','currentEncounter','currentAsrResult','currentTask','taskStatus','currentTaskId','currentExportReadiness','currentInputText','currentDraft','currentSafetyCheck','currentQualityReport','currentExports','currentSteps','currentAgentTrace','currentEvaluation','currentAudioId','currentAsrSessionId','liveTranscriptSegments','provisionalTranscriptSegments','recordPreview'];
   const baseline = Object.fromEntries(keys.map(k => [k, copy(s[k] ?? null)]));
   window.setWorkspaceReviewScene = kind => {
     if (typeof closeWorkspaceAuxiliary === 'function') closeWorkspaceAuxiliary();
@@ -26,15 +27,32 @@
     for (const k of keys) s[k] = copy(baseline[k]);
     clearToast();
     s.recordEditMode = false; s.recordEditDirty = false; s.recordEditConflict = null; s.lastActionError = '';
+    s.approvalDisclosureOpen = false;
     s.browserRecordingStatus = 'idle'; s.browserRecordingMessage = ''; s.recordHighlightUntil = 0;
     document.querySelector('#recordingPanel').hidden = true;
     if (kind === 'empty' || kind === 'recording' || kind === 'role') {
-      s.currentRecordFields = null; s.currentTaskId = null; s.currentTask = null; s.taskStatus = 'TRANSCRIBED'; s.currentExportReadiness = null;
-      if (kind !== 'role') { s.currentAsrResult = null; s.currentInputText = ''; s.liveTranscriptSegments = []; s.provisionalTranscriptSegments = []; }
+      // Clear the same session state as a real new encounter; keep its checked-in ID.
+      // Leaving currentDraft/preview behind makes the empty scene look like an active task.
+      resetTaskState({keepEncounter: true, keepAsr: kind === 'role'});
+      s.browserRecordingElapsedSeconds = 0;
+      s.browserRecordingSessionId = null; s.browserRecordingChunkIndex = 0;
+      s.browserRecordingRecordedChunks = 0; s.browserRecordingPendingChunks = 0;
+      s.browserRecordingRetryStatus = ''; s.browserRecordingFinalized = false;
+      s.browserRecordingRecovering = false; s.browserRecordingObjectUrl = '';
+      if (kind === 'role') s.taskStatus = 'TRANSCRIBED';
     }
     if (kind === 'recording') {
       s.browserRecordingStatus = 'recording'; s.browserRecordingMessage = '模拟录音状态；未使用麦克风，未提交音频。';
       document.querySelector('#recordingPanel').hidden = false;
+    }
+    if (kind === 'approved') {
+      s.taskStatus = 'exported'; s.currentTask.current_stage = 'exported'; s.currentEncounter.status = 'exported';
+      s.currentExportReadiness = {revision_id: 1, revision_number: 2, content_hash:'visual-only', approved:true, can_export:true};
+      for (const [key] of EDITABLE_FIELD_DEFS) { const f=s.currentRecordFields[key]; if(f) {f.doctor_review_status=f.value?'content_confirmed':'missing_accepted';f.confirmed_by_doctor=Boolean(f.value);} }
+      for (const diagnosis of s.currentRecordFields.candidate_diagnoses || []) {
+        diagnosis.doctor_review_status = 'candidate_confirmed';
+        diagnosis.confirmed_by_doctor = true; diagnosis.deleted_by_doctor = false;
+      }
     }
     if (kind === 'review') { s.currentTask.current_stage = 'waiting_doctor_review'; s.currentEncounter.status = 'reviewed'; }
     if (kind === 'long') s.currentRecordFields.present_illness.value += '患者描述夜间咳嗽较明显，睡眠受影响，饮水和进食情况需进一步了解。'.repeat(12);
@@ -54,13 +72,13 @@
     const tools = document.createElement('div');
     tools.id = 'workspaceReviewTools';
     tools.innerHTML = `<style>
-      #workspaceReviewTools { display:flex;align-items:center;gap:8px;margin-left:auto;font-size:12px;position:relative; }
+      #workspaceReviewTools { display:flex;align-items:center;gap:8px;margin-left:auto;font-size:14px;position:relative; }
       #workspaceReviewTools .review-data-badge { color:#805c25;background:#fff8e9;padding:2px 7px;border-radius:4px;white-space:nowrap; }
       #workspaceReviewTools summary { cursor:pointer;color:#526477;white-space:nowrap;padding:6px; }
       #workspaceReviewTools .review-tools-popover { position:absolute;right:0;top:38px;z-index:40;width:270px;background:white;padding:16px;border:1px solid #cbd5df;box-shadow:0 6px 24px #10203018;border-radius:6px;font-size:14px; }
       #workspaceReviewTools p { margin:0 0 12px;line-height:1.5; }
       #workspaceReviewScene { width:100%;margin-top:8px;font-size:14px; }
-    </style><span class="review-data-badge">演示数据</span><details><summary>验收工具</summary><div class="review-tools-popover"><p>合成数据，仅用于版式验收；未执行真实模型。</p><label for="workspaceReviewScene">验收场景</label><select id="workspaceReviewScene" aria-label="版式验收场景"><option value="draft">病历草稿</option><option value="empty">待采集</option><option value="recording">录音状态（模拟）</option><option value="long">长病历</option><option value="review">等待审核</option><option value="role">角色阻断</option><option value="conflict">Revision冲突</option></select></div></details>`;
+    </style><span class="review-data-badge">演示数据</span><details><summary>验收工具</summary><div class="review-tools-popover"><p>合成数据，仅用于版式验收；未执行真实模型。</p><label for="workspaceReviewScene">验收场景</label><select id="workspaceReviewScene" aria-label="版式验收场景"><option value="draft">病历草稿</option><option value="empty">待采集</option><option value="recording">录音状态（模拟）</option><option value="long">长病历</option><option value="review">等待审核</option><option value="approved">已审核（模拟）</option><option value="role">角色阻断</option><option value="conflict">Revision冲突</option></select></div></details>`;
     document.querySelector('.topbar').insertBefore(tools, document.querySelector('.top-actions'));
     tools.querySelector('select').addEventListener('change', e => {
       window.setWorkspaceReviewScene(e.target.value); tools.querySelector('details').open = false;

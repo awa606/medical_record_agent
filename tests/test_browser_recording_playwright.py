@@ -132,6 +132,8 @@ def test_recording_entry_guides_to_encounter_selection_and_panel() -> None:
             page.locator('[data-product-view-target="encounter"]').first.click()
             expect(page.locator("body")).to_have_attribute("data-product-view", "workbench")
             expect(page.locator("#workbenchSelectionNotice")).to_contain_text("开始接诊")
+            if not page.locator("#localSyntheticPatient").is_visible():
+                page.locator("#localRegistrationDisclosure summary").click()
             page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-LIVE")
             page.click("#createLocalEncounterButton")
             button = page.locator('#dashboardEncounterList [data-encounter-action="start"]')

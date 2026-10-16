@@ -30,6 +30,7 @@ def main() -> None:
         'RECORD_PROVIDER_MODE': 'demo', 'LLM_PROVIDER': 'mock',
         'ASR_ENGINE': 'mock', 'MEDICAL_RECORD_AGENT_ASR_ENGINE': 'mock',
         'ASR_PREWARM_ENABLED': '0',
+        'MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME': f'mra_visual_review_{args.port}',
     })
     static_root = ROOT / 'static'
     if args.baseline_static:
@@ -60,7 +61,19 @@ def main() -> None:
               await new Promise(r => setTimeout(r, 200));
             }
           };
-          await wait(() => window.__MRA_APP_STATE__?.authUser);
+          // Authentication completes before the normal page restores a URL encounter.
+          // Let that read finish before the preview starts its own synthetic encounter.
+          await wait(() => window.__MRA_APP_STATE__?.authUser && !window.__MRA_APP_STATE__.busy);
+          // Only the isolated visual-review database receives this synthetic encounter.
+          const encounter = await api('/api/encounters', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({patient_deidentified_id:'SIM-DEMO-0929-FEVER', patient_display_name:'张示例'})
+          });
+          await api(`/api/encounters/${encounter.id}/check-in`, {method:'POST'});
+          await performEncounterAction(encounter.id, 'start');
+          if (String(selectedEncounterId()) !== String(encounter.id) || !encounterReadyForInput()) {
+            throw Error('Synthetic review encounter did not become ready; no generation was requested');
+          }
           await createRecordTask('患者发热伴咳嗽咽痛2天，最高体温38.2℃。没有胸痛，也没有药物过敏史。');
           await wait(() => window.__MRA_APP_STATE__.currentRecordFields && window.__MRA_APP_STATE__.eventSource === null);
         """

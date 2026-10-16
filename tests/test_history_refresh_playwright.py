@@ -10,6 +10,8 @@ def test_saved_text_reloads_same_task_without_new_generation():
             browser = p.chromium.launch()
             page = browser.new_page()
             _login(page, server.base_url)
+            if not page.locator("#localSyntheticPatient").is_visible():
+                page.locator("#localRegistrationDisclosure summary").click()
             page.click('#createLocalEncounterButton')
             row = page.locator('#dashboardEncounterList article').filter(has_text='张示例')
             row.get_by_role('button', name='开始接诊', exact=True).click()

@@ -15,6 +15,8 @@ from tests.test_doctor_workflow_state_contract_playwright import _server_databas
 
 
 def seed_partial(page, server):
+    if not page.locator("#localSyntheticPatient").is_visible():
+        page.locator("#localRegistrationDisclosure summary").click()
     page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
     page.click("#createLocalEncounterButton")
     page.locator('#dashboardEncounterList [data-encounter-action="start"]').click()

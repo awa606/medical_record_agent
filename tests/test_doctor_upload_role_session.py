@@ -26,6 +26,8 @@ def test_uploaded_audio_can_save_role_review_after_generation_gate(mode):
             browser = playwright.chromium.launch()
             page = browser.new_page()
             _login(page, server.base_url)
+            if not page.locator("#localSyntheticPatient").is_visible():
+                page.locator("#localRegistrationDisclosure summary").click()
             page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
             page.click("#createLocalEncounterButton")
             row = page.locator("#dashboardEncounterList article").filter(has_text="张示例")

@@ -175,6 +175,8 @@ def _prepare_review_fixture(page) -> int:
 
 def _select_all_review_items(page) -> None:
     page.evaluate("syncApprovalReviewStateWithRevision(window.__MRA_APP_STATE__.currentExportReadiness)")
+    if not page.locator(".approval-disclosure").get_attribute("open") == "":
+        page.locator(".approval-disclosure > summary").click()
     page.locator("#recordFields [data-approval-confirm-regular]").click()
     missing_keys = page.evaluate(
         """

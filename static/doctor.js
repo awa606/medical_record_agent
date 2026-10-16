@@ -870,13 +870,13 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
   if (appState.encounterWorklistError) {
     return `<div class="safety-strip danger">${escapeHtml(appState.encounterWorklistError)}</div>`;
   }
-  const items = appState.encounterWorklist || [];
+  const items = (appState.encounterWorklist || []).filter(item => includeRevisions || !appState.worklistQuickFilter || encounterQueueGroup(item) === appState.worklistQuickFilter);
   if (!items.length) {
     return `
       ${encounterSelectionNoticeMarkup(includeRevisions)}
       <div class="empty-state dashboard-empty-state">
-        <strong>今日暂无就诊任务</strong>
-        <span>可以从下方入口开始一次新的问诊工作。</span>
+        <strong>${appState.worklistQuickFilter ? "当前筛选下暂无就诊" : "今日暂无就诊任务"}</strong>
+        <span>可以切换筛选条件，或登记一次新的就诊。</span>
         <div class="empty-state-actions">
           <button type="button" data-focus-registration>登记演示就诊</button>
         </div>
@@ -1422,24 +1422,26 @@ function runtimeServiceSummary(key, value) {
   return value.status ? technicalLabel(value.status) : "可用";
 }
 
+function encounterQueueGroup(item = {}) {
+  const state = derivePersistedWorkflowState({ encounterStatus: item.status, taskStatus: item.task_status,
+    currentStage: item.task_current_stage, hasTask: Boolean(item.task_id) });
+  if (state === "failed") return "exceptions";
+  if (!item.task_id || ["capture_input", "select_encounter"].includes(state)) return "pendingInput";
+  if (["pending_review", "draft_generated"].includes(state)) return "pendingReview";
+  if (["approved", "exported"].includes(state)) return "completed";
+  return "processing";
+}
+
 function renderDashboardSummary() {
-  const stats = (appState.encounterWorklist || []).reduce((acc, item) => {
-    const status = String(item.status || item.task_current_stage || item.task_status || "").toLowerCase();
-    if (!item.task_id || status === "draft") {
-      acc.pendingInput += 1;
-    } else if (status.includes("fail")) {
-      acc.exceptions += 1;
-    } else if (status === "pending_review" || status === "reviewed") {
-      acc.pendingReview += 1;
-    } else if (status !== "approved" && status !== "exported") {
-      acc.processing += 1;
-    }
-    return acc;
-  }, { pendingInput: 0, processing: 0, pendingReview: 0, exceptions: 0 });
+  const stats = { pendingInput: 0, processing: 0, pendingReview: 0, exceptions: 0 };
+  (appState.encounterWorklist || []).forEach(item => { const group = encounterQueueGroup(item); if (group in stats) stats[group] += 1; });
   if ($("dashboardDoctorLabel")) $("dashboardDoctorLabel").textContent = String(stats.pendingInput);
   if ($("dashboardEncounterLabel")) $("dashboardEncounterLabel").textContent = String(stats.processing);
   if ($("dashboardTaskStatusLabel")) $("dashboardTaskStatusLabel").textContent = String(stats.pendingReview);
   if ($("dashboardRecordingLabel")) $("dashboardRecordingLabel").textContent = String(stats.exceptions);
+  document.querySelectorAll('[data-dashboard-filter]').forEach(button => {
+    button.setAttribute('aria-pressed', String(button.dataset.dashboardFilter === (appState.worklistQuickFilter || "")));
+  });
 }
 
 function renderAdminHome() {
@@ -2191,6 +2193,10 @@ function doctorDisplayState() {
       inputStatus,
     };
   }
+  if (appState.currentTaskId && historicalRecordQuality().incomplete) {
+    return { key: "incomplete", title: "历史病历内容不完整", taskHint: "历史字段无可用内容，原因未记录",
+      reviewLabel: "内容不完整", dataStatus: "需核对历史原文", inputStatus };
+  }
   if (state === "pending_review") {
     return {
       key: "pending_review",
@@ -2509,6 +2515,10 @@ function renderReviewBoundaryNotice() {
   notice.className = `review-boundary-notice ${displayState.key}`.trim();
   if (["approved", "exported"].includes(displayState.key)) {
     notice.textContent = "医生审核已完成；导出文件绑定当前就诊和最新病历版本。";
+    return;
+  }
+  if (displayState.key === "incomplete") {
+    notice.textContent = "历史病历内容不完整；请核对保存的原文并补录，不能把空结果作为已生成草稿。";
     return;
   }
   if (displayState.key === "pending_review") {
@@ -2900,12 +2910,34 @@ function fieldStatus(field, key) {
       ? { key: "candidate", label: "候选待确认" }
       : { key: "missing", label: "待补充" };
   }
-  if (!field || field.missing || (!field.value && field.hint)) return { key: "missing", label: "待补充" };
+  if (field?.status === "conflicting") return { key: "conflicting", label: "证据冲突" };
+  if (!field || field.missing || !readableStoredText(field.value)) return { key: "missing", label: "待补充" };
   if (field.status === "partial") return { key: "partial", label: "部分完成" };
-  if (field.status === "conflicting") return { key: "conflicting", label: "证据冲突" };
   if (field.confirmed_by_doctor) return { key: "confirmed", label: "已确认" };
   if (typeof field.confidence === "number" && field.confidence < 0.7) return { key: "low", label: "低置信度" };
   return { key: "neutral", label: "待医生审核" };
+}
+
+function readableStoredText(value) {
+  if (value == null) return "";
+  const text = String(value);
+  return !text.trim() || /^(?:null|undefined)$/i.test(text.trim()) ? "" : text;
+}
+
+function recordedMissingReason(field) {
+  if (!field?.missing) return "";
+  return {
+    not_asked_confirmed: "医生确认本次未询问",
+    missing_accepted: "医生接受本次信息缺失",
+  }[field.doctor_review_status] || "";
+}
+
+function historicalRecordQuality(fields = appState.currentRecordFields) {
+  const entries = EDITABLE_FIELD_DEFS.map(([key]) => fields?.[key]).filter(Boolean);
+  const hasUnrecordedContent = field => !readableStoredText(field.value) && !readableStoredText(field.hint) && !recordedMissingReason(field);
+  const placeholders = entries.some(field => hasUnrecordedContent(field) && [field.value, field.hint].some(value => typeof value === 'string' && /^(?:null|undefined)$/i.test(value.trim())));
+  const unrecorded = entries.length > 0 && entries.every(hasUnrecordedContent);
+  return { placeholders, incomplete: unrecorded, affected: placeholders || unrecorded };
 }
 
 function fieldValue(fields, key) {
@@ -2915,7 +2947,7 @@ function fieldValue(fields, key) {
   }
   const field = fields?.[key];
   if (field?.status === "conflicting") return "待核对（模型内容未采纳）";
-  return field?.value || field?.hint || "暂无内容";
+  return readableStoredText(field?.value) || readableStoredText(field?.hint) || recordedMissingReason(field) || "历史字段无可用内容，原因未记录";
 }
 
 function fieldEvidence(field, key) {
@@ -3527,6 +3559,7 @@ function renderAllFieldsDetailContent() {
 
 function clearApprovalReviewSelections() {
   appState.approvalRegularFieldsConfirmed = false;
+  appState.approvalDisclosureOpen = false;
   appState.approvalMissingDecisions = {};
   appState.approvalDiagnosisDecisions = {};
   appState.approvalHighRiskConfirmations = {};
@@ -3566,7 +3599,7 @@ function approvalFieldItems(fields) {
 }
 
 function fieldHasReviewableContent(field) {
-  return Boolean(field && !field.missing && field.value);
+  return Boolean(field && !field.missing && readableStoredText(field.value));
 }
 
 function fieldReviewComplete(field) {
@@ -3634,7 +3667,7 @@ function renderApprovalChecklist(fields) {
   const revision = currentRevisionInfo();
   const fieldItems = approvalFieldItems(fields);
   const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
-  const missingFields = fieldItems.filter(({ field }) => !fieldHasReviewableContent(field));
+  const missingFields = fieldItems.filter(({ field }) => field.status !== "conflicting" && !fieldHasReviewableContent(field));
   const diagnoses = fields.candidate_diagnoses || [];
   const risks = highRiskReviewItems(fields);
   const pending = pendingApprovalCount(fields);
@@ -3654,7 +3687,7 @@ function renderApprovalChecklist(fields) {
       <div class="approval-item" data-approval-item="field:${escapeHtml(key)}">
         <div>
           <strong>${escapeHtml(title)}</strong>
-          <span>${escapeHtml(field?.hint || "本次未采集，需要医生处理")}</span>
+          <span>${escapeHtml(readableStoredText(field?.hint) || "历史字段无可用内容，原因未记录；请核对原文")}</span>
         </div>
         ${approvalStatusPill(done)}
         <div class="approval-item-actions">
@@ -3699,7 +3732,7 @@ function renderApprovalChecklist(fields) {
   }).join("");
   return `
     <section class="approval-checklist" aria-label="分项审核">
-      <details class="approval-disclosure" ${pending && !approved ? "open" : ""}>
+      <details class="approval-disclosure" ${appState.approvalDisclosureOpen ? "open" : ""}>
       <summary class="approval-checklist-head">
         <div>
           <strong>医生分项审核 · 版本 #${escapeHtml(revision.revisionNumber || revision.revisionId || "-")}</strong>
@@ -3716,6 +3749,7 @@ function renderApprovalChecklist(fields) {
         <button type="button" class="approval-primary-action ${regularDone ? "active" : ""}" data-approval-confirm-regular>
           确认当前全部普通字段
         </button>
+        <p class="approval-confirm-scope">我已核对：${regularFields.map(({title}) => escapeHtml(title)).join("、")}。此操作不处理缺失、候选诊断或证据冲突。</p>
       </div>`, regularDone)}
       ${missingRows ? `<div class="approval-section"><div class="approval-section-title"><strong>缺失项处理</strong></div>${missingRows}</div>` : ""}
       ${diagnosisRows ? `<div class="approval-section"><div class="approval-section-title"><strong>候选诊断处理</strong></div>${diagnosisRows}</div>` : ""}
@@ -3730,6 +3764,7 @@ async function buildTaskApprovalPayload() {
   if (!appState.currentTaskId) throw new Error("暂无可确认的任务");
   const fields = activeRecordFields();
   if (!fields) throw new Error("暂无可审核的病历字段");
+  if (historicalRecordQuality(fields).incomplete) throw new Error("历史病历内容不完整，请核对原文并补录后重新审核。");
   const readiness = await refreshExportReadiness();
   const revision = currentRevisionInfo(readiness);
   syncApprovalReviewStateWithRevision(readiness);
@@ -3796,6 +3831,8 @@ function renderFields() {
   if (!fields) {
     $("fieldCountBadge").textContent = "待生成";
     $("fieldCountBadge").className = "status-badge neutral";
+    $("recordFields").innerHTML = `<section class="record-empty-state"><h3>病历将在这里整理</h3><p>在左侧开始录音、上传音频或输入文本。完成后，在这里核对原文、修改并审核病历。</p></section>`;
+    return;
   }
 
   let missingCount = 0;
@@ -3806,15 +3843,20 @@ function renderFields() {
     let status = appState.viewMode === "doctor"
       ? draftFieldStatus(fields, key)
       : fieldStatus(fields?.[key] || null, key);
+    const diagnosesReviewed = isApprovedDisplay && key === "preliminary_diagnosis"
+      && draftDiagnoses(fields).length > 0
+      && draftDiagnoses(fields).every(item => ["candidate_confirmed", "ai_candidate_deleted"].includes(item.doctor_review_status));
+    const displayTitle = diagnosesReviewed ? "候选诊断（医生已审核）" : title;
+    if (diagnosesReviewed) status = { key: "confirmed", label: "已处理" };
     if (isApprovedDisplay && ["missing", "partial", "low"].includes(status.key)) {
       status = {
         key: "confirmed",
-        label: status.key === "missing" ? "医生已确认未采集" : "医生已确认部分采集",
+        label: status.key === "missing" ? ({not_asked_confirmed:"医生确认本次未询问",missing_accepted:"医生接受本次缺失"}[fields?.[key]?.doctor_review_status] || "历史审核已完成，字段无内容") : "医生已确认部分采集",
       };
     }
     if (status.key === "missing") missingCount += 1;
     const value = isEditing
-      ? (fields?.[key]?.value || "")
+      ? readableStoredText(fields?.[key]?.value)
       : appState.viewMode === "doctor" ? draftFieldValue(fields, key) : fieldValue(fields, key);
     const evidence = appState.viewMode === "doctor" ? draftFieldEvidence(fields, key) : fieldEvidence(fields?.[key] || null, key);
     const qualityLabel = fieldQualityLabel(key);
@@ -3847,7 +3889,7 @@ function renderFields() {
     return `
       <article class="field-card ${status.key} ${fieldWeightClass(key)} ${highlightClass} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${isApprovedDisplay && !isEditing ? "readonly-field" : ""} ${isEditing ? "editing" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}" tabindex="-1">
         <div class="field-head">
-          <span class="field-title">${escapeHtml(title)}</span>
+          <span class="field-title">${escapeHtml(displayTitle)}</span>
           ${appState.viewMode === "doctor"
             ? `<span class="field-status-inline"><span class="status-dot-label ${status.key}" title="${escapeHtml(compactStatusText || "待生成")}"></span><span class="field-status-text">${escapeHtml(status.label)}</span></span>`
             : `<span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>${qualityLabel ? `<span class="status-badge ${fieldQualityBadgeClass(qualityLabel)}">${escapeHtml(qualityLabel)}</span>` : ""}`}
@@ -3895,13 +3937,16 @@ function renderFields() {
       ? "实时预览"
       : isApprovedDisplay
         ? "已审核"
-        : allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
+        : historicalRecordQuality(fields).incomplete ? "内容不完整" : allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
     $("fieldCountBadge").className = `status-badge ${isApprovedDisplay ? "confirmed" : isPreview ? "info" : allMissingCount ? "missing" : "confirmed"}`;
   }
   const supportedCount = EDITABLE_FIELD_DEFS.filter(([key]) => fields?.[key]?.value && !fields[key].missing && fields[key].status !== "conflicting").length;
   const conflictCount = EDITABLE_FIELD_DEFS.filter(([key]) => fields?.[key]?.status === "conflicting").length;
   const partialNotice = fields && !isPreview && !isApprovedDisplay && conflictCount
     ? `<div class="partial-draft-summary">${supportedCount}项已有可核对内容，${conflictCount}项证据冲突已隔离。可继续编辑和保存；冲突处理后才能批准导出。</div>` : "";
+  const quality = historicalRecordQuality(fields);
+  const historicalNotice = !isPreview && !isEditing && quality.affected
+    ? `<p class="historical-record-notice" role="status">${quality.incomplete ? "历史病历内容不完整" : "部分历史字段无可用内容"}，原因未记录。${isApprovedDisplay ? "历史审核记录保留；这项提示不表示旧字段已经补全。" : "请核对保存的原文；不会据此推断未询问或否认。"}</p>` : "";
   const previewNotice = isPreview
     ? `<div class="preview-notice">${escapeHtml(previewNoticeText())}；正式生成病历后会替换为审核版结果。</div>`
     : partialNotice;
@@ -3919,7 +3964,7 @@ function renderFields() {
   const recovery = appState.recordEditRecovery;
   const recoveryNotice = recovery && recovery.taskId === appState.currentTaskId && !isEditing
     ? `<details class="record-recovery"><summary>本次冲突前的本地修改 · 尚未保存</summary><p>当前显示服务器最新版本。下面仅保留您修改过的字段，请与最新内容核对。</p>${EDITABLE_FIELD_DEFS.filter(([key]) => String(recovery.fields[key]?.value || "") !== String(recovery.baseline?.[key]?.value || "")).map(([key, title]) => `<p><strong>${escapeHtml(title)}</strong>：${escapeHtml(recovery.fields[key]?.value || "（留空）")}</p>`).join("")}<button type="button" data-record-reapply>将这些修改带入当前版本继续编辑</button></details>` : "";
-  $("recordFields").innerHTML = previewNotice + versionNotice + editNotice + recoveryNotice
+  $("recordFields").innerHTML = previewNotice + historicalNotice + versionNotice + editNotice + recoveryNotice
     + (isEditing ? "" : renderApprovalChecklist(fields)) + cards + diagnoses + summaryFooter + draftLegend;
 }
 
@@ -3935,14 +3980,7 @@ function classifySpeaker(line, segment = {}) {
   if (segment.role === "患者") return "patient";
   if (segment.role === "陪同人员") return "other";
   if (segment.role === "其他") return "other";
-  const raw = `${segment.speaker || ""} ${line}`.toLowerCase();
-  if (raw.includes("医生") || raw.includes("doctor")) return "doctor";
-  if (raw.includes("患者") || raw.includes("patient")) return "patient";
-  if (raw.includes("其他") || raw.includes("other")) return "other";
-  const inferred = inferLowConfidenceRole(line);
-  if (inferred === "医生") return "doctor";
-  if (inferred === "患者") return "patient";
-  return "unknown";
+  return explicitTextRole(line)?.speaker || "unknown";
 }
 
 function isFinalClinicalRole(role) {
@@ -4337,27 +4375,22 @@ function syncAsrTextFromSegments() {
   appState.currentAsrResult.needs_review = segments.some((segment) => segment.needs_review || segment.role === "待确认" || !segment.reviewed_by_doctor);
 }
 
+function explicitTextRole(line) {
+  const match = String(line || "").match(/^\s*(?:\[(医生|患者|家属|陪同人员|其他|doctor|patient|待校正|待确认)\]|(医生|患者|家属|陪同人员|其他|doctor|patient)\s*[:：])\s*/i);
+  if (!match) return null;
+  const raw = (match[1] || match[2]).toLowerCase();
+  const label = ({ doctor: "医生", patient: "患者" })[raw] || raw;
+  return { label, speaker: label === "医生" ? "doctor" : label === "患者" ? "patient" : ["家属", "陪同人员", "其他"].includes(label) ? "other" : "unknown", prefixLength: match[0].length };
+}
+
 function transcriptRowsFromText(text) {
-  const normalized = String(text || "")
-    .replace(/\s*(\[(?:医生|患者|陪同人员|其他|doctor|patient|待校正|待确认)\])/gi, "\n$1")
-    .trim();
-  return normalized
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line, index) => ({
-      index,
-      editable: false,
-      sourceSegment: null,
-      segmentId: `text-${index}`,
-      startTime: null,
-      endTime: null,
-      speakerId: null,
-      time: "--:--",
-      speaker: classifySpeaker(line),
-      label: classifySpeaker(line) === "doctor" ? "医生" : classifySpeaker(line) === "patient" ? "患者" : "待确认",
-      text: line.replace(/^\[(医生|患者|陪同人员|其他|doctor|patient|待校正|待确认)\]\s*/i, ""),
-    }));
+  return String(text || "").split(/\n+/).map(line => line.trim()).filter(Boolean).map((line, index) => {
+    const role = explicitTextRole(line);
+    return { index, editable: false, sourceSegment: null, segmentId: `text-${index}`,
+      startTime: null, endTime: null, speakerId: null, time: "--:--",
+      speaker: role?.speaker || "unknown", label: role?.label || "角色未记录",
+      text: role ? line.slice(role.prefixLength) : line };
+  });
 }
 
 function transcriptRows() {
@@ -4799,8 +4832,12 @@ function renderTranscript() {
 
   if (!rows.length && !asr && !appState.currentAsrSessionId) {
     const restoreStatus = appState.transcriptRestoreStatus;
-    $("transcriptBadge").textContent = restoreStatus === "error" ? "加载失败" : restoreStatus === "missing" ? "原文未保存" : "待输入";
-    const message = restoreStatus === "error" ? "原文加载失败，请重新打开该就诊；已保存病历保持不变。" : restoreStatus === "missing" ? "该历史记录未保存原始输入，不能从病历反推转写。" : "尚未输入，可开始录音、上传音频或输入文本。";
+    const capture = {
+      recording: {label: "录音中", message: "正在录音，等待转写内容。"},
+      paused: {label: "录音已暂停", message: "录音已暂停，暂无转写内容。可恢复录音或停止后提交。"},
+    }[appState.browserRecordingStatus];
+    $("transcriptBadge").textContent = restoreStatus === "error" ? "加载失败" : restoreStatus === "missing" ? "原文未保存" : capture?.label || "待输入";
+    const message = restoreStatus === "error" ? "原文加载失败，请重新打开该就诊；已保存病历保持不变。" : restoreStatus === "missing" ? "该历史记录未保存原始输入，不能从病历反推转写。" : capture?.message || "尚未输入，可开始录音、上传音频或输入文本。";
     $("transcriptList").innerHTML = `<div class="empty-state transcript-empty" role="status">${escapeHtml(message)}</div>`;
     return;
   }
@@ -5917,6 +5954,7 @@ function renderFooter() {
   const exportButton = $("exportButton");
   const footerHints = {
     draft_generated: "病历草稿已生成，可先保存修改；保存后进入医生审核。",
+    incomplete: "历史内容不完整；请核对原文并补录，保存后重新审核。",
     pending_review: "等待医生审核；完成医生审核后方可导出。",
     failed: "流程中断；请先重新转写或改用文本输入。",
     approved: "病历审核已完成；可以导出已审核病历。",
@@ -5946,7 +5984,12 @@ function renderFooter() {
   exportButton.dataset.disabledReason = exportButton.disabled ? "完成医生审核后方可导出" : "";
   exportButton.title = exportButton.disabled ? "完成医生审核后方可导出" : "导出已审核病历";
 
-  if (displayState.key === "draft_generated") {
+  if (displayState.key === "incomplete") {
+    confirmButton.disabled = true;
+    exportButton.disabled = true;
+    confirmButton.title = "请先核对原文并补录可用内容";
+    exportButton.title = "历史内容不完整，尚不可导出";
+  } else if (displayState.key === "draft_generated") {
     regenerateButton.hidden = true;
     confirmButton.hidden = true;
     exportButton.hidden = true;
@@ -7400,6 +7443,11 @@ function reapplyLocalRecordChanges() {
 async function confirmFields() {
   try {
     if (!appState.currentTaskId) throw new Error("暂无可确认的任务");
+    if (pendingApprovalCount(activeRecordFields())) {
+      appState.approvalDisclosureOpen = true;
+      renderFields();
+      document.querySelector('.approval-disclosure summary')?.focus();
+    }
     setBusy(true, "正在完成审核...");
     const payload = await buildTaskApprovalPayload();
     appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/approve`, {
@@ -9149,6 +9197,10 @@ function bindEvents() {
     event.preventDefault();
     refreshEncounterWorklist();
   });
+  document.querySelectorAll('[data-dashboard-filter]').forEach(button => button.addEventListener('click', () => {
+    appState.worklistQuickFilter = button.dataset.dashboardFilter;
+    renderEncounterWorklistPanel();
+  }));
   $("encounterStatusFilter").addEventListener("change", () => {
     refreshEncounterWorklist();
   });
@@ -9168,7 +9220,7 @@ function bindEvents() {
     await restoreEncounter(button.dataset.restoreEncounter, { nextInputMethod: button.dataset.afterRestoreInput || "" });
   });
   $("dashboardEncounterList")?.addEventListener("click", async (event) => {
-    if (event.target.closest("[data-focus-registration]")) { $("localSyntheticPatient")?.focus(); return; }
+    if (event.target.closest("[data-focus-registration]")) { $("localRegistrationDisclosure").open = true; $("localSyntheticPatient")?.focus(); return; }
     const actionButton = event.target.closest("[data-encounter-action]");
     if (actionButton) {
       if (actionButton.dataset.encounterAction === "start-recording") {
@@ -9317,6 +9369,9 @@ function bindEvents() {
   $("recognitionModeSelect")?.addEventListener("change", () => {
     appState.recognitionMode = $("recognitionModeSelect").value || "fast";
   });
+  $("recordFields").addEventListener("toggle", (event) => {
+    if (event.target.matches('.approval-disclosure') && event.target.isConnected) appState.approvalDisclosureOpen = event.target.open;
+  }, true);
   $("recordFields").addEventListener("click", (event) => {
     const resolve = event.target.closest("[data-field-resolution]");
     if (resolve) { beginFieldResolution(resolve.dataset.resolutionKey, resolve.dataset.fieldResolution); return; }

@@ -183,6 +183,8 @@ def test_field_edit_focus_save_failure_and_completed_review_disclosure() -> None
             expect(page.locator("#recordFields script")).to_have_count(0)
             page.unroute("**/review")
             page.click("#cancelRecordEditButton")
+            if not page.locator(".approval-disclosure").get_attribute("open") == "":
+                page.locator(".approval-disclosure > summary").click()
             page.click("[data-approval-confirm-regular]")
             expect(page.locator(".review-completed")).not_to_have_attribute("open", "")
             expect(page.locator("[data-approval-confirm-regular]")).not_to_be_visible()

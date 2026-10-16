@@ -7,8 +7,8 @@
     <link rel="icon" href="./brand/medilisten-v1.ico" sizes="any" />
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
     <link rel="stylesheet" href="./doctor.css?v=alpha51-zh-20260929" />
-    <link rel="stylesheet" href="./doctor-ui-v2.css?v=alpha51-zh-20260929" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-partial-help-20261012" />
+    <link rel="stylesheet" href="./doctor-ui-v2.css?v=alpha51-task-layout-20261016" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-task-layout-20261016" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -113,40 +113,24 @@
       <section id="workbenchHome" class="product-view product-dashboard" data-product-view="workbench" aria-label="医生工作台与就诊列表">
         <div class="dashboard-hero">
           <div>
-            <span class="page-eyebrow">医生工作台</span>
-            <h2>今日需要处理的就诊</h2>
-            <p>优先处理待审核和异常任务，已保存的就诊可随时继续。</p>
+            <h2>医生工作台</h2>
+            <p>选择患者开始接诊，或继续已保存的病历。</p>
           </div>
           <div class="dashboard-actions">
             <button type="button" class="primary-action" data-product-view-target="encounter">继续当前就诊</button>
             <button type="button" id="dashboardRefreshWorklistButton">刷新列表</button>
           </div>
         </div>
-        <div class="dashboard-status-grid" aria-label="当前系统状态">
-          <div class="dashboard-status-card dashboard-stat-card">
-            <span>待录入</span>
-            <strong id="dashboardDoctorLabel">-</strong>
-          </div>
-          <div class="dashboard-status-card dashboard-stat-card">
-            <span>处理中</span>
-            <strong id="dashboardEncounterLabel">-</strong>
-          </div>
-          <div class="dashboard-status-card dashboard-stat-card">
-            <span>待审核</span>
-            <strong id="dashboardTaskStatusLabel">-</strong>
-          </div>
-          <div class="dashboard-status-card dashboard-stat-card">
-            <span>异常任务</span>
-            <strong id="dashboardRecordingLabel">-</strong>
-          </div>
-        </div>
-        <section class="dashboard-panel local-registration-panel" aria-label="本地患者登记">
-          <div class="panel-header">
-            <div>
-              <h2 id="localRegistrationTitle">新建演示就诊</h2>
-              <p id="localRegistrationHelp">选择合成患者，完成报到后开始接诊。此入口不代替医院挂号系统。</p>
-            </div>
-          </div>
+        <nav class="dashboard-status-filters" aria-label="就诊任务快捷筛选">
+          <button type="button" data-dashboard-filter="" aria-pressed="true">全部就诊</button>
+          <button type="button" data-dashboard-filter="pendingInput" aria-pressed="false">待录入 <strong id="dashboardDoctorLabel">-</strong></button>
+          <button type="button" data-dashboard-filter="processing" aria-pressed="false">处理中 <strong id="dashboardEncounterLabel">-</strong></button>
+          <button type="button" data-dashboard-filter="pendingReview" aria-pressed="false">待审核 <strong id="dashboardTaskStatusLabel">-</strong></button>
+          <button type="button" data-dashboard-filter="exceptions" aria-pressed="false">异常 <strong id="dashboardRecordingLabel">-</strong></button>
+        </nav>
+        <details id="localRegistrationDisclosure" class="dashboard-panel local-registration-panel" aria-label="本地患者登记">
+          <summary class="registration-summary"><strong id="localRegistrationTitle">新建演示就诊</strong><span>展开登记并报到</span></summary>
+          <p id="localRegistrationHelp" class="form-help">选择合成患者，完成报到后开始接诊。此入口不代替医院挂号系统。</p>
           <form id="localEncounterForm" class="local-registration-form">
             <label>
               <span id="localPatientLabel">模拟患者 · 仅演示</span>
@@ -159,7 +143,7 @@
             <button type="submit" class="primary-action" id="createLocalEncounterButton">登记并报到</button>
           </form>
           <p class="form-help">报到完成后，在就诊任务中点击“开始接诊”。同一模拟患者可以建立不同的就诊记录。</p>
-        </section>
+        </details>
         <section class="dashboard-panel">
           <div class="panel-header">
             <div>
@@ -658,6 +642,6 @@
       <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=alpha51-history-20261013"></script>
+    <script src="./doctor.js?v=alpha51-task-layout-20261016"></script>
   </body>
 </html>

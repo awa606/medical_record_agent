@@ -14,6 +14,8 @@ def test_check_in_retry_preserves_one_registration_and_unknown_identity():
             # Failed check-in is explicit fault injection, not a fake success.
             page.route("**/api/encounters/*/check-in", lambda route: route.fulfill(
                 status=503, content_type="application/json", body=json.dumps({"detail":"test check-in outage"})), times=1)
+            if not page.locator("#localSyntheticPatient").is_visible():
+                page.locator("#localRegistrationDisclosure summary").click()
             page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-NEGATION")
             with page.expect_response(lambda response:
                                       "/api/encounters?" in response.url

@@ -34,6 +34,8 @@ def test_doctor_workspace_layout_and_real_record_entry(width: int, height: int) 
             browser = playwright.chromium.launch(headless=True)
             page = browser.new_page(viewport={"width": width, "height": height})
             _login(page, server.base_url)
+            if not page.locator("#localSyntheticPatient").is_visible():
+                page.locator("#localRegistrationDisclosure summary").click()
             page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
             page.click("#createLocalEncounterButton")
             page.locator('#dashboardEncounterList [data-encounter-action="start"]').click()

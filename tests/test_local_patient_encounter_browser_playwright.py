@@ -68,6 +68,8 @@ def test_doctor_a_local_encounter_flow_is_hidden_from_doctor_b() -> None:
                 display_name="Doctor A",
             )
 
+            if not page_a.locator("#localSyntheticPatient").is_visible():
+                page_a.locator("#localRegistrationDisclosure summary").click()
             page_a.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
             page_a.click("#createLocalEncounterButton")
             row = page_a.locator("#dashboardEncounterList article").filter(has_text="张示例")
@@ -108,6 +110,8 @@ def test_doctor_a_local_encounter_flow_is_hidden_from_doctor_b() -> None:
             assert linkage["taskEncounterId"] == encounter_id
             assert linkage["checkInStatus"] == "in_progress"
 
+            if not page_a.locator(".approval-disclosure").get_attribute("open") == "":
+                page_a.locator(".approval-disclosure > summary").click()
             page_a.locator("[data-approval-confirm-regular]").click()
             for selector in ('[data-approval-action="accept_missing"]', '[data-approval-action="confirm_candidate"]', '[data-approval-risk-key]'):
                 # Capture stable keys, then use real visible clicks despite re-rendering.

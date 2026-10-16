@@ -27,6 +27,8 @@ def test_independent_cookie_new_patients_repeat_visit_and_source_reopen():
             cookies = {item["name"] for item in context.cookies()}
             assert {"mra_showcase_test", "mra_usage_test"}.issubset(cookies)
             for _ in range(2):
+                if not page.locator("#localSyntheticPatient").is_visible():
+                    page.locator("#localRegistrationDisclosure summary").click()
                 page.select_option("#localSyntheticPatient", "__new__")
                 page.click("#createLocalEncounterButton")
                 expect(page.locator("#workbenchSelectionNotice")).to_contain_text("报到完成")
@@ -35,6 +37,8 @@ def test_independent_cookie_new_patients_repeat_visit_and_source_reopen():
             assert len(records) == 2
             assert len({record["patient_id"] for record in records}) == 2
             first = records[0]
+            if not page.locator("#localSyntheticPatient").is_visible():
+                page.locator("#localRegistrationDisclosure summary").click()
             page.select_option("#localSyntheticPatient", first["patient_deidentified_id"])
             page.click("#createLocalEncounterButton")
             expect(page.locator("#createLocalEncounterButton")).to_be_enabled()

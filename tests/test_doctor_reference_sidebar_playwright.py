@@ -94,6 +94,8 @@ def test_reference_names_open_full_details_without_losing_edits(page):
 
 
 def test_empty_live_and_failure_references_remain_compact_and_escaped(page):
+    if not page.locator("#localSyntheticPatient").is_visible():
+        page.locator("#localRegistrationDisclosure summary").click()
     page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
     page.click("#createLocalEncounterButton")
     page.locator('#dashboardEncounterList [data-encounter-action="start"]').first.click()
@@ -125,6 +127,8 @@ def test_empty_live_and_failure_references_remain_compact_and_escaped(page):
 
 
 def test_live_reference_close_does_not_stop_recording_and_restores_replaced_trigger(page):
+    if not page.locator("#localSyntheticPatient").is_visible():
+        page.locator("#localRegistrationDisclosure summary").click()
     page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
     page.click("#createLocalEncounterButton")
     page.locator('#dashboardEncounterList [data-encounter-action="start"]').first.click()

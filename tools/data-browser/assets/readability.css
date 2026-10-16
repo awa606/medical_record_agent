@@ -1,0 +1,36 @@
+/* Chinese display labels preserve stock queries, raw evidence and table links. */
+body { font-family: "Microsoft YaHei", sans-serif; color: #19334a; line-height: 1.55; }
+.content { max-width: 1440px; margin: auto; }
+h1 { font-size: 26px; } h2 { font-size: 22px; } h3 { font-size: 18px; }
+small, .technical { font-size: 14px; color: #566d7f; font-weight: normal; overflow-wrap: anywhere; }
+.block { display: block; }
+.tag { font-size: 14px; border: 1px solid #b7cad7; border-radius: 5px; padding: 4px 8px; white-space: nowrap; }
+.snapshot-context { background: #f1f6fa; border-left: 3px solid #397897; padding: 16px 20px; margin: 24px 0; }
+.snapshot-context p { margin: 8px 0; overflow-wrap: anywhere; }
+.catalog { margin: 28px 0; } .relation { color: #526b7c; }
+.catalog-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(245px,1fr)); gap: 12px; }
+.catalog-item { border: 1px solid #d6e1e8; border-radius: 6px; padding: 16px; text-decoration: none; display: flex; flex-direction: column; gap: 6px; }
+.catalog-item strong { font-size: 18px; } .catalog-item span { color: #526b7c; font-size: 14px; }
+.catalog-item:hover, .catalog-item:focus-visible { background: #f1f7fa; outline: 2px solid #5c8fac; }
+.rows-and-columns th { min-width: 100px; vertical-align: top; }
+.rows-and-columns td { vertical-align: top; max-width: 36rem; overflow-wrap: anywhere; }
+.rows-and-columns td pre { white-space: pre-wrap; }
+details { margin: 12px 0; } summary { cursor: pointer; }
+.rows-and-columns dl { min-width: 260px; } .rows-and-columns dd { margin: 0 0 10px; white-space: pre-wrap; }
+.filters { margin: 20px 0; } .filter-value { min-width: 100px; }
+.filters .filter-column { min-width: 230px; }
+header .actor small { color: #e9f3fa; }
+.rows-and-columns small, .rows-and-columns th { white-space: normal; }
+@media(max-width: 700px) { .catalog-grid { grid-template-columns: 1fr; } h1 { font-size: 23px; } }
+.rows-and-columns td.col-content_sha256,
+.rows-and-columns td.col-content_hash {
+  max-width: 9rem;
+  overflow-wrap: anywhere;
+}
+.rows-and-columns td.col-content,
+.rows-and-columns td.col-draft_text {
+  min-width: 26rem;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+.row h1 { overflow-wrap: anywhere; }

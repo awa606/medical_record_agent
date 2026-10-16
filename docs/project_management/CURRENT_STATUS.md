@@ -8,24 +8,24 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-22T15:57:12+08:00`
-- Source hash: `655cbfebfe6ece0ef557ef2fac1cdb0c9fb6263eb7304fc5eb895f71ba4d82d8`
+- Updated at: `2026-10-16T13:33:16.266Z`
+- Source hash: `89dbe1d02597df26bfbdee307e2e401deacc47955b74f3c6afef33777a110396`
 - Phase: **Alpha**
-- Repo: `codex/alpha33-doctor-edit-review-export@b3374fd50b71e12f9e7a7eb5e3b410b6953455a4`
-- Base main: `b5cc5369ae9503f28910feca6b1d402add408671`
-- Active PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · DRAFT
-- Last merged PR: [#111](https://github.com/awa606/medical_record_agent/pull/111) · MERGED · `b5cc5369ae9503f28910feca6b1d402add408671`
-- Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
+- Repo: `codex/alpha51-demo-visual-e2e@b9ebf835fb593b1e5c694cb8aed7885cfb34228f`
+- Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
+- Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
+- Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
+- Forecast Alpha Exit: **原软件预测2026-10-07已超期；实际软件放行待剩余验收，完整M4仍受硬件延期影响**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 5 | 0 | 0 | 1 | 2 | 8 | 99 |
+| 4 | 0 | 0 | 1 | 3 | 8 | 99 |
 
 ## Current Task
 
-**5.1 · 三条主路径E2E Smoke** — `BACKLOG`
+**5.1 · 02c14cee审核候选已升级8798；两条真实流程及离线恢复完成，发布门禁未齐** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: WBS 5.1：文本、上传音频、浏览器录音三条完整路径E2E Smoke与首个可恢复冻结候选
-- Parallel waiting task: 1.2目标硬件验证继续DEFERRED，不占用当前软件支线
+- Single next task: 唯一下一工作：在02c14cee同一版本集中补物理麦克风和实际100%/125%/150%显示验收；保持失败记录与模型质量独立结论。5.1全部门禁满足后再执行5.3连续五次真实音频流程，未齐之前继续称审核候选。
+- Parallel waiting task: 物理麦克风及100%/125%/150%实际缩放待用户稍后配合；模型质量、实时资源和新版流感检索未过门；硬件继续延期
 
 ## Manual Actions
 
-- 无
+- 界面已认可；物理录音和实际缩放按用户稍后安排集中补验
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

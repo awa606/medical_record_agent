@@ -3,7 +3,20 @@ from __future__ import annotations
 import re
 from app.schemas import MedicalField, MedicalRecordFields, SafetyCheckResult
 
+PATIENT_FIELD_KEYS = ("chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms", "past_history", "allergy_history", "physical_exam")
+
+
+def supported_field_keys(fields: MedicalRecordFields) -> list[str]:
+    """Count supported draft fields, never rejected nonempty model values."""
+    return [key for key in PATIENT_FIELD_KEYS
+            if not getattr(fields, key).missing
+            and getattr(fields, key).status in {"complete", "partial"}
+            and str(getattr(fields, key).value or "").strip()]
+
+
 def _field_text(field: MedicalField, *, physical_exam: bool = False) -> str:
+    if field.status == "conflicting":
+        return "待核对（模型内容未采纳）"
     if field.missing:
         if physical_exam:
             return "待医生查体补充"
@@ -11,8 +24,6 @@ def _field_text(field: MedicalField, *, physical_exam: bool = False) -> str:
     if field.status == "partial" and field.value:
         missing = "、".join(field.missing_elements or ["待补充信息"])
         return f"{field.value}（部分完成，仍需补充：{missing}）"
-    if field.status == "conflicting" and field.value:
-        return f"{field.value}（证据冲突，需医生复核）"
     return field.value or "未提及，待补充"
 
 

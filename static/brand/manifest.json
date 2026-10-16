@@ -1,0 +1,28 @@
+{
+  "source": "user-provided image(41).png",
+  "source_sha256": "4e97e6f277ce9726b5ec4e4c763859134a786d641fd8b0708211987ea8410af9",
+  "processing": "User-authorized deterministic outside-connected near-white background removal, crop and format/size export. Internal original RGB pixels untouched; no generative redraw.",
+  "crop_bbox": [
+    126,
+    140,
+    1126,
+    1120
+  ],
+  "padding_pixels": 25,
+  "removed_background_pixels": 618698,
+  "ico_sizes": [
+    16,
+    24,
+    32,
+    48,
+    64,
+    128,
+    256
+  ],
+  "files": {
+    "medilisten-original.png": "4e97e6f277ce9726b5ec4e4c763859134a786d641fd8b0708211987ea8410af9",
+    "medilisten-v1-master.png": "8fc0472b6a04c16c7a3d1c4cdd1a9685cf32b5f3b036c49a834bf9dc62bd7cef",
+    "medilisten-v1.ico": "afb3b121711786a531dc57d7411b065209b88f16194cf9c6ba7a201a9942cb71",
+    "medilisten-v1.png": "2269162423512500e2b5cdf0317ab38ba9938f30426ba61e44d0ca71fb4e791c"
+  }
+}

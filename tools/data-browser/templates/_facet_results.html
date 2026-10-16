@@ -1,0 +1,29 @@
+<div class="facet-results">
+    {% for facet_info in sorted_facet_results %}
+        <div class="facet-info facet-{{ database|to_css_class }}-{{ table|to_css_class }}-{{ facet_info.name|to_css_class }}" id="facet-{{ facet_info.name|to_css_class }}" data-column="{{ facet_info.name }}">
+            <p class="facet-info-name">
+                <strong>{{ mra_label(facet_info.name) }}{% if facet_info.type != "column" %}（{{ mra_value(facet_info.type) }} / {{ facet_info.type }}）{% endif %}
+                    <span class="facet-info-total">{% if facet_info.truncated %}&gt;{% endif %}{{ facet_info.results|length }}</span>
+                </strong>
+                {% if facet_info.hideable %}
+                    <a href="{{ facet_info.toggle_url }}" class="cross">&#x2716;</a>
+                {% endif %}
+            </p>
+            <ul class="tight-bullets">
+                {% for facet_value in facet_info.results %}
+                    {% set visible_value %}{% if facet_info.name in mra_enum_columns %}{{ mra_value(facet_value.label) }}（{{ facet_value.label }}）{% elif facet_info.name in ['is_active', 'is_current', 'missing'] %}{{ '是' if facet_value.label|string == '1' else '否' }}（{{ facet_value.label }}）{% else %}{{ facet_value.label or '-' }}{% endif %}{% endset %}
+                    {% if not facet_value.selected %}
+                        <li><a href="{{ facet_value.toggle_url }}">{{ visible_value }}</a> {{ "{:,}".format(facet_value.count) }}</li>
+                    {% else %}
+                        <li>{{ visible_value }} &middot; {{ "{:,}".format(facet_value.count) }} <a href="{{ facet_value.toggle_url }}" class="cross">&#x2716;</a></li>
+                    {% endif %}
+                {% endfor %}
+                {% if facet_info.truncated %}
+                    <li class="facet-truncated">{% if request.args._facet_size != "max" -%}
+                        <a href="{{ path_with_replaced_args(request, {"_facet_size": "max"}) }}">…</a>{% else -%}…{% endif %}
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    {% endfor %}
+</div>

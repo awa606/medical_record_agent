@@ -1,0 +1,197 @@
+{
+  "status": "RECOVERABLE_CANDIDATE_WITH_OPEN_RELEASE_GATES",
+  "captured_at": "2026-10-12T08:46:57.630430+00:00",
+  "application_sha": "770bd920aecb45ecf0e3966db948f34b6d6fd637",
+  "delivery_tool_sha": "ce2b9e36210b166a519735194794129bc5733ba6",
+  "release_id": "review-pilot-770bd920-20261012-r5",
+  "archive_bytes_before_evidence": 10981059595,
+  "archive_files_before_evidence": 201,
+  "images": {
+    "app": {
+      "name": "mra51-partial-review:770bd920aecb",
+      "id": "sha256:780a14c9397196433b0afcdec643b283748c7f04739e6ff9c62c6b8b5335e9be"
+    },
+    "ollama": {
+      "name": "ollama/ollama:0.34.0",
+      "id": "sha256:684d8674b4315fa18f4f0e973a118ec2652ed96f67563277839985175858e0ba"
+    }
+  },
+  "ollama_manifest_sha256": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+  "history_counts": {
+    "patient": 12,
+    "encounter": 13,
+    "agent_task": 9,
+    "record_revision": 15,
+    "approval": 6,
+    "approval_item": 62,
+    "export_event": 8,
+    "knowledge_source": 4,
+    "knowledge_document": 4,
+    "knowledge_chunk": 78,
+    "knowledge_embedding": 78
+  },
+  "core": {
+    "application_sha": "770bd920aecb45ecf0e3966db948f34b6d6fd637",
+    "network": "Docker internal + gateway default-route removal",
+    "fresh_viewer_install": "--no-index from packaged wheelhouse",
+    "initial_history_fingerprints_match": true,
+    "counts": {
+      "patient": 12,
+      "encounter": 13,
+      "agent_task": 9,
+      "record_revision": 15,
+      "approval": 6,
+      "approval_item": 62,
+      "export_event": 8,
+      "knowledge_source": 4,
+      "knowledge_document": 4,
+      "knowledge_chunk": 78,
+      "knowledge_embedding": 78
+    },
+    "all_mounts_in_new_D_directory": true,
+    "external_connections": {
+      "app": "BLOCKED",
+      "gateway": "BLOCKED",
+      "ollama": "BLOCKED"
+    },
+    "resource_hashes": {
+      "static/doctor.html": {
+        "git": "5cd32d8317abb39b658d3d8a31aff622446f091aceb4eaa5ca3d429b1fe2d623",
+        "image": "5cd32d8317abb39b658d3d8a31aff622446f091aceb4eaa5ca3d429b1fe2d623",
+        "LF_equivalent": true
+      },
+      "static/doctor.js": {
+        "git": "cdeb4bbbd674b54ff0eea9fa16df3bdba07e5b8ec92acb3b570084452f2409c8",
+        "image": "010e3ce1023c9a30aa5320d592ffbe74b8fdaedd9232a9917c6ffb16f03e8afe",
+        "LF_equivalent": true
+      },
+      "app/services/llm/llm_record_generator.py": {
+        "git": "7b64ef2162b9dde525effd3fa7c455f0dcaa23d717038ac61ce7400cfcc85710",
+        "image": "7b64ef2162b9dde525effd3fa7c455f0dcaa23d717038ac61ce7400cfcc85710",
+        "LF_equivalent": true
+      }
+    },
+    "source_resources_LF_equivalent": true,
+    "approved_history_and_original_text_restored": true,
+    "embedded_help": true,
+    "retrieval_mode": "hybrid_v1",
+    "knowledge_results": 5,
+    "five_result_citation_completeness": "100%",
+    "disabled_document_excluded": true,
+    "knowledge_enabled_combination_restored": true,
+    "doctor_cannot_manage_knowledge": true,
+    "anonymous_encounters_denied": true,
+    "status": "PASS_RESTORED_CORE"
+  },
+  "viewer": {
+    "port": 18997,
+    "source": "离线恢复 770bd920",
+    "chinese_home": true,
+    "visible_filter": true,
+    "foreign_key_navigation": true,
+    "restricted_routes": {
+      "/mra_snapshot.json?sql=select+1": 403,
+      "/mra_snapshot.db": 403,
+      "/mra_snapshot/auth_user": 404,
+      "/mra_snapshot/record_revision.csv?_stream=on": 400
+    },
+    "anonymous_and_write_denied": true,
+    "snapshot_unchanged": true,
+    "status": "PASS_VIEWER_VISIBLE_CONTROLS"
+  },
+  "restart": {
+    "tables_match": true,
+    "table_count": 10
+  },
+  "text_flow": {
+    "status": "PASS_WITH_EXPLICIT_OPERATOR_CORRECTION",
+    "encounter_id": 14,
+    "task_id": 10,
+    "first_statuses": {
+      "chief_complaint": "complete",
+      "present_illness": "conflicting",
+      "previous_treatment": "missing",
+      "accompanying_symptoms": "complete",
+      "past_history": "missing",
+      "allergy_history": "complete",
+      "physical_exam": "missing"
+    },
+    "manual_corrections": [
+      "present_illness"
+    ],
+    "saved_revision": 17,
+    "export_size": 1441,
+    "historical_reopen": true
+  },
+  "audio_flow": {
+    "status": "FAILED",
+    "encounter_id": 15,
+    "task_id": 11,
+    "engine": "funasr-paraformer-zh",
+    "segment_count": 21,
+    "audio_sha256": "e0d16a3192b99ee99c74fc730facd22338cd4da2a3bb28da980d6d99375f74a4",
+    "manual_role_mapping": {
+      "spk0": "患者",
+      "spk1": "医生"
+    },
+    "first_statuses": {
+      "chief_complaint": "complete",
+      "present_illness": "complete",
+      "previous_treatment": "complete",
+      "accompanying_symptoms": "missing",
+      "past_history": "complete",
+      "allergy_history": "missing",
+      "physical_exam": "missing"
+    },
+    "manual_corrections": [
+      "chief_complaint"
+    ],
+    "saved_revision": 19,
+    "export_size": 1430,
+    "exported": true,
+    "failure": "TimeoutError: Page.wait_for_function: Timeout 30000ms exceeded."
+  },
+  "audio_history_separate_verification": {
+    "new_ASR_calls": 0,
+    "new_model_calls": 0,
+    "application_sha": "770bd920aecb45ecf0e3966db948f34b6d6fd637",
+    "approved_revision": 19,
+    "original_asr_transcript_restored": true,
+    "history_reopen_visible_button": true,
+    "stale_revision_denied": 409,
+    "unapproved_task_export_denied": 400,
+    "status": "PASS_HISTORY_AND_NEGATIVE_GATES"
+  },
+  "offline_models_and_mounts": "all copied into new D directory; no C cache binding; app/gateway/ollama outbound BLOCKED",
+  "viewer_dependencies": "new Python3.11 venv; 28 local wheels; pip --no-index; Datasette0.65.5",
+  "credentials": "original password hashes/sessions/identity map omitted; owner IDs kept; fresh credentials created at restore",
+  "local_validation": {
+    "whole_regression_before_tool_fixes": "762 passed,2 skipped,1 warning,8 subtests",
+    "final_tool_tests": "9 passed",
+    "intake_browser_regression": "2 passed",
+    "CI": "6fadd34 verify PASS https://github.com/awa606/medical_record_agent/actions/runs/38224350884"
+  },
+  "open_items": [
+    "physical microphone on final SHA",
+    "actual 100/125/150 display",
+    "audio automatic refresh restoration state mismatch / busy timeout",
+    "5.3 continuous five real audio flows"
+  ],
+  "model_quality": "model first response conflicts persist; explicit operator edits not counted as model success",
+  "WBS": "5.1 VERIFY;5.3 BACKLOG;16 tasks99h unchanged",
+  "failures_retained": [
+    "r1 duplicate YAML",
+    "r2 missing test descriptor and PS5.1 mismatch",
+    "r3 inherited pipe and venv redirector",
+    "r4 cross-kernel WAL access",
+    "audio harness refresh/reopen failures; same saved input reused, no model retry"
+  ],
+  "clinical_validation": false,
+  "source_resumed": {
+    "source_unchanged": true,
+    "table_count": 10,
+    "source_port": 8798,
+    "restored_replica_stopped": true,
+    "ready": 200
+  }
+}

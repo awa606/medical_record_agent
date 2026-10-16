@@ -1,0 +1,1286 @@
+{
+  "verified_at": "2026-09-29T00:30:25+08:00",
+  "verifier": "Codex engineering checks; no clinician review",
+  "baseline_code": "e2cd73830f94502e463875515485f855cd88dac7",
+  "runtime_code": "8afc6bd537e3bccce9989529a6540005236677a4",
+  "production_guard_deployed": false,
+  "new_case_model_calls": 0,
+  "model_call_scope": "Offline replay has no model requests; existing readiness probes are excluded",
+  "manual_corrections": 0,
+  "models": [
+    {
+      "model": "qwen3:4b",
+      "total": 21,
+      "raw_passed": 12,
+      "before_passed": 9,
+      "after_passed": 12,
+      "new_regressions": 0,
+      "groups": {
+        "realtek13": {
+          "raw_passed": 0,
+          "before_passed": 0,
+          "after_passed": 0
+        },
+        "case11": {
+          "raw_passed": 3,
+          "before_passed": 0,
+          "after_passed": 3
+        },
+        "question": {
+          "raw_passed": 3,
+          "before_passed": 3,
+          "after_passed": 3
+        },
+        "family": {
+          "raw_passed": 0,
+          "before_passed": 0,
+          "after_passed": 0
+        },
+        "negative_allergy": {
+          "raw_passed": 3,
+          "before_passed": 3,
+          "after_passed": 3
+        },
+        "treatment": {
+          "raw_passed": 0,
+          "before_passed": 0,
+          "after_passed": 0
+        },
+        "missing": {
+          "raw_passed": 3,
+          "before_passed": 3,
+          "after_passed": 3
+        }
+      },
+      "runs": [
+        {
+          "input_id": "realtek13",
+          "run": 1,
+          "raw_sha256": "4e0c4a75d14ed6f0938705605e2985f25dbadb038b0fbb7e56a850ba09340a1a",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": false,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "before_conflicts": {
+            "chief_complaint": "引用不在原始转写中；引用片段序号不匹配；没有对应的真实音频片段；字段改写不能由引用逐项支持，需医生修正"
+          },
+          "after_conflicts": {
+            "chief_complaint": "引用不在原始转写中；引用片段序号不匹配；没有对应的真实音频片段；字段改写不能由引用逐项支持，需医生修正"
+          },
+          "pipeline_checks": {
+            "citations_match_input_and_index": false,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "pipeline_conflicts": {
+            "chief_complaint": "引用不在原始转写中；引用片段序号不匹配；没有对应的真实音频片段；字段改写不能由引用逐项支持，需医生修正"
+          }
+        },
+        {
+          "input_id": "realtek13",
+          "run": 2,
+          "raw_sha256": "226a9570ee2206917d524ba8fe3f4b57af5951569e578bd4e0cc919fc7c74909",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": false,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "before_conflicts": {
+            "chief_complaint": "引用不在原始转写中；引用片段序号不匹配；没有对应的真实音频片段；字段改写不能由引用逐项支持，需医生修正"
+          },
+          "after_conflicts": {
+            "chief_complaint": "引用不在原始转写中；引用片段序号不匹配；没有对应的真实音频片段；字段改写不能由引用逐项支持，需医生修正"
+          },
+          "pipeline_checks": {
+            "citations_match_input_and_index": false,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "pipeline_conflicts": {
+            "chief_complaint": "引用不在原始转写中；引用片段序号不匹配；没有对应的真实音频片段；字段改写不能由引用逐项支持，需医生修正"
+          }
+        },
+        {
+          "input_id": "realtek13",
+          "run": 3,
+          "raw_sha256": "abecfcc7f5167be2275b0f7b0ffe3d34a4af4c557a73515e02d0dd5c3f0efb4b",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": false,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "before_conflicts": {
+            "chief_complaint": "引用不在原始转写中；引用片段序号不匹配；没有对应的真实音频片段；字段改写不能由引用逐项支持，需医生修正"
+          },
+          "after_conflicts": {
+            "chief_complaint": "引用不在原始转写中；引用片段序号不匹配；没有对应的真实音频片段；字段改写不能由引用逐项支持，需医生修正"
+          },
+          "pipeline_checks": {
+            "citations_match_input_and_index": false,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "pipeline_conflicts": {
+            "chief_complaint": "引用不在原始转写中；引用片段序号不匹配；没有对应的真实音频片段；字段改写不能由引用逐项支持，需医生修正"
+          }
+        },
+        {
+          "input_id": "case11",
+          "run": 1,
+          "raw_sha256": "0c404b8a603bdcedaf7a4976993d146c27bf48d8d432c9aec4c75c10a4ac84f4",
+          "before_passed": false,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": true,
+            "headache_in_accompanying": true,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {
+            "present_illness": "引用截断了主体、时间、确定性或状态限定"
+          },
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": true,
+            "headache_in_accompanying": true,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "case11",
+          "run": 2,
+          "raw_sha256": "27da836a6fd16a75e25813ceaaba809a268b6be10027944e686fc47a5628dfc2",
+          "before_passed": false,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": true,
+            "headache_in_accompanying": true,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {
+            "present_illness": "引用截断了主体、时间、确定性或状态限定"
+          },
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": true,
+            "headache_in_accompanying": true,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "case11",
+          "run": 3,
+          "raw_sha256": "9afb22b1ace1f6cd08cfe1a0f3fb10b343d36e88c8f9b8d726fa7222e57fa551",
+          "before_passed": false,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": true,
+            "headache_in_accompanying": true,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {
+            "present_illness": "引用截断了主体、时间、确定性或状态限定"
+          },
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": true,
+            "headache_in_accompanying": true,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "question",
+          "run": 1,
+          "raw_sha256": "fd8dd9c9b932dbcaabe9f8961b25822a90fc6cbd4a969670f2ebaf0e87051e8c",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "question",
+          "run": 2,
+          "raw_sha256": "3cff76a64fa7ad9af1a0c9c571668808d1a0e12cd9f216d674bd279a205d9036",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "question",
+          "run": 3,
+          "raw_sha256": "211170b3cdb62a26ac43499b9a45c2e1feec5af7b6f8d2d7491687dab5dfd116",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "family",
+          "run": 1,
+          "raw_sha256": "8eb07ebf42701e0560415c3060a2c04d051e9bc4d138575f694adbc6340b92e2",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": false
+          },
+          "before_conflicts": {
+            "chief_complaint": "家属或他人事实不能归入患者本人字段，需医生核对归属",
+            "allergy_history": "家属或他人事实不能归入患者本人字段，需医生核对归属"
+          },
+          "after_conflicts": {
+            "chief_complaint": "家属或他人事实不能归入患者本人字段，需医生核对归属",
+            "allergy_history": "家属或他人事实不能归入患者本人字段，需医生核对归属"
+          },
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": false
+          },
+          "pipeline_conflicts": {
+            "chief_complaint": "家属或他人事实不能归入患者本人字段，需医生核对归属",
+            "allergy_history": "家属或他人事实不能归入患者本人字段，需医生核对归属"
+          }
+        },
+        {
+          "input_id": "family",
+          "run": 2,
+          "raw_sha256": "619156b8f7d74309526a308d198c733f41ce6ed74b17f6017c252adf656d67b2",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": false
+          },
+          "before_conflicts": {
+            "chief_complaint": "家属或他人事实不能归入患者本人字段，需医生核对归属",
+            "allergy_history": "家属或他人事实不能归入患者本人字段，需医生核对归属"
+          },
+          "after_conflicts": {
+            "chief_complaint": "家属或他人事实不能归入患者本人字段，需医生核对归属",
+            "allergy_history": "家属或他人事实不能归入患者本人字段，需医生核对归属"
+          },
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": false
+          },
+          "pipeline_conflicts": {
+            "chief_complaint": "家属或他人事实不能归入患者本人字段，需医生核对归属",
+            "allergy_history": "家属或他人事实不能归入患者本人字段，需医生核对归属"
+          }
+        },
+        {
+          "input_id": "family",
+          "run": 3,
+          "raw_sha256": "836b3fa2af7d6d44c906d3a38aba0a430d9e755507b57d468c2b96696cf7c251",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": false
+          },
+          "before_conflicts": {
+            "chief_complaint": "家属或他人事实不能归入患者本人字段，需医生核对归属",
+            "allergy_history": "家属或他人事实不能归入患者本人字段，需医生核对归属"
+          },
+          "after_conflicts": {
+            "chief_complaint": "家属或他人事实不能归入患者本人字段，需医生核对归属",
+            "allergy_history": "家属或他人事实不能归入患者本人字段，需医生核对归属"
+          },
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": false
+          },
+          "pipeline_conflicts": {
+            "chief_complaint": "家属或他人事实不能归入患者本人字段，需医生核对归属",
+            "allergy_history": "家属或他人事实不能归入患者本人字段，需医生核对归属"
+          }
+        },
+        {
+          "input_id": "negative_allergy",
+          "run": 1,
+          "raw_sha256": "ba37270ed7c065f189e73de43f1bc0f443e5bad4e7d3e7cdf50cc2fa0e5063ff",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": true,
+            "negation_preserved": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": true,
+            "negation_preserved": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "negative_allergy",
+          "run": 2,
+          "raw_sha256": "04bea73ec84ded93d3c87886c5a2fc50e4978daf38a59ae10b1290623dd0cd1c",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": true,
+            "negation_preserved": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": true,
+            "negation_preserved": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "negative_allergy",
+          "run": 3,
+          "raw_sha256": "c9b52e0d01965def7d09cabd29ff6960f68e94dacba827b15c9e1fc48a6c9e2d",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": true,
+            "negation_preserved": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": true,
+            "negation_preserved": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "treatment",
+          "run": 1,
+          "raw_sha256": "8b4eb7f05675f9828659a1b319e845dbc0b372d0103583b39c31ed5f5dee275c",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": false,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": false,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "treatment",
+          "run": 2,
+          "raw_sha256": "a1782035707cad323ccb6e426b765b4300467a214be55058ab68ab3244e4008a",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": false,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": false,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "treatment",
+          "run": 3,
+          "raw_sha256": "c59d9bf375bbaa038463a15f2df138267fe300696914eba68298bfab102342b3",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": false,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": false,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "missing",
+          "run": 1,
+          "raw_sha256": "10559a09a792898859bbd735b2594092ed7fa0983ff0b87f195793811f15cace",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "missing",
+          "run": 2,
+          "raw_sha256": "6b0e8c44e203586d96c1acfb30299022ad6b4d9f5a418522a817849c795dc7d6",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "missing",
+          "run": 3,
+          "raw_sha256": "7857e01f6335b4f9b1ed74fd669098bd17a6ca558c51ef0f8b6b5d6e9a50edba",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        }
+      ]
+    },
+    {
+      "model": "qwen3:8b",
+      "total": 21,
+      "raw_passed": 9,
+      "before_passed": 9,
+      "after_passed": 9,
+      "new_regressions": 0,
+      "groups": {
+        "realtek13": {
+          "raw_passed": 3,
+          "before_passed": 3,
+          "after_passed": 3
+        },
+        "case11": {
+          "raw_passed": 0,
+          "before_passed": 0,
+          "after_passed": 0
+        },
+        "question": {
+          "raw_passed": 3,
+          "before_passed": 3,
+          "after_passed": 3
+        },
+        "family": {
+          "raw_passed": 0,
+          "before_passed": 0,
+          "after_passed": 0
+        },
+        "negative_allergy": {
+          "raw_passed": 0,
+          "before_passed": 0,
+          "after_passed": 0
+        },
+        "treatment": {
+          "raw_passed": 0,
+          "before_passed": 0,
+          "after_passed": 0
+        },
+        "missing": {
+          "raw_passed": 3,
+          "before_passed": 3,
+          "after_passed": 3
+        }
+      },
+      "runs": [
+        {
+          "input_id": "realtek13",
+          "run": 1,
+          "raw_sha256": "150de79e3e3d15f594f9a7e420c4877c54109e1bc7679c5ea31f9b869fb99c46",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "realtek13",
+          "run": 2,
+          "raw_sha256": "1b286613747307b2688b57c3d4b29fa82791a85f2471098f5f8351f5f81a7c31",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "realtek13",
+          "run": 3,
+          "raw_sha256": "a2fd2c133172e88221facc27eaab2f78644d17427f64562108bdf582549502e5",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "four_expected_fields": true,
+            "fever_in_chief": true,
+            "symptoms_in_illness": true,
+            "exact_temperature": true,
+            "negated_chest_pain": true,
+            "negated_allergy": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "case11",
+          "run": 1,
+          "raw_sha256": "7ba69794b8e082e76091f632a19253fecf801192b62227c73dfa51d2dbc6744e",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": false,
+            "headache_in_accompanying": false,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {
+            "chief_complaint": "引用截断了主体、时间、确定性或状态限定"
+          },
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": false,
+            "headache_in_accompanying": false,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "case11",
+          "run": 2,
+          "raw_sha256": "7f89a50c75f35e688a8cf865c17f37f9878e9590a1de2d1603356f35aeead7a3",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": false,
+            "headache_in_accompanying": false,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {
+            "chief_complaint": "引用截断了主体、时间、确定性或状态限定"
+          },
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": false,
+            "headache_in_accompanying": false,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "case11",
+          "run": 3,
+          "raw_sha256": "f8b1d0a735467c56dd727df12258a5943fb7d1a364828fe7857d97cd2ca661a1",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": false,
+            "headache_in_accompanying": false,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {
+            "chief_complaint": "引用截断了主体、时间、确定性或状态限定"
+          },
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "headache_in_chief": true,
+            "fever_and_temperature_in_illness": false,
+            "headache_in_accompanying": false,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "question",
+          "run": 1,
+          "raw_sha256": "4968d3478da97cffc16220db821c771c266444054e5df3c080e6a251a9a07aa7",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "question",
+          "run": 2,
+          "raw_sha256": "0f9f29afc91a850718f6e5fbb87b2d94ed5290a53943463de47cd14eb75ed062",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "question",
+          "run": 3,
+          "raw_sha256": "b66226a2fde351342659cb1a5ca8eb9d86f41f2189204059cfb825255061b733",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_patient_fact": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "family",
+          "run": 1,
+          "raw_sha256": "3ba7ef917cfb692d59fa6150c2315fcf20fb2db5d321b468fb3ef100ce3ca675",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "error": "ValidationError: 1 validation error for MedicalRecordFields"
+        },
+        {
+          "input_id": "family",
+          "run": 2,
+          "raw_sha256": "496efc9f592d3c6bd908c7fa91965ab4e37b5589acb87cd4b0bd9f45392c79aa",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "error": "ValidationError: 1 validation error for MedicalRecordFields"
+        },
+        {
+          "input_id": "family",
+          "run": 3,
+          "raw_sha256": "7ea76e4329d2ae69d8e63087191bd538f4d36c39c890d851f4279ba9718b412a",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "error": "ValidationError: 1 validation error for MedicalRecordFields"
+        },
+        {
+          "input_id": "negative_allergy",
+          "run": 1,
+          "raw_sha256": "7627540e2f02d7874c4bd74beba524a778a4eb7bf30d4bf5e283adc425eac69c",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": false,
+            "negation_preserved": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": false,
+            "negation_preserved": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "negative_allergy",
+          "run": 2,
+          "raw_sha256": "5e44de6af7cbaa0a92841aada27048dee6de13fb66898b251475251b4015274d",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": false,
+            "negation_preserved": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": false,
+            "negation_preserved": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "negative_allergy",
+          "run": 3,
+          "raw_sha256": "8017088236236ef1fae2cc469fc80b62004a422e7bbf394948da1347226199c1",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": false,
+            "negation_preserved": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "allergy_only": false,
+            "negation_preserved": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "treatment",
+          "run": 1,
+          "raw_sha256": "fc2a5a231641cb03979b72e89e21d150fcaecaae114806623e67bd1016f6a216",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": true,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": true,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "treatment",
+          "run": 2,
+          "raw_sha256": "879d5696cac9d86a60cef9180964685050b03c5ad5130cad7a5334f81dff2158",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": true,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": true,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "treatment",
+          "run": 3,
+          "raw_sha256": "98e06a400ac27eaa92dedc67e7a2ec211f29c91eb3e56d1d44132b943829b8c7",
+          "before_passed": false,
+          "raw_passed": false,
+          "after_passed": false,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": true,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "treatment_present": true,
+            "only_treatment_or_illness": true,
+            "treatment_and_response": false
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "missing",
+          "run": 1,
+          "raw_sha256": "c3ec359688ef3fe162811d6bae62003b49606d9aa612c6579d7d80928a5b5ed5",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "missing",
+          "run": 2,
+          "raw_sha256": "dc61beba6bd20ecb93b471d8d19f04a3940637b95696dfbc8993ccd13b07505a",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        },
+        {
+          "input_id": "missing",
+          "run": 3,
+          "raw_sha256": "a2c6a45ceef4d814ae8574f730d85ca8ac270d03088685d791afa5017a4d43be",
+          "before_passed": true,
+          "raw_passed": true,
+          "after_passed": true,
+          "raw_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "before_conflicts": {},
+          "after_conflicts": {},
+          "pipeline_checks": {
+            "citations_match_input_and_index": true,
+            "every_nonempty_field_has_evidence": true,
+            "missing_flags_consistent": true,
+            "no_unmentioned_fields": true
+          },
+          "pipeline_conflicts": {}
+        }
+      ]
+    }
+  ],
+  "viewer": {
+    "lifecycle": {
+      "idempotent_start": true,
+      "occupied_port_keeps_old_viewer": true,
+      "stop_start": true,
+      "same_counts": true
+    },
+    "port": 8796,
+    "snapshot_at": "2026-09-28T16:15:06.547318+00:00",
+    "checks": {
+      "patient": true,
+      "record_revision": true,
+      "knowledge_source": true,
+      "knowledge_document": true,
+      "knowledge_chunk": true,
+      "knowledge_embedding_metadata": true,
+      "patient_encounter_revision_approval_export_clicks": true,
+      "source_document_chunk_embedding_clicks": true,
+      "sql_download_auth_table_write_blocked": true,
+      "source_and_snapshot_unchanged": true
+    }
+  },
+  "current_viewer": {
+    "port": 8796,
+    "snapshot_at": "2026-09-28T16:15:55.838694+00:00",
+    "source_label": "8795 / 8afc6bd / consistent backup before 2026-09-29 00:00",
+    "counts": {
+      "patient": 4,
+      "agent_task": 5,
+      "encounter": 8,
+      "record_revision": 12,
+      "revision_field": 84,
+      "approval": 7,
+      "export_event": 8,
+      "knowledge_source": 5,
+      "knowledge_document": 7,
+      "knowledge_chunk": 116,
+      "knowledge_embedding_metadata": 96
+    }
+  },
+  "runtime": {
+    "health": "200",
+    "ready": "200 after existing startup probe",
+    "knowledge": {
+      "mode": "hybrid_v1",
+      "hits": 5
+    },
+    "anonymous_admin_status": 401
+  },
+  "tests": {
+    "pytest_passed": 676,
+    "pytest_skipped": 1,
+    "isolated_datasette_passed": 9,
+    "frontend_and_powershell_syntax": "PASS"
+  },
+  "release": {
+    "5.1": "VERIFY",
+    "5.3": "BACKLOG",
+    "doctor_pilot": "NOT_RELEASED",
+    "reason": "first-output quality fails; final same-version real three paths, display and release recovery not complete"
+  },
+  "artifact_hashes": {
+    "replay-final/report.private.json": "7ad24a6e4daec7291da450e9b99c02ceff079ff48bd4909d4a8a450a8e854840",
+    "viewer-runtime-report.json": "9e69b0c1ac325f06e59a44c4d2853bae1447536a2c2f37105b19dc7fc28faf39",
+    "pytest-final-guard.log": "45fa0339e9b21c9b309e2dfb81cecc7289f2b70bad6716c86998ab5222400bc1",
+    "source-backup.private.sqlite3": "562d312c469da214f02edfc578bac73f060d5877c69acf71048846b14a8724f2"
+  }
+}

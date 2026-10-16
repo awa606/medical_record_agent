@@ -324,6 +324,25 @@ class TaskApiTests(unittest.TestCase):
         self.assertNotIn("鍙戠儹", document_xml)
         self.assertNotIn("涓昏瘔", document_xml)
 
+    def test_deleted_ai_diagnoses_remain_auditable_but_are_not_exported(self):
+        result = MedicalRecordOrchestrator().run_from_text("左手手掌被咬了，大概两个小时左右，用酒精冲洗，牙龈出血。")
+        task_id = result["task_id"]
+        payload = self.approval_payload_for_task(task_id)
+        self.assertTrue(payload["diagnoses"])
+        for item in payload["diagnoses"]:
+            item["action"] = "delete_ai_candidate"
+        approved = approve_task(task_id, TaskApprovalRequest.model_validate(payload))
+        diagnoses = approved["result_json"]["fields"]["candidate_diagnoses"]
+        self.assertTrue(all(d["deleted_by_doctor"] for d in diagnoses))
+        exported = export_task(task_id)
+        markdown = Path(exported["exports"]["markdown_path"]).read_text(encoding="utf-8")
+        with ZipFile(exported["exports"]["word_path"]) as docx:
+            xml = docx.read("word/document.xml").decode("utf-8")
+        for body in (markdown, xml):
+            self.assertNotIn("医生已确认", body)
+            self.assertIn("无保留的候选诊断", body)
+        self.assertEqual(len(read_task(task_id)["result_json"]["fields"]["candidate_diagnoses"]), len(diagnoses))
+
     def test_export_download_route_returns_docx_after_approval(self):
         client = TestClient(app)
         doctor = create_user(client, username="download-doctor")
@@ -476,7 +495,11 @@ class TaskApiTests(unittest.TestCase):
         with self.assertRaises(HTTPException) as blocked:
             approve_task(task_id, TaskApprovalRequest.model_validate(payload))
         self.assertEqual(blocked.exception.status_code, 409)
-        review_task(task_id, self._review_request(task_id, self._custom_fields()))
+        corrected = self._custom_fields()
+        corrected.chief_complaint.value = "发热3天，医生核对补充记录"
+        request = self._review_request(task_id, corrected)
+        request.manual_takeover_fields = ["chief_complaint"]
+        review_task(task_id, request)
         approved = approve_task(task_id, TaskApprovalRequest.model_validate(self._minimal_payload(task_id)))
         self.assertTrue(approved["result_json"]["fields"]["chief_complaint"]["confirmed_by_doctor"])
 
@@ -543,7 +566,11 @@ class TaskApiTests(unittest.TestCase):
         )
         with self.assertRaises(HTTPException):
             approve_task(task_id, TaskApprovalRequest.model_validate(self._minimal_payload(task_id, include_high_risk=True)))
-        review_task(task_id, self._review_request(task_id, self._custom_fields(candidate_high_risk=True)))
+        corrected = self._custom_fields(candidate_high_risk=True)
+        corrected.chief_complaint.value = "发热3天，医生核对补充记录"
+        request = self._review_request(task_id, corrected)
+        request.manual_takeover_fields = ["chief_complaint"]
+        review_task(task_id, request)
         payload = self._minimal_payload(task_id, include_high_risk=True)
         payload["fields"].append({"key": "chief_complaint", "action": "confirm_content"})
         approve_task(task_id, TaskApprovalRequest.model_validate(payload))

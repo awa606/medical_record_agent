@@ -54,6 +54,8 @@ class ReviewRequest(BaseModel):
     fields: MedicalRecordFields
     expected_revision_id: int
     expected_content_hash: str
+    manual_takeover_fields: list[str] = Field(default_factory=list)
+    source_corrected_fields: list[str] = Field(default_factory=list)
 
 
 class FieldApprovalItem(BaseModel):
@@ -288,19 +290,68 @@ def _reset_review_state(fields: MedicalRecordFields) -> MedicalRecordFields:
 def _mark_manual_doctor_edits(
     fields: MedicalRecordFields,
     previous_fields: MedicalRecordFields | None,
+    *,
+    manual_takeover_fields: list[str] | None = None,
+    source_corrected_fields: list[str] | None = None,
 ) -> list[str]:
     if previous_fields is None:
         return []
     changed: list[str] = []
+    manual = set(manual_takeover_fields or [])
+    corrected = set(source_corrected_fields or [])
     for key, _label, field in _field_items(fields):
         previous = getattr(previous_fields, key)
         current_value = str(field.value or "").strip()
         previous_value = str(previous.value or "").strip()
-        if current_value == previous_value and bool(field.missing) == bool(previous.missing):
+        content_changed = current_value != previous_value or bool(field.missing) != bool(previous.missing)
+        if key in corrected:
+            # Validate doctor-selected evidence as evidence, never as a manual
+            # exemption from grounding. The provenance note is set afterwards.
+            field.doctor_review_note = None
+            changed.append(key)
+            continue
+        if key in manual:
+            field.source_spans = []
+            field.fact_ids = []
+            field.confidence = None
+            field.status = "missing" if field.missing else "partial"
+            field.doctor_review_note = "manual_doctor_edit_v1: 医生补录；新内容为人工来源，原模型内容和错误引用保留在旧版本。"
+            changed.append(key)
+            continue
+        if not content_changed:
+            # Only the server's previous revision can carry manual provenance.
+            # A later edit to another field must not lose this source marker.
+            field.doctor_review_note = previous.doctor_review_note
+            field.source_spans = [span.model_copy(deep=True) for span in previous.source_spans]
+            field.status = previous.status
+            continue
+        if previous.status == "conflicting":
+            field.source_spans = [span.model_copy(deep=True) for span in previous.source_spans]
+            field.status = "conflicting"
+            field.hint = "请根据原文修正，或明确选择医生补录；原模型冲突仍保留。"
             continue
         field.doctor_review_note = MANUAL_DOCTOR_EDIT_NOTE
         changed.append(key)
     return changed
+
+
+def _validate_field_resolutions(payload: ReviewRequest, previous: MedicalRecordFields | None) -> None:
+    manual, corrected = payload.manual_takeover_fields, payload.source_corrected_fields
+    if (len(manual) != len(set(manual)) or len(corrected) != len(set(corrected))
+            or set(manual) & set(corrected) or (set(manual) | set(corrected)) - set(FIELD_LABELS)):
+        raise HTTPException(status_code=422, detail="字段处置声明包含未知、重复或相互冲突的字段。")
+    if not manual and not corrected:
+        return
+    if previous is None:
+        raise HTTPException(status_code=422, detail="没有可核对的原病历版本，不能声明字段处置。")
+    for key in manual + corrected:
+        old, new = getattr(previous, key), getattr(payload.fields, key)
+        value_changed = (str(old.value or "").strip(), old.missing) != (str(new.value or "").strip(), new.missing)
+        evidence_changed = [s.model_dump() for s in old.source_spans] != [s.model_dump() for s in new.source_spans]
+        if not value_changed and (key in manual or not evidence_changed):
+            raise HTTPException(status_code=422, detail=f"{FIELD_LABELS[key]}没有实际修正，不能仅勾选消除冲突。")
+        if key in corrected and (new.missing or not new.value or not new.source_spans):
+            raise HTTPException(status_code=422, detail=f"{FIELD_LABELS[key]}原文修正必须提供内容及可核验引用。")
 
 
 def _current_revision_or_error(task: dict[str, Any]) -> dict[str, Any]:
@@ -363,7 +414,14 @@ def _apply_field_approval(fields: MedicalRecordFields, item: FieldApprovalItem) 
     elif item.action == "accept_missing":
         field.confirmed_by_doctor = True
         field.doctor_review_status = "missing_accepted"
-    field.doctor_review_note = item.note
+    source_note = str(field.doctor_review_note or "")
+    if source_note.startswith(("manual_doctor_edit_v1:", "doctor_source_correction_v1:")):
+        # Approval must not erase the server-established source of a doctor's
+        # correction, otherwise a later revision loses its provenance.
+        if item.note:
+            field.doctor_review_note = source_note + "；审核说明：" + item.note
+    else:
+        field.doctor_review_note = item.note
     return {
         "item_type": "field",
         "item_key": item.key,
@@ -538,17 +596,43 @@ def review_task(
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
 
+    revision = _current_revision_or_error(task)
+    if (review_payload.expected_revision_id != int(revision["id"])
+            or review_payload.expected_content_hash != _revision_content_hash(revision)):
+        raise HTTPException(status_code=409, detail={
+            "error_code": "stale_record_revision",
+            "expected_revision_id": review_payload.expected_revision_id,
+            "current_revision_id": int(revision["id"]),
+            "current_content_hash": _revision_content_hash(revision),
+            "message": "病历版本已更新，请加载最新版本后保存；本地修改仍保留。",
+        })
+    # The transaction below repeats this check atomically against concurrent
+    # saves. This early check prevents stale resolution declarations from
+    # being judged against a different doctor's revision.
     try:
         previous_fields = MedicalRecordFields.model_validate(result.get("fields") or {})
     except ValidationError:
         previous_fields = None
+    _validate_field_resolutions(review_payload, previous_fields)
     fields = _reset_review_state(review_payload.fields)
-    manual_edited_fields = _mark_manual_doctor_edits(fields, previous_fields)
+    manual_edited_fields = _mark_manual_doctor_edits(
+        fields, previous_fields,
+        manual_takeover_fields=review_payload.manual_takeover_fields,
+        source_corrected_fields=review_payload.source_corrected_fields,
+    )
     if os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}:
         from app.services.field_grounding import ground_fields
         from app.services.privacy import anonymize_text
         fields = ground_fields(fields, anonymize_text(task.get("input_text") or result.get("conversation_text") or ""),
                                (result.get("asr_source") or {}).get("segments"))
+    if previous_fields:
+        resolved = set(review_payload.manual_takeover_fields + review_payload.source_corrected_fields)
+        for key, _label, field in _field_items(fields):
+            if getattr(previous_fields, key).status == "conflicting" and key not in resolved:
+                field.status = "conflicting"
+                field.hint = "原模型冲突尚未处置，请选择根据原文修正或医生补录后保存。"
+    for key in review_payload.source_corrected_fields:
+        getattr(fields, key).doctor_review_note = "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。"
     generator = _record_generator_or_503()
     draft = generator.generate_draft(fields)
     safety_check = generator.safety_check(draft, fields)
@@ -565,6 +649,21 @@ def review_task(
     result["approved"] = False
     if manual_edited_fields:
         result["llm_trace"]["manual_edited_fields"] = manual_edited_fields
+    resolutions = [
+        {"field": key, "method": method, "previous_revision_id": review_payload.expected_revision_id,
+         "previous_value": getattr(previous_fields, key).value,
+         "previous_source_spans": [s.model_dump() for s in getattr(previous_fields, key).source_spans],
+         "value": getattr(fields, key).value}
+        for method, keys in (("doctor_entry", review_payload.manual_takeover_fields),
+                             ("source_correction", review_payload.source_corrected_fields))
+        for key in keys
+    ]
+    if resolutions:
+        result["llm_trace"]["field_resolution_history"] = [
+            *(prior_trace.get("field_resolution_history") or []), *resolutions,
+        ]
+    from app.services.record_quality import build_record_quality_report
+    result["quality_report"] = build_record_quality_report(fields, safety_check, draft=draft)
 
     actor = current_user_from_request(request)
     try:
@@ -579,7 +678,9 @@ def review_task(
             source="doctor_review",
             workflow_status="waiting_review",
             event_type="doctor_review_saved",
-            event_detail={"task_id": task_id, "manual_edited_fields": manual_edited_fields, **_actor_detail(request)},
+            event_detail={"task_id": task_id, "manual_edited_fields": manual_edited_fields,
+                          "field_resolutions": [{"field": r["field"], "method": r["method"]} for r in resolutions],
+                          **_actor_detail(request)},
         )
     except StaleRecordRevisionError as exc:
         raise HTTPException(

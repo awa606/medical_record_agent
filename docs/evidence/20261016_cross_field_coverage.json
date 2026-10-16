@@ -1,0 +1,727 @@
+{
+  "i01": {
+    "calls": 3,
+    "passed": 3,
+    "gate": "SPIKE_PASS_NOT_DEPLOYABLE",
+    "results": [
+      {
+        "case": "I01",
+        "repeat": 1,
+        "passed": true,
+        "seconds": 5.797,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "7bb1b8040d03b2bf79be373cc602576c8a615a44602d6eb5398355cc27fc1386"
+      },
+      {
+        "case": "I01",
+        "repeat": 2,
+        "passed": true,
+        "seconds": 5.375,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "7dd90a50b30f1def07cb4b261887565d5f6f3bdbf6a5c6116c6886cd4320d9f4"
+      },
+      {
+        "case": "I01",
+        "repeat": 3,
+        "passed": true,
+        "seconds": 5.297,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "c9619e981dce82791786e9506878e3edd6538edf95f3133a2988bbcb96b9b8e0"
+      }
+    ]
+  },
+  "three-cases": {
+    "calls": 9,
+    "passed": 9,
+    "gate": "SPIKE_PASS_NOT_DEPLOYABLE",
+    "results": [
+      {
+        "case": "B01",
+        "repeat": 1,
+        "passed": true,
+        "seconds": 4.89,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "0df64e37c938b45ab1bf624921162a1c201fd8c17536c0deb66aff9330c7cc58"
+      },
+      {
+        "case": "B01",
+        "repeat": 2,
+        "passed": true,
+        "seconds": 4.594,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "75766c1e95c9f133087532c5223930731ae5479c49836db2158f99330dabe321"
+      },
+      {
+        "case": "B01",
+        "repeat": 3,
+        "passed": true,
+        "seconds": 4.547,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "4dfc8d1a323b93250c5c4f4bfd7b64a3b1161820936d35e7948c0ca91e209bcf"
+      },
+      {
+        "case": "I01",
+        "repeat": 1,
+        "passed": true,
+        "seconds": 4.391,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "98bb566ff8b9369ef30b4a26a6a5b18f881b2145a0803ab864758741f120d4da"
+      },
+      {
+        "case": "I01",
+        "repeat": 2,
+        "passed": true,
+        "seconds": 4.156,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "14b7779d71151097845cf72926c311c6fd8367027ddde560284f879912900558"
+      },
+      {
+        "case": "I01",
+        "repeat": 3,
+        "passed": true,
+        "seconds": 4.094,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "f15e53aa0a5f8525680aca0de94cc95d402b2e7016e234a8d828c8f76b34e14a"
+      },
+      {
+        "case": "P01",
+        "repeat": 1,
+        "passed": true,
+        "seconds": 5.188,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "fad03071ee5665a7b678ad67b4c134cb74f57a91c5367e7b7e5707adc4654766"
+      },
+      {
+        "case": "P01",
+        "repeat": 2,
+        "passed": true,
+        "seconds": 4.421,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "fac58e5b1f89a249ab4a59bf259d82df6a2603b4a97529e0abf3acaae76b3fdb"
+      },
+      {
+        "case": "P01",
+        "repeat": 3,
+        "passed": true,
+        "seconds": 4.953,
+        "first_score": {
+          "passed": true,
+          "errors": []
+        },
+        "final_score": {
+          "passed": true,
+          "errors": []
+        },
+        "error": null,
+        "raw_sha256": "15acd02ed796e5a140f7e6ad0495175b82ae89d33652a0aadb1476845b9ecad9"
+      }
+    ]
+  },
+  "pressure": {
+    "calls": 21,
+    "passed": 15,
+    "gate": "REJECTED",
+    "results": [
+      {
+        "case": "realtek13",
+        "repeat": 1,
+        "seconds": 5.156,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "four_expected_fields": true,
+          "fever_in_chief": true,
+          "symptoms_in_illness": true,
+          "exact_temperature": true,
+          "negated_chest_pain": true,
+          "negated_allergy": true
+        },
+        "final_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "four_expected_fields": true,
+          "fever_in_chief": true,
+          "symptoms_in_illness": true,
+          "exact_temperature": true,
+          "negated_chest_pain": true,
+          "negated_allergy": true
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "bef81a717b331072a7b1e0e5ba6ecdfb0fd00c4e20835c002370114dd308a440"
+      },
+      {
+        "case": "realtek13",
+        "repeat": 2,
+        "seconds": 5.546,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "four_expected_fields": true,
+          "fever_in_chief": true,
+          "symptoms_in_illness": true,
+          "exact_temperature": true,
+          "negated_chest_pain": true,
+          "negated_allergy": true
+        },
+        "final_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "four_expected_fields": true,
+          "fever_in_chief": true,
+          "symptoms_in_illness": true,
+          "exact_temperature": true,
+          "negated_chest_pain": true,
+          "negated_allergy": true
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "8689c5f4e0c86da1ad21c542eb241d8d37be12b95535e833ab9a7ed5d1ac48e6"
+      },
+      {
+        "case": "realtek13",
+        "repeat": 3,
+        "seconds": 5.313,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "four_expected_fields": true,
+          "fever_in_chief": true,
+          "symptoms_in_illness": true,
+          "exact_temperature": true,
+          "negated_chest_pain": true,
+          "negated_allergy": true
+        },
+        "final_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "four_expected_fields": true,
+          "fever_in_chief": true,
+          "symptoms_in_illness": true,
+          "exact_temperature": true,
+          "negated_chest_pain": true,
+          "negated_allergy": true
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "b5c8c0ec9469d073de9b1cf9cc30ec9950c94c919ce982e5bbd977221249cc5a"
+      },
+      {
+        "case": "case11",
+        "repeat": 1,
+        "seconds": 6.468,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "headache_in_chief": true,
+          "fever_and_temperature_in_illness": true,
+          "headache_in_accompanying": true,
+          "no_unmentioned_fields": true
+        },
+        "final_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "headache_in_chief": true,
+          "fever_and_temperature_in_illness": true,
+          "headache_in_accompanying": true,
+          "no_unmentioned_fields": true
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "fdbd0bc222e37d91dfd6e510d90b79ca693d941c22c082dbc9d3f1fd763baf8b"
+      },
+      {
+        "case": "case11",
+        "repeat": 2,
+        "seconds": 5.969,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "headache_in_chief": true,
+          "fever_and_temperature_in_illness": true,
+          "headache_in_accompanying": true,
+          "no_unmentioned_fields": true
+        },
+        "final_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "headache_in_chief": true,
+          "fever_and_temperature_in_illness": true,
+          "headache_in_accompanying": true,
+          "no_unmentioned_fields": true
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "4a429081ef9c2b957d70377524b8ee1c56931a9f50b8c8212f10066b8183f73c"
+      },
+      {
+        "case": "case11",
+        "repeat": 3,
+        "seconds": 5.359,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "headache_in_chief": true,
+          "fever_and_temperature_in_illness": true,
+          "headache_in_accompanying": true,
+          "no_unmentioned_fields": true
+        },
+        "final_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "headache_in_chief": true,
+          "fever_and_temperature_in_illness": true,
+          "headache_in_accompanying": true,
+          "no_unmentioned_fields": true
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "b5e428cf7ac9a626334d170d46c038e4c21426156260cd633362c1e8e92e08f0"
+      },
+      {
+        "case": "question",
+        "repeat": 1,
+        "seconds": 2.641,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "no_patient_fact": true
+        },
+        "final_checks": {
+          "expected_safe_refusal": true
+        },
+        "expected_safe_refusal": true,
+        "error": null,
+        "raw_sha256": "31df4f3bf51a57edec070b85bfad70cb369276ae2a2b6a946ba6046351e0b413"
+      },
+      {
+        "case": "question",
+        "repeat": 2,
+        "seconds": 2.485,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "no_patient_fact": true
+        },
+        "final_checks": {
+          "expected_safe_refusal": true
+        },
+        "expected_safe_refusal": true,
+        "error": null,
+        "raw_sha256": "f57312497f633d46d0de3e9805ebc474fd54b5ce0258d39cfc4409499484232a"
+      },
+      {
+        "case": "question",
+        "repeat": 3,
+        "seconds": 2.578,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "no_patient_fact": true
+        },
+        "final_checks": {
+          "expected_safe_refusal": true
+        },
+        "expected_safe_refusal": true,
+        "error": null,
+        "raw_sha256": "f2b8e18bc450b74a1de46b8133c7b6c16683091d75aa1e96cf9855252ca963cf"
+      },
+      {
+        "case": "family",
+        "repeat": 1,
+        "seconds": 2.375,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "no_patient_fact": true
+        },
+        "final_checks": {
+          "expected_safe_refusal": true
+        },
+        "expected_safe_refusal": true,
+        "error": null,
+        "raw_sha256": "47b8c790d4b5f56680a8ffac186e1d2218b873b0221d22b0a1faaa968e557e06"
+      },
+      {
+        "case": "family",
+        "repeat": 2,
+        "seconds": 2.375,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "no_patient_fact": true
+        },
+        "final_checks": {
+          "expected_safe_refusal": true
+        },
+        "expected_safe_refusal": true,
+        "error": null,
+        "raw_sha256": "ad15b8ca113d06d5788dc4c92d5269ec2091442888b092b64407f47996f600cd"
+      },
+      {
+        "case": "family",
+        "repeat": 3,
+        "seconds": 2.5,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "no_patient_fact": true
+        },
+        "final_checks": {
+          "expected_safe_refusal": true
+        },
+        "expected_safe_refusal": true,
+        "error": null,
+        "raw_sha256": "f587eccba22a56f8a36bc87928187610590dcd7a240a122b61effbc2b6f68f19"
+      },
+      {
+        "case": "negative_allergy",
+        "repeat": 1,
+        "seconds": 3.0,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "allergy_only": true,
+          "negation_preserved": true
+        },
+        "final_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "allergy_only": true,
+          "negation_preserved": true
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "ab5b0442f686b4d07fb8a92ab30d676cca18297e90fcdc8703330469c0eff6cc"
+      },
+      {
+        "case": "negative_allergy",
+        "repeat": 2,
+        "seconds": 3.016,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "allergy_only": true,
+          "negation_preserved": true
+        },
+        "final_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "allergy_only": true,
+          "negation_preserved": true
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "382c865148d8f7ebdcc3b59597eedac69ee7c4954efa63885dc6996c688206ce"
+      },
+      {
+        "case": "negative_allergy",
+        "repeat": 3,
+        "seconds": 3.187,
+        "passed": true,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "allergy_only": true,
+          "negation_preserved": true
+        },
+        "final_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "allergy_only": true,
+          "negation_preserved": true
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "08971921aeca9c13e70ca8d03a3e93c13eb11dc36cd73c37d526cda4404cca8d"
+      },
+      {
+        "case": "treatment",
+        "repeat": 1,
+        "seconds": 2.343,
+        "passed": false,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "treatment_present": false,
+          "only_treatment_or_illness": true,
+          "treatment_and_response": false
+        },
+        "final_checks": {
+          "expected_safe_refusal": false
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "fb7843e2bb60df1850c442f30081b73bdbcf47a10c4fd1b7dc0ec5ce1e267b44"
+      },
+      {
+        "case": "treatment",
+        "repeat": 2,
+        "seconds": 2.344,
+        "passed": false,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "treatment_present": false,
+          "only_treatment_or_illness": true,
+          "treatment_and_response": false
+        },
+        "final_checks": {
+          "expected_safe_refusal": false
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "9dee5ab57fd477c6879df7dd6415b228d98367e11abf493a36311cc97620d9d4"
+      },
+      {
+        "case": "treatment",
+        "repeat": 3,
+        "seconds": 2.282,
+        "passed": false,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "treatment_present": false,
+          "only_treatment_or_illness": true,
+          "treatment_and_response": false
+        },
+        "final_checks": {
+          "expected_safe_refusal": false
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "65496811660e9af5036eba9c2b6b94efed6f7dd75a2c3251176199e014492424"
+      },
+      {
+        "case": "missing",
+        "repeat": 1,
+        "seconds": 2.687,
+        "passed": false,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "no_unmentioned_fields": true
+        },
+        "final_checks": {
+          "expected_safe_refusal": false
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "85148f1b81114f70d949c3f677d9f7e4bb54fed12858721008d09a87608a7323"
+      },
+      {
+        "case": "missing",
+        "repeat": 2,
+        "seconds": 2.547,
+        "passed": false,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "no_unmentioned_fields": true
+        },
+        "final_checks": {
+          "expected_safe_refusal": false
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "ef52a4a27f2e9574afd429adb51dee99ae5f13f43662c49b98d6254cbea11a57"
+      },
+      {
+        "case": "missing",
+        "repeat": 3,
+        "seconds": 2.468,
+        "passed": false,
+        "first_checks": {
+          "citations_match_input_and_index": true,
+          "every_nonempty_field_has_evidence": true,
+          "missing_flags_consistent": true,
+          "no_unmentioned_fields": true
+        },
+        "final_checks": {
+          "expected_safe_refusal": false
+        },
+        "expected_safe_refusal": false,
+        "error": null,
+        "raw_sha256": "a34b1114ba8f44a92cf86ab6de0051e2882d7b8102c42cb7cc9fb83f7068638f"
+      }
+    ]
+  },
+  "production_changed": false,
+  "development_validation_frozen_executed": false,
+  "post_review_safe_refusal_recheck": {
+    "checked": 6,
+    "new_model_calls": 0,
+    "score_unchanged": true,
+    "complete_check_passed": 15,
+    "total": 21,
+    "checks": [
+      {
+        "case": "family",
+        "repeat": 1,
+        "code": "LLM_NO_SUPPORTED_FACTS",
+        "raw_sha256": "47b8c790d4b5f56680a8ffac186e1d2218b873b0221d22b0a1faaa968e557e06"
+      },
+      {
+        "case": "family",
+        "repeat": 2,
+        "code": "LLM_NO_SUPPORTED_FACTS",
+        "raw_sha256": "ad15b8ca113d06d5788dc4c92d5269ec2091442888b092b64407f47996f600cd"
+      },
+      {
+        "case": "family",
+        "repeat": 3,
+        "code": "LLM_NO_SUPPORTED_FACTS",
+        "raw_sha256": "f587eccba22a56f8a36bc87928187610590dcd7a240a122b61effbc2b6f68f19"
+      },
+      {
+        "case": "question",
+        "repeat": 1,
+        "code": "LLM_NO_SUPPORTED_FACTS",
+        "raw_sha256": "31df4f3bf51a57edec070b85bfad70cb369276ae2a2b6a946ba6046351e0b413"
+      },
+      {
+        "case": "question",
+        "repeat": 2,
+        "code": "LLM_NO_SUPPORTED_FACTS",
+        "raw_sha256": "f57312497f633d46d0de3e9805ebc474fd54b5ce0258d39cfc4409499484232a"
+      },
+      {
+        "case": "question",
+        "repeat": 3,
+        "code": "LLM_NO_SUPPORTED_FACTS",
+        "raw_sha256": "f2b8e18bc450b74a1de46b8133c7b6c16683091d75aa1e96cf9855252ca963cf"
+      }
+    ]
+  }
+}

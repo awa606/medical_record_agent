@@ -1,0 +1,151 @@
+{
+  "date": "2026-09-28",
+  "wbs": "5.1",
+  "status": "REJECTED_NOT_DEPLOYED",
+  "research_gate": "NEEDS_MORE_EVIDENCE",
+  "design_gate": "NOT_STARTED",
+  "base_sha": "3aa615688df9740148fe8b02f87b5f2ec7e56773",
+  "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+  "options": {
+    "temperature": 0,
+    "num_ctx": 8192,
+    "num_predict": 2048
+  },
+  "started_at": "2026-09-28T08:30:31.100933+00:00",
+  "completed_at": "2026-09-28T08:31:47.668645+00:00",
+  "new_model_calls": 21,
+  "manual_corrections": 0,
+  "automatic_retries": 0,
+  "mock_or_cloud_calls": 0,
+  "schema_and_id_contract_valid": 21,
+  "quote_text_or_index_errors": 0,
+  "small_spike_passed": 9,
+  "small_spike_total": 21,
+  "groups": [
+    {
+      "input_id": "realtek13",
+      "runs": 3,
+      "passed": 0,
+      "failed_checks": [
+        "four_expected_fields"
+      ],
+      "citation_errors": 0,
+      "seconds": [
+        40.104,
+        3.639,
+        3.696
+      ]
+    },
+    {
+      "input_id": "case11",
+      "runs": 3,
+      "passed": 0,
+      "failed_checks": [
+        "no_conflict"
+      ],
+      "citation_errors": 0,
+      "seconds": [
+        2.588,
+        2.458,
+        2.362
+      ]
+    },
+    {
+      "input_id": "question",
+      "runs": 3,
+      "passed": 0,
+      "failed_checks": [
+        "no_conflict",
+        "no_patient_fact"
+      ],
+      "citation_errors": 0,
+      "seconds": [
+        1.794,
+        1.612,
+        1.315
+      ]
+    },
+    {
+      "input_id": "family",
+      "runs": 3,
+      "passed": 0,
+      "failed_checks": [
+        "no_conflict",
+        "no_patient_fact"
+      ],
+      "citation_errors": 0,
+      "seconds": [
+        1.369,
+        1.443,
+        1.261
+      ]
+    },
+    {
+      "input_id": "negative_allergy",
+      "runs": 3,
+      "passed": 3,
+      "failed_checks": [],
+      "citation_errors": 0,
+      "seconds": [
+        1.225,
+        1.068,
+        1.153
+      ]
+    },
+    {
+      "input_id": "treatment",
+      "runs": 3,
+      "passed": 3,
+      "failed_checks": [],
+      "citation_errors": 0,
+      "seconds": [
+        1.589,
+        1.605,
+        1.616
+      ]
+    },
+    {
+      "input_id": "missing",
+      "runs": 3,
+      "passed": 3,
+      "failed_checks": [],
+      "citation_errors": 0,
+      "seconds": [
+        1.532,
+        1.321,
+        1.365
+      ]
+    }
+  ],
+  "validation_31_40_executed": false,
+  "historical_regression_41_60_executed": false,
+  "development_1_30_executed": false,
+  "production_provider_modified": false,
+  "running_app_sha": "a3a5ca8719815007eb22b225ba30893a02157ed6",
+  "candidate_source_sha256": {
+    "scripts/experiments/evidence_selection.py": "14fd183740be396be5010c0a9c2df5bd96f9e4fd8e1f33f9aee915c701f68af2",
+    "scripts/experiments/run_evidence_selection.py": "4ce8a372a79760973d225aa84e7c9d0f01641805cbd7d53b5665eef05e012e5f"
+  },
+  "artifact_report_sha256": "c7b892965221d4cd53af627d9baddf7c63b95f769b40b1ed5d9aa0f80bff52cb",
+  "quality_limit": "Engineering test of archived real ASR transcript and synthetic cases, not ASR accuracy or clinical validity. Exact mapping is not model understanding.",
+  "verification": {
+    "adapter_and_launcher_tests": "26 passed",
+    "full_pytest": "643 passed, 1 skipped, 1 warning in 445.17s",
+    "rule_safety": "240/240 cases; 206/206 facts; rule results, not model results",
+    "frontend_syntax": "doctor.js and feedback.js PASS",
+    "brand_browser": "Edge login and worklist render PASS; same 30x30 header bounds",
+    "runtime_unchanged": {
+      "phase": "READY",
+      "states": {
+        "ollama": "running",
+        "app": "running",
+        "gateway": "running"
+      },
+      "web_available": true,
+      "model_ready": true,
+      "app_git_sha": "a3a5ca8719815007eb22b225ba30893a02157ed6",
+      "release_status": "CANDIDATE_NOT_RELEASED",
+      "port": 8795
+    }
+  }
+}

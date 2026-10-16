@@ -47,9 +47,16 @@ def render_markdown(fields: MedicalRecordFields, safety_check: SafetyCheckResult
         lines.extend([f"## {label}", value, ""])
 
     lines.append("## 候选诊断")
-    if fields.candidate_diagnoses:
-        for diagnosis in fields.candidate_diagnoses:
-            lines.append(f"- {diagnosis.name}（{diagnosis.status}，医生已确认）")
+    retained_diagnoses = [
+        diagnosis for diagnosis in fields.candidate_diagnoses
+        if not diagnosis.deleted_by_doctor and diagnosis.doctor_review_status != "ai_candidate_deleted"
+    ]
+    if retained_diagnoses:
+        for diagnosis in retained_diagnoses:
+            review = "医生已确认候选" if diagnosis.confirmed_by_doctor else "待医生确认"
+            lines.append(f"- {diagnosis.name}（{diagnosis.status}，{review}）")
+    elif fields.candidate_diagnoses:
+        lines.append("无保留的候选诊断（AI候选已由医生排除；审核记录保留）")
     else:
         lines.append("未提及/待医生确认")
 

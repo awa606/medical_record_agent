@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-16T12:35:59.620Z`
-- Source hash: `a9ccecab5dab17add0088ae8de0b0c6d7ec35d0cca045df51fa47446a3b83040`
+- Updated at: `2026-10-16T13:33:16.266Z`
+- Source hash: `89dbe1d02597df26bfbdee307e2e401deacc47955b74f3c6afef33777a110396`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@02c14cee863cc4a8867e7530ac346a716c5a5f7e`
+- Repo: `codex/alpha51-demo-visual-e2e@b9ebf835fb593b1e5c694cb8aed7885cfb34228f`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 20px标题版式已认可；用药校验局部修复，独立恢复与8798升级待验** — `VERIFY`
+**5.1 · 02c14cee审核候选已升级8798；两条真实流程及离线恢复完成，发布门禁未齐** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 唯一下一工作：通过完整工程回归后，在新目录恢复已认可界面与用药校验候选；完成文本、授权音频、数据知识及持久化后升级8798。物理录音与实际缩放待补，5.1仍VERIFY，5.3不启动。
+- Single next task: 唯一下一工作：在02c14cee同一版本集中补物理麦克风和实际100%/125%/150%显示验收；保持失败记录与模型质量独立结论。5.1全部门禁满足后再执行5.3连续五次真实音频流程，未齐之前继续称审核候选。
 - Parallel waiting task: 物理麦克风及100%/125%/150%实际缩放待用户稍后配合；模型质量、实时资源和新版流感检索未过门；硬件继续延期
 
 ## Manual Actions

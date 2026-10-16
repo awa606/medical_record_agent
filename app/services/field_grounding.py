@@ -6,6 +6,7 @@ from typing import Any
 
 from app.schemas import MedicalRecordFields, SourceSpan
 from app.services.clinical_facts import clinical_experiencer, clinical_segment_contexts, extract_clinical_facts, split_clinical_segments
+from app.services.treatment_context import treatment_grounding_errors
 
 FIELD_KEYS = ("chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms", "past_history", "allergy_history", "physical_exam")
 
@@ -185,6 +186,7 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
                 else:
                     errors.append("引用匹配多个音频片段，必须明确片段身份")
             context = segments[span.index] if span.index is not None and 0 <= span.index < len(segments) else "\n".join(matching)
+            errors.extend(treatment_grounding_errors(field.value, context, previous_treatment=key == "previous_treatment"))
             matching_contexts = [c for c in contexts if span.text and compact(span.text) in compact(c.text)]
             if span.index is not None:
                 matching_contexts = [c for c in matching_contexts if c.index == span.index]

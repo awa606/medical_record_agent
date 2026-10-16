@@ -6,6 +6,7 @@ from typing import Literal
 
 from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, SourceSpan
 from app.services.fever_respiratory_pack import infer_fever_respiratory_candidates
+from app.services.treatment_context import treatment_contexts
 
 
 FactType = Literal["symptom", "measurement", "duration", "treatment", "allergy"]
@@ -256,8 +257,17 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
         if duration:
             add(type_="duration", name="病程", experiencer=subject(duration), temporality=_temporality(_concept_scope(normalized, duration)), value=duration, evidence=segment, index=index)
 
-        if _contains_treatment(normalized):
-            add(type_="treatment", name="既往处理", experiencer=segment_experiencer, temporality=segment_temporality, value=_treatment_value(normalized), evidence=segment, index=index)
+        for treatment in treatment_contexts(segment):
+            if treatment.proposed:
+                continue
+            add(
+                type_="treatment", name="既往处理", assertion=treatment.assertion,
+                certainty="uncertain" if treatment.assertion == "uncertain" else "confirmed",
+                experiencer=clinical_experiencer(segment, speaker=context.speaker,
+                    patient_target=context.patient_target, position=treatment.action_start),
+                temporality=_temporality(treatment.text), value=treatment.text,
+                evidence=treatment.text, index=index,
+            )
 
         for allergy in _allergy_mentions(normalized):
             assertion, certainty = _semantic_assertion(normalized, allergy)
@@ -496,22 +506,6 @@ def _extract_duration(text: str) -> str | None:
     if not match:
         return None
     return re.sub(r"\s+", "", match.group("duration"))
-
-
-def _contains_treatment(text: str) -> bool:
-    return any(keyword in text for keyword in ["布洛芬", "退热药", "退烧药", "吃了", "服用", "用药"])
-
-
-def _treatment_value(text: str) -> str:
-    if "布洛芬" in text:
-        if any(keyword in text for keyword in ["降下", "退了", "退热", "退烧"]):
-            return "服用布洛芬后体温下降"
-        return "服用布洛芬"
-    if "退热药" in text:
-        return "服用退热药"
-    if "退烧药" in text:
-        return "服用退烧药"
-    return "已自行处理，具体药物待补充"
 
 
 def _dedupe_facts(facts: list[ClinicalFact]) -> list[ClinicalFact]:

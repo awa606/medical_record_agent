@@ -94,3 +94,17 @@ def test_export_does_not_modify_review_state(tmp_path, monkeypatch):
     before = fields.model_dump()
     _export(tmp_path, monkeypatch, fields)
     assert fields.model_dump() == before
+
+
+def test_removed_ai_candidates_are_not_clinical_exclusions_in_any_export(tmp_path, monkeypatch):
+    fields = MedicalRecordFields.model_validate({"candidate_diagnoses": [{
+        "name": "发热待查", "deleted_by_doctor": True,
+        "doctor_review_status": "ai_candidate_deleted",
+    }]})
+    before = fields.model_dump()
+    markdown, _, paragraphs = _export(tmp_path, monkeypatch, fields)
+    expected = "无保留的候选诊断；AI候选已移除（不代表临床排除）；审核记录保留"
+    assert expected in markdown
+    assert expected in paragraphs
+    assert "已由医生排除" not in markdown
+    assert fields.model_dump() == before

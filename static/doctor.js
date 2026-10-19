@@ -6412,6 +6412,9 @@ function listenForEvents(taskId, eventsUrl) {
     appState.taskStatus = "WAITING_DOCTOR_REVIEW";
     await refreshTask(data.task_id, data.task);
     if (!current()) return;
+    if (appState.browserRecordingFinalized?.audio_id === appState.currentAudioId && appState.currentAudioId) {
+      appState.browserRecordingMessage = "病历草稿已生成，可在工作区继续修改、审核和导出。";
+    }
     appState.recordHighlightUntil = Date.now() + 2800;
     source.close();
     appState.eventSource = null;
@@ -6428,6 +6431,9 @@ function listenForEvents(taskId, eventsUrl) {
     appState.taskStatus = "FAILED";
     await refreshTask(data.task_id, data.task);
     if (!current()) return;
+    if (appState.browserRecordingFinalized?.audio_id === appState.currentAudioId && appState.currentAudioId) {
+      appState.browserRecordingMessage = "病历生成失败，录音和转写已保留，请查看失败提示。";
+    }
     source.close();
     appState.eventSource = null;
     setBusy(false);
@@ -9178,14 +9184,18 @@ async function submitBrowserRecording() {
     renderBrowserRecordingPanel();
     const generated = await continueGeneratingFromTranscription(transcribed);
     appState.browserRecordingStatus = "recorded";
-    appState.browserRecordingMessage = "病历草稿已生成，可在工作区继续修改、审核和导出。";
-    renderBrowserRecordingPanel();
-    if (generated?.task_id || appState.currentTaskId) {
+    if (generated?.task_id) {
+      appState.browserRecordingMessage = "录音转写完成，病历生成任务已提交，请等待草稿结果。";
       appState.browserRecordingSubmitted = true;
       closeDrawer();
       setProductView("encounter");
-      showToast("病历草稿已生成，请继续修改和审核");
+      showToast("病历生成任务已提交，请等待草稿结果");
+    } else {
+      appState.browserRecordingMessage = appState.pendingGenerateAfterRoleReview
+        ? "录音转写完成，请先确认说话人身份；病历尚未生成。"
+        : "录音转写完成，病历尚未生成，请查看当前处理提示。";
     }
+    renderBrowserRecordingPanel();
   } catch (error) {
     appState.browserRecordingStatus = appState.browserRecordingFile ? "recorded" : "error";
     appState.browserRecordingMessage = `上传失败：${error?.message || String(error)}`;

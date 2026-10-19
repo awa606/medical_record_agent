@@ -73,7 +73,7 @@ def _record_paragraphs(
             review = "医生已确认候选" if confirmed else "候选/待医生确认"
             paragraphs.append(("list", f"{diagnosis.name}（{review}）"))
     elif fields.candidate_diagnoses:
-        paragraphs.append(("body", "无保留的候选诊断（AI候选已由医生排除；审核记录保留）"))
+        paragraphs.append(("body", "无保留的候选诊断；AI候选已移除（不代表临床排除）；审核记录保留"))
     else:
         paragraphs.append(("body", "未记录候选诊断" if approved else "未提及/待医生确认"))
     paragraphs.extend([

@@ -131,9 +131,10 @@ def test_doctor_recording_submit_keeps_progress_visible_until_task_created() -> 
     assert "closeDrawer()" not in before_upload
     assert "正在转写录音并生成病历草稿，请保持页面打开。" in submit_body
     assert "录音转写完成，正在生成结构化病历草稿..." in submit_body
-    assert "病历草稿已生成，可在工作区继续修改、审核和导出。" in submit_body
+    assert "录音转写完成，病历生成任务已提交，请等待草稿结果。" in submit_body
     assert "const generated = await continueGeneratingFromTranscription(transcribed)" in submit_body
-    assert 'showToast("病历草稿已生成，请继续修改和审核")' in submit_body
+    assert 'showToast("病历生成任务已提交，请等待草稿结果")' in submit_body
+    assert "病历草稿已生成" not in submit_body
 
 
 def test_doctor_recording_drawer_close_does_not_silently_cancel_active_recording() -> None:

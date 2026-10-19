@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-19T08:53:49.921Z`
-- Source hash: `49b167a67179d8082927191251ceea8211162163aad6ab8dc49b1daa71e50ec6`
+- Updated at: `2026-10-19T10:41:37.556Z`
+- Source hash: `9f53087f2439b40496abafeb5e9942e2562a0984cc41905b0def83e82ea3742f`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@f0b91f5d8d8197cb6cebff9f0abc8e5d19a7f51b`
+- Repo: `codex/alpha51-demo-visual-e2e@a9cd27b56f9fcf61eaecf421e369476a781535ab`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 预览互斥、角色门禁与工作流状态修复代码回归通过；8798仍bfdd62e，新版真实流程及恢复待验** — `VERIFY`
+**5.1 · 真实麦克风E18慢放FAIL；a9cd27b录音生命周期修复已锁定，定向10/46通过，完整回归/部署/实操复测待验** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 以f0b91f5核验候选镜像与独立恢复，并完成同版本可见文本/授权音频流程；补物理麦克风及真实100%/125%/150%缩放。首次模型质量与人工修订分开，5.1全部通过后才启动5.3连续五次。
-- Parallel waiting task: 8798仍运行bfdd62e；新候选实际启动、部署及完整恢复待验，旧环境/失败日志保留。硬件继续延期，5.3未启动；既有在线恢复包装不替代新版本或离线推理验收。
+- Single next task: 完成a9cd27b完整回归后受控更新独立候选，重新验证真实录音、取消重录、试听及完整流程；同版本文本/上传、实际100%/125%/150%缩放、恢复与8798切换分别补证，5.1全部满足后才启动5.3连续五次。
+- Parallel waiting task: 旧f0b91f5的文本E16和上传音频E17人工后闭环已完成，不能替代a9cd27b；E18物理麦克风FAIL与20分钟DNS503观察FAIL原件保留。8798此前安全停止且未升级，硬件继续延期，5.3未启动。
 
 ## Manual Actions
 
-- 最终版本物理麦克风与实际100%/125%/150%缩放仍待用户现场配合；其它可独立核验继续进行，无需新数据或采购。
+- 待修复候选就绪后，用户重新实际录音、取消重录并试听核对，再核验100%/125%/150%真实缩放；不以旧版本、合成音频或单元测试替代。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

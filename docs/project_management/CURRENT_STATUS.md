@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-19T15:59:19.446Z`
-- Source hash: `00014593d4fad37a4b10e9ab1d1d01d11064d47fbb6ea10fc3ed7640f9bfd427`
+- Updated at: `2026-10-19T16:48:50.215Z`
+- Source hash: `c672db338d1dd8adfe2e95486d98909d0d1ec31f130d36aa1c5ef875ae02762f`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@8f1019e70f3a28ca26888e5be6bcea5ce9bece44`
+- Repo: `codex/alpha51-demo-visual-e2e@92743996711efda8d50ed973f7ca5809022f6c5a`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **原软件预测2026-10-07已超期，10月19日22:00展示冻结目标未达；实际放行待剩余同版本验收，完整M4仍受硬件与断网核心流程要求约束**
+- Forecast Alpha Exit: **原软件预测2026-10-07已超期，10月19日22:00冻结目标未达；ab8同版本三路径及新目录完整恢复待验，5.1保持VERIFY95%，5.3BACKLOG0%。完整M4仍受硬件与断网核心流程要求约束，在线DeepSeek不等于离线生成。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · e1入口恢复，知识管理隔离实操通过；8798授权音频已准备但未提交** — `VERIFY`
+**5.1 · ab8音频标识修复已升级，E16审核导出与重启持久化通过，发布门禁仍待收口** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 在8798运行e1a8bce2完成已准备的授权音频上传、角色确认、一次正式生成、人工核对、保存审核、导出及重开，核对调用次数；未完成前保持5.1 VERIFY，不启动5.3。
-- Parallel waiting task: 本轮实质验收证据最终提交8f1019e，业务运行仍e1a8bce2。19003知识导入/编辑/启停/停用排除可见操作与8项权限通过，原业务及4份启用资料未改变；8797最终采样23:56:28，14患者16就诊19病历版本8批准10导出，关联与权限复核通过，E16仅待输入无任务。Docker两次恢复及TLS503原故障保留，原因未确认；本阶段DeepSeek新增0次。22:00冻结目标未达。
+- Single next task: 按ab8b0c5a最终运行版补齐同版本三路径及独立完整归档恢复；模型首次输出问题保留，5.1全部满足后才进入5.3连续五次，不以人工修订后的成功替代模型质量。
+- Parallel waiting task: 实质交付证据提交9274399，应用运行ab8b0c5a，CI39284314530成功。E16一次正式生成task13/Revision20#1，首次3完整3缺失1冲突；人工修订3字段后Revision21#2、批准9、导出11与历史重开通过。DOCX26/26段一致，2页无截断或重叠。00:44重启12表及E16的8文件/账本不变，新增模型0；共享累计16次/估算0.299696元。8797快照00:38:43：14患者16就诊21版本9批准11导出，4资料78片段78索引，关联及权限通过。19003知识管理隔离验收保留，原资料不改。
 
 ## Manual Actions
 
-- 8798 E16上传面板等待手动选择既有授权音频，尚未提交或生成；最终e1物理麦克风与既有放行门禁仍待验。a9麦克风和100%/125%/150%用户确认按原版本保留，不能自动转记。
+- 本轮授权音频已完成。浏览器本地下载落地尚未确认，edge://downloads被安全限制拒绝且未绕过。ab8最终物理录音及实际显示证据未齐；此前a9录音与100%/125%/150%确认保留原版本边界。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-19T05:04:39.953Z`
-- Source hash: `4262d77b41f5991ef4d8b1273a35eaa879968ab81e44d6ddaa29499c87218ef7`
+- Updated at: `2026-10-19T07:46:10.608Z`
+- Source hash: `0dfdec7d28fb677aa9a5b9206998950c845f546dbf7bd7863c384f6627db4e80`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@db4081ea8d7746f23f86a1ac76edc4b66e427b41`
+- Repo: `codex/alpha51-demo-visual-e2e@bfdd62e3fbacbbe230b371c23bfc29944b7e984c`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798在线审核候选已部署；文本与授权音频审核演示完成，最终发布验收未齐** — `VERIFY`
+**5.1 · 实时识别标签与部署元数据修复已升级8798；同版本文本/音频人工审核及独立恢复通过，完整产品验收未齐** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: 固定db4081e补齐最终同版本路径与恢复证据，集中安排物理录音和真实缩放；首次模型完整性、转写角色与知识相关性独立保留未通过。
-- Parallel waiting task: 8795和旧本地环境停止保留；硬件继续延期，5.3尚未启动。
+- Single next task: 补齐物理麦克风和真实100%/125%/150%缩放验收，并对照5.1剩余门禁整理同版本发布证据；模型首次质量独立保持未通过，5.1全部完成后才启动5.3连续五次。
+- Parallel waiting task: 8795与旧本地环境停止保留；18999/18997恢复验后停止保留；硬件继续延期，5.3未启动。在线恢复套件已组装，91/119项公开文件与独立镜像复制校验通过；Load及真实Start/Stop尚未实测，私密依赖外置。
 
 ## Manual Actions
 

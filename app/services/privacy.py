@@ -117,8 +117,16 @@ def install_anonymous_logging() -> None:
     factory.anonymous_records = True
     logging.setLogRecordFactory(factory)
 
-def _anonymous_json_body(body: bytes) -> bytes:
-    return json.dumps(anonymize_payload(json.loads(body)), ensure_ascii=False).encode()
+def _anonymous_json_body(body: bytes, request_path: str = "") -> bytes:
+    payload = json.loads(body)
+    version = payload.get("version") if isinstance(payload, dict) else None
+    if request_path == "/static/deployment.json" and isinstance(version, str) and re.fullmatch(r"[0-9a-fA-F]{40}", version):
+        # Only this document's top-level Git SHA is immutable deployment metadata.
+        safe = anonymize_payload({key: value for key, value in payload.items() if key != "version"})
+        safe["version"] = version
+    else:
+        safe = anonymize_payload(payload)
+    return json.dumps(safe, ensure_ascii=False).encode()
 
 
 class AnonymousResponses:
@@ -129,6 +137,7 @@ class AnonymousResponses:
     async def __call__(self, scope, receive, send):
         if scope.get("type") != "http" or not enabled():
             return await self.app(scope, receive, send)
+        request_path = scope.get("path", "")
         start = None
         content_type = ""
         buffer = b""
@@ -149,7 +158,7 @@ class AnonymousResponses:
                 if not message.get("more_body"):
                     try:
                         # Identity-map SQLite I/O must not block other ASGI requests.
-                        body = await run_in_threadpool(_anonymous_json_body, buffer)
+                        body = await run_in_threadpool(_anonymous_json_body, buffer, request_path)
                     except (ValueError, UnicodeError):
                         body = b'{"detail":"anonymous response serialization failed"}'
                         start["status"] = 500

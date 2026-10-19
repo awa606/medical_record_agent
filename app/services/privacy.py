@@ -11,6 +11,25 @@ import traceback
 from pathlib import Path
 from starlette.concurrency import run_in_threadpool
 
+
+# These values route ASR resources; an ID-like digit run is not patient prose.
+# Keep only the generated UUID4 hex contract, never arbitrary IDs or URLs.
+_UUID4_HEX = r"[0-9a-f]{12}4[0-9a-f]{3}[89ab][0-9a-f]{15}"
+_ASR_ID_KEYS = {"audio_id", "session_id", "live_session_id"}
+_ASR_URL_PATTERNS = {
+    "media_url": rf"/api/audio/{_UUID4_HEX}/media",
+    "events_url": rf"/api/asr/sessions/{_UUID4_HEX}/events",
+    "result_url": rf"/api/asr/sessions/{_UUID4_HEX}/result",
+}
+
+
+def _is_asr_routing_value(key: str, value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    pattern = _UUID4_HEX if key in _ASR_ID_KEYS else _ASR_URL_PATTERNS.get(key)
+    return pattern is not None and re.fullmatch(pattern, value) is not None
+
+
 def enabled() -> bool:
     flag = os.getenv("MRA_ANONYMIZE")
     return flag.lower() in {"1", "true", "yes"} if flag is not None else os.getenv("RECORD_PROVIDER_MODE", "demo") == "edge"
@@ -65,8 +84,10 @@ def anonymize_payload(value):
         # A numeric run inside a SHA must not break optimistic concurrency.
         digest_keys = {"content_hash", "current_content_hash", "expected_content_hash", "content_sha256"}
         return {
-            key: item if key in digest_keys and isinstance(item, str)
-            and re.fullmatch(r"[0-9a-fA-F]{64}", item) else anonymize_payload(item)
+            key: item if (
+                key in digest_keys and isinstance(item, str)
+                and re.fullmatch(r"[0-9a-fA-F]{64}", item)
+            ) or _is_asr_routing_value(key, item) else anonymize_payload(item)
             for key, item in value.items()
         }
     if isinstance(value, list):

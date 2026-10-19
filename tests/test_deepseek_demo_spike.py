@@ -239,7 +239,7 @@ def test_timeout_keeps_reservation_and_makes_no_automatic_retry(tmp_path):
             opener.return_value.open.side_effect = TimeoutError('server echoed test-only-not-a-real-key')
             result = run_case(provider, '发热3天', tmp_path / 'run')
             assert opener.return_value.open.call_count == 1
-    assert not result['pipeline_pass'] and 'TimeoutError' in result['error']
+    assert not result['pipeline_pass'] and 'TRANSPORT_TIMEOUT' in result['error']
     assert 'test-only-not-a-real-key' not in result['error']
     assert ledger_calls(tmp_path)[0]['charged_micro_cny'] == CALL_RESERVE
     assert ledger_calls(tmp_path)[0]['state'] == 'failed_reservation_retained'

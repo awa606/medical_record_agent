@@ -2180,10 +2180,24 @@ function processingStageStatuses() {
     statuses.safety = "done";
   }
   if (failed) {
-    statuses.asr = "failed";
-    ["role", "fields", "draft", "safety"].forEach((key) => {
-      if (statuses[key] !== "done") statuses[key] = "pending";
+    const failure = currentFailureDetail();
+    const failedStage = failure.kind === "transcription" ? "asr"
+      : ({ extract_fields: "fields", generate_draft: "draft", safety_check: "safety" })[failure.stage];
+    const failureIndex = PROCESSING_STAGES.findIndex((stage) => stage.key === failedStage);
+    PROCESSING_STAGES.forEach(({ key }, index) => {
+      if (key === failedStage) statuses[key] = "failed";
+      else if (failureIndex >= 0 && index > failureIndex) statuses[key] = "pending";
+      else if (failureIndex >= 0 && ["fields", "draft"].includes(key)) statuses[key] = "done";
+      else if (failureIndex < 0 && statuses[key] === "active") statuses[key] = "pending";
     });
+  }
+  const isTextImport = appState.currentAsrResult?.engine === "text-import"
+    || appState.currentAsrResult?.audio_id === "text-import";
+  const hasAudioSource = Boolean(appState.currentAudioId || appState.currentAsrSessionId
+    || (appState.currentAsrResult && !isTextImport) || appState.uploadedFilename
+    || appState.browserRecordingFinalized?.audio_id);
+  if (!hasAudioSource && (appState.currentInputText || appState.currentTask?.input_type === "text")) {
+    ["audio", "asr", "role"].forEach((key) => { statuses[key] = "not_applicable"; });
   }
   return statuses;
 }
@@ -2198,7 +2212,7 @@ function renderProcessingStages() {
   };
   return `
     <ol class="processing-stage-list" aria-label="AI 处理阶段">
-      ${PROCESSING_STAGES.map((stage) => {
+      ${PROCESSING_STAGES.filter((stage) => statuses[stage.key] !== "not_applicable").map((stage) => {
         const status = statuses[stage.key] || "pending";
         return `
           <li class="processing-stage ${status}">
@@ -3032,7 +3046,7 @@ function draftFieldValue(fields, key) {
   if (key === "preliminary_diagnosis") {
     return draftDiagnoses(fields)
       .map((diagnosis) => diagnosis.name
-        ? `${diagnosis.name}${diagnosis.deleted_by_doctor || diagnosis.doctor_review_status === "ai_candidate_deleted" ? "（医生已排除）" : ""}`
+        ? `${diagnosis.name}${diagnosis.deleted_by_doctor || diagnosis.doctor_review_status === "ai_candidate_deleted" ? "（已移除AI候选）" : ""}`
         : "")
       .filter(Boolean)
       .join("；");
@@ -3517,7 +3531,7 @@ function renderReferenceGuides(item, supplementary = '') {
 
 function referenceReviewStatus(item = {}, temporary = false) {
   if (temporary) return '临时结果 · 待医生确认';
-  if (item.deleted_by_doctor || item.doctor_review_status === 'ai_candidate_deleted') return '医生已排除';
+  if (item.deleted_by_doctor || item.doctor_review_status === 'ai_candidate_deleted') return '已移除AI候选';
   if (item.doctor_review_status === 'not_asked_confirmed') return '医生已确认本次未询问';
   if (item.doctor_review_status === 'missing_accepted') return '医生已接受本次缺失';
   if (item.confirmed_by_doctor || ['candidate_confirmed', 'content_confirmed'].includes(item.doctor_review_status)) return '医生已确认';
@@ -3797,7 +3811,7 @@ function renderApprovalChecklist(fields) {
         </div>
         <span class="approval-entry-label">${approved ? "查看审核记录" : "开始核对"}</span>
       </summary>
-      ${approved ? `<div class="approval-readonly-record">${fieldItems.map(({title,field}) => `<div><strong>${escapeHtml(title)}</strong><span>${escapeHtml({content_confirmed:"内容已确认",not_asked_confirmed:"确认本次未询问",missing_accepted:"接受本次缺失"}[field?.doctor_review_status] || "未记录分项确认")}</span></div>`).join("")}${diagnoses.map(d => `<div><strong>${escapeHtml(d.name)}</strong><span>${escapeHtml({candidate_confirmed:"候选已确认",ai_candidate_deleted:"医生已排除"}[d.doctor_review_status] || "未确认")}</span></div>`).join("")}</div>` : `
+      ${approved ? `<div class="approval-readonly-record">${fieldItems.map(({title,field}) => `<div><strong>${escapeHtml(title)}</strong><span>${escapeHtml({content_confirmed:"内容已确认",not_asked_confirmed:"确认本次未询问",missing_accepted:"接受本次缺失"}[field?.doctor_review_status] || "未记录分项确认")}</span></div>`).join("")}${diagnoses.map(d => `<div><strong>${escapeHtml(d.name)}</strong><span>${escapeHtml({candidate_confirmed:"候选已确认",ai_candidate_deleted:"已移除AI候选"}[d.doctor_review_status] || "未确认")}</span></div>`).join("")}</div>` : `
       ${outstanding(`<div class="approval-section">
         <div class="approval-section-title">
           <strong>普通字段</strong>
@@ -4349,7 +4363,22 @@ function liveConversationTextForPreview() {
 }
 
 function previewSignature(text, segments) {
-  return `${segments.length}:${text.length}:${text.slice(-120)}`;
+  return JSON.stringify([text, segments]);
+}
+
+function recordPreviewContextKey() {
+  // Include role edits and source identity, not only the visible transcript tail.
+  return JSON.stringify([appState.authUser?.id, appState.encounterRestoreVersion,
+    appState.currentEncounter?.id, appState.currentAsrSessionId, appState.currentAudioId,
+    liveConversationTextForPreview(), currentReviewSegments(), appState.speakerAssignments,
+    appState.currentAsrResult?.speaker_assignments, appState.currentAsrResult?.role_quality,
+    appState.speakerRoleCorrections, appState.speakerMappingRequired, appState.roleReviewDirty]);
+}
+
+function recordPreviewNeedsRoleReview() {
+  return appState.roleReviewDirty || appState.speakerMappingRequired
+    || roleQualityNeedsIdentityReview() || pendingSpeakerAssignments().length > 0
+    || currentReviewSegments().some((segment) => !isTrustedClinicalRole(segment));
 }
 
 function hasClinicalPreviewSignal(text) {
@@ -4357,9 +4386,10 @@ function hasClinicalPreviewSignal(text) {
 }
 
 async function fetchRecordPreview(text, segments) {
-  if (!text.trim() || recordPreviewBlocked() || appState.recordPreviewInFlight) return;
+  if (!text.trim() || recordPreviewBlocked() || recordPreviewNeedsRoleReview() || appState.recordPreviewInFlight) return;
   const signature = previewSignature(text, segments);
   if (signature === appState.recordPreviewLastSignature) return;
+  const contextKey = recordPreviewContextKey();
   appState.recordPreviewAbortController?.abort();
   const controller = new AbortController();
   const requestId = appState.recordPreviewRequestId + 1;
@@ -4382,27 +4412,37 @@ async function fetchRecordPreview(text, segments) {
       }),
       signal: controller.signal,
     });
-    if (requestId !== appState.recordPreviewRequestId) return;
+    if (requestId !== appState.recordPreviewRequestId || contextKey !== recordPreviewContextKey()
+      || recordPreviewBlocked() || recordPreviewNeedsRoleReview()) return;
     appState.recordPreview = response;
     appState.recordPreviewStatus = response.status || "preview_ready";
     appState.recordPreviewUpdatedAt = response.updated_at || "";
     appState.recordPreviewLastSignature = signature;
     appState.recordPreviewLastRunAt = Date.now();
   } catch (error) {
-    if (error?.name === "AbortError" || requestId !== appState.recordPreviewRequestId) return;
+    if (error?.name === "AbortError" || requestId !== appState.recordPreviewRequestId
+      || contextKey !== recordPreviewContextKey() || recordPreviewBlocked() || recordPreviewNeedsRoleReview()) return;
     appState.recordPreviewStatus = "failed";
     appState.recordPreviewError = error?.message || "实时预览暂不可用，转写继续。";
   } finally {
     if (requestId === appState.recordPreviewRequestId) {
+      const inputChanged = contextKey !== recordPreviewContextKey();
+      if (inputChanged || recordPreviewBlocked() || recordPreviewNeedsRoleReview()) {
+        appState.recordPreviewStatus = appState.recordPreview ? "preview_ready" : "idle";
+        appState.recordPreviewError = "";
+      }
       appState.recordPreviewInFlight = false;
       appState.recordPreviewAbortController = null;
       renderAll();
+      // New input may have arrived while this request owned the slot. This is
+      // a new preview, not a retry of a failed request for unchanged input.
+      if (inputChanged) scheduleRecordPreview();
     }
   }
 }
 
 function recordPreviewBlocked() {
-  // A formal request owns inference until the user explicitly starts new input.
+  // A generation workflow owns inference from capture until explicit new input.
   // This also covers creation failures which have not returned a task ID yet.
   return Boolean(appState.recordPreviewSuspended || appState.currentTaskId
     || appState.currentRecordFields || appState.pendingGenerateAfterRoleReview);
@@ -4410,7 +4450,7 @@ function recordPreviewBlocked() {
 
 function scheduleRecordPreview({ force = false } = {}) {
   if (recordPreviewBlocked()) return;
-  if (roleReviewRequired()) return;
+  if (recordPreviewNeedsRoleReview()) return;
   const segments = currentReviewSegments().filter((segment) => !segment.provisional).map(segmentWithInferredRole);
   const text = liveConversationTextForPreview();
   if (
@@ -4424,8 +4464,11 @@ function scheduleRecordPreview({ force = false } = {}) {
     ? 0
     : Math.max(RECORD_PREVIEW_DEBOUNCE_MS, RECORD_PREVIEW_MIN_INTERVAL_MS - (now - appState.recordPreviewLastRunAt));
   if (appState.recordPreviewTimer) window.clearTimeout(appState.recordPreviewTimer);
+  const contextKey = recordPreviewContextKey();
+  const requestId = appState.recordPreviewRequestId;
   appState.recordPreviewTimer = window.setTimeout(() => {
     appState.recordPreviewTimer = null;
+    if (requestId !== appState.recordPreviewRequestId || contextKey !== recordPreviewContextKey()) return;
     fetchRecordPreview(text, segments);
   }, delay);
 }
@@ -6411,8 +6454,12 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
   appState.asrEventSource = source;
   appState.asrConnectionStatus = "connecting";
   let terminalReceived = false;
+  const listenCurrentAsrEvent = (type, handler) => source.addEventListener(type, (event) => {
+    if (appState.asrEventSource === source) handler(event);
+  });
 
   source.onopen = () => {
+    if (appState.asrEventSource !== source) return;
     appState.asrConnectionStatus = "connected";
     if (appState.asrLastError === "转写连接正在恢复，识别任务仍在后台运行。") {
       appState.asrLastError = "";
@@ -6420,7 +6467,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   };
 
-  source.addEventListener("session_created", (event) => {
+  listenCurrentAsrEvent("session_created", (event) => {
     const data = JSON.parse(event.data);
     appState.currentAsrSessionId = data.session_id || appState.currentAsrSessionId;
     appState.taskStatus = "CREATED";
@@ -6452,7 +6499,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("audio_uploaded", (event) => {
+  listenCurrentAsrEvent("audio_uploaded", (event) => {
     const data = JSON.parse(event.data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.uploadedFilename = data.filename || appState.uploadedFilename;
@@ -6460,7 +6507,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("transcribing", (event) => {
+  listenCurrentAsrEvent("transcribing", (event) => {
     const data = JSON.parse(event.data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.taskStatus = "TRANSCRIBING";
@@ -6471,7 +6518,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("transcribing_progress", (event) => {
+  listenCurrentAsrEvent("transcribing_progress", (event) => {
     const data = JSON.parse(event.data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.selectedEngine = data.engine || appState.selectedEngine;
@@ -6491,7 +6538,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("chunk_plan", (event) => {
+  listenCurrentAsrEvent("chunk_plan", (event) => {
     const data = JSON.parse(event.data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.selectedEngine = data.engine || appState.selectedEngine;
@@ -6508,7 +6555,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("chunk_started", (event) => {
+  listenCurrentAsrEvent("chunk_started", (event) => {
     const data = JSON.parse(event.data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.selectedEngine = data.engine || appState.selectedEngine;
@@ -6524,7 +6571,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("chunk_completed", (event) => {
+  listenCurrentAsrEvent("chunk_completed", (event) => {
     const data = JSON.parse(event.data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
     appState.selectedEngine = data.engine || appState.selectedEngine;
@@ -6537,7 +6584,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("chunk_failed", (event) => {
+  listenCurrentAsrEvent("chunk_failed", (event) => {
     const data = JSON.parse(event.data);
     applyAsrFailureDetail(data);
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
@@ -6589,12 +6636,12 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   };
 
-  source.addEventListener("segment", handleTranscriptSegment);
-  source.addEventListener("segment_update", handleTranscriptSegment);
-  source.addEventListener("transcript.partial", handleTranscriptSegment);
-  source.addEventListener("transcript.stable", handleTranscriptSegment);
+  listenCurrentAsrEvent("segment", handleTranscriptSegment);
+  listenCurrentAsrEvent("segment_update", handleTranscriptSegment);
+  listenCurrentAsrEvent("transcript.partial", handleTranscriptSegment);
+  listenCurrentAsrEvent("transcript.stable", handleTranscriptSegment);
 
-  source.addEventListener("clinical_processing.started", (event) => {
+  listenCurrentAsrEvent("clinical_processing.started", (event) => {
     const data = JSON.parse(event.data);
     if (data.version && Number(data.version) <= Number(appState.liveClinicalVersion || 0)) return;
     appState.liveClinicalStatus = "processing";
@@ -6602,12 +6649,12 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAssist();
   });
 
-  source.addEventListener("record.live_patch", (event) => {
+  listenCurrentAsrEvent("record.live_patch", (event) => {
     const data = JSON.parse(event.data);
     if (applyLiveClinicalDraft(data)) renderAssist();
   });
 
-  source.addEventListener("clinical_processing.completed", (event) => {
+  listenCurrentAsrEvent("clinical_processing.completed", (event) => {
     const data = JSON.parse(event.data);
     if (data.version && Number(data.version) < Number(appState.liveClinicalVersion || 0)) return;
     appState.liveClinicalStatus = "completed";
@@ -6616,14 +6663,14 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAssist();
   });
 
-  source.addEventListener("clinical_processing.failed", (event) => {
+  listenCurrentAsrEvent("clinical_processing.failed", (event) => {
     const data = JSON.parse(event.data);
     appState.liveClinicalStatus = "failed";
     appState.liveClinicalError = data.message || data.error || "临床参考暂时不可用，实时转写会继续。";
     renderAssist();
   });
 
-  source.addEventListener("session.finalizing", (event) => {
+  listenCurrentAsrEvent("session.finalizing", (event) => {
     const data = JSON.parse(event.data);
     appState.asrPhase = "finalizing";
     appState.asrChunkStatus = data.mode === "browser_live_chunk_finalization"
@@ -6632,7 +6679,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("session.finalized", (event) => {
+  listenCurrentAsrEvent("session.finalized", (event) => {
     const data = JSON.parse(event.data);
     appState.asrPhase = "finalized";
     appState.asrChunkStatus = data.formal_record_status === "ready_for_generation"
@@ -6641,7 +6688,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("diarization_progress", (event) => {
+  listenCurrentAsrEvent("diarization_progress", (event) => {
     const data = JSON.parse(event.data);
     appState.taskStatus = "TRANSCRIBING";
     appState.asrPhase = data.phase || "speaker_calibration";
@@ -6654,7 +6701,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("reconciliation_completed", (event) => {
+  listenCurrentAsrEvent("reconciliation_completed", (event) => {
     const data = JSON.parse(event.data);
     const result = data.asr_result;
     if (!result) return;
@@ -6671,7 +6718,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     renderAll();
   });
 
-  source.addEventListener("speaker_turn", (event) => {
+  listenCurrentAsrEvent("speaker_turn", (event) => {
     const data = JSON.parse(event.data);
     if (!data.segment || data.segment.provisional) return;
     upsertLiveTranscriptSegment(data.segment);
@@ -6686,10 +6733,10 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
       || appState.speakerAssignments.some((item) => item.requires_confirmation);
     renderAll();
   };
-  source.addEventListener("speaker_mapping_update", (event) => handleSpeakerMapping(event, false));
-  source.addEventListener("speaker_mapping_required", (event) => handleSpeakerMapping(event, true));
+  listenCurrentAsrEvent("speaker_mapping_update", (event) => handleSpeakerMapping(event, false));
+  listenCurrentAsrEvent("speaker_mapping_required", (event) => handleSpeakerMapping(event, true));
 
-  source.addEventListener("completed", (event) => {
+  listenCurrentAsrEvent("completed", (event) => {
     const data = JSON.parse(event.data);
     terminalReceived = true;
     appState.currentAudioId = data.audio_id || appState.currentAudioId;
@@ -6736,7 +6783,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
     resolve?.({ audio_id: data.audio_id, asr_result: data.asr_result });
   });
 
-  source.addEventListener("failed", (event) => {
+  listenCurrentAsrEvent("failed", (event) => {
     const data = JSON.parse(event.data);
     applyAsrFailureDetail(data);
     terminalReceived = true;
@@ -6752,6 +6799,7 @@ function listenForAsrEvents(eventsUrl, { resolve, reject } = {}) {
   });
 
   source.onerror = () => {
+    if (appState.asrEventSource !== source) return;
     if (!terminalReceived) {
       // EventSource reconnects automatically and sends Last-Event-ID. A transient
       // network interruption must not turn a running ASR job into a failed job.
@@ -6880,7 +6928,10 @@ function updateReviewSegment(index, patch) {
   segment.reviewed_by_doctor = true;
   segment.needs_review = !segment.role || segment.role === "待确认";
   appState.roleReviewDirty = true;
+  resetRecordPreview();
   syncAsrTextFromSegments();
+  renderFields();
+  renderAssist();
   renderRunContext();
   renderDebug();
 }
@@ -6908,6 +6959,7 @@ function updateSpeakerRole(speakerId, role) {
     (item) => item.requires_confirmation || !item.role,
   );
   appState.roleReviewDirty = true;
+  resetRecordPreview();
   syncAsrTextFromSegments();
   renderAll();
 }
@@ -6989,6 +7041,7 @@ function undoLastSpeakerMerge() {
   appState.speakerRoleCorrections = cloneStateValue(snapshot.speakerRoleCorrections) || {};
   appState.roleReviewDirty = Boolean(snapshot.roleReviewDirty);
   appState.lastSpeakerMergeSnapshot = null;
+  resetRecordPreview();
   renderAll();
   showToast("已撤销本页显示；刷新后以服务端合并结果为准");
 }
@@ -7277,6 +7330,7 @@ async function startRecordGenerationFromAudio(audioId) {
 
 async function runAudioWorkflowFromFile(file, engine, mode = appState.audioMode) {
   resetTaskState({ keepEncounter: true });
+  appState.recordPreviewSuspended = mode === "generate";
   appState.selectedEngine = engine;
   const transcribed = await uploadAndTranscribe(file, engine);
   if (mode === "generate") {
@@ -7530,6 +7584,7 @@ async function confirmFields() {
     appState.taskStatus = "approved";
     await refreshTask(appState.currentTaskId, appState.currentTask);
     await refreshExportReadiness();
+    appState.recordSaveNotice = "";
     renderAll();
     setBusy(false);
     showToast("病历审核已完成");
@@ -8059,6 +8114,7 @@ async function startFixedAudioLiveDemo() {
   resetTaskState({ keepEncounter: true });
   appState.recognitionMode = "follow";
   appState.audioMode = "generate";
+  appState.recordPreviewSuspended = true;
   appState.fixedDemoStatus = "preparing";
   appState.fixedDemoMessage = "正在载入固定音频跟随识别演示资源。";
   appState.fixedDemoFinalized = null;
@@ -8737,6 +8793,8 @@ function startBrowserRecordingIntervals() {
 }
 
 async function startBrowserRecordingCaptureForExistingSession(requestId) {
+  resetRecordPreview();
+  appState.recordPreviewSuspended = true;
   if (!appState.browserRecordingSessionId) {
     throw new Error("录音会话尚未恢复，请重新开始录音。");
   }
@@ -8811,6 +8869,9 @@ async function completeBrowserRecordingUpload() {
 async function startBrowserRecording() {
   clearActionError();
   if (!requireEncounterBeforeInput("record")) return;
+  closeAsrStream();
+  resetRecordPreview();
+  appState.recordPreviewSuspended = true;
   const useLiveFollow = shouldUseLiveBrowserRecordingFollow();
   if (useLiveFollow) {
     appState.recognitionMode = "follow";
@@ -9024,6 +9085,7 @@ async function cancelBrowserRecording({ silent = false } = {}) {
   const sessionId = appState.browserRecordingSessionId;
   appState.browserRecordingRequestId += 1;
   if (appState.browserRecordingSessionId && appState.currentAsrSessionId === appState.browserRecordingSessionId) {
+    closeAsrStream();
     appState.currentAsrSessionId = null;
     updateSessionUrl("");
   }
@@ -9080,6 +9142,8 @@ async function submitBrowserRecording() {
     if (!appState.browserRecordingFinalized?.audio_id) {
       throw new Error("请先完成录音并试听确认。");
     }
+    resetRecordPreview();
+    appState.recordPreviewSuspended = true;
     appState.browserRecordingStatus = "uploading";
     appState.browserRecordingMessage = "正在转写录音并生成病历草稿，请保持页面打开。";
     renderAll();

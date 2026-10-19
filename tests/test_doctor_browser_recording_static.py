@@ -161,8 +161,8 @@ def test_doctor_recording_live_gate_uses_follow_chunks_and_transcript_events() -
     assert 'listenForAsrEvents(`/api/asr/sessions/${encodeURIComponent(liveSessionId)}/events`)' in script
     assert 'form.append("chunk_started_at_ms"' in script
     assert 'form.append("chunk_ended_at_ms"' in script
-    assert 'source.addEventListener("transcript.partial", handleTranscriptSegment)' in script
-    assert 'source.addEventListener("transcript.stable", handleTranscriptSegment)' in script
+    assert 'listenCurrentAsrEvent("transcript.partial", handleTranscriptSegment)' in script
+    assert 'listenCurrentAsrEvent("transcript.stable", handleTranscriptSegment)' in script
 
 
 def test_doctor_live_clinical_reference_handles_versioned_sse_events() -> None:
@@ -171,11 +171,11 @@ def test_doctor_live_clinical_reference_handles_versioned_sse_events() -> None:
     assert "liveClinicalDraft" in script
     assert "function applyLiveClinicalDraft" in script
     assert "version <= Number(appState.liveClinicalVersion || 0)" in script
-    assert 'source.addEventListener("record.live_patch"' in script
-    assert 'source.addEventListener("clinical_processing.started"' in script
-    assert 'source.addEventListener("clinical_processing.failed"' in script
-    assert 'source.addEventListener("session.finalizing"' in script
-    assert 'source.addEventListener("session.finalized"' in script
+    assert 'listenCurrentAsrEvent("record.live_patch"' in script
+    assert 'listenCurrentAsrEvent("clinical_processing.started"' in script
+    assert 'listenCurrentAsrEvent("clinical_processing.failed"' in script
+    assert 'listenCurrentAsrEvent("session.finalizing"' in script
+    assert 'listenCurrentAsrEvent("session.finalized"' in script
 
 
 def test_doctor_live_clinical_reference_summary_is_bounded_and_detailed() -> None:

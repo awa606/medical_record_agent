@@ -409,6 +409,8 @@ def _stable_preview_input(payload: PreviewRecordRequest) -> tuple[str, list[dict
             status_code=409,
             detail="结构化预览需要先完成稳定的说话人角色映射。",
         )
+    # Check every stable speaker before dropping unmapped turns from the preview.
+    _require_segments_role_quality(payload.conversation_text, stable)
     conversation = "\n".join(
         f"[{segment['role']}] {str(segment.get('text') or '').strip()}"
         for segment in mapped

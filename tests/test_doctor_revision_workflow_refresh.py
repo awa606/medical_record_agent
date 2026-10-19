@@ -28,3 +28,20 @@ console.log(JSON.stringify({renderedState,encounter:appState.currentEncounter,
     assert observed['encounter']['current_revision_id'] == 20
     assert observed['readiness'] is None
     assert '/api/encounters/13' in observed['requested']
+
+
+def test_approval_success_clears_outdated_save_notice():
+    observed = run_browser_logic(r'''
+appState.currentTaskId=9;appState.recordSaveNotice='修改已保存；请审核当前版本后导出。';
+pendingApprovalCount=()=>0;buildTaskApprovalPayload=async()=>({});
+api=async()=>({id:9,status:'approved'});refreshTask=async()=>{};refreshExportReadiness=async()=>({});
+await confirmFields();console.log(JSON.stringify(appState.recordSaveNotice));
+''')
+    assert observed == ''
+
+
+def test_deleted_ai_candidate_is_not_reported_as_disease_exclusion():
+    observed = run_browser_logic(r'''
+console.log(JSON.stringify(referenceReviewStatus({doctor_review_status:'ai_candidate_deleted'})));
+''')
+    assert observed == '已移除AI候选'

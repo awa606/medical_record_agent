@@ -114,7 +114,7 @@ def test_reference_drawer_readability_and_single_scroll(page, width, height):
 def test_reference_status_uses_existing_schema_enums(page):
     prepare_reference_fixture(page)
     cases = [('candidate_confirmed', '医生已确认'), ('content_confirmed', '医生已确认'),
-             ('ai_candidate_deleted', '医生已排除'), ('not_asked_confirmed', '医生已确认本次未询问'),
+             ('ai_candidate_deleted', '已移除AI候选'), ('not_asked_confirmed', '医生已确认本次未询问'),
              ('missing_accepted', '医生已接受本次缺失'), ('pending', '候选 · 待医生确认')]
     for status, label in cases:
         assert page.evaluate('s => referenceReviewStatus({doctor_review_status:s})', status) == label

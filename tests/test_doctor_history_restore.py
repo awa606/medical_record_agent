@@ -6,7 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run_browser_logic(body):
+def run_browser_logic(body, *, real_preview=False):
     script = r'''
 const fs = require('fs');
 const location = new URL('http://localhost/static/doctor.html?session_id=saved#encounter');
@@ -32,6 +32,9 @@ appState.authUser={id:1};
 `;
 eval(source + '\n(async()=>{' + process.argv[1] + '\n})().catch(e=>{console.error(e);process.exitCode=1});');
 '''
+    if real_preview:
+        script = script.replace('resetRecordPreview=()=>{};', '')
+        script = script.replace('resetRoleReviewState=()=>{};', '')
     output = subprocess.check_output(['node', '-e', script, body], cwd=ROOT,
                                      text=True, encoding='utf8', timeout=25)
     return json.loads(output)

@@ -1,5 +1,6 @@
 """Failed record generation must not ask doctors to repeat successful ASR."""
 from tests.test_doctor_history_restore import run_browser_logic
+import pytest
 
 
 def test_audio_generation_failure_keeps_asr_and_retries_only_generation():
@@ -72,3 +73,30 @@ console.log(JSON.stringify(currentFailureDetail()));
 ''')
     assert observed['kind'] == 'transcription'
     assert observed['code'] == 'ASR_TIMEOUT'
+
+
+@pytest.mark.parametrize('step, expected', [
+    ('extract_fields', 'fields'), ('generate_draft', 'draft'), ('safety_check', 'safety'),
+])
+def test_processing_stage_marks_actual_generation_failure(step, expected):
+    observed = run_browser_logic(r'''
+appState.currentAudioId='audio';appState.currentAsrResult={segments:[{role:'患者',text:'发热'}]};
+appState.currentTaskId=11;appState.taskStatus='FAILED';
+appState.currentTask={id:11,status:'FAILED',current_stage:'failed'};
+appState.currentSteps=[{step_name:''' + repr(step) + r''',status:'FAILED'}];
+console.log(JSON.stringify(processingStageStatuses()));
+''')
+    assert observed['asr'] == 'done'
+    assert observed[expected] == 'failed'
+
+
+def test_text_processing_never_claims_audio_or_asr_completion():
+    observed = run_browser_logic(r'''
+api=async()=>({task_id:12,status:'CREATED',events_url:'/events'});listenForEvents=()=>{};
+await createRecordTask('患者：发热');
+appState.taskStatus='EXTRACTING_FIELDS';
+console.log(JSON.stringify({statuses:processingStageStatuses(),html:renderProcessingStages()}));
+''')
+    assert all(observed['statuses'][key] == 'not_applicable' for key in ('audio', 'asr', 'role'))
+    assert '音频上传' not in observed['html']
+    assert 'FunASR' not in observed['html']

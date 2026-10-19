@@ -8800,6 +8800,7 @@ async function startBrowserRecordingCaptureForExistingSession(requestId) {
   }
   if (navigator.mediaDevices.enumerateDevices) {
     const devices = await navigator.mediaDevices.enumerateDevices();
+    if (!browserRecordingRequestActive(requestId)) return;
     if (!devices.some((device) => device.kind === "audioinput")) {
       throw new DOMException("No audio input device", "NotFoundError");
     }
@@ -8811,17 +8812,31 @@ async function startBrowserRecordingCaptureForExistingSession(requestId) {
       autoGainControl: true,
     },
   });
-  if (appState.browserRecordingRequestId !== requestId) {
+  if (!browserRecordingRequestActive(requestId)) {
     stream.getTracks().forEach((track) => track.stop());
     return;
   }
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const audioContext = new AudioContextClass();
-  await audioContext.resume();
+  try {
+    await audioContext.resume();
+  } catch (error) {
+    stream.getTracks().forEach((track) => track.stop());
+    audioContext.close().catch(() => {});
+    throw error;
+  }
+  if (!browserRecordingRequestActive(requestId)) {
+    stream.getTracks().forEach((track) => track.stop());
+    audioContext.close().catch(() => {});
+    return;
+  }
   const source = audioContext.createMediaStreamSource(stream);
   const processor = audioContext.createScriptProcessor(4096, Math.max(1, source.channelCount || 1), 1);
   processor.onaudioprocess = (event) => {
-    if (appState.browserRecordingStatus !== "recording") return;
+    if (appState.browserRecordingStatus !== "recording"
+        || appState.browserRecordingRequestId !== requestId
+        || appState.browserRecordingProcessor !== processor
+        || appState.browserRecordingAudioContext !== audioContext) return;
     const input = event.inputBuffer;
     const frameCount = input.length;
     const channelCount = Math.max(1, input.numberOfChannels || 1);
@@ -8867,8 +8882,11 @@ async function completeBrowserRecordingUpload() {
 }
 
 async function startBrowserRecording() {
+  // All entry points share this guard; disabling one button cannot own a microphone.
+  if (["requesting", "recording", "paused", "finalizing", "uploading"].includes(appState.browserRecordingStatus)) return;
   clearActionError();
   if (!requireEncounterBeforeInput("record")) return;
+  cleanupBrowserRecordingCapture();
   closeAsrStream();
   resetRecordPreview();
   appState.recordPreviewSuspended = true;
@@ -8957,7 +8975,10 @@ async function startBrowserRecording() {
     const source = audioContext.createMediaStreamSource(stream);
     const processor = audioContext.createScriptProcessor(4096, Math.max(1, source.channelCount || 1), 1);
     processor.onaudioprocess = (event) => {
-      if (appState.browserRecordingStatus !== "recording") return;
+      if (appState.browserRecordingStatus !== "recording"
+          || appState.browserRecordingRequestId !== requestId
+          || appState.browserRecordingProcessor !== processor
+          || appState.browserRecordingAudioContext !== audioContext) return;
       const input = event.inputBuffer;
       const frameCount = input.length;
       const channelCount = Math.max(1, input.numberOfChannels || 1);
@@ -8985,9 +9006,9 @@ async function startBrowserRecording() {
     startBrowserRecordingIntervals();
     renderAll();
   } catch (error) {
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    if (audioContext) audioContext.close().catch(() => {});
     if (browserRecordingRequestActive(requestId)) {
-      if (stream) stream.getTracks().forEach((track) => track.stop());
-      if (audioContext) audioContext.close().catch(() => {});
       setBrowserRecordingError(browserRecordingErrorMessage(error));
     }
   }
@@ -9017,14 +9038,15 @@ async function resumeBrowserRecording() {
     setBrowserRecordingError("浏览器录音需要 HTTPS 或 localhost 环境，请切换安全地址后重试。");
     return;
   }
-  const requestId = appState.browserRecordingRequestId + 1;
-  appState.browserRecordingRequestId = requestId;
   if (!appState.browserRecordingProcessor) {
+    const requestId = appState.browserRecordingRequestId + 1;
+    appState.browserRecordingRequestId = requestId;
     appState.browserRecordingStatus = "requesting";
     appState.browserRecordingMessage = "正在恢复麦克风录音...";
     renderAll();
     try {
       await startBrowserRecordingCaptureForExistingSession(requestId);
+      if (!browserRecordingRequestActive(requestId)) return;
     } catch (error) {
       if (appState.browserRecordingRequestId === requestId) {
         setBrowserRecordingError(browserRecordingErrorMessage(error));
@@ -9084,6 +9106,7 @@ async function stopBrowserRecording({ auto = false } = {}) {
 async function cancelBrowserRecording({ silent = false } = {}) {
   const sessionId = appState.browserRecordingSessionId;
   appState.browserRecordingRequestId += 1;
+  const requestId = appState.browserRecordingRequestId;
   if (appState.browserRecordingSessionId && appState.currentAsrSessionId === appState.browserRecordingSessionId) {
     closeAsrStream();
     appState.currentAsrSessionId = null;
@@ -9104,6 +9127,7 @@ async function cancelBrowserRecording({ silent = false } = {}) {
       serverCleanupConfirmed = true;
     } catch (error) {
       await putBrowserRecordingCleanup(sessionId, "cancel").catch(() => undefined);
+      if (appState.browserRecordingRequestId !== requestId) return;
       appState.browserRecordingRetryStatus = "取消清理待网络恢复后重试";
       if (!silent && window.navigator.onLine) reportActionError(error);
     }
@@ -9111,6 +9135,7 @@ async function cancelBrowserRecording({ silent = false } = {}) {
       await clearBrowserRecordingQueue(sessionId).catch(() => undefined);
     }
   }
+  if (appState.browserRecordingRequestId !== requestId) return;
   appState.browserRecordingChunkIndex = 0;
   appState.browserRecordingRecordedChunks = 0;
   appState.browserRecordingUploadedChunks = 0;

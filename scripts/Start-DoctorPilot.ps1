@@ -9,6 +9,8 @@ $documents = Join-Path $root 'docs\pilot\doctor-v1'
 $iconPath = Join-Path $root 'static\brand\medilisten-v1.ico'
 $version = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $environmentLabel = if ($version.environment_label) { $version.environment_label } else { '医生试用入口' }
+$onlineCandidate = $version.provider_profile -eq 'online_deepseek'
+$providerSummary = if ($onlineCandidate) { '在线审核候选 · DeepSeek 云端生成（需联网）· 本地 FunASR 转写' } else { 'Qwen 本地生成 · 本地 FunASR 转写' }
 
 if ($InstallShortcut) {
     $desktop = [Environment]::GetFolderPath('Desktop')
@@ -18,7 +20,7 @@ if ($InstallShortcut) {
     $shortcut.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
     $shortcut.Arguments = '-NoProfile -STA -WindowStyle Hidden -File "' + $PSCommandPath + '" -Config "' + $configPath + '" -Python "' + $pythonPath + '"'
     $shortcut.WorkingDirectory = $root
-    $shortcut.Description = '本机候选版：启动、工作台、操作手册与试用反馈'
+    $shortcut.Description = if ($onlineCandidate) { '在线审核候选：DeepSeek云端生成，需联网；未放行独立医生试用' } else { '本机候选版：启动、工作台、操作手册与试用反馈' }
     if (Test-Path -LiteralPath $iconPath) { $shortcut.IconLocation = "$iconPath,0" }
     $shortcut.Save()
     Write-Output $link
@@ -30,6 +32,7 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "MediListen · $environmentLabel"
+if ($onlineCandidate) { $form.Text += ' · 在线审核候选' }
 if (Test-Path -LiteralPath $iconPath) { $form.Icon = New-Object System.Drawing.Icon($iconPath) }
 $form.Size = New-Object System.Drawing.Size(800,590)
 $form.MinimumSize = New-Object System.Drawing.Size(780,570)
@@ -49,7 +52,7 @@ $layout.Controls.Add($title,0,0)
 if ($version.handbook_dir -and (Test-Path -LiteralPath $version.handbook_dir)) { $documents=$version.handbook_dir }
 $context = New-Object System.Windows.Forms.Label
 $context.Dock='Fill'
-$context.Text = "内部候选 · 尚未放行独立医生试用`r`n应用版本 $($version.app_git_sha.Substring(0,12)) · 仅合成病例／模拟问诊"
+$context.Text = "内部候选 · 尚未放行独立医生试用`r`n应用版本 $($version.app_git_sha.Substring(0,12)) · 仅合成病例／模拟问诊`r`n$providerSummary"
 $layout.Controls.Add($context,0,1)
 $actions = New-Object System.Windows.Forms.FlowLayoutPanel; $actions.Dock='Fill'
 $layout.Controls.Add($actions,0,2)
@@ -80,7 +83,7 @@ function Invoke-Pilot($action, [bool]$confirmedSaved=$false) {
     if ($confirmedSaved) { $args += ' --confirm-saved' }
     $script:worker=Start-Process -FilePath $pythonPath -ArgumentList $args -PassThru -WindowStyle Hidden -RedirectStandardOutput $script:logPath -RedirectStandardError $script:errPath
     foreach($b in $script:buttons){$b.Enabled=$false}
-    $status.Text='正在检查登记版本与本地服务，请稍候……'
+    $status.Text='正在检查登记版本与服务，请稍候……'
 }
 
 $script:buttons += Add-ActionButton $actions '启动服务' { Invoke-Pilot 'start' }
@@ -120,7 +123,11 @@ $timer.Add_Tick({
             try {
                 $s=$line | ConvertFrom-Json
                 $label=switch($s.phase){'READY'{'运行就绪：可以打开工作台；模型质量和医生试用尚未放行。'} 'VIEWER_READY'{'数据与知识查看器已打开：仅供查看已采样的匿名记录，不能编辑病历。'} 'HELP_OPENED'{'已打开当前环境的使用帮助。'} 'HELP_OFFLINE'{'服务暂不可用，已打开离线手册；请核对手册版本。'} 'MODEL_NOT_READY'{'网页可用，真实模型预热中；生成保持阻断。'} 'WEB_STARTING'{'服务启动中。'} 'STOPPED'{'服务已停止，数据保留。'} 'CONFIGURED'{'本版入口已登记。'} 'ERROR'{if($s.message -match '^([A-Z_]+):\s*(.+)$'){"$($Matches[2])（故障代码：$($Matches[1])）"}else{"操作未完成。原始提示：$($s.message)"}} default {"状态尚无中文释义（$($s.phase)）"}}
+                if($onlineCandidate -and $s.phase -eq 'MODEL_NOT_READY'){
+                    $label='网页可用；在线生成尚未就绪，请检查网络、服务鉴权及本地转写状态。历史记录仍可查看。'
+                }
                 $readable += $label
+                if($s.provider_label){$readable += "生成服务：$($s.provider_label) · 模型 $($s.model)"}
                 if($s.entrypoints){
                     foreach($key in @('doctor','knowledge','data_browser','manual')){
                         $entry=$s.entrypoints.$key
@@ -149,7 +156,7 @@ $timer.Add_Tick({
 $timer.Start()
 $form.Add_FormClosed({$timer.Stop();$timer.Dispose()})
 if ($SmokeTest) {
-    $result=@{title=$form.Text; icon_path=$iconPath; custom_icon=(Test-Path -LiteralPath $iconPath); action_buttons=@($actions.Controls | ForEach-Object {$_.Text}); help_buttons=@($help.Controls | ForEach-Object {$_.Text}); document_directory=$documents}
+    $result=@{title=$form.Text; provider_summary=$providerSummary; context=$context.Text; icon_path=$iconPath; custom_icon=(Test-Path -LiteralPath $iconPath); action_buttons=@($actions.Controls | ForEach-Object {$_.Text}); help_buttons=@($help.Controls | ForEach-Object {$_.Text}); document_directory=$documents}
     $timer.Stop();$timer.Dispose();$form.Dispose()
     $result | ConvertTo-Json -Compress
     exit

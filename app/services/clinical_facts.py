@@ -129,6 +129,9 @@ def clinical_segment_contexts(text: str) -> list[ClinicalSegmentContext]:
         question = _is_unanswered_question(sentence) or (
             role == "医生" and bool(re.search(r"有没有|是否|是不是|吗|么|什么|多少|何时|什么时候|[?？]", sentence))
             and not re.search(r"(?:患者|病人)(?:回答|说|称)?[：:,，\s]*(?:有|没有|没|无|否认|不确定|不知道)", sentence)
+        ) or (
+            role in {"家属", "家长"}
+            and bool(re.search(r"有没有|是否|是不是|[?？]|(?:吗|么|呢)\s*$", sentence))
         )
         rows.append(ClinicalSegmentContext(index, sentence, role, question, target))
     return rows

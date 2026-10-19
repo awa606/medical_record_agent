@@ -952,7 +952,7 @@ function encounterPhaseLabel(item = {}) {
     transcribed: "转写已完成",
     generating: "生成病历",
     role_review: "身份待确认",
-    draft_generated: "草稿已生成",
+    draft_generated: "草稿待核对",
     pending_review: "等待医生审核",
     approved: "病历已审核",
     exported: "已导出",
@@ -968,7 +968,7 @@ function encounterStatusLabel(status) {
     pending_review: "待审核",
     waiting_review: "待审核",
     waiting_doctor_review: "待审核",
-    doctor_review: "草稿已生成",
+    doctor_review: "草稿待核对",
     reviewed: "待审核",
     approved: "已批准",
     exported: "已导出",
@@ -1032,6 +1032,16 @@ function restoreTaskSource(task) {
   appState.currentInputText = result.conversation_text || task?.input_text || "";
   appState.currentAsrResult = source && (source.segments?.length || source.text || source.conversation_text) ? source : null;
   appState.currentAudioId = source?.audio_id && source.audio_id !== "text-import" ? source.audio_id : null;
+  // A persisted ASR result is complete even when reopening by encounter only.
+  // This restores capture controls, never the record's approval/export status.
+  if (appState.currentAudioId && appState.currentAsrResult) {
+    const duration = Number(source.duration);
+    appState.asrPhase = "completed";
+    appState.asrStreamProgress = 1;
+    appState.asrProgressKind = "actual";
+    appState.asrAudioDurationSeconds = Number.isFinite(duration) && duration > 0 ? duration : 0;
+    appState.asrProcessedAudioSeconds = appState.asrAudioDurationSeconds;
+  }
   appState.liveTranscriptSegments = [];
   appState.provisionalTranscriptSegments = [];
   appState.transcriptRestoreStatus = appState.currentInputText || appState.currentAsrResult ? "ready" : task?.id ? "missing" : "idle";
@@ -1412,6 +1422,9 @@ function runtimeServiceSummary(key, value) {
     const mode = status.mode || "demo";
     if (provider === "mock" && mode === "demo") return "演示模式可用";
     if (value.ok === false || status.reachable === false) return "服务不可用";
+    if (provider === "online" && String(status.model || "").startsWith("deepseek")) {
+      return `DeepSeek 云端生成（需联网） · ${status.model}`;
+    }
     return `${technicalLabel(provider)} · ${technicalLabel(mode)}`;
   }
   if (key === "ready") return value.ok === false || value.status !== "ready" ? "未能完成就绪检查，请稍后刷新；原始原因见技术详情。" : "可用";

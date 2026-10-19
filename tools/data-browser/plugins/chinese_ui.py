@@ -33,7 +33,8 @@ VALUES = {
     "safety_checking": "安全校验中", "degraded": "降级处理中", "doctor_review": "医生核对",
     "waiting_doctor_review": "等待医生审核", "waiting_review": "等待审核", "pending_review": "待审核",
     "reviewed": "已核对", "approved": "已批准", "exported": "已导出", "completed": "已完成", "done": "已完成",
-    "failed": "失败", "invalidated": "已失效", "pending": "待处理", "confirmed": "已确认",
+    # approval.status=active is a current, non-invalidated approval, not a quality score.
+    "active": "有效审核", "failed": "失败", "invalidated": "已失效", "pending": "待处理", "confirmed": "已确认",
     "supported": "有原文支持", "conflicting": "证据冲突", "insufficient": "依据不足", "missing": "未采集",
     "not_mentioned": "未提及", "partial": "部分采集", "unreviewed": "待核对", "accepted": "已接受",
     "accepted_missing": "已接受缺失", "accepted_partial": "已接受部分采集", "not_asked": "尚未询问",

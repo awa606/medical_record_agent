@@ -127,7 +127,7 @@ def test_backend_aliases_drive_one_consistent_doctor_workflow_state() -> None:
                     "encounter_status": "pending_review",
                     "with_fields": True,
                     "state": "draft_generated",
-                    "phase": "草稿已生成",
+                    "phase": "草稿待核对",
                     "next_action": "病历草稿已生成，可编辑",
                     "step": "病历审核",
                 },

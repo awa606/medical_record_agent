@@ -1,4 +1,4 @@
-"""Local, pinned deployment controller. Never builds, deletes or migrates data."""
+"""Pinned deployment controller. Never builds, deletes or migrates data."""
 from __future__ import annotations
 
 import argparse
@@ -17,6 +17,12 @@ import time
 from urllib import error, request
 
 SERVICES = ("ollama", "app", "gateway")
+ONLINE_SERVICES = ("app", "gateway")
+PROFILES = ("local_qwen", "online_deepseek")
+ONLINE_BASES = {"https://api.deepseek.com", "https://api.deepseek.com/v1"}
+ONLINE_MODEL = "deepseek-flash"
+ONLINE_KEY_FILE = "/run/secrets/deepseek.env"
+ONLINE_PRIVATE = "/app/online-private"
 RESOURCES = ("doctor.html", "doctor.js", "doctor.css", "doctor-ui-v2.css", "doctor-workspace.css")
 BRAND_RESOURCES = ("brand/medilisten-v1.png", "brand/medilisten-v1.ico")
 DEPLOYMENT_RESOURCE = "deployment.json"
@@ -26,6 +32,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PilotError(RuntimeError):
     pass
+
+
+def provider_profile(config: dict) -> str:
+    profile = config.get("provider_profile", "local_qwen")
+    if profile not in PROFILES:
+        raise PilotError("INVALID_CONFIG: 未识别的生成服务配置；不会自动切换模型。")
+    return profile
+
+
+def services_for(config: dict) -> tuple[str, ...]:
+    return ONLINE_SERVICES if provider_profile(config) == "online_deepseek" else SERVICES
 
 
 def command(*args: str) -> str:
@@ -71,7 +88,30 @@ def mount(item: dict, destination: str) -> str:
     return str(Path(matches[0]).resolve())
 
 
-def check_real(items: dict, project: str, port: int) -> None:
+def check_online_storage(item: dict, e: dict) -> None:
+    """Check mounted locations, never open a credential or publish its digest."""
+    if (e.get("ONLINE_LLM_BUDGET_LEDGER") != ONLINE_PRIVATE + "/cost-ledger.json"
+            or e.get("ONLINE_LLM_DIAGNOSTICS_DIR") != ONLINE_PRIVATE + "/business-diagnostics"):
+        raise PilotError("ONLINE_STORAGE_MISMATCH: 费用与诊断路径必须使用登记的独立目录。")
+    private_mounts = [m for m in item["Mounts"] if m["Destination"] == ONLINE_PRIVATE]
+    if (len(private_mounts) != 1 or private_mounts[0].get("Type") != "bind"
+            or private_mounts[0].get("RW") is not True):
+        raise PilotError("ONLINE_STORAGE_MISMATCH: 费用与诊断目录必须使用可写的独立挂载。")
+    private = Path(private_mounts[0]["Source"])
+    ledger, diagnostics = private / "cost-ledger.json", private / "business-diagnostics"
+    if (not private.is_dir() or (ledger.exists() and not ledger.is_file())
+            or (diagnostics.exists() and not diagnostics.is_dir())):
+        raise PilotError("ONLINE_STORAGE_MISMATCH: 费用或诊断路径不存在或类型错误；不会自动初始化目录。")
+    key_file = e.get("ONLINE_LLM_API_KEY_FILE", "")
+    if key_file:
+        key_mounts = [m for m in item["Mounts"] if m["Destination"] == ONLINE_KEY_FILE]
+        if (key_file != ONLINE_KEY_FILE or len(key_mounts) != 1
+                or key_mounts[0].get("Type") != "bind" or key_mounts[0].get("RW") is not False
+                or not Path(key_mounts[0]["Source"]).is_file()):
+            raise PilotError("CREDENTIAL_MOUNT_MISMATCH: 凭据必须来自登记路径的只读文件挂载。")
+
+
+def check_real(items: dict, project: str, port: int, *, profile: str = "local_qwen") -> None:
     if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{2,60}", project) or not 1024 <= port <= 65535:
         raise PilotError("INVALID_CONFIG: 项目或端口无效。")
     if port in (2600, 2626, 2666):
@@ -81,24 +121,40 @@ def check_real(items: dict, project: str, port: int) -> None:
         if labels.get("com.docker.compose.project") != project or labels.get("com.docker.compose.service") != service:
             raise PilotError("PROJECT_MISMATCH: 容器不属于登记项目。")
     e = env(items["app"])
-    expected = {"RECORD_PROVIDER_MODE": "edge", "MEDICAL_RECORD_AGENT_ASR_ENGINE": "funasr",
-                "MEDICAL_RECORD_AGENT_REQUIRE_FUNASR": "1", "LLM_PROVIDER": "ollama",
-                "OLLAMA_MODEL": "qwen3:4b", "OLLAMA_BASE_URL": "http://ollama:11434"}
+    if profile == "online_deepseek":
+        expected = {"RECORD_PROVIDER_MODE": "live", "MEDICAL_RECORD_AGENT_ASR_ENGINE": "funasr",
+                    "MEDICAL_RECORD_AGENT_REQUIRE_FUNASR": "1", "LLM_PROVIDER": "online",
+                    "ONLINE_LLM_PROFILE": "deepseek_demo", "ONLINE_LLM_MODEL": ONLINE_MODEL,
+                    "LLM_MAX_RETRIES": "0", "MRA_ANONYMIZE": "1"}
+        key = e.get("ONLINE_LLM_API_KEY", "")
+        key_file = e.get("ONLINE_LLM_API_KEY_FILE", "")
+        invalid_key = (not key.strip() or key.startswith(("YOUR_", "请填写", "<"))
+                       or any(c.isspace() for c in key))
+        if (e.get("ONLINE_LLM_API_BASE") not in ONLINE_BASES or (not key_file and invalid_key)):
+            raise PilotError("PROVIDER_MISMATCH: 在线候选必须使用登记的官方服务和本机私密凭据。")
+        check_online_storage(items["app"], e)
+    elif profile == "local_qwen":
+        expected = {"RECORD_PROVIDER_MODE": "edge", "MEDICAL_RECORD_AGENT_ASR_ENGINE": "funasr",
+                    "MEDICAL_RECORD_AGENT_REQUIRE_FUNASR": "1", "LLM_PROVIDER": "ollama",
+                    "OLLAMA_MODEL": "qwen3:4b", "OLLAMA_BASE_URL": "http://ollama:11434"}
+    else:
+        raise PilotError("INVALID_CONFIG: 未识别的生成服务配置。")
     if any(e.get(k) != v for k, v in expected.items()):
-        raise PilotError("PROVIDER_MISMATCH: 必须使用固定本地FunASR和Qwen，拒绝Mock或云端。")
+        raise PilotError("PROVIDER_MISMATCH: 生成或转写服务与登记模式不一致，拒绝隐式回退。")
     bindings = items["gateway"]["HostConfig"].get("PortBindings") or {}
     if bindings != {"8000/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(port)}]}:
         raise PilotError("PORT_MISMATCH: 网关必须只绑定登记的本机端口。")
-    for service in ("app", "ollama"):
+    for service in (s for s in items if s != "gateway"):
         if items[service]["HostConfig"].get("PortBindings"):
             raise PilotError("EXPOSED_MODEL: 模型和应用不得单独暴露端口。")
 
 
-def configure(project: str, port: int, path: Path) -> dict:
+def configure(project: str, port: int, path: Path, *, provider_profile: str = "local_qwen") -> dict:
     if path.exists():
         raise PilotError("CONFIG_EXISTS: 保留旧配置；升级请生成新文件并重新验收。")
-    items = {s: inspect(f"{project}-{s}-1") for s in SERVICES}
-    check_real(items, project, port)
+    services = services_for({"provider_profile": provider_profile})
+    items = {s: inspect(f"{project}-{s}-1") for s in services}
+    check_real(items, project, port, profile=provider_profile)
     code, _ = fetch(port, "/health")
     if code != 200:
         raise PilotError("HEALTH_REQUIRED: 登记版本前必须恢复现有服务。")
@@ -107,10 +163,17 @@ def configure(project: str, port: int, path: Path) -> dict:
     revision = labels.get("org.opencontainers.image.revision", "")
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise PilotError("VERSION_UNKNOWN: 镜像必须有完整Git版本标签。")
-    model_dir = Path(mount(items["ollama"], "/root/.ollama/models"))
-    manifest = model_dir / "manifests/registry.ollama.ai/library/qwen3/4b"
-    if not manifest.is_file() or sha(manifest) != MODEL_DIGEST:
-        raise PilotError("MODEL_DIGEST_MISMATCH: 固定模型摘要不符。")
+    model_config = {}
+    if provider_profile == "local_qwen":
+        model_dir = Path(mount(items["ollama"], "/root/.ollama/models"))
+        manifest = model_dir / "manifests/registry.ollama.ai/library/qwen3/4b"
+        if not manifest.is_file() or sha(manifest) != MODEL_DIGEST:
+            raise PilotError("MODEL_DIGEST_MISMATCH: 固定模型摘要不符。")
+        model_config = {"model_digest": MODEL_DIGEST, "model_manifest": str(manifest)}
+    else:
+        # No credential, credential fingerprint or local model metadata is persisted.
+        model_config = {"online_api_base": env(app)["ONLINE_LLM_API_BASE"], "online_model": ONLINE_MODEL,
+                        "credential_file": env(app).get("ONLINE_LLM_API_KEY_FILE", "")}
     resources = {}
     for resource in (*RESOURCES, *BRAND_RESOURCES):
         status, content = fetch(port, "/static/" + resource)
@@ -123,10 +186,11 @@ def configure(project: str, port: int, path: Path) -> dict:
         if deployment.get("version") != revision:
             raise PilotError("VERSION_MISMATCH: 页面环境标识与镜像版本不同。")
         resources[DEPLOYMENT_RESOURCE] = hashlib.sha256(descriptor).hexdigest()
-    config = {"schema_version": 1, "release_status": "CANDIDATE_NOT_RELEASED",
+    config = {"schema_version": 1, "provider_profile": provider_profile,
+              "release_status": "ONLINE_REVIEW_CANDIDATE" if provider_profile == "online_deepseek" else "CANDIDATE_NOT_RELEASED",
               "project": project, "port": port, "app_git_sha": revision,
               "backend_git_sha": labels.get("org.medilisten.backend.revision", revision),
-              "model_digest": MODEL_DIGEST, "model_manifest": str(manifest),
+              **model_config,
               "runtime": mount(app, "/app/runtime"), "resources": resources,
               "containers": {s: {"id": i["Id"], "image": i["Image"],
                                   "mounts": {m["Destination"]: str(Path(m["Source"]).resolve()) for m in i["Mounts"]}}
@@ -140,13 +204,21 @@ def configure(project: str, port: int, path: Path) -> dict:
 
 
 def validate(config: dict) -> dict:
-    if config.get("schema_version") != 1 or set(config.get("containers", {})) != set(SERVICES):
+    profile = provider_profile(config)
+    services = services_for(config)
+    if config.get("schema_version") != 1 or set(config.get("containers", {})) != set(services):
         raise PilotError("INVALID_CONFIG: 配置版本或服务不完整。")
     # Previous registrations stay valid; a new registration pins both brand assets.
     if set(config.get("resources", {})) not in (set(RESOURCES), set(RESOURCES) | set(BRAND_RESOURCES), set(RESOURCES) | set(BRAND_RESOURCES) | {DEPLOYMENT_RESOURCE}):
         raise PilotError("INVALID_CONFIG: 网页资源指纹不完整，需要维护人员重新登记。")
-    items = {s: inspect(config["containers"][s]["id"]) for s in SERVICES}
-    check_real(items, config["project"], config["port"])
+    items = {s: inspect(config["containers"][s]["id"]) for s in services}
+    check_real(items, config["project"], config["port"], profile=profile)
+    if profile == "online_deepseek":
+        e = env(items["app"])
+        if (config.get("online_api_base") != e.get("ONLINE_LLM_API_BASE")
+                or config.get("online_model") != e.get("ONLINE_LLM_MODEL")
+                or config.get("credential_file", "") != e.get("ONLINE_LLM_API_KEY_FILE", "")):
+            raise PilotError("PROVIDER_MISMATCH: 在线服务或凭据来源与登记配置不同。")
     if config.get("cookie_name") and env(items["app"]).get("MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME") != config["cookie_name"]:
         raise PilotError("COOKIE_MISMATCH: 登录环境与登记配置不同。")
     for service, item in items.items():
@@ -156,18 +228,23 @@ def validate(config: dict) -> dict:
             raise PilotError("VERSION_MISMATCH: 容器、镜像或挂载已变化，需要维护人员重新登记。")
     if not (Path(config["runtime"]) / "medical_record_agent.sqlite3").is_file():
         raise PilotError("DATA_MISSING: 运行库不存在；不会自动初始化或覆盖。")
-    manifest = Path(config["model_manifest"])
-    if not manifest.is_file() or sha(manifest) != config["model_digest"] or config["model_digest"] != MODEL_DIGEST:
-        raise PilotError("MODEL_DIGEST_MISMATCH: 模型缓存发生变化。")
+    if profile == "local_qwen":
+        manifest = Path(config["model_manifest"])
+        if not manifest.is_file() or sha(manifest) != config["model_digest"] or config["model_digest"] != MODEL_DIGEST:
+            raise PilotError("MODEL_DIGEST_MISMATCH: 模型缓存发生变化。")
     return items
 
 
 def web_status(config: dict, items: dict) -> dict:
+    online = provider_profile(config) == "online_deepseek"
     states = {s: i["State"]["Status"] for s, i in items.items()}
     result = {"phase": "STOPPED", "states": states, "web_available": False,
               "model_ready": False, "app_git_sha": config["app_git_sha"],
               "backend_git_sha": config.get("backend_git_sha", config["app_git_sha"]),
-              "release_status": config["release_status"], "port": config["port"]}
+              "release_status": config["release_status"], "port": config["port"],
+              "provider_profile": provider_profile(config), "requires_internet": online,
+              "provider_label": "DeepSeek 云端生成（需联网）" if online else "Qwen 本地生成",
+              "model": config.get("online_model") if online else "qwen3:4b"}
     if not all(i["State"]["Running"] for i in items.values()):
         return result
     status, _ = fetch(config["port"], "/health")
@@ -346,7 +423,7 @@ def switch_environment(config: dict, config_path: Path, timeout: int, confirmed_
             # A newly started target has not been opened by this action. Stop only
             # its registered containers, then restore the previous environment.
             failed = validate(config)
-            for service in reversed(SERVICES):
+            for service in reversed(services_for(config)):
                 if failed[service]["State"]["Running"]:
                     command("docker", "stop", "--time", "30", failed[service]["Id"])
             try:
@@ -372,9 +449,9 @@ def start(config: dict, config_path: Path, timeout: int = 600, *, pair_lock_held
         if policy not in {"no", "unless-stopped"}:
             raise PilotError("RESTART_POLICY_INVALID: 未识别的活动环境恢复策略；未修改容器。")
         if peer_items:
-            command("docker", "update", "--restart", "no", *(peer_items[s]["Id"] for s in SERVICES))
-        command("docker", "update", "--restart", policy, *(items[s]["Id"] for s in SERVICES))
-        for service in SERVICES:
+            command("docker", "update", "--restart", "no", *(peer_items[s]["Id"] for s in services_for(pair[0])))
+        command("docker", "update", "--restart", policy, *(items[s]["Id"] for s in services_for(config)))
+        for service in services_for(config):
             if not items[service]["State"]["Running"]:
                 command("docker", "start", items[service]["Id"])
         deadline = time.monotonic() + timeout
@@ -396,7 +473,7 @@ def stop(config: dict, config_path: Path, confirmed_saved: bool = False) -> dict
         items = validate(config)
         if config.get("peer_config"):
             assert_idle(config, items, confirmed_saved)
-        for service in reversed(SERVICES):
+        for service in reversed(services_for(config)):
             if items[service]["State"]["Running"]:
                 command("docker", "stop", "--time", "30", items[service]["Id"])
         return {"phase": "STOPPED", "message": "已停止本版本，数据库和模型保留。"}
@@ -444,10 +521,11 @@ def main():
     p.add_argument("--port", type=int, default=8795)
     p.add_argument("--timeout", type=int, default=600)
     p.add_argument("--confirm-saved", action="store_true")
+    p.add_argument("--provider-profile", choices=PROFILES, default="local_qwen")
     a = p.parse_args()
     try:
         if a.action == "configure":
-            config = configure(a.project, a.port, a.config)
+            config = configure(a.project, a.port, a.config, provider_profile=a.provider_profile)
             result = {"phase": "CONFIGURED", "app_git_sha": config["app_git_sha"], "config": str(a.config)}
         else:
             config = json.loads(a.config.read_text(encoding="utf-8-sig"))

@@ -136,6 +136,34 @@ class SnapshotTests(unittest.TestCase):
 
 @unittest.skipUnless(importlib.util.find_spec("datasette"), "isolated Datasette tool dependency")
 class ViewerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_approval_lifecycle_labels_preserve_raw_values_and_unknown_codes(self):
+        seed = SnapshotTests()
+        seed.setUp()
+        self.addCleanup(seed.doCleanups)
+        with database(seed.source) as connection:
+            connection.execute("UPDATE approval SET status='active' WHERE id=1")
+            connection.execute("INSERT INTO approval(id,encounter_id,task_id,revision_id,status) VALUES(2,1,1,1,'invalidated')")
+            connection.execute("INSERT INTO approval(id,encounter_id,task_id,revision_id,status) VALUES(3,1,1,1,'unknown_review_code')")
+        seed.export()
+        directory = seed.root / "out"
+        ds = make_datasette(directory, "approval-label-test-secret")
+        headers = {"cookie": "ds_actor=" + ds.sign({"a": {"id": "root"}}, "actor")}
+        before = (directory / "mra_snapshot.sqlite3").read_bytes()
+
+        active = (await ds.client.get("/mra_snapshot/approval/1", headers=headers)).text
+        self.assertIn("有效审核", active)
+        self.assertIn("(active)", active)
+        self.assertNotIn("未配置中文释义", active)
+        invalidated = (await ds.client.get("/mra_snapshot/approval/2", headers=headers)).text
+        self.assertIn("已失效", invalidated)
+        self.assertIn("(invalidated)", invalidated)
+        unknown = (await ds.client.get("/mra_snapshot/approval/3", headers=headers)).text
+        self.assertIn("未配置中文释义", unknown)
+        self.assertIn("(unknown_review_code)", unknown)
+        payload = (await ds.client.get("/mra_snapshot/approval.json?_shape=array", headers=headers)).json()
+        self.assertEqual([row["status"] for row in payload], ["active", "invalidated", "unknown_review_code"])
+        self.assertEqual(before, (directory / "mra_snapshot.sqlite3").read_bytes())
+
     async def test_chinese_controls_keep_raw_filters_json_evidence_and_snapshot(self):
         seed = SnapshotTests()
         seed.setUp()

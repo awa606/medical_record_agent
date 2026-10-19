@@ -31,6 +31,24 @@ def test_reopen_audio_keeps_segment_identity_role_and_timing():
     assert observed['currentAudioId'] == 'anonymous-audio'
 
 
+def test_reopen_audio_without_session_restores_completed_controls_not_record_status():
+    asr = {'audio_id': 'saved-audio', 'duration': 60,
+           'segments': [{'text': '咳嗽两天', 'role': '患者'}]}
+    observed = restored({'id': 14, 'current_stage': 'EXPORTED',
+                         'result_json': {'asr_source': asr}})
+    assert observed['asrPhase'] == 'completed'
+    assert observed['asrStreamProgress'] == 1
+    assert observed['asrProcessedAudioSeconds'] == 60
+    assert observed['taskStatus'] == 'EXPORTED'
+
+
+def test_text_import_does_not_claim_completed_audio():
+    observed = restored({'id': 15, 'result_json': {'asr_source': {
+        'audio_id': 'text-import', 'text': '患者：咳嗽两天'}}})
+    assert observed.get('asrPhase', 'idle') == 'idle'
+    assert observed['currentAudioId'] is None
+
+
 def test_missing_original_is_not_reconstructed_from_record_fields():
     observed = restored({'id':11,'result_json':{'fields':{'chief_complaint':{'value':'发热'}},'draft':'发热'}})
     assert observed['currentInputText'] == ''

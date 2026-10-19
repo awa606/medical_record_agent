@@ -7206,7 +7206,7 @@ async function uploadAndTranscribe(file, engine) {
   appState.taskStatus = "TRANSCRIBING";
   renderAll();
 
-  setBusy(true, recognitionMode === "follow" ? "正在跟随识别音频..." : "正在尽快识别完整音频...");
+  setBusy(true, recognitionMode === "follow" ? "正在跟随识别音频..." : "正在识别已上传音频…");
   return new Promise((resolve, reject) => {
     listenForAsrEvents(uploaded.events_url, { resolve, reject });
   });
@@ -7725,7 +7725,7 @@ function openAudioTranscribe() {
   appState.audioMode = "transcribe";
   appState.recognitionMode = "follow";
   if ($("recognitionModeSelect")) $("recognitionModeSelect").value = appState.recognitionMode;
-  $("audioPanelHint").textContent = "跟随识别会对已录好的完整音频逐段处理，并通过 SSE 持续追加转写、角色和进度。";
+  $("audioPanelHint").textContent = "实时识别会批量处理已上传音频，结果返回后显示；跟随识别会逐段处理并追加转写、角色和进度。";
   $("submitAudioButton").textContent = "上传并实时转写";
   openDrawer("audioPanel", "MP3/WAV 实时转写");
   refreshDoctorProfiles();
@@ -7737,7 +7737,7 @@ function openAudioGenerate() {
   appState.audioMode = "generate";
   appState.recognitionMode = "follow";
   if ($("recognitionModeSelect")) $("recognitionModeSelect").value = appState.recognitionMode;
-  $("audioPanelHint").textContent = "选择尽快识别可批量处理完整音频；选择跟随识别会逐段显示转写并在完成后生成草稿。";
+  $("audioPanelHint").textContent = "实时识别会批量处理已上传音频，结果返回后显示；跟随识别会逐段显示转写，并在完成后生成草稿。";
   $("submitAudioButton").textContent = "实时转写并生成病历";
   openDrawer("audioPanel", "MP3/WAV 生成病历");
   refreshDoctorProfiles();

@@ -383,11 +383,12 @@
             </div>
             <div class="audio-player-secondary">
               <div class="transcript-pace-control" role="group" aria-label="转写显示节奏">
-                <button type="button" data-transcript-pace="fast" data-busy-allowed="true" class="active">尽快识别</button>
+                <button type="button" data-transcript-pace="fast" data-busy-allowed="true" class="active">实时识别</button>
                 <button type="button" data-transcript-pace="follow" data-busy-allowed="true">跟随播放</button>
               </div>
               <span id="audioProcessingSummary" class="audio-processing-summary">等待音频</span>
             </div>
+            <p class="form-help">即时显示已返回转写；切换不会重新识别。</p>
           </footer>
         </section>
 
@@ -534,10 +535,11 @@
         <p class="form-help">支持 WAV、MP3、M4A、FLAC、OGG，最大 200 MiB（约200兆字节）。请使用合成或已获授权的去标识音频。</p>
         <label class="recognition-mode-control" for="recognitionModeSelect">识别模式
           <select id="recognitionModeSelect">
-            <option value="fast">尽快识别</option>
+            <option value="fast">实时识别</option>
             <option value="follow">跟随识别</option>
           </select>
         </label>
+        <p class="form-help">处理已上传音频，结果返回后显示；不表示边录边转写。</p>
         <div class="speaker-profile-control">
           <label for="doctorProfileSelect">医生声纹（可选）</label>
           <select id="doctorProfileSelect">

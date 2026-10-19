@@ -72,4 +72,3 @@ console.log(JSON.stringify(currentFailureDetail()));
 ''')
     assert observed['kind'] == 'transcription'
     assert observed['code'] == 'ASR_TIMEOUT'
-

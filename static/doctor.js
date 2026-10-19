@@ -126,6 +126,7 @@ const appState = {
   recordPreviewLastRunAt: 0,
   recordPreviewLastSignature: "",
   recordPreviewInFlight: false,
+  recordPreviewSuspended: false,
   recordPreviewRequestId: 0,
   recordPreviewAbortController: null,
   liveClinicalDraft: null,
@@ -1319,7 +1320,7 @@ function clearToast() {
 }
 
 function containsTechnicalErrorText(message) {
-  return /\b(TypeError|Traceback|NoneType|RuntimeError|ValueError|FileNotFoundError|Exception|stack trace)\b/i.test(message || "")
+  return /\b(TypeError|Traceback|NoneType|RuntimeError|ValueError|FileNotFoundError|Exception|URLError|TRANSPORT_[A-Z_]+|stack trace)\b/i.test(message || "")
     || /must be a mapping/i.test(message || "");
 }
 
@@ -1329,7 +1330,7 @@ function doctorSafeErrorMessage(error) {
   const message = detail.message || nested.message || error?.message || String(error || "");
   const code = detail.error_code || nested.code || appState.asrFailureCode || "";
   const stage = detail.stage || nested.stage || appState.asrFailureStage || "";
-  const isAsrError = stage === "transcription" || String(code).startsWith("ASR_") || appState.taskStatus === "TRANSCRIBING" || appState.currentAudioId;
+  const isAsrError = stage === "transcription" || String(code).startsWith("ASR_") || appState.taskStatus === "TRANSCRIBING";
   if (containsTechnicalErrorText(message)) {
     if (isAsrError) {
       return "转写服务暂时不可用，本次任务已暂停。音频已安全保存，可重新转写或改用文本输入。";
@@ -1353,8 +1354,49 @@ function failureStageLabel(stage) {
     transcription: "智能转写",
     upload: "音频上传",
     generation: "病历生成",
+    extract_fields: "病历字段提取",
+    generate_draft: "病历草稿生成",
+    safety_check: "病历安全校验",
+    task: "任务处理（阶段未记录）",
   };
-  return labels[stage] || stage || "智能转写";
+  return labels[stage] || stage || "任务处理（阶段未记录）";
+}
+
+function currentFailureDetail() {
+  const task = appState.currentTask || {};
+  const names = { extract_fields: "FIELD_EXTRACTION_FAILED", generate_draft: "DRAFT_GENERATION_FAILED", safety_check: "SAFETY_CHECK_FAILED" };
+  const steps = (appState.currentSteps || []).filter(step => String(step.status).toUpperCase() === "FAILED");
+  const logs = task.result_json?.step_logs || [];
+  const stepName = [...steps].reverse().map(step => step.step_name || step.step).find(name => names[name])
+    || [...logs].reverse().map(step => step.step).find(name => names[name]);
+  const formalFailed = appState.currentTaskId && [task.status, task.current_stage, appState.taskStatus].some(value => String(value).toLowerCase() === "failed");
+  // A user can explicitly re-transcribe while an older failed record task is
+  // still selected. An actual new ASR error must win over that stale task.
+  const explicitAsrFailure = Boolean(appState.asrLastError || appState.asrChunkLastError);
+  if (formalFailed && !explicitAsrFailure) {
+    const message = task.error_message || task.result_json?.error_message || "";
+    const reason = message.includes("LLM_OUTPUT_CONTRADICTION")
+      ? "模型输出矛盾，未采纳；未生成可审核病历。请核对原文后修改输入或主动重新生成。"
+      : message.includes("LLM_NO_SUPPORTED_FACTS")
+        ? "未找到可用病历信息。请补充患者陈述，或人工修改输入后生成。"
+        : "病历生成未完成，输入原文仍保留。可检查输入后主动重新生成；未经核对不能审核导出。";
+    return { kind: "generation", stage: stepName || "generation", code: names[stepName] || "RECORD_GENERATION_FAILED", reason,
+      source: appState.currentAsrResult ? "转写已完成，音频与转写原文已保留" : "输入原文已保留" };
+  }
+  if (appState.asrLastError || appState.asrChunkLastError || appState.asrFailureStage === "transcription") {
+    return { kind: "transcription", stage: appState.asrFailureStage || "transcription", code: appState.asrFailureCode || "ASR_FAILED",
+      reason: doctorFacingTranscriptionIssue() || "转写服务暂时不可用，本次任务已暂停。",
+      source: appState.currentAudioId ? "音频已安全保存" : "需要重新上传音频" };
+  }
+  return { kind: "unknown", stage: "task", code: "TASK_FAILED", reason: "任务未完成，失败阶段尚未取得，请查看技术详情。",
+    source: appState.currentAsrResult ? "已完成的转写仍保留" : appState.currentInputText ? "输入原文已保留" : "请核对已保存的输入" };
+}
+
+async function retryFailedTask() {
+  const failure = currentFailureDetail();
+  if (failure.kind === "generation") return regenerateRecord();
+  if (failure.kind === "transcription") return retryTranscriptionFromFailure();
+  return openDebug();
 }
 
 function reportActionError(error) {
@@ -2050,7 +2092,7 @@ function renderStepPrompt() {
   let tone = "";
 
   if (workflowState === "failed") {
-    text = "转写服务暂时不可用，请先重新转写或改用文本输入。";
+    text = currentFailureDetail().reason;
     tone = "danger";
   } else if (workflowState === "exported") {
     text = "病历已导出，可归档或开始下一次任务。";
@@ -2177,13 +2219,15 @@ function doctorDisplayState() {
   const state = currentWorkflowState();
   const inputStatus = appState.currentAudioId ? "音频上传" : appState.currentInputText ? "文本导入" : "未上传";
   if (state === "failed") {
+    const failure = currentFailureDetail();
+    const title = failure.kind === "generation" ? "病历生成中断" : failure.kind === "transcription" ? "智能转写失败" : "任务未完成";
     return {
       key: "failed",
-      title: "智能转写失败",
-      taskHint: "任务失败 · 音频上传",
-      reviewLabel: "智能转写失败",
-      dataStatus: "音频已安全保存",
-      inputStatus: "音频上传",
+      title,
+      taskHint: `${title} · ${failureStageLabel(failure.stage)}`,
+      reviewLabel: title,
+      dataStatus: failure.source,
+      inputStatus,
     };
   }
   if (state === "exported") {
@@ -2316,7 +2360,7 @@ function nextActionState() {
     };
   }
 
-  if (appState.lastActionError) {
+  if (appState.lastActionError && displayState.key !== "failed") {
     const action = appState.currentAudioId
       ? { key: "retry-transcription", label: "重试转写" }
       : encounterReadyForInput()
@@ -2332,21 +2376,16 @@ function nextActionState() {
   }
 
   if (displayState.key === "failed") {
-    const generationFailed = Boolean(appState.currentTaskId && (appState.currentInputText || appState.currentAsrResult));
-    const message = appState.currentTask?.error_message || "";
-    const reason = message.includes("LLM_OUTPUT_CONTRADICTION")
-      ? "模型输出矛盾，未采纳；未生成可审核病历。请核对原文后修改输入或主动重新生成。"
-      : message.includes("LLM_NO_SUPPORTED_FACTS")
-        ? "未找到可用病历信息。请补充患者陈述，或人工修改输入后生成。"
-        : "病历生成未完成，输入原文仍保留。可检查输入后主动重新生成；未经核对不能审核导出。";
+    const failure = currentFailureDetail();
+    const generationFailed = failure.kind === "generation";
     return {
       tone: "danger",
-      title: generationFailed ? "病历生成中断" : "转写中断",
-      detail: generationFailed ? reason : "智能转写失败，音频已保存时可直接重新转写；也可以改用文本输入。",
+      title: displayState.title,
+      detail: failure.reason,
       stages: true,
       actions: generationFailed
-        ? [workflowAction({key: "generate-record", label: "重新生成病历", tone: "primary"}), workflowAction({key: "text-input", label: "修改输入", tone: "secondary"})]
-        : singlePrimaryAction({ key: "retry-transcription", label: appState.currentAudioId ? "重试转写" : "重新上传" }),
+        ? [workflowAction({key: "text-input", label: "修改输入", tone: "secondary"})]
+        : failure.kind === "transcription" ? singlePrimaryAction({ key: "retry-transcription", label: appState.currentAudioId ? "重试转写" : "重新上传" }) : [],
     };
   }
 
@@ -2558,22 +2597,27 @@ function renderTranscriptionFailurePanel() {
   const stageNode = $("transcriptionFailureStage");
   const codeNode = $("transcriptionFailureCode");
   const audioStateNode = $("transcriptionFailureAudioState");
-  const reason = doctorFacingTranscriptionIssue() || "转写服务暂时不可用，本次任务已暂停。";
+  const failure = currentFailureDetail();
+  const generationFailed = failure.kind === "generation";
+  const badge = $("transcriptionFailureBadge");
+  const title = $("transcriptionFailureTitle");
+  if (badge) badge.textContent = generationFailed ? "病历生成异常" : failure.kind === "transcription" ? "转写异常" : "任务异常";
+  if (title) title.textContent = doctorDisplayState().title;
   if (message) {
-    message.textContent = `${reason} 可以重新转写、改用文本输入，或查看技术详情后交给管理员处理。`;
+    message.textContent = failure.reason;
   }
   if (stageNode) {
-    stageNode.textContent = failureStageLabel(appState.asrFailureStage);
+    stageNode.textContent = failureStageLabel(failure.stage);
   }
   if (codeNode) {
-    codeNode.textContent = appState.asrFailureCode || "ASR_FAILED";
+    codeNode.textContent = failure.code;
   }
   if (audioStateNode) {
-    audioStateNode.textContent = appState.asrAudioPreserved || appState.currentAudioId ? "音频已安全保存" : "需要重新上传音频";
+    audioStateNode.textContent = failure.source;
   }
   if (retryButton) {
-    retryButton.textContent = appState.currentAudioId ? "重新转写" : "重新上传并转写";
-    retryButton.title = appState.currentAudioId
+    retryButton.textContent = generationFailed ? "重新生成病历" : failure.kind === "unknown" ? "查看技术详情" : appState.currentAudioId ? "重新转写" : "重新上传并转写";
+    retryButton.title = generationFailed ? "使用已保存原文重新生成；不会重新转写音频" : failure.kind === "unknown" ? "先核对失败步骤，不自动重新调用模型" : appState.currentAudioId
       ? "使用当前已保存音频重新执行 ASR 转写"
       : "当前没有可复用音频，请重新上传问诊音频";
   }
@@ -4313,7 +4357,7 @@ function hasClinicalPreviewSignal(text) {
 }
 
 async function fetchRecordPreview(text, segments) {
-  if (!text.trim() || appState.currentRecordFields) return;
+  if (!text.trim() || recordPreviewBlocked() || appState.recordPreviewInFlight) return;
   const signature = previewSignature(text, segments);
   if (signature === appState.recordPreviewLastSignature) return;
   appState.recordPreviewAbortController?.abort();
@@ -4357,8 +4401,15 @@ async function fetchRecordPreview(text, segments) {
   }
 }
 
+function recordPreviewBlocked() {
+  // A formal request owns inference until the user explicitly starts new input.
+  // This also covers creation failures which have not returned a task ID yet.
+  return Boolean(appState.recordPreviewSuspended || appState.currentTaskId
+    || appState.currentRecordFields || appState.pendingGenerateAfterRoleReview);
+}
+
 function scheduleRecordPreview({ force = false } = {}) {
-  if (appState.currentRecordFields) return;
+  if (recordPreviewBlocked()) return;
   if (roleReviewRequired()) return;
   const segments = currentReviewSegments().filter((segment) => !segment.provisional).map(segmentWithInferredRole);
   const text = liveConversationTextForPreview();
@@ -6202,6 +6253,7 @@ function resetTaskState({ keepAsr = false, keepEncounter = false } = {}) {
   appState.currentInputText = "";
   appState.taskStatus = "CREATED";
   resetRecordPreview();
+  appState.recordPreviewSuspended = false;
   if (!keepAsr) {
     closeAsrStream();
     releaseAudioPlayerSource();
@@ -6250,6 +6302,8 @@ async function refreshTask(taskId, taskFromEvent = null, { refreshEncounter = tr
   if (!isCurrentRead(context) || sequence !== appState.taskReadSequence) return;
   appState.currentTask = task;
   appState.currentTaskId = task.id || task.task_id || taskId;
+  resetRecordPreview();
+  appState.recordPreviewSuspended = true;
   const loadedContext = captureReadContext();
   appState.taskStatus = task.current_stage || task.status || appState.taskStatus;
   const result = task.result_json || {};
@@ -6785,6 +6839,7 @@ async function waitForAsrResultReady(sessionId, eventsUrl, { timeoutMs = 600000,
 
 async function createRecordTask(conversationText, { keepAsr = false } = {}) {
   resetTaskState({ keepAsr, keepEncounter: true });
+  appState.recordPreviewSuspended = true;
   appState.currentInputText = conversationText;
   if (!keepAsr) {
     appState.currentAsrResult = {
@@ -7061,7 +7116,6 @@ async function saveRoleReview({ silent = false } = {}) {
     savedResult = response.asr_result;
     pendingCount = roleReviewPendingCount();
     qualityPassed = roleQualityPassed(savedResult);
-    if (!pendingCount && qualityPassed) scheduleRecordPreview({ force: true });
     shouldAutoGenerate = Boolean(
       !silent
         && appState.pendingGenerateAfterRoleReview
@@ -7070,6 +7124,9 @@ async function saveRoleReview({ silent = false } = {}) {
         && !appState.currentTaskId
         && !appState.currentRecordFields,
     );
+    if (!silent && !shouldAutoGenerate && !pendingCount && qualityPassed) {
+      scheduleRecordPreview({ force: true });
+    }
   } finally {
     appState.roleReviewSaving = false;
     renderAll();
@@ -7193,6 +7250,8 @@ function applyRoleQualityGateError(error) {
 }
 
 async function startRecordGenerationFromAudio(audioId) {
+  resetRecordPreview();
+  appState.recordPreviewSuspended = true;
   setBusy(true, "正在从转写文本生成病历...");
   try {
     const params = new URLSearchParams();
@@ -9289,7 +9348,7 @@ function bindEvents() {
     handleKnowledgeAdminAction(event).catch(reportActionError);
   });
   $("retryTranscriptionButton")?.addEventListener("click", () => {
-    retryTranscriptionFromFailure().catch(reportActionError);
+    retryFailedTask().catch(reportActionError);
   });
   $("fallbackTextInputButton")?.addEventListener("click", openTextImport);
   $("openTechnicalDetailButton")?.addEventListener("click", openDebug);

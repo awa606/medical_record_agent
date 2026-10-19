@@ -7,10 +7,13 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import errno
 import json
 import os
 from pathlib import Path
 import re
+import socket
+import ssl
 import threading
 import time
 from urllib import error, parse, request
@@ -43,6 +46,35 @@ def write_json(path: Path, value: object) -> None:
 
 class SpikeError(RuntimeError):
     pass
+
+
+def safe_failure_code(exc: Exception) -> str:
+    """Classify typed transport reasons without retaining arbitrary error text.
+
+    A timeout does not establish whether TCP, TLS, or response reading timed out.
+    Unknown/string reasons deliberately remain unknown instead of parsing URLs.
+    """
+    if isinstance(exc, SpikeError):
+        return str(exc)
+    if isinstance(exc, error.HTTPError):
+        return 'HTTP_' + str(exc.code)
+    reason = exc.reason if isinstance(exc, error.URLError) else exc
+    categories = (
+        (socket.gaierror, 'TRANSPORT_DNS'),
+        (ssl.SSLCertVerificationError, 'TRANSPORT_TLS_CERTIFICATE'),
+        (ssl.SSLError, 'TRANSPORT_TLS'),
+        (TimeoutError, 'TRANSPORT_TIMEOUT'),
+        (ConnectionRefusedError, 'TRANSPORT_CONNECTION_REFUSED'),
+        (ConnectionResetError, 'TRANSPORT_CONNECTION_RESET'),
+    )
+    for reason_type, code in categories:
+        if isinstance(reason, reason_type):
+            return code
+    if isinstance(reason, OSError) and reason.errno in {errno.ENETUNREACH, errno.EHOSTUNREACH}:
+        return 'TRANSPORT_NETWORK_UNREACHABLE'
+    if isinstance(exc, error.URLError):
+        return 'TRANSPORT_UNKNOWN'
+    return type(exc).__name__
 
 
 class BudgetLedger:
@@ -210,7 +242,7 @@ class DeepSeekDemoProvider:
             return {'reachable': MODEL in models, 'model': MODEL, 'models': models,
                     'error_code': None if MODEL in models else 'MODEL_NOT_LISTED', 'inference_called': False}
         except Exception as exc:
-            code = str(exc) if isinstance(exc, SpikeError) else ('HTTP_' + str(exc.code) if isinstance(exc, error.HTTPError) else type(exc).__name__)
+            code = safe_failure_code(exc)
             return {'reachable': False, 'model': MODEL, 'models': [], 'error_code': code, 'inference_called': False}
 
     def save(self, name: str, value: object) -> None:
@@ -303,7 +335,7 @@ class DeepSeekDemoProvider:
                 raise SpikeError('SERVER_USAGE_EXCEEDED_RESERVATION')
         except Exception as exc:
             # Do not leak exception bodies, URLs or echoed credentials.
-            code = str(exc) if isinstance(exc, SpikeError) else ('HTTP_' + str(exc.code) if isinstance(exc, error.HTTPError) else type(exc).__name__)
+            code = safe_failure_code(exc)
             if not budget_settled:
                 self.ledger.finish(call_id, usage=None, failure=code)
             self.save('failure.json', {'code': code, 'budget_call_id': call_id, 'auto_retry': False})

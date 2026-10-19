@@ -225,10 +225,10 @@
 
         <section id="transcriptionFailurePanel" class="failure-recovery-panel" hidden aria-live="polite">
           <div>
-            <span class="status-badge missing">转写异常</span>
-            <strong>转写服务暂时不可用，本次任务已暂停。</strong>
+            <span id="transcriptionFailureBadge" class="status-badge missing">任务异常</span>
+            <strong id="transcriptionFailureTitle">本次任务未完成。</strong>
             <p id="transcriptionFailureMessage">可以重新转写、改用文本输入，或查看技术详情后交给管理员处理。</p>
-            <dl class="failure-meta-list" aria-label="转写失败详情">
+            <dl class="failure-meta-list" aria-label="任务失败详情">
               <div>
                 <dt>失败阶段</dt>
                 <dd id="transcriptionFailureStage">转写</dd>
@@ -238,7 +238,7 @@
                 <dd id="transcriptionFailureCode">语音转写失败（ASR_FAILED）</dd>
               </div>
               <div>
-                <dt>音频状态</dt>
+                <dt>输入状态</dt>
                 <dd id="transcriptionFailureAudioState">已安全保存</dd>
               </div>
             </dl>

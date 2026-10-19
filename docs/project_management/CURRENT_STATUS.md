@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-19T12:26:47.893Z`
-- Source hash: `478c578a1be0b377937b6e18282b9e4f0fb11a655c5dae87656fe65f08ae3a3f`
+- Updated at: `2026-10-19T15:59:19.446Z`
+- Source hash: `00014593d4fad37a4b10e9ab1d1d01d11064d47fbb6ea10fc3ed7640f9bfd427`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@e1a8bce2fac2fdf1f57e51580899ed6e712326bb`
+- Repo: `codex/alpha51-demo-visual-e2e@8f1019e70f3a28ca26888e5be6bcea5ce9bece44`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **原软件预测2026-10-07已超期；实际软件放行待剩余验收，完整M4仍受硬件延期影响**
+- Forecast Alpha Exit: **原软件预测2026-10-07已超期，10月19日22:00展示冻结目标未达；实际放行待剩余同版本验收，完整M4仍受硬件与断网核心流程要求约束**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · e1已部署8798并刷新8797；独立恢复及20分钟就绪PASS，同版本剩余路径仍待验** — `VERIFY`
+**5.1 · e1入口恢复，知识管理隔离实操通过；8798授权音频已准备但未提交** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 按5.1既有标准补齐最终e1音频、麦克风及剩余真实功能操作的Evidence和核验信息，再判断放行；5.3同一冻结版本/环境/Provider连续五次真实音频尚未启动。
-- Parallel waiting task: e1文本E20与独立恢复E20各自完成生成、人工修订、审核、导出和重开；8798原库业务指纹保持、8797已刷新完整e1来源，指定2010资料实际检索5条hybrid_v1。正式20分钟28采样/56请求全部成功，生成0；保留窗口前ASR预热503、f0慢放及DNSFAIL，a9用户麦克风/缩放证据不自动升级为e1。硬件延期。
+- Single next task: 在8798运行e1a8bce2完成已准备的授权音频上传、角色确认、一次正式生成、人工核对、保存审核、导出及重开，核对调用次数；未完成前保持5.1 VERIFY，不启动5.3。
+- Parallel waiting task: 本轮实质验收证据最终提交8f1019e，业务运行仍e1a8bce2。19003知识导入/编辑/启停/停用排除可见操作与8项权限通过，原业务及4份启用资料未改变；8797最终采样23:56:28，14患者16就诊19病历版本8批准10导出，关联与权限复核通过，E16仅待输入无任务。Docker两次恢复及TLS503原故障保留，原因未确认；本阶段DeepSeek新增0次。22:00冻结目标未达。
 
 ## Manual Actions
 
-- 最终e1音频/麦克风与未覆盖的真实功能仍需对应验收；知识整库质量、临床准确率和5.3连续五次尚未完成。既有a9物理麦克风及100%/125%/150%用户确认按原版本保留。
+- 8798 E16上传面板等待手动选择既有授权音频，尚未提交或生成；最终e1物理麦克风与既有放行门禁仍待验。a9麦克风和100%/125%/150%用户确认按原版本保留，不能自动转记。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

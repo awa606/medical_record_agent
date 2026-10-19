@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-16T13:33:16.266Z`
-- Source hash: `89dbe1d02597df26bfbdee307e2e401deacc47955b74f3c6afef33777a110396`
+- Updated at: `2026-10-19T05:04:39.953Z`
+- Source hash: `4262d77b41f5991ef4d8b1273a35eaa879968ab81e44d6ddaa29499c87218ef7`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@b9ebf835fb593b1e5c694cb8aed7885cfb34228f`
+- Repo: `codex/alpha51-demo-visual-e2e@db4081ea8d7746f23f86a1ac76edc4b66e427b41`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 02c14cee审核候选已升级8798；两条真实流程及离线恢复完成，发布门禁未齐** — `VERIFY`
+**5.1 · 8798在线审核候选已部署；文本与授权音频审核演示完成，最终发布验收未齐** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 唯一下一工作：在02c14cee同一版本集中补物理麦克风和实际100%/125%/150%显示验收；保持失败记录与模型质量独立结论。5.1全部门禁满足后再执行5.3连续五次真实音频流程，未齐之前继续称审核候选。
-- Parallel waiting task: 物理麦克风及100%/125%/150%实际缩放待用户稍后配合；模型质量、实时资源和新版流感检索未过门；硬件继续延期
+- Single next task: 固定db4081e补齐最终同版本路径与恢复证据，集中安排物理录音和真实缩放；首次模型完整性、转写角色与知识相关性独立保留未通过。
+- Parallel waiting task: 8795和旧本地环境停止保留；硬件继续延期，5.3尚未启动。
 
 ## Manual Actions
 
-- 界面已认可；物理录音和实际缩放按用户稍后安排集中补验
+- 物理麦克风与实际100%/125%/150%缩放按此前稍后配合安排，无需新数据或采购。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

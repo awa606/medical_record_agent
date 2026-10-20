@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-19T16:48:50.215Z`
-- Source hash: `c672db338d1dd8adfe2e95486d98909d0d1ec31f130d36aa1c5ef875ae02762f`
+- Updated at: `2026-10-20T00:56:30.793Z`
+- Source hash: `82e67438e47b194913499af8d7775132b0bdfc4eb1ad2f783c3e35b496f4acdb`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@92743996711efda8d50ed973f7ca5809022f6c5a`
+- Repo: `codex/alpha51-demo-visual-e2e@9526507a6e62d0aebcba751bcca94ddf373f6b1b`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **原软件预测2026-10-07已超期，10月19日22:00冻结目标未达；ab8同版本三路径及新目录完整恢复待验，5.1保持VERIFY95%，5.3BACKLOG0%。完整M4仍受硬件与断网核心流程要求约束，在线DeepSeek不等于离线生成。**
+- Forecast Alpha Exit: **5.1保持VERIFY95%，5.3BACKLOG0%。原2026-10-07软件预测及10月19日22:00冻结目标已超期；本轮完成ab8文本/在线Profile独立恢复与主入口复原，不修改正式日期。完整M4仍受硬件及断网核心流程要求约束；单例、自动测试和人工修订不代表稳定医生试用版。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · ab8音频标识修复已升级，E16审核导出与重启持久化通过，发布门禁仍待收口** — `VERIFY`
+**5.1 · ab8文本与独立恢复闭环已验，8798及8796展示入口恢复，5.1继续VERIFY** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 按ab8b0c5a最终运行版补齐同版本三路径及独立完整归档恢复；模型首次输出问题保留，5.1全部满足后才进入5.3连续五次，不以人工修订后的成功替代模型质量。
-- Parallel waiting task: 实质交付证据提交9274399，应用运行ab8b0c5a，CI39284314530成功。E16一次正式生成task13/Revision20#1，首次3完整3缺失1冲突；人工修订3字段后Revision21#2、批准9、导出11与历史重开通过。DOCX26/26段一致，2页无截断或重叠。00:44重启12表及E16的8文件/账本不变，新增模型0；共享累计16次/估算0.299696元。8797快照00:38:43：14患者16就诊21版本9批准11导出，4资料78片段78索引，关联及权限通过。19003知识管理隔离验收保留，原资料不改。
+- Single next task: 固定ab8展示版继续收口跨子句误拦与首Revision显示竞态、浏览器下载落盘及同最终SHA物理录音/完整路径证据；满足5.1门禁后才进入5.3连续五次，不将人工修订成绩当模型首次质量。
+- Parallel waiting task: 实质材料提交9526507，业务运行ab8b0c5a未改。E17/task14一次正式生成，首次管线5完整1缺失1规则误拦，人工修改3字段后Rev23#2/批准10/导出12/重开通过。8796快照08:35:37含15患者17就诊23版本10批准12导出、4资料78片段78索引。D盘ab8约4.75GiB精确镜像/本地资源恢复，136项公开清单、72缓存及78份冻结基线文件核验，baseline-E17与可变runtime分开，28个wheel在新venv离线安装查看器；19006 E18/task15人工修订后Rev25#2/批准11/导出13，重启11表22文件及页面重开一致。断网ready503、联网200，无隐藏回退；19006/19007已停止，8798恢复READY。共享累计18次、内部估算0.313876元。
 
 ## Manual Actions
 
-- 本轮授权音频已完成。浏览器本地下载落地尚未确认，edge://downloads被安全限制拒绝且未绕过。ab8最终物理录音及实际显示证据未齐；此前a9录音与100%/125%/150%确认保留原版本边界。
+- 当前无需重复选音频或录音。浏览器下载实际落盘仍未确认；ab8物理麦克风和实际显示继续保留待验，旧a9证据不自动转记。恢复包依赖本机C盘外部API密钥和共享账本，不是自包含跨机包或离线AI。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

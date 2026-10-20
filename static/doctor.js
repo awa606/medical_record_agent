@@ -2739,6 +2739,7 @@ function closeDrawer() {
   }
   $("drawerBackdrop").classList.remove("active");
   detailDrawerVersion += 1;
+  recordHistoryView = null;
   $("drawer").classList.remove("active");
   $("drawer").setAttribute("aria-hidden", "true");
   $("drawer").inert = true;
@@ -3640,11 +3641,126 @@ function currentRevisionInfo(readiness = appState.currentExportReadiness) {
   const task = appState.currentTask || {};
   const result = task.result_json || {};
   const revision = result.record_revision || {};
+  const revisionId = task.current_record_revision_id || revision.id || readiness?.revision_id || null;
+  const saved = [appState.currentEncounter?.current_revision, ...(appState.currentEncounter?.revisions || [])]
+    .find(item => item && String(item.id) === String(revisionId));
+  const matchingReadiness = String(readiness?.revision_id) === String(revisionId) ? readiness : null;
   return {
-    revisionId: readiness?.revision_id || task.current_record_revision_id || revision.id || null,
-    revisionNumber: readiness?.revision_number || task.current_record_revision_no || revision.revision_no || null,
-    contentHash: readiness?.content_hash || revision.content_hash || "",
+    revisionId,
+    revisionNumber: matchingReadiness?.revision_number || task.current_record_revision_no
+      || (String(revision.id) === String(revisionId) ? revision.revision_no : null) || saved?.revision_no || null,
+    contentHash: matchingReadiness?.content_hash || (String(revision.id) === String(revisionId) ? revision.content_hash : "") || saved?.content_hash || "",
   };
+}
+
+// A separate read-only view: never assign historical values to the current draft.
+let recordHistoryView = null;
+
+function savedRevisionFields(revision) {
+  const parseObject = value => {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid snapshot");
+    return parsed;
+  };
+  try {
+    if (revision.fields_json != null) return parseObject(revision.fields_json);
+    return parseObject(parseObject(revision.result_json).fields);
+  } catch (_) {
+    return null;
+  }
+}
+
+function revisionSourceLabel(source) {
+  return { generation: "系统生成", doctor_review: "医生修改保存" }[source]
+    || (source ? `其他来源（${source}）` : "来源未记录");
+}
+
+function historyFieldText(field) {
+  if (field?.value == null || String(field.value).trim() === "") return "（未记录）";
+  return String(field.value);
+}
+
+function historyFieldState(field) {
+  if (!field) return "字段未记录";
+  if (field.status === "conflicting") return "当时存在证据冲突";
+  if (field.missing) return "当时标记为缺失";
+  return "已保存内容；不代表已审核";
+}
+
+function historyFieldSignature(field) {
+  return JSON.stringify([field?.value ?? null, field?.missing ?? null, field?.status ?? null]);
+}
+
+function recordHistoryMarkup(view) {
+  const versions = view.revisions;
+  if (!versions.length) return '<div class="empty-state">本次就诊尚无已保存版本。保存病历后可在这里查看。</div>';
+  const selected = versions.find(item => String(item.id) === String(view.selectedId));
+  const current = versions.find(item => String(item.id) === String(view.currentId));
+  if (!selected) return '<div class="safety-strip danger">所选版本不存在，请关闭后重新加载。</div>';
+  const fields = savedRevisionFields(selected);
+  const currentFields = current && savedRevisionFields(current);
+  const isCurrent = String(selected.id) === String(view.currentId);
+  const options = versions.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === selected.id ? "selected" : ""}>版本 ${escapeHtml(item.revision_no)} · ${escapeHtml(revisionSourceLabel(item.source))} · ${escapeHtml(formatDateTime(item.created_at))}${String(item.id) === String(view.currentId) ? " · 当前" : ""}</option>`).join("");
+  const changed = fields && currentFields ? FIELD_DEFS.filter(([key]) => historyFieldSignature(fields[key]) !== historyFieldSignature(currentFields[key])).length : null;
+  const rows = fields ? FIELD_DEFS.map(([key, title]) => {
+    const field = fields[key];
+    const different = !isCurrent && currentFields && historyFieldSignature(field) !== historyFieldSignature(currentFields[key]);
+    const spans = Array.isArray(field?.source_spans) ? field.source_spans : [];
+    return `<section class="history-field ${different ? "history-field-changed" : ""}">
+      <h3>${escapeHtml(title)}${different ? '<span class="history-change-badge">已变化</span>' : ""}</h3>
+      <p class="history-field-state">${escapeHtml(historyFieldState(field))}</p>
+      <div class="history-field-columns ${different ? "has-comparison" : ""}">
+        <div><strong>${isCurrent ? "当前已保存内容" : `所选版本 ${escapeHtml(selected.revision_no)}`}</strong><p class="history-value">${escapeHtml(historyFieldText(field))}</p></div>
+        ${different ? `<div><strong>当前版本 ${escapeHtml(current.revision_no)}</strong><p class="history-value">${escapeHtml(historyFieldText(currentFields[key]))}</p><p class="history-field-state">${escapeHtml(historyFieldState(currentFields[key]))}</p></div>` : ""}
+      </div>
+      ${spans.length ? `<details class="history-evidence"><summary>查看该版本原文引用（${spans.length}条）</summary>${spans.map(span => `<blockquote>${escapeHtml(span.text || "（引文未记录）")}</blockquote>`).join("")}</details>` : ""}
+    </section>`;
+  }).join("") : '<div class="safety-strip danger">该版本快照无法解析，未用当前内容替代。请联系维护者核查原始记录。</div>';
+  const diagnoses = Array.isArray(fields?.candidate_diagnoses) ? fields.candidate_diagnoses : [];
+  return `<div class="record-history-view">
+    <p class="history-readonly">只读查看 · 不会替换当前病历或改变审核状态。</p>
+    ${view.editing ? '<p class="history-edit-notice">您的编辑内容仍保留。这里仅比较已经保存的版本，不包含尚未保存的修改。</p>' : ""}
+    <label class="history-version-select">选择保存版本<select data-history-version>${options}</select></label>
+    <p class="history-meta">就诊 E-${escapeHtml(view.encounterId)} · ${escapeHtml(revisionSourceLabel(selected.source))} · 保存于 ${escapeHtml(formatDateTime(selected.created_at))}</p>
+    <p class="history-compare-summary" role="status">${isCurrent ? "正在查看当前已保存版本。" : currentFields && fields ? `与当前已保存版本 ${escapeHtml(current.revision_no)} 相比，${changed}项字段内容或采集状态不同。` : "当前已保存版本不可用，暂不能对照。"}${versions.length === 1 ? " 本次就诊目前只有一个版本。" : ""}</p>
+    ${rows}
+    ${diagnoses.length ? `<details class="history-evidence"><summary>该版本候选诊断（历史记录）</summary><ul>${diagnoses.map(item => `<li>${escapeHtml(item.name || "未命名候选")}</li>`).join("")}</ul><p>历史候选不等于已确认诊断，未从当前病历补写。</p></details>` : ""}
+    ${selected.draft_text ? `<details class="history-evidence"><summary>该版本保存的病历全文</summary><p class="history-value">${escapeHtml(selected.draft_text)}</p></details>` : ""}
+  </div>`;
+}
+
+async function openRecordHistory() {
+  const context = captureReadContext();
+  if (!context.encounterId || !appState.authUser) return;
+  openDetailDrawer("病历历史版本", '<p role="status">正在读取已保存版本…</p>');
+  const drawerVersion = detailDrawerVersion;
+  recordHistoryView = null;
+  const stillCurrent = () => drawerVersion === detailDrawerVersion && isCurrentRead(context);
+  try {
+    const detail = await readApi(`/api/encounters/${encodeURIComponent(context.encounterId)}`);
+    if (!stillCurrent()) return;
+    if (String(detail.id) !== String(context.encounterId) || !Array.isArray(detail.revisions)
+      || detail.revisions.some(item => String(item.encounter_id) !== String(context.encounterId))) throw new Error("版本与本次就诊不一致");
+    const revisions = [...detail.revisions].sort((a, b) => Number(b.revision_no) - Number(a.revision_no));
+    recordHistoryView = {
+      context, drawerVersion, encounterId: detail.id, revisions, currentId: detail.current_revision_id,
+      selectedId: (revisions.find(item => String(item.id) !== String(detail.current_revision_id)) || revisions[0])?.id,
+      editing: appState.recordEditMode || appState.recordEditDirty,
+    };
+    $("detailDrawerContent").innerHTML = recordHistoryMarkup(recordHistoryView);
+  } catch (_) {
+    if (!stillCurrent()) return;
+    $("detailDrawerContent").innerHTML = '<div class="safety-strip danger">历史版本读取失败。请确认仍已登录并有本次就诊权限，然后重试；当前编辑内容未改变。</div><button type="button" data-history-retry>重新加载历史版本</button>';
+  }
+}
+
+function selectRecordHistoryVersion(id) {
+  const view = recordHistoryView;
+  if (!view || view.drawerVersion !== detailDrawerVersion || !isCurrentRead(view.context)) return;
+  if (!view.revisions.some(item => String(item.id) === String(id))) return;
+  view.selectedId = view.revisions.find(item => String(item.id) === String(id)).id;
+  $("detailDrawerContent").innerHTML = recordHistoryMarkup(view);
+  $("detailDrawerContent").querySelector('[data-history-version]')?.focus({ preventScroll: true });
 }
 
 function currentApprovalRevisionKey(readiness = appState.currentExportReadiness) {
@@ -4031,7 +4147,7 @@ function renderFields() {
     </div>` : "";
   const revision = currentRevisionInfo();
   const versionNotice = fields && !isPreview && appState.currentTaskId
-    ? `<div class="record-version" role="status">当前版本 #${escapeHtml(revision.revisionNumber || revision.revisionId || "待核验")}${isEditing ? " · 编辑中，尚未保存" : ""}${appState.recordSaveNotice ? `<span>${escapeHtml(appState.recordSaveNotice)}</span>` : ""}</div>` : "";
+    ? `<div class="record-version"><span role="status">当前版本 ${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"}${isEditing ? " · 编辑中，尚未保存" : ""}</span>${detailButton("history:record", "历史版本")}${appState.recordSaveNotice ? `<span>${escapeHtml(appState.recordSaveNotice)}</span>` : ""}</div>` : "";
   const recovery = appState.recordEditRecovery;
   const recoveryNotice = recovery && recovery.taskId === appState.currentTaskId && !isEditing
     ? `<details class="record-recovery"><summary>本次冲突前的本地修改 · 尚未保存</summary><p>当前显示服务器最新版本。下面仅保留您修改过的字段，请与最新内容核对。</p>${EDITABLE_FIELD_DEFS.filter(([key]) => String(recovery.fields[key]?.value || "") !== String(recovery.baseline?.[key]?.value || "")).map(([key, title]) => `<p><strong>${escapeHtml(title)}</strong>：${escapeHtml(recovery.fields[key]?.value || "（留空）")}</p>`).join("")}<button type="button" data-record-reapply>将这些修改带入当前版本继续编辑</button></details>` : "";
@@ -6165,6 +6281,10 @@ function renderFooter() {
 
 function openWorkbenchDetail(target = "") {
   const [type, value] = String(target).split(":");
+  if (type === "history") {
+    void openRecordHistory();
+    return;
+  }
   if (type === "field") {
     const title = DRAFT_FIELD_DEFS.find(([key]) => key === value)?.[1]
       || FIELD_DEFS.find(([key]) => key === value)?.[1]
@@ -9676,6 +9796,11 @@ function bindEvents() {
     seekConsultationAudio(Number(transcriptRow.dataset.segmentStart), { autoplay: true });
   });
   $("detailDrawerContent").addEventListener("change", (event) => {
+    const historySelect = event.target.closest("[data-history-version]");
+    if (historySelect) {
+      selectRecordHistoryVersion(historySelect.value);
+      return;
+    }
     const speakerRoleSelect = event.target.closest("[data-speaker-role-select]");
     if (speakerRoleSelect) {
       updateSpeakerRole(speakerRoleSelect.dataset.speakerId, speakerRoleSelect.value);
@@ -9706,6 +9831,10 @@ function bindEvents() {
     selectReferenceTab(tabs[index]); tabs[index].focus();
   });
   $("detailDrawerContent").addEventListener("click", async (event) => {
+    if (event.target.closest("[data-history-retry]")) {
+      await openRecordHistory();
+      return;
+    }
     const tab = event.target.closest('[data-reference-tab]');
     if (tab) { selectReferenceTab(tab); return; }
     const generateButton = event.target.closest("[data-generate-from-transcript]");

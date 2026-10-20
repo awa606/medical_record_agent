@@ -6259,6 +6259,31 @@ body.doctor-mode .input-method-popover button {
 }
 
 
+.record-version { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 0 16px; color: #52627a; font-size: 14px; }
+.record-version button { font-size: 16px; min-height: 36px; }
+.record-history-view { color: #17324d; font-size: 16px; line-height: 1.7; }
+.history-readonly { margin: 0 0 16px; padding: 12px 14px; background: #eef6fc; border-radius: 6px; }
+.history-edit-notice { padding: 12px 14px; background: #fff8e8; border-left: 3px solid #b77b18; }
+.history-version-select { display: grid; gap: 8px; font-weight: 600; }
+.history-version-select select { width: 100%; min-width: 0; min-height: 44px; padding: 8px; font: inherit; color: inherit; background: #fff; border: 1px solid #b9c8d8; border-radius: 6px; }
+.history-meta, .history-field-state { font-size: 14px; color: #52627a; overflow-wrap: anywhere; }
+.history-compare-summary { margin: 16px 0; }
+.history-field { padding: 20px 0; border-top: 1px solid #dbe4ee; }
+.history-field h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 8px; font-size: 20px; font-weight: 700; }
+.history-change-badge { font-size: 14px; font-weight: 500; padding: 1px 8px; border-radius: 4px; color: #85550c; background: #fff1cc; }
+.history-field-state { margin: 4px 0 12px; }
+.history-field-columns { display: grid; gap: 16px; }
+.history-field-columns.has-comparison { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.history-field-columns > div { min-width: 0; }
+.history-field-columns.has-comparison > div { background: #f5f8fb; padding: 12px; border-radius: 6px; }
+.history-field-columns strong { font-size: 14px; color: #52627a; }
+.history-value { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.history-evidence { margin: 12px 0 0; font-size: 14px; }
+.history-evidence summary { cursor: pointer; color: #175b91; padding: 6px 0; }
+.history-evidence blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid #d2e1ee; white-space: pre-wrap; overflow-wrap: anywhere; }
+.record-history-view :focus-visible { outline: 3px solid #398bdd; outline-offset: 3px; }
+@media (max-width: 650px) { .history-field-columns.has-comparison { grid-template-columns: 1fr; } }
+
 .admin-list {
   display: grid;
   gap: 10px;

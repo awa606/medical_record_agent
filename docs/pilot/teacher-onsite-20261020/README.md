@@ -1,0 +1,37 @@
+# 教师现场试用资料
+
+本目录维护在 DEV-01 上供教师现场操作 MediListen 的资料源文件。应用运行版本为 `ab8b0c5a`，医生入口使用 8798；资料整理不改变应用、模型、数据库或正式验收结论。
+
+## 资料组成
+
+- `guide.html` / `guide.pdf`：三页教师操作指南，覆盖新建就诊、文本输入、原文和指南核对、修改保存、分项审核、导出与历史重开。
+- `cases.html` / `cases.pdf`：T01 发热咳嗽主线、T02 家属代述和未知信息选做病例。
+- `recording.html` / `recording.pdf`：双人朗读稿和单人备用稿，标明角色标题不朗读；实际时长以录音为准。
+- `feedback.html` / `feedback.pdf`：不预填结果的反馈表。HTML 只在当前页保留输入，由填写者显式导出 JSON；没有上传请求或自动持久化。
+- `case-T01.txt`、`case-T02.txt`：可复制的完整文本；不包含真实患者资料。
+- `trial.css`、`trial.js`：本地样式、复制文本和反馈下载功能。
+- `index.html`：教师试用首页；`facilitator.html`：组织者开场前准备说明，两者由包装脚本复制。
+
+桌面入口及首页由独立打包脚本负责；本构建器不创建、读取或分发账号、密码与 API 密钥。
+
+完成资料生成后运行 `scripts/package_teacher_trial.ps1`。它创建本包专用桌面入口并校验既有 8798 配置，不启动或停止服务。首次试用前，由组织者在专用教师窗口登录普通医生账号；凭据不写入资料包。
+
+## 重建资料
+
+使用 Codex 工作区依赖返回的 Python，内含 ReportLab；字体从 DEV-01 的 Windows 字体目录读取宋体与微软雅黑。示例以仓库根目录为工作目录：
+
+```powershell
+& 'C:\Users\AWA007\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' -X utf8 docs/pilot/teacher-onsite-20261020/build_materials.py --out .artifacts/teacher-onsite-20261020/pack
+```
+
+生成前按 PDF Skill 执行创建标记；使用 bundled Poppler 渲染并逐页检查。`materials-build.json` 中记录内容校验值与页面布局高度，其静态布局检查不能替代视觉检查。实际检查结果另存本机证据目录，不把反馈内容提交 Git。
+
+资料采用 A4、居中标题、黑字、中文宋体正文及微软雅黑标题。直接生成 PDF，不依赖用户安装的桌面 Office。当前没有 bundled LibreOffice，因此不交付未经渲染检查的 Word 文件。
+
+## 使用边界
+
+先使用普通医生账号完成 T01；管理工具不作为教师主线。T02 是可选挑战，当前模型不能完成时记录失败，不要求通过反复生成或虚构缺失事实来完成导出。
+
+使用指南要求实际找到并打开导出文件，不能仅凭“开始下载”提示判断成功。既有用药校验误拦保留说明；规则阻断、AI 首次内容与人工修订分别记录。资料编制和操作陪同不等于已完成真实教师测试。
+
+所有填写后的反馈、原始截图和下载文件只保存在本机授权位置。分享资料前只使用公开模板文件清单，不包含私密账号、运行配置、病历库或已填写反馈。

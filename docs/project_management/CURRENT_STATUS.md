@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-20T00:56:30.793Z`
-- Source hash: `82e67438e47b194913499af8d7775132b0bdfc4eb1ad2f783c3e35b496f4acdb`
+- Updated at: `2026-10-20T01:23:06.760Z`
+- Source hash: `68e3a54182a7d8867916ab7601b1dbf9cb54aa5ed7c936fb43ee7f7ca3c32419`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@9526507a6e62d0aebcba751bcca94ddf373f6b1b`
+- Repo: `codex/alpha51-demo-visual-e2e@84b4c287cd683ad0d524cf23725e8df2faf38599`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1保持VERIFY95%，5.3BACKLOG0%。原2026-10-07软件预测及10月19日22:00冻结目标已超期；本轮完成ab8文本/在线Profile独立恢复与主入口复原，不修改正式日期。完整M4仍受硬件及断网核心流程要求约束；单例、自动测试和人工修订不代表稳定医生试用版。**
+- Forecast Alpha Exit: **5.1保持VERIFY95%，5.3BACKLOG0%，M1–M4仍OPEN，16项99h及正式日期不变。教师本机试用包不是远程部署或医院产品放行。已有D盘在线Profile本地资源恢复保留；不是断网AI，也不以此次材料与普通医生单例预演代替完整Alpha或稳定医生试用版。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · ab8文本与独立恢复闭环已验，8798及8796展示入口恢复，5.1继续VERIFY** — `VERIFY`
+**5.1 · 教师现场试用材料与普通医生E18流程已核验，运行ab8保持，5.1继续VERIFY** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 固定ab8展示版继续收口跨子句误拦与首Revision显示竞态、浏览器下载落盘及同最终SHA物理录音/完整路径证据；满足5.1门禁后才进入5.3连续五次，不将人工修订成绩当模型首次质量。
-- Parallel waiting task: 实质材料提交9526507，业务运行ab8b0c5a未改。E17/task14一次正式生成，首次管线5完整1缺失1规则误拦，人工修改3字段后Rev23#2/批准10/导出12/重开通过。8796快照08:35:37含15患者17就诊23版本10批准12导出、4资料78片段78索引。D盘ab8约4.75GiB精确镜像/本地资源恢复，136项公开清单、72缓存及78份冻结基线文件核验，baseline-E17与可变runtime分开，28个wheel在新venv离线安装查看器；19006 E18/task15人工修订后Rev25#2/批准11/导出13，重启11表22文件及页面重开一致。断网ready503、联网200，无隐藏回退；19006/19007已停止，8798恢复READY。共享累计18次、内部估算0.313876元。
+- Single next task: 按固定ab8运行版组织T01教师现场试用，记录独立完成和求助；收口跨子句规则误拦、Revision显示差异及同版本发布门禁，满足5.1后才进入5.3。材料/人工修订不替代模型首次质量。
+- Parallel waiting task: 实质材料提交84b4c28，业务运行ab8b0c5a未改。两个桌面入口、4份HTML/PDF共9页、T01/T02合成病例、双人60–90秒与单人录音稿及空白反馈已整理；9页视觉检查通过。普通doctor E18/患者16/task15一次在线生成，首次6字段非空1查体缺失，仍有混句，人工修订4字段两次保存到Revision28/#3、批准11/导出13。浏览器DOCX实际落盘，与服务端SHA及27段内容一致；工作台重开8行原文、#3、审核/导出和帮助保持。累计19次、内部估算0.32158元。
 
 ## Manual Actions
 
-- 当前无需重复选音频或录音。浏览器下载实际落盘仍未确认；ab8物理麦克风和实际显示继续保留待验，旧a9证据不自动转记。恢复包依赖本机C盘外部API密钥和共享账本，不是自包含跨机包或离线AI。
+- 现场先由组织者检查服务并使用普通医生账号，老师按T01完成一轮并填写空白反馈；不要求老师操作Docker。反馈HTML真实点击下载未验，现有PDF可打印；新录音稿尚未实际录音，ab8物理麦克风与实际缩放及同版本三路径仍待验。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-20T01:23:06.760Z`
-- Source hash: `68e3a54182a7d8867916ab7601b1dbf9cb54aa5ed7c936fb43ee7f7ca3c32419`
+- Updated at: `2026-10-21T22:55:26+08:00`
+- Source hash: `1e29e4428c1d2dfd1b9b9e5a3d6083ee43f0afa9fa40d7ee763ae03568aa63b6`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@84b4c287cd683ad0d524cf23725e8df2faf38599`
+- Repo: `codex/alpha51-demo-visual-e2e@6aa98e731971be5fd7d437e507b1134b86e5bab9`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 教师现场试用材料与普通医生E18流程已核验，运行ab8保持，5.1继续VERIFY** — `VERIFY`
+**5.1 · 历史产物归档收尾进行中；保留8798 d495/ab8审核候选，5.1继续VERIFY** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 按固定ab8运行版组织T01教师现场试用，记录独立完成和求助；收口跨子句规则误拦、Revision显示差异及同版本发布门禁，满足5.1后才进入5.3。材料/人工修订不替代模型首次质量。
-- Parallel waiting task: 实质材料提交84b4c28，业务运行ab8b0c5a未改。两个桌面入口、4份HTML/PDF共9页、T01/T02合成病例、双人60–90秒与单人录音稿及空白反馈已整理；9页视觉检查通过。普通doctor E18/患者16/task15一次在线生成，首次6字段非空1查体缺失，仍有混句，人工修订4字段两次保存到Revision28/#3、批准11/导出13。浏览器DOCX实际落盘，与服务端SHA及27段内容一致；工作台重开8行原文、#3、审核/导出和帮助保持。累计19次、内部估算0.32158元。
+- Single next task: 完成已审查历史二进制的Release上传、完整下载与解压SHA核验，再按无引用单文件清单清理；保留当前模型、数据与失败事实。归档后回到同版本5.1剩余验收，不提前进入5.3。
+- Parallel waiting task: 归档工具实质提交6aa98e7，6项合成工具回归通过；公开白名单与Docker全部87容器引用核验已完成。r5/r6模型有引用，当前数据及未提交修改保护；远端上传、取回及实际释放量仍进行中。此次没有更换产品镜像、模型或业务数据库。
 
 ## Manual Actions
 
-- 现场先由组织者检查服务并使用普通医生账号，老师按T01完成一轮并填写空白反馈；不要求老师操作Docker。反馈HTML真实点击下载未验，现有PDF可打印；新录音稿尚未实际录音，ab8物理麦克风与实际缩放及同版本三路径仍待验。
+- 本轮归档无需新增用户操作；最终产品的教师真实试用与未齐发布验收保持原安排。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

@@ -142,3 +142,36 @@ def test_common_intake_and_advice_variants_do_not_drop_qualifiers(monkeypatch, s
 def test_completed_intake_is_not_rejected_by_other_predicates(monkeypatch, source, value):
     _, fields = run_recorded(monkeypatch, source, value)
     assert fields.previous_treatment.status == "complete"
+
+
+def test_recorded_e17_adjacent_history_does_not_change_treatment_time(monkeypatch):
+    source = "这两天没有服用药物，以前没有慢性疾病"
+    value = "这两天没有服用药物"
+    _, fields = run_recorded(monkeypatch, source, value)
+    assert fields.previous_treatment.status == "complete"
+    assert fields.previous_treatment.value == value
+    assert fields.previous_treatment.source_spans[0].text == source
+
+
+def test_audio_time_scope_records_existing_whole_segment_mapping(monkeypatch):
+    # Record the pre-existing audio adapter behavior separately: fixing the
+    # time guard does not fix its inclusion of adjacent history in this value.
+    source = "这两天没有服用药物，以前没有慢性疾病"
+    generator, fields = run_recorded(monkeypatch, source, "这两天没有服用药物", audio=True)
+    assert fields.previous_treatment.status == "complete"
+    assert fields.previous_treatment.value == source
+    assert fields.previous_treatment.source_spans[0].text == source
+    assert generator.field_repairs["previous_treatment"]["original_value_changed"] is True
+
+
+@pytest.mark.parametrize("source,value", [
+    ("以前服用布洛芬，最近没有慢性疾病", "服用布洛芬"),
+    ("以前，服用布洛芬", "服用布洛芬"),
+    ("在以前，服用布洛芬", "服用布洛芬"),
+    ("昨天服用布洛芬，但今天没有服药", "服用布洛芬"),
+    ("以前，服用布洛芬，服用布洛芬", "服用布洛芬"),
+])
+def test_treatment_time_still_required_for_own_or_ambiguous_clause(monkeypatch, source, value):
+    _, fields = run_recorded(monkeypatch, source, value)
+    assert fields.previous_treatment.status == "conflicting"
+    assert fields.previous_treatment.value == value

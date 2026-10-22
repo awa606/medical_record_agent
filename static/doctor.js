@@ -3922,7 +3922,7 @@ function renderApprovalChecklist(fields) {
       <details class="approval-disclosure" ${appState.approvalDisclosureOpen ? "open" : ""}>
       <summary class="approval-checklist-head">
         <div>
-          <strong>医生分项审核 · 版本 #${escapeHtml(revision.revisionNumber || revision.revisionId || "-")}</strong>
+          <strong>医生分项审核 · 版本 ${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"}</strong>
           <p>${approved ? "已完成审核；内容确认、未询问和接受缺失分别留痕。" : pending ? `还有 ${pending} 项待处理；证据冲突必须修正。` : "核对项已处理，仍需点击“审核病历”提交。"}</p>
         </div>
         <span class="approval-entry-label">${approved ? "查看审核记录" : "开始核对"}</span>

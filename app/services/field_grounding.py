@@ -9,9 +9,41 @@ from app.services.clinical_facts import clinical_experiencer, clinical_segment_c
 from app.services.treatment_context import treatment_grounding_errors
 
 FIELD_KEYS = ("chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms", "past_history", "allergy_history", "physical_exam")
+_TIME_QUALIFIERS = ("昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏")
 
 def compact(text: str) -> str:
     return re.sub(r"[\s，,。；;、：:！？!?]", "", text).replace("发烧", "发热").replace("摄氏度", "℃")
+
+
+def _treatment_time_scope(value: str, context: str) -> str:
+    """Scope time checks only when every selected clause is uniquely located.
+
+    Keep full original clauses, including prefixes omitted by the model. A
+    separate time-only prefix still qualifies the following clause. Ambiguous
+    or non-extractive values retain the previous whole-context protection.
+    Other subject, negation, modality and citation checks use the full source.
+    """
+    clauses = [part for part in re.split(r"[，,。；;\n]+", context) if part.strip()]
+    selected = [compact(part) for part in re.split(r"[，,。；;\n]+", value) if compact(part)]
+    if not selected:
+        return context
+    indexes: set[int] = set()
+    for text in selected:
+        matches = [index for index, clause in enumerate(clauses) if text in compact(clause)]
+        if len(matches) != 1:
+            return context
+        index = matches[0]
+        indexes.add(index)
+        while index > 0:
+            prefix = re.sub(
+                r"^\s*(?:[\[【](?:患者|病人|医生|医师|家属|家长)[\]】]\s*[:：]?|(?:患者|病人|医生|医师|家属|家长)\s*[:：])\s*",
+                "", clauses[index - 1],
+            )
+            if not re.fullmatch(r"(?:在)?(?:" + "|".join(_TIME_QUALIFIERS) + r")", compact(prefix)):
+                break
+            index -= 1
+            indexes.add(index)
+    return "\n".join(clauses[index] for index in sorted(indexes))
 
 
 def _guardian_child_quote(span_text: str, matching_contexts: list) -> bool:
@@ -242,10 +274,12 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
                     errors.append("家属发言缺少明确且保留的患者主体，需医生核对归属")
                 if re.search(r"吗|么|有没有|是否|[?？]", context):
                     errors.append("家属提问不能作为已确认的患者事实")
-            for token in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子", "昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏", "不确定", "不知道"):
+            time_context = _treatment_time_scope(field.value, context) if key == "previous_treatment" else context
+            for token in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子", *_TIME_QUALIFIERS, "不确定", "不知道"):
                 if token == "孩子" and guardian_child_quote:
                     continue
-                if token in context and token not in field.value:
+                qualifier_context = time_context if token in _TIME_QUALIFIERS else context
+                if token in qualifier_context and token not in field.value:
                     errors.append("引用截断了主体、时间、确定性或状态限定")
             for symptom in ("发热", "发烧", "咳嗽", "胸痛", "气促", "呼吸困难", "过敏", "高血压", "糖尿病"):
                 if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, context) and not re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, field.value):
@@ -278,8 +312,9 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
             ) for span in field.source_spans)
             if subject_required and subject not in field.value:
                 errors.append("主体归属丢失，不能写成患者本人事实")
-        for timing in ("昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏"):
-            if timing in evidence and timing not in field.value:
+        time_evidence = _treatment_time_scope(field.value, evidence) if key == "previous_treatment" else evidence
+        for timing in _TIME_QUALIFIERS:
+            if timing in time_evidence and timing not in field.value:
                 errors.append("时间或状态限定丢失")
         for uncertainty in ("不确定", "不知道", "说不清", "可能", "疑似"):
             if uncertainty in evidence and uncertainty not in field.value:

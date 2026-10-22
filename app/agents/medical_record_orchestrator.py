@@ -127,14 +127,16 @@ class MedicalRecordOrchestrator:
             )
             self._persist_result()
 
-            self._set_status(self.STATUS_WAITING_DOCTOR_REVIEW, "doctor_review")
-            self._persist_result()
+            # Pollers treat WAITING_DOCTOR_REVIEW as a terminal result. Persist
+            # its revision first so the published result can be reviewed safely.
             create_record_revision_for_task(
                 task_id,
                 self._result_payload(),
                 source="generation",
                 workflow_status="pending_review",
             )
+            self._set_status(self.STATUS_WAITING_DOCTOR_REVIEW, "doctor_review")
+            self._persist_result()
             return self._result()
         except Exception as exc:
             self._capture_llm_trace()

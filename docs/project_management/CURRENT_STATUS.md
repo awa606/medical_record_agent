@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-23T01:29:43.070Z`
-- Source hash: `ca73802f0cdd16e23a413c55dc8b3ed589c40cb3e31f16103c32352da51281f2`
+- Updated at: `2026-10-23T01:54:34.464Z`
+- Source hash: `af2594e7bceae9d7e5faa18784f0fd8e75e8284fb24f014c17ebd4d0b2313b22`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@51a4df637356d69876cc52995413a11432a26a29`
+- Repo: `codex/alpha51-demo-visual-e2e@d2f019397793167071721c4ee20575ab38271f98`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798 f6操作修复已部署；教师入口及只读查看器可用，待最终真实三路径** — `VERIFY`
+**5.1 · 8798 f6真实文本接口闭环完成；模型字段混放及最终按钮/音频验收待收口** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 按T01实际操作记录阻断，再补最终运行组合文本、上传音频和物理录音验收
+- Single next task: 针对T01首次字段混放和正文/引用覆盖不一致做最小复现，再补最终组合可见按钮及音频验收
 - Parallel waiting task: 硬件继续延期；5.2离线生成、5.3连续五次和真人试用分别判断
 
 ## Manual Actions
 
-- 浏览器自动化被Work设置禁用，按T01手动核验；最终版本集中完成物理录音及实际显示，不冒用旧版证据
+- 助手已完成T01真实文本接口集成，无需用户重做此项；Work浏览器自动化仍禁用，最终按钮、物理录音和实际显示待对应版本验收
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

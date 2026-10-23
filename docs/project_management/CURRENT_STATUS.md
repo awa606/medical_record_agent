@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-23T04:23:21.394Z`
-- Source hash: `3d3ba3f76901685a160351f86fa1242f0a96db7448e27bf4eef5d87644e0d5cc`
+- Updated at: `2026-10-23T04:42:42.162Z`
+- Source hash: `e70929e9b7eefe313f62d1532a4ed178162d606782a383e60c38446c6d5c968b`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@3a927b8fc25983f4aecf0ccec54caed45c60d1ea`
+- Repo: `codex/alpha51-demo-visual-e2e@b07d6da4675f9e7a9f3b4111639be29db8a3520d`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · R2补齐保存后提示刷新，149项受影响回归通过；8798停在f6，3a927候选运行验收中** — `VERIFY`
+**5.1 · 普通修改覆盖提示补修156项通过；最终候选待按钮验收，8798仍停f6** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 完成3a927隔离候选的保存提示复核及可见按钮流程；保持legacy提示，CI与候选通过后升级8798
+- Single next task: 完成b07d6da隔离候选的历史查看、审核导出按钮及对应CI，保持legacy和显式代理；通过后再升级8798
 - Parallel waiting task: 硬件继续延期；5.2离线生成、5.3连续五次和真人试用分别判断
 
 ## Manual Actions
 
-- 用户已保存退出8798；助手继续自行验收，最终物理麦克风与实际缩放保留版本边界
+- 用户已保存退出；助手自行继续验收，不复用T01用户通过。最终物理麦克风与实际缩放保留适用版本边界
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

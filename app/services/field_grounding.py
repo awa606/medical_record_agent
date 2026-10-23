@@ -69,19 +69,44 @@ def _guardian_child_quote(span_text: str, matching_contexts: list) -> bool:
     )
 
 
+def _selected_child_clauses(value: str, span_text: str, matching_contexts: list) -> list[str]:
+    """Scope subject checks to explicitly selected child facts in a wide quote.
+
+    The quote and original index remain unchanged. Every selected clause must
+    name the child, occur verbatim in this one source sentence, and resolve to
+    that child. An adjacent parent fact cannot supply the selected subject.
+    All quote existence, role, negation and qualifier guards still run normally.
+    """
+    if len(matching_contexts) != 1:
+        return []
+    context = matching_contexts[0]
+    if (context.speaker not in {"家属", "家长"} or context.patient_target != "child"
+            or context.question):
+        return []
+    clauses = [part.strip() for part in re.split(r"[，,。；;\n]+", value) if part.strip()]
+    for clause in clauses:
+        position = context.text.find(clause)
+        if (not re.search(r"孩子|儿子|女儿", clause) or clause not in span_text or position < 0
+                or clinical_experiencer(context.text, speaker=context.speaker,
+                    patient_target=context.patient_target, position=position + len(clause)) != "patient"):
+            return []
+    return clauses
+
+
 def reconcile_extractive_fields(
     fields: MedicalRecordFields,
     trusted_segments: list[dict[str, Any]] | None,
     *,
     source: str,
 ) -> tuple[MedicalRecordFields, dict[str, dict[str, Any]]]:
-    """Canonicalize already supported extracts against reviewed audio segments.
+    """Bind already supported extracts to reviewed audio segment identities.
 
     The language model is still responsible for selecting the fields and spans.
-    Validate the original value and citations before replacing text or clearing
-    sentence indices. Invalid fields remain intact and conflicting for review;
-    canonicalization must not hide a model error. The normal grounding gate also
-    runs afterwards against the resulting audio references.
+    Validate the original value and citations before binding identity/timing.
+    Keep selected values, quote text and original sentence indices unchanged:
+    expanding them to a whole audio segment mixes independent clinical fields.
+    Invalid fields remain intact and conflicting for review. The normal
+    grounding gate runs again against the resulting audio references.
     """
 
     if not trusted_segments:
@@ -142,15 +167,15 @@ def reconcile_extractive_fields(
                 continue
 
             segment_id = str(segment.get("segment_id") or "") or None
-            dedupe_key = (segment_id, text)
+            dedupe_key = (segment_id, span_text)
             if dedupe_key in seen:
                 continue
             seen.add(dedupe_key)
             canonical.append(
                 SourceSpan(
-                    text=text,
+                    text=span.text,
                     segment_id=segment_id,
-                    index=None,
+                    index=span.index,
                     start_time=segment.get("start_time"),
                     end_time=segment.get("end_time"),
                 )
@@ -178,8 +203,6 @@ def reconcile_extractive_fields(
             }
             continue
 
-        original_value = field.value
-        field.value = "；".join(span.text.rstrip("，,。；; ") for span in canonical)
         field.source_spans = canonical
         field.missing = False
         if rejected:
@@ -191,8 +214,8 @@ def reconcile_extractive_fields(
             field.status = "complete"
             field.hint = None
         repairs[key] = {
-            "strategy": "canonical_source_quotes",
-            "original_value_changed": compact(original_value) != compact(field.value),
+            "strategy": "bind_source_identity",
+            "original_value_changed": False,
             "accepted_span_count": len(canonical),
             "rejected_span_count": len(rejected),
             "rejected_reasons": sorted(set(rejected)),
@@ -251,7 +274,9 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
                 guardian_child_quotes.add(span.text)
             if any(c.question for c in matching_contexts):
                 errors.append("未回答的提问不能作为患者事实")
-            for clause in re.split(r"[，,。；;\n]+", span.text):
+            selected_child = _selected_child_clauses(field.value, span.text, matching_contexts)
+            subject_clauses = selected_child or re.split(r"[，,。；;\n]+", span.text)
+            for clause in subject_clauses:
                 if clause.strip() and any(clinical_experiencer(c.text, speaker=c.speaker, patient_target=c.patient_target, position=c.text.find(clause) + len(clause)) in {"family", "other", "unknown"} for c in matching_contexts):
                     # No disease lookup: even an unfamiliar family condition is rejected.
                     errors.append("家属或他人事实不能归入患者本人字段，需医生核对归属")

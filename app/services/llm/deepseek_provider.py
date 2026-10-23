@@ -33,6 +33,24 @@ OUTPUT_RATE_MICRO_CNY = 8
 CALL_RESERVE = INPUT_TOKEN_RESERVE * INPUT_RATE_MICRO_CNY + OUTPUT_TOKEN_LIMIT * OUTPUT_RATE_MICRO_CNY
 BUDGET_MICRO_CNY = 20_000_000
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+CLAUSE_V1_CONTRACT = (
+    '字段值与引用职责不同：value只逐字摘录与该字段有关的最小完整子句，可用分号连接多条原文；'
+    'source_spans.text仍逐字引用完整原句并保留原编号。不能因引用同句，就把其他栏目的内容搬入value。'
+    '拆分时必须保留该事实的否定、主体、时间、不确定性、数值和单位，不拆断因果或用药反应。'
+    '各字段独立覆盖，不能因为主诉已有就漏写现病史。主诉只需主要症状和病程，可简短；'
+    '现病史应包含已陈述的本次症状、病程、体温、相关阴性症状、诊疗经过及结果；'
+    '既往处理包括本次已做或明确未做的用药、检查及处理结果，不填医生建议或未回答的用药问题；'
+    '伴随症状仅写本次症状及其阴性信息，不搬入独立过敏史或既往病史；'
+    '过敏史仅写过敏及其否定或不确定性，不搬入胸痛、体温等独立症状；'
+    '既往史仅写患者自己的既往病史；查体只写医生明确观察的体征，未做检查不能推断查体正常。'
+    '例如原句“没有头痛，也没有青霉素过敏”可分别摘录“没有头痛”和“也没有青霉素过敏”，两者均引用该原句。'
+    '只有“吃药后出现皮疹”等明确关联时可在相关字段保留关联描述。'
+    '输出前核对每个字段是否漏写该字段已引用的相关事实；宽引用中的无关事实不要求重复。'
+)
+LEGACY_FIELD_VALUE_CONTRACT = (
+    '每个value使用原句，保留否定、主体、时间、数值和单位，不改写。'
+    'source_spans.text引用完整原句，index使用编号。'
+)
 
 
 def now() -> str:
@@ -171,6 +189,18 @@ class NoRedirect(request.HTTPRedirectHandler):
         raise SpikeError('HTTP_REDIRECT_REJECTED')
 
 
+class ExplicitHTTPSProxyHandler(request.ProxyHandler):
+    """Keep the selected CONNECT route even when global NO_PROXY is set."""
+
+    def proxy_open(self, req, proxy, proxy_type):
+        if proxy_type != 'https' or req.type != 'https' or self.proxies.get('https') != proxy:
+            raise SpikeError('DEEPSEEK_PROXY_ROUTE_INVALID')
+        # The constructor has accepted only a local HTTP host:port, with no
+        # credentials. Preserve HTTPSHandler and its default certificate checks.
+        req.set_proxy(parse.urlsplit(proxy).netloc, 'http')
+        return None
+
+
 class DeepSeekDemoProvider:
     name = 'online'
     model = MODEL
@@ -178,12 +208,22 @@ class DeepSeekDemoProvider:
 
     def __init__(self, *, api_key: str, output: Path, ledger: BudgetLedger,
                  case_id: str = 'business', endpoint: str = ENDPOINT, local_test: bool = False,
-                 single_use: bool = False):
+                 single_use: bool = False, https_proxy_url: str = '', field_contract: str = 'legacy'):
         url = parse.urlsplit(endpoint)
         if endpoint != ENDPOINT and not (local_test and url.scheme == 'http' and url.hostname == '127.0.0.1'):
             raise SpikeError('ENDPOINT_NOT_ALLOWED')
+        if https_proxy_url:
+            match = re.fullmatch(r'http://(127\.0\.0\.1|localhost|host\.docker\.internal):([0-9]{1,5})',
+                                 https_proxy_url) if isinstance(https_proxy_url, str) else None
+            if not match or not 1 <= int(match.group(2)) <= 65535:
+                raise SpikeError('DEEPSEEK_PROXY_NOT_ALLOWED')
+        elif not isinstance(https_proxy_url, str):
+            raise SpikeError('DEEPSEEK_PROXY_NOT_ALLOWED')
+        if field_contract not in ('legacy', 'clause_v1'):
+            raise SpikeError('DEEPSEEK_FIELD_CONTRACT_NOT_ALLOWED')
         self.api_key, self.output, self.ledger = api_key, output, ledger
         self.case_id, self.endpoint = case_id, endpoint
+        self.https_proxy_url, self.field_contract = https_proxy_url, field_contract
         self.diagnostics_root = output
         self.single_use = single_use
         self._call_lock = threading.Lock()
@@ -220,14 +260,31 @@ class DeepSeekDemoProvider:
                 raise SpikeError(variable + '_MUST_BE_ABSOLUTE')
             locations[variable] = path
         return cls(api_key=api_key, output=locations['ONLINE_LLM_DIAGNOSTICS_DIR'],
-                   ledger=BudgetLedger(locations['ONLINE_LLM_BUDGET_LEDGER']))
+                   ledger=BudgetLedger(locations['ONLINE_LLM_BUDGET_LEDGER']),
+                   https_proxy_url=os.environ.get('ONLINE_LLM_PROXY_URL', ''),
+                   field_contract=os.environ.get('ONLINE_LLM_FIELD_CONTRACT', '') or 'legacy')
+
+    def _opener(self):
+        # Empty explicit mapping prevents urllib from inheriting global proxies.
+        # A configured proxy is the only route; failure never retries directly.
+        proxies = {'https': self.https_proxy_url} if self.https_proxy_url else {}
+        handler = ExplicitHTTPSProxyHandler(proxies) if proxies else request.ProxyHandler({})
+        return request.build_opener(handler, NoRedirect())
+
+    def _numbered_source(self, text: str) -> str:
+        source = numbered_source(text)
+        if self.field_contract == 'legacy':
+            return source
+        if LEGACY_FIELD_VALUE_CONTRACT not in source:
+            raise SpikeError('DEEPSEEK_FIELD_CONTRACT_MARKER_MISSING')
+        return source.replace(LEGACY_FIELD_VALUE_CONTRACT, CLAUSE_V1_CONTRACT)
 
     def probe(self, *, timeout_seconds: float = 5) -> dict:
         """Authenticated model-list read; no inference or budget reservation."""
         endpoint = self.endpoint.rsplit('/chat/completions', 1)[0] + '/models'
         req = request.Request(endpoint, method='GET', headers={'Authorization': 'Bearer ' + self.api_key})
         try:
-            opener = request.build_opener(request.ProxyHandler({}), NoRedirect())
+            opener = self._opener()
             with opener.open(req, timeout=min(5, max(0.1, timeout_seconds))) as response:
                 raw = response.read(65537)
             if len(raw) > 65536:
@@ -268,12 +325,14 @@ class DeepSeekDemoProvider:
         self.used = True
         if not anonymization_enabled():
             raise SpikeError('DEEPSEEK_ANONYMIZATION_REQUIRED')
+        self.response_metadata = {'transport_mode': 'explicit_local_proxy' if self.https_proxy_url else 'direct',
+                                  'field_contract': self.field_contract}
         payload = {'model': MODEL, 'thinking': {'type': 'disabled'},
                    'response_format': {'type': 'json_object'}, 'temperature': 0,
                    'max_tokens': OUTPUT_TOKEN_LIMIT, 'stream': False,
                    'messages': [{'role': 'system', 'content': MEDICAL_RECORD_SYSTEM_PROMPT +
                        '\n输出 JSON 必须符合以下既有字段 Schema，不添加诊断建议：\n' + json.dumps(extraction_schema(), ensure_ascii=False)},
-                       {'role': 'user', 'content': numbered_source(anonymize_text(conversation_text))}]}
+                       {'role': 'user', 'content': self._numbered_source(anonymize_text(conversation_text))}]}
         message_bytes = sum(len(m['content'].encode('utf-8')) for m in payload['messages'])
         # UTF-8 bytes plus 1024 protocol tokens is a conservative input bound;
         # unexpected server usage locks this ledger pending reconciliation.
@@ -287,7 +346,7 @@ class DeepSeekDemoProvider:
         req = request.Request(self.endpoint, data=body, method='POST', headers={
             'Authorization': 'Bearer ' + self.api_key, 'Content-Type': 'application/json'})
         try:
-            opener = request.build_opener(request.ProxyHandler({}), NoRedirect())
+            opener = self._opener()
             try:
                 with opener.open(req, timeout=timeout_seconds) as response:
                     raw = response.read(MAX_RESPONSE_BYTES + 1)
@@ -311,7 +370,7 @@ class DeepSeekDemoProvider:
             if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
                 raise SpikeError('RESPONSE_CHOICES_INVALID')
             choice = choices[0]
-            self.response_metadata = {'request_id': data.get('id'), 'model': data.get('model'),
+            self.response_metadata = {**self.response_metadata, 'request_id': data.get('id'), 'model': data.get('model'),
                 'finish_reason': choice.get('finish_reason'), 'usage': data.get('usage'),
                 'latency_ms': int((time.perf_counter() - start) * 1000), 'budget_call_id': call_id}
             if choice.get('finish_reason') != 'stop':

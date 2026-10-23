@@ -15,6 +15,7 @@ from app.services.llm.mock_provider import MockLLMProvider
 from app.services.mock_llm import MockLLM
 from app.services.record_rules import render_draft, check_draft_safety, supported_field_keys
 from app.services.field_grounding import ground_fields, reconcile_extractive_fields
+from app.services.field_alignment import validate_field_alignment
 from app.services.privacy import anonymize_text
 
 
@@ -84,6 +85,7 @@ class LLMRecordGenerator:
         self.source_segments: list[dict] | None = None
         self.field_validation: dict[str, Any] | None = None
         self.field_repairs: dict[str, dict[str, Any]] = {}
+        self.field_alignment: dict[str, dict[str, Any]] = {}
         self.payload_repairs: dict[str, str] = {}
         # Explicit opt-in for synthetic experiments only. Raw data is never
         # included in get_trace() or persisted by the application.
@@ -97,6 +99,7 @@ class LLMRecordGenerator:
         self.attempt_count = 0
         self.field_validation = None
         self.field_repairs = {}
+        self.field_alignment = {}
         self.payload_repairs = {}
         if self.init_fallback_reason:
             return self._fallback_extract(conversation, self.init_fallback_reason)
@@ -157,6 +160,7 @@ class LLMRecordGenerator:
                     field.missing = False
                     field.status = "conflicting"
                     field.hint = "模型输出矛盾，未采纳；请核对原文后修改。"
+                fields, self.field_alignment = validate_field_alignment(fields)
                 self._diagnostic("grounded", fields.model_dump())
                 self.field_validation = {key: {"status": getattr(fields, key).status, "reason": getattr(fields, key).hint,
                     "source_segment_ids": [s.segment_id for s in getattr(fields, key).source_spans]} for key in FIELD_KEYS}
@@ -241,6 +245,7 @@ class LLMRecordGenerator:
         trace["model_digest"] = getattr(self.provider, "model_digest", None)
         trace["field_validation"] = self.field_validation
         trace["field_repairs"] = self.field_repairs
+        trace["field_alignment"] = self.field_alignment
         trace["payload_repairs"] = self.payload_repairs
         trace["attempt_count"] = self.attempt_count
         trace["response_metadata"] = dict(getattr(self.provider, "response_metadata", {}))

@@ -153,15 +153,15 @@ def test_recorded_e17_adjacent_history_does_not_change_treatment_time(monkeypatc
     assert fields.previous_treatment.source_spans[0].text == source
 
 
-def test_audio_time_scope_records_existing_whole_segment_mapping(monkeypatch):
-    # Record the pre-existing audio adapter behavior separately: fixing the
-    # time guard does not fix its inclusion of adjacent history in this value.
+def test_audio_binding_does_not_include_adjacent_history(monkeypatch):
+    # Binding timing/identity must not expand a valid treatment subclause.
     source = "这两天没有服用药物，以前没有慢性疾病"
-    generator, fields = run_recorded(monkeypatch, source, "这两天没有服用药物", audio=True)
+    value = "这两天没有服用药物"
+    generator, fields = run_recorded(monkeypatch, source, value, audio=True)
     assert fields.previous_treatment.status == "complete"
-    assert fields.previous_treatment.value == source
+    assert fields.previous_treatment.value == value
     assert fields.previous_treatment.source_spans[0].text == source
-    assert generator.field_repairs["previous_treatment"]["original_value_changed"] is True
+    assert generator.field_repairs["previous_treatment"]["original_value_changed"] is False
 
 
 @pytest.mark.parametrize("source,value", [

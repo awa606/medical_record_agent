@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-23T01:54:34.464Z`
-- Source hash: `af2594e7bceae9d7e5faa18784f0fd8e75e8284fb24f014c17ebd4d0b2313b22`
+- Updated at: `2026-10-23T04:00:36.041Z`
+- Source hash: `d145c6dc3c51ead7ad05c49a2625bb491f52dd4b260ba31025f2f5866579bfbf`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@d2f019397793167071721c4ee20575ab38271f98`
+- Repo: `codex/alpha51-demo-visual-e2e@7c5021f46514755b29e2b9f730a0a53a3509e884`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798 f6真实文本接口闭环完成；模型字段混放及最终按钮/音频验收待收口** — `VERIFY`
+**5.1 · 字段混放、引用覆盖与音频绑定修复通过代码回归；8798仍f6，9afe候选待运行验收** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 针对T01首次字段混放和正文/引用覆盖不一致做最小复现，再补最终组合可见按钮及音频验收
+- Single next task: 验证9afe隔离候选的受影响文本与音频流程，保持legacy提示和安全门禁；通过后升级8798
 - Parallel waiting task: 硬件继续延期；5.2离线生成、5.3连续五次和真人试用分别判断
 
 ## Manual Actions
 
-- 助手已完成T01真实文本接口集成，无需用户重做此项；Work浏览器自动化仍禁用，最终按钮、物理录音和实际显示待对应版本验收
+- 升级切换前仅确认8798已保存退出；物理麦克风与实际缩放仍待最终对应版本验收
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

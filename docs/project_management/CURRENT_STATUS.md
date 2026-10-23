@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-22T13:50:01.378Z`
-- Source hash: `721704021a3e73079c0fdfb73beea368752443b8fd716589f11ef62630016975`
+- Updated at: `2026-10-23T01:00:11.745Z`
+- Source hash: `d9b08ae6890aa6c7775795acb38f47ad5724c312c9d7f84a5942a294f5d84e03`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@5d00c8b021f5abc9f44df675cd8c8e9f64a31e42`
+- Repo: `codex/alpha51-demo-visual-e2e@f6ec0a1626569cac8cf7b43c4a571f79fb7e647b`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 历史归档清理完成；8798审核候选保留，继续5.1最终验收** — `VERIFY`
+**5.1 · 8798操作稳定性修复完成代码验证；准备候选升级与最终三路径验收** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 完成8798同一最终版本剩余发布验收并核清5.1门禁；未齐全前不关闭5.1，不启动5.3。
-- Parallel waiting task: 归档02的171项白名单与追加完成收据均已完整取回；C121项和D340项精确清理完成，保留现用模型、回退、数据和失败事实。本轮只复核入口与就绪，不重新调用收费生成。
+- Single next task: 发布通过检查的三项局部修复，补最终组合的文本、上传音频和物理录音验收
+- Parallel waiting task: 硬件继续延期；5.2离线生成和5.3连续五次分别验收
 
 ## Manual Actions
 
-- 本轮归档无需用户操作；教师真实试用及未齐全的最终产品验收按原安排。
+- 物理录音、实际显示及真实按钮按最终候选集中补验；旧版已通过证据保留适用版本
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

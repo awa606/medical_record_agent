@@ -633,6 +633,8 @@ def review_task(
                 field.hint = "原模型冲突尚未处置，请选择根据原文修正或医生补录后保存。"
     for key in review_payload.source_corrected_fields:
         getattr(fields, key).doctor_review_note = "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。"
+    from app.services.field_alignment import refresh_existing_coverage_hints
+    fields = refresh_existing_coverage_hints(fields)
     generator = _record_generator_or_503()
     draft = generator.generate_draft(fields)
     safety_check = generator.safety_check(draft, fields)

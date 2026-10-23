@@ -11,6 +11,8 @@ from app.services.treatment_context import treatment_contexts
 
 CLAUSES = re.compile(r"[，,。；;\n]+")
 RELATION = re.compile(r"表现为|表现是|引起|导致|所致|伴有|伴随|出现|发生|(?:过敏|服药|用药|注射).{0,8}(?:时|后)")
+COVERAGE_HINT = "引用含本字段尚未写入的事实，请核对后补充；系统未自动补写。"
+COVERAGE_GAP_PREFIXES = ("已引用但未写入：", "已引用的检查状态未写入：")
 
 
 def nonempty_clauses(text):
@@ -153,6 +155,32 @@ def coverage_missing(key, value, spans):
     return list(dict.fromkeys(missing))
 
 
+def refresh_existing_coverage_hints(fields: MedicalRecordFields) -> MedicalRecordFields:
+    """Refresh only our existing coverage findings after an explicit review save.
+
+    Call after authoritative grounding. Never reclassify ordinary/manual fields,
+    clear another validator's finding, alter content or treat coverage as approval.
+    Historical reads must not call this helper.
+    """
+    refreshed = fields.model_copy(deep=True)
+    for key in ("present_illness", "previous_treatment"):
+        field = getattr(refreshed, key)
+        if (not field.value or field.missing or field.status != "partial"
+                or field.hint != COVERAGE_HINT or field.confirmed_by_doctor
+                or str(field.doctor_review_note or "").startswith("manual_doctor_edit_v1:")
+                or not any(item.startswith(COVERAGE_GAP_PREFIXES) for item in field.missing_elements)):
+            continue
+        unrelated = [item for item in field.missing_elements
+                     if not item.startswith(COVERAGE_GAP_PREFIXES)]
+        missing = coverage_missing(key, field.value, field.source_spans)
+        field.missing_elements = list(dict.fromkeys([*unrelated, *missing]))
+        if not missing:
+            field.hint = None
+            if not field.missing_elements:
+                field.status = "complete"
+    return refreshed
+
+
 def validate_field_alignment(
     fields: MedicalRecordFields,
 ) -> tuple[MedicalRecordFields, dict[str, dict[str, object]]]:
@@ -182,6 +210,6 @@ def validate_field_alignment(
         if missing:
             field.status = "partial"
             field.missing_elements = list(dict.fromkeys([*field.missing_elements, *missing]))
-            field.hint = "引用含本字段尚未写入的事实，请核对后补充；系统未自动补写。"
+            field.hint = COVERAGE_HINT
             diagnostics[key] = {"kind": "cited_same_field_coverage_gap", "items": missing}
     return checked, diagnostics

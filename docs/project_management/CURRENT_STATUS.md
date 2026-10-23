@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-23T01:00:11.745Z`
-- Source hash: `d9b08ae6890aa6c7775795acb38f47ad5724c312c9d7f84a5942a294f5d84e03`
+- Updated at: `2026-10-23T01:29:43.070Z`
+- Source hash: `ca73802f0cdd16e23a413c55dc8b3ed589c40cb3e31f16103c32352da51281f2`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@f6ec0a1626569cac8cf7b43c4a571f79fb7e647b`
+- Repo: `codex/alpha51-demo-visual-e2e@51a4df637356d69876cc52995413a11432a26a29`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798操作稳定性修复完成代码验证；准备候选升级与最终三路径验收** — `VERIFY`
+**5.1 · 8798 f6操作修复已部署；教师入口及只读查看器可用，待最终真实三路径** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 发布通过检查的三项局部修复，补最终组合的文本、上传音频和物理录音验收
-- Parallel waiting task: 硬件继续延期；5.2离线生成和5.3连续五次分别验收
+- Single next task: 按T01实际操作记录阻断，再补最终运行组合文本、上传音频和物理录音验收
+- Parallel waiting task: 硬件继续延期；5.2离线生成、5.3连续五次和真人试用分别判断
 
 ## Manual Actions
 
-- 物理录音、实际显示及真实按钮按最终候选集中补验；旧版已通过证据保留适用版本
+- 浏览器自动化被Work设置禁用，按T01手动核验；最终版本集中完成物理录音及实际显示，不冒用旧版证据
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

@@ -21,7 +21,9 @@ MANUAL_HINT = "医生手工修改；原始转写证据仅供对照，需在当�
 SOURCE = "患者：发热两天，没有胸痛。患者：这两天没有服用药物。患者：这次还没有做检查。"
 
 
-@pytest.mark.parametrize("edit_method", ["source_correction", "normal_edit"])
+@pytest.mark.parametrize("edit_method", [
+    "source_correction", "normal_edit", "normal_edit_cleared_quotes", "normal_edit_previous_no_quotes",
+])
 def test_review_refreshes_owned_gaps_and_keeps_revision_guards(tmp_path, monkeypatch, edit_method):
     """Fixed first response -> real authenticated HTTP approval/review endpoints."""
     monkeypatch.setenv("MEDICAL_RECORD_AGENT_DB", str(tmp_path / "review.sqlite3"))
@@ -68,10 +70,27 @@ def test_review_refreshes_owned_gaps_and_keeps_revision_guards(tmp_path, monkeyp
     first_after_approval = dict(get_record_revision(first_id))
     assert first_after_approval == first_revision
 
+    if edit_method == "normal_edit_previous_no_quotes":
+        # Simulate an already saved, quote-free manual version. A later normal
+        # save must not reach back to the original model revision to fill quotes.
+        for key in ("present_illness", "previous_treatment"):
+            getattr(fields, key).value += "。"
+        takeover_payload = review_payload_for_fields(task_id, fields)
+        takeover_payload["manual_takeover_fields"] = ["present_illness", "previous_treatment"]
+        taken_over = client.post(f"/api/tasks/{task_id}/review", json=takeover_payload)
+        assert taken_over.status_code == 200, taken_over.text
+        fields = MedicalRecordFields.model_validate(taken_over.json()["result_json"]["fields"])
+        assert not fields.present_illness.source_spans and not fields.previous_treatment.source_spans
+        assert fields.present_illness.missing_elements and fields.previous_treatment.missing_elements
+
     fields.present_illness.value = "发热两天，没有胸痛"
     fields.previous_treatment.value = "这两天没有服用药物；这次还没有做检查"
     expected_values = {key: getattr(fields, key).value for key in ("present_illness", "previous_treatment")}
     expected_spans = {key: [span.model_dump() for span in getattr(fields, key).source_spans] for key in expected_values}
+    previous_gaps = {key: list(getattr(fields, key).missing_elements) for key in expected_values}
+    if edit_method == "normal_edit_cleared_quotes":
+        for key in expected_values:
+            getattr(fields, key).source_spans = []  # The visible normal editor clears client quotes.
     payload = review_payload_for_fields(task_id, fields)
     if edit_method == "source_correction":
         payload["source_corrected_fields"] = list(expected_values)
@@ -83,7 +102,7 @@ def test_review_refreshes_owned_gaps_and_keeps_revision_guards(tmp_path, monkeyp
         assert field["value"] == expected
         assert field["source_spans"] == expected_spans[key]
         assert field["status"] == ("complete" if edit_method == "source_correction" else "partial"), field
-        assert field["missing_elements"] == []
+        assert field["missing_elements"] == (previous_gaps[key] if edit_method == "normal_edit_previous_no_quotes" else [])
         assert field["hint"] == (None if edit_method == "source_correction" else MANUAL_HINT)
         assert not field["confirmed_by_doctor"]
         assert field["doctor_review_status"] == "pending"
@@ -103,8 +122,15 @@ def test_review_refreshes_owned_gaps_and_keeps_revision_guards(tmp_path, monkeyp
     wrong.present_illness.status = "partial"
     wrong.present_illness.hint = COVERAGE_HINT
     wrong.present_illness.missing_elements = ["已引用但未写入：胸痛（无）"]
+    if edit_method in {"source_correction", "normal_edit_previous_no_quotes"}:
+        # Explicit selection is required to introduce evidence after a version
+        # that already had none. The default editor is not allowed to infer it.
+        wrong.present_illness.source_spans = [SourceSpan(text="发热两天，没有胸痛", index=0)]
+    else:
+        wrong.present_illness.source_spans = []
     bad_payload = review_payload_for_fields(task_id, wrong)
-    bad_payload["source_corrected_fields"] = ["present_illness"]
+    if edit_method in {"source_correction", "normal_edit_previous_no_quotes"}:
+        bad_payload["source_corrected_fields"] = ["present_illness"]
     rejected_content = client.post(f"/api/tasks/{task_id}/review", json=bad_payload)
     assert rejected_content.status_code == 200, rejected_content.text
     contradictory = rejected_content.json()["result_json"]["fields"]["present_illness"]

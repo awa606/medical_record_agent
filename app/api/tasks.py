@@ -330,6 +330,12 @@ def _mark_manual_doctor_edits(
             field.status = "conflicting"
             field.hint = "请根据原文修正，或明确选择医生补录；原模型冲突仍保留。"
             continue
+        # Normal editing may clear client citations. Restore only that empty
+        # case from the immediately previous server state, for comparison only.
+        # Nonempty typed quotes retain their existing grounding checks; never
+        # infer missing quotes from older revision history.
+        if not field.source_spans:
+            field.source_spans = [span.model_copy(deep=True) for span in previous.source_spans]
         field.doctor_review_note = MANUAL_DOCTOR_EDIT_NOTE
         changed.append(key)
     return changed

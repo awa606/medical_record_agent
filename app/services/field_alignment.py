@@ -13,6 +13,7 @@ CLAUSES = re.compile(r"[，,。；;\n]+")
 RELATION = re.compile(r"表现为|表现是|引起|导致|所致|伴有|伴随|出现|发生|(?:过敏|服药|用药|注射).{0,8}(?:时|后)")
 COVERAGE_HINT = "引用含本字段尚未写入的事实，请核对后补充；系统未自动补写。"
 COVERAGE_GAP_PREFIXES = ("已引用但未写入：", "已引用的检查状态未写入：")
+MANUAL_REVIEW_HINT = "医生手工修改；原始转写证据仅供对照，需在当前Revision中明确审核。"
 
 
 def nonempty_clauses(text):
@@ -158,23 +159,26 @@ def coverage_missing(key, value, spans):
 def refresh_existing_coverage_hints(fields: MedicalRecordFields) -> MedicalRecordFields:
     """Refresh only our existing coverage findings after an explicit review save.
 
-    Call after authoritative grounding. Never reclassify ordinary/manual fields,
-    clear another validator's finding, alter content or treat coverage as approval.
-    Historical reads must not call this helper.
+    Call after authoritative grounding. Manual edits with retained, checked
+    citations may refresh our old gaps, but keep their manual hint and partial
+    status. Never clear another validator's finding, alter content or treat
+    coverage as approval. Historical reads must not call this helper.
     """
     refreshed = fields.model_copy(deep=True)
     for key in ("present_illness", "previous_treatment"):
         field = getattr(refreshed, key)
+        manual_source = str(field.doctor_review_note or "").startswith("manual_doctor_edit_v1:")
+        manual_with_evidence = manual_source and bool(field.source_spans) and field.hint == MANUAL_REVIEW_HINT
+        owned_hint = not manual_source and field.hint == COVERAGE_HINT
         if (not field.value or field.missing or field.status != "partial"
-                or field.hint != COVERAGE_HINT or field.confirmed_by_doctor
-                or str(field.doctor_review_note or "").startswith("manual_doctor_edit_v1:")
+                or not (owned_hint or manual_with_evidence) or field.confirmed_by_doctor
                 or not any(item.startswith(COVERAGE_GAP_PREFIXES) for item in field.missing_elements)):
             continue
         unrelated = [item for item in field.missing_elements
                      if not item.startswith(COVERAGE_GAP_PREFIXES)]
         missing = coverage_missing(key, field.value, field.source_spans)
         field.missing_elements = list(dict.fromkeys([*unrelated, *missing]))
-        if not missing:
+        if not missing and not manual_source:
             field.hint = None
             if not field.missing_elements:
                 field.status = "complete"

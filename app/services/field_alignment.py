@@ -185,4 +185,3 @@ def validate_field_alignment(
             field.hint = "引用含本字段尚未写入的事实，请核对后补充；系统未自动补写。"
             diagnostics[key] = {"kind": "cited_same_field_coverage_gap", "items": missing}
     return checked, diagnostics
-

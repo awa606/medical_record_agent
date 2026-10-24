@@ -2,6 +2,7 @@
 import pytest
 
 from app.schemas import MedicalField, MedicalRecordFields, SourceSpan
+from app.services.clinical_facts import extract_clinical_facts
 from app.services.llm.base import LLMProviderResponse
 from app.services.llm.llm_record_generator import LLMRecordGenerator
 from app.services.treatment_context import treatment_contexts
@@ -100,6 +101,58 @@ def test_causal_link_between_actions_is_not_treated_as_contrast():
 def test_intended_second_action_is_not_completed_treatment(monkeypatch):
     source = "我没有服用布洛芬而服用阿莫西林的打算"
     assert generate(monkeypatch, source, "服用阿莫西林").status == "conflicting"
+
+
+@pytest.mark.parametrize("condition", ["假如", "假设", "倘若", "要是"])
+@pytest.mark.parametrize("narrow_quote", [False, True])
+def test_conditional_second_action_cannot_become_actual_intake(monkeypatch, condition, narrow_quote):
+    source = f"{condition}没有服用布洛芬而服用了阿莫西林"
+    field = generate(monkeypatch, source, "服用了阿莫西林",
+        quote="服用了阿莫西林" if narrow_quote else None)
+    assert field.status == "conflicting"
+
+
+def test_hypothetical_word_in_previous_clause_does_not_block_real_action(monkeypatch):
+    source = "刚才讨论的是假设情况，实际没有服用布洛芬而服用了阿莫西林"
+    field = generate(monkeypatch, source, "服用了阿莫西林", quote="服用了阿莫西林")
+    assert field.status == "complete"
+
+
+@pytest.mark.parametrize("condition", ["假如", "假设", "倘若", "要是"])
+@pytest.mark.parametrize("actions", ["服用了阿莫西林", "服用了布洛芬而服用了阿莫西林"])
+@pytest.mark.parametrize("narrow_quote", [False, True])
+def test_conditional_action_without_negation_is_not_actual_intake(monkeypatch, condition, actions, narrow_quote):
+    source = condition + actions
+    field = generate(monkeypatch, source, "服用了阿莫西林",
+        quote="服用了阿莫西林" if narrow_quote else None)
+    assert field.status == "conflicting"
+
+
+@pytest.mark.parametrize("condition", ["假如", "假设", "倘若", "要是"])
+@pytest.mark.parametrize("actions", ["服用了阿莫西林", "服用了布洛芬而服用了阿莫西林"])
+def test_conditional_medication_not_in_fact_list(condition, actions):
+    source = condition + actions
+    contexts = treatment_contexts(source)
+    assert contexts and all(context.proposed for context in contexts)
+    assert not [fact for fact in extract_clinical_facts("患者：" + source) if fact.type == "treatment"]
+
+
+def test_factual_medication_after_hypothesis_keeps_exact_fact():
+    source = "刚才讨论的是假设情况，实际没有服用布洛芬而服用了阿莫西林"
+    facts = [fact for fact in extract_clinical_facts("患者：" + source) if fact.type == "treatment"]
+    assert [(fact.value, fact.assertion) for fact in facts] == [
+        ("实际没有服用布洛芬", "absent"), ("服用了阿莫西林", "present")]
+
+
+def test_mainly_took_medication_is_not_conditional(monkeypatch):
+    source = "这两天主要是服用了布洛芬"
+    assert generate(monkeypatch, source, source).status == "complete"
+
+
+def test_mainly_took_medication_remains_in_fact_list():
+    source = "这两天主要是服用了布洛芬"
+    facts = [fact for fact in extract_clinical_facts("患者：" + source) if fact.type == "treatment"]
+    assert [(fact.value, fact.assertion) for fact in facts] == [(source, "present")]
 
 
 def test_exact_offsets_and_separate_states_for_two_actions():

@@ -37,10 +37,12 @@ try {
         # 帮助材料仍可离线打开。Workspace分支才阻止进入不可用的系统。
     }
     $profile = Join-Path (Split-Path -Parent $pack) 'teacher-browser-profile'
+    $workspaceUrl = $settings.base_url + '/static/doctor.html?v=' + [Uri]::EscapeDataString([string]$settings.app_git_sha)
     if ($CheckOnly) {
         [pscustomobject]@{
             view = $View; web_available = $available; version_matches = $versionMatches
             runtime_version = $runtimeVersion; expected_version = $settings.app_git_sha
+            workspace_url = $workspaceUrl
             profile_is_outside_pack = -not $profile.StartsWith($pack + [IO.Path]::DirectorySeparatorChar)
             home_available = $true; service_actions = 0; launcher_uses_credentials = $false
         } | ConvertTo-Json
@@ -50,7 +52,7 @@ try {
     if ($View -eq 'Workspace') {
         if (-not $available) { throw '8798暂时无法连接。请先请现场维护者启动服务；可继续打开教师操作指南。本入口不会重启或切换环境。' }
         if (-not $versionMatches) { throw '运行版本与本次试用资料不一致。请联系现场维护者核对版本后再开始，避免误用旧页面。' }
-        $url = $settings.base_url + '/static/doctor.html'
+        $url = $workspaceUrl
     } else {
         $url = ([Uri]$index).AbsoluteUri
     }

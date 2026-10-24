@@ -484,7 +484,7 @@ def open_workspace(config: dict, *, view: str = "workbench") -> dict:
     if not result["web_available"]:
         raise PilotError("WEB_NOT_READY: 请先启动本版本。")
     suffix = "#admin" if view == "admin" else "#help" if view == "help" else ""
-    _open_app_window(config, f"http://127.0.0.1:{config['port']}/static/doctor.html{suffix}")
+    _open_app_window(config, f"http://127.0.0.1:{config['port']}/static/doctor.html?v={config['app_git_sha']}{suffix}")
     return result
 
 

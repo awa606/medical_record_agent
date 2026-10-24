@@ -137,8 +137,30 @@ def test_open_uses_isolated_browser_profile(registered, tmp_path, monkeypatch):
     pilot.open_workspace(config)
     args = calls[0]
     assert str(edge) == args[0]
-    assert "--app=http://127.0.0.1:8795/static/doctor.html" in args
+    assert f"--app=http://127.0.0.1:8795/static/doctor.html?v={config['app_git_sha']}" in args
     assert "--user-data-dir=" + str(Path(config["runtime"]).parent / "doctor-browser-profile") in args
+
+
+@pytest.mark.parametrize("view,fragment", [("workbench", ""), ("admin", "admin"), ("help", "help")])
+def test_workspace_entry_uses_registered_version_before_fragment(registered, monkeypatch, view, fragment):
+    from urllib.parse import parse_qs, urlsplit
+
+    config, _ = registered  # Existing registration: no new optional configuration.
+    monkeypatch.setattr(pilot, "web_status", lambda *_: {"web_available": True})
+    monkeypatch.setattr(pilot, "fetch", lambda *_: (200, b"help available"))
+    opened = []
+    monkeypatch.setattr(pilot, "_open_app_window", lambda cfg, url: opened.append((cfg, url)))
+    if view == "help":
+        assert pilot.open_help(config)["phase"] == "HELP_OPENED"
+    else:
+        pilot.open_workspace(config, view=view)
+
+    assert len(opened) == 1 and opened[0][0] is config
+    address = urlsplit(opened[0][1])
+    assert (address.scheme, address.netloc, address.path) == (
+        "http", "127.0.0.1:8795", "/static/doctor.html")
+    assert parse_qs(address.query) == {"v": [config["app_git_sha"]]}
+    assert address.fragment == fragment
 
 
 def test_brand_fingerprints_optional_for_old_registration_but_complete_for_new(registered, monkeypatch):

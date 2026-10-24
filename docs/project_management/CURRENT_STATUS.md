@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-24T13:03:16.496Z`
-- Source hash: `950b510ef4e0d9b66e3a4feebb860b28975e02ca024434a0fdf4ddd6253d111a`
+- Updated at: `2026-10-24T13:25:16.443Z`
+- Source hash: `0e4d42085722c652d077e1e424e9aad8eb95e58deed8d4204af59bc2e883e9ec`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@cd56f59d6c7bf6ff02a6e78c1367cd01768c98d9`
+- Repo: `codex/alpha51-demo-visual-e2e@1a115df5df270044a06457c73b965c4d9dceb0e1`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798已部署cd56转写来源与播放器修复；后端4b不变，真实E8/E23恢复通过，模型漏提及完整发布门禁仍未齐** — `VERIFY`
+**5.1 · 8798前端cd56/后端4b可用；CI唯一旧文案断言已修，本地10项通过，新CI待核；本地提取进入独立兼容性判因** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 针对本地模型漏提继续定位约束解码与提取契约；复用已通过功能证据，仅补最终版本剩余三路径与恢复验收；5.1保持VERIFY、5.3不启动
+- Single next task: 确认修正后的CI；本地最多9次兼容性诊断后恢复8798，补当前版授权音频真实按钮闭环；5.1仍VERIFY
 - Parallel waiting task: 硬件继续延期；5.2离线生成、5.3连续五次和真人试用分别判断
 
 ## Manual Actions

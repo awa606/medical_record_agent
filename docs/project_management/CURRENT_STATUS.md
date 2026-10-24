@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-23T04:42:42.162Z`
-- Source hash: `e70929e9b7eefe313f62d1532a4ed178162d606782a383e60c38446c6d5c968b`
+- Updated at: `2026-10-24T04:30:57.860Z`
+- Source hash: `ab00b63fdb490b799f35bbdd4b414af7ca92b9f2a7e1c96aed233d3221bbe04e`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@b07d6da4675f9e7a9f3b4111639be29db8a3520d`
+- Repo: `codex/alpha51-demo-visual-e2e@55c6eac38953c8808e28f51ed5b1a6720053380a`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 普通修改覆盖提示补修156项通过；最终候选待按钮验收，8798仍停f6** — `VERIFY`
+**5.1 · 普通修改空引用补修158项通过；55c6eac已启动8798，正在验收与更新入口** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 完成b07d6da隔离候选的历史查看、审核导出按钮及对应CI，保持legacy和显式代理；通过后再升级8798
+- Single next task: 完成55c6eac对应CI、运行验收与入口推广；修正失效代理配置，保持legacy和现有就绪门禁
 - Parallel waiting task: 硬件继续延期；5.2离线生成、5.3连续五次和真人试用分别判断
 
 ## Manual Actions

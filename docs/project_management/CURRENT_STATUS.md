@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-24T10:07:04.320Z`
-- Source hash: `05e462f63ccf7d40ecb4b57d3658febfb097a206454b8964746ffebee65436be`
+- Updated at: `2026-10-24T10:28:35.440Z`
+- Source hash: `14866df8b10b9458e59738100d3e49e647284f427d07aa360172cb53b06ac06b`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@ae9de1d05479c77d17afc1a0408ce37f92eb3c61`
+- Repo: `codex/alpha51-demo-visual-e2e@4b041cf469cebc547ac79835891a985f4db30ae1`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798仍运行55c；用药跨动作误拦与评测汇总修复已提交，本地标签候选0/3对0/3被拒绝，未部署** — `VERIFY`
+**5.1 · 8798仍运行55c；真实三子智能体复核发现并修复条件用药漏拦，135项与独立5例通过；本地标签候选被拒绝，新规则未部署** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 完成本批用药校验候选受影响发布验收；本地提取先定位可选事实全被舍弃的原因，不扩大采样；5.1保持VERIFY、5.3不启动
+- Single next task: 完成最终用药校验补丁CI及受影响发布验收；本地提取先定位事实全被舍弃的原因，不扩大采样；5.1保持VERIFY、5.3不启动
 - Parallel waiting task: 硬件继续延期；5.2离线生成、5.3连续五次和真人试用分别判断
 
 ## Manual Actions

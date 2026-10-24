@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-24T04:47:54.559Z`
-- Source hash: `8dfa4735d6142255677c8afa2016750cd9c600a5d28a6fa8740b812663827c52`
+- Updated at: `2026-10-24T05:07:45.070Z`
+- Source hash: `8eb5f7c0a9e4d3770ad89338258c06b46eaab7c30f3882bc493b703880c28493`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@43a9dbd5146a1f0877e4d6be3be739ce42875f2b`
+- Repo: `codex/alpha51-demo-visual-e2e@b4fd620368713cb7f86f03cf5efcec7a4c5981a5`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798运行55c6eac，文本按钮闭环与引文保留已验；旧UI断言已更新，等待新CI和入口推广** — `VERIFY`
+**5.1 · 8798已推广55c审核候选；文本、授权音频审核闭环及重启持久化通过，8796快照与教师材料已更新** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 等待测试更正后的完整CI；核验授权音频、推广启动器并刷新教师材料与数据快照
+- Single next task: 完成最终55c版本新目录恢复验收；物理录音与实际显示待集中配合，5.1继续VERIFY、5.3不启动
 - Parallel waiting task: 硬件继续延期；5.2离线生成、5.3连续五次和真人试用分别判断
 
 ## Manual Actions
 
-- 用户已保存退出；助手自行继续验收，不复用T01用户通过。最终物理麦克风与实际缩放保留适用版本边界
+- 本轮助手自行完成文本及授权音频工程流程；物理麦克风和实际缩放继续保留最终版本边界
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

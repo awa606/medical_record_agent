@@ -61,7 +61,7 @@ def test_recognition_mode_replaces_visible_asr_engine_selector() -> None:
     assert "recognitionModeSelect" in visible
     assert "实时识别" in visible
     assert "尽快识别" not in visible
-    assert "即时显示已返回转写；切换不会重新识别。" in visible
+    assert "切换已返回转写，不重新识别。" in visible
     assert "处理已上传音频，结果返回后显示；不表示边录边转写。" in visible
     assert "跟随识别" in visible
     assert "requireEncounterBeforeInput" in visible

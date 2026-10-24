@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-24T13:25:16.443Z`
-- Source hash: `0e4d42085722c652d077e1e424e9aad8eb95e58deed8d4204af59bc2e883e9ec`
+- Updated at: `2026-10-24T14:26:33.008Z`
+- Source hash: `69b3626b419ca2e858711836226a76cca64586672323ffcabdd855480467b572`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@1a115df5df270044a06457c73b965c4d9dceb0e1`
+- Repo: `codex/alpha51-demo-visual-e2e@e0039cea9647968f9b2e14a3c0afb778f4d063dd`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1保持VERIFY95%，5.3BACKLOG0%，M1–M4仍OPEN，16项99h及正式日期不变。教师本机试用包不是远程部署或医院产品放行。已有D盘在线Profile本地资源恢复保留；不是断网AI，也不以此次材料与普通医生单例预演代替完整Alpha或稳定医生试用版。**
+- Forecast Alpha Exit: **5.1仍为VERIFY95%，5.3仍为BACKLOG0%，M1至M4保持OPEN；16项、99h、正式日期及硬件延期不变。当前为教师展示审核候选，尚未通过稳定医生试用版或医院部署Gate。在线DeepSeek需联网，离线资源恢复不等于断网生成。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798前端cd56/后端4b可用；CI唯一旧文案断言已修，本地10项通过，新CI待核；本地提取进入独立兼容性判因** — `VERIFY`
+**5.1 · CI旧文案已修；E25当前资源音频修订、审核导出重开通过；本地诊断资源阻断，入口修复CI待核** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 确认修正后的CI；本地最多9次兼容性诊断后恢复8798，补当前版授权音频真实按钮闭环；5.1仍VERIFY
-- Parallel waiting task: 硬件继续延期；5.2离线生成、5.3连续五次和真人试用分别判断
+- Single next task: 资源满足原预检线后仅运行冻结的最多9次本地约束诊断；展示沿用当前DeepSeek审核流程，不扩大提示词试验。
+- Parallel waiting task: 硬件支线延期；5.2断网生成、5.3连续五次和医院部署分别判断，不由展示成功替代。
 
 ## Manual Actions
 
-- 当前无需重做已通过流程；最终版本物理录音和实际显示仍保留待验
+- 当前无需用户重复流程；最终版本物理录音和实际显示按既有安排保留待验。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

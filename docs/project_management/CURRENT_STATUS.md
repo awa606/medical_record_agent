@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-24T11:20:48.626Z`
-- Source hash: `539650d96a776ef2506359b0c4e9bde49ed2a78fc2c809d3fdef0c6fc8a5277b`
+- Updated at: `2026-10-24T11:45:02.775Z`
+- Source hash: `b7cbf052effcbeb466a9d5e873d79ca181cd0369a1e38aab13f03f7f699dd146`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@f5b1155ddcc009f84e719bf37d7dacd50cdba9f2`
+- Repo: `codex/alpha51-demo-visual-e2e@f7c550bfb938f6cd957b74baa6e33f059e8ea312`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798已升级4b用药修复；隔离文本审核导出通过，教师资料及8796快照同步；本地释义候选0/3拒绝** — `VERIFY`
+**5.1 · 8798已升级4b；本地释义0/3拒绝；CI报到测试超时未复现，仅收紧测试请求观察，定向通过且生产未变** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 补最终4b受影响授权音频与完整恢复证据；本地先诊断约束解码和契约漏选，不重复释义试验或扩大冻结集；5.1保持VERIFY、5.3不启动
+- Single next task: 核对报到测试观察修正后的CI；随后补最终4b授权音频与完整恢复，本地先诊断约束解码及提取契约；5.1保持VERIFY、5.3不启动
 - Parallel waiting task: 硬件继续延期；5.2离线生成、5.3连续五次和真人试用分别判断
 
 ## Manual Actions
 
-- 当前无需新数据或重做已通过流程；最终版本物理麦克风、实际显示仍保留待验
+- 当前无需重做已通过流程；最终版本物理录音和实际显示仍保留待验
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

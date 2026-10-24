@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from contextlib import closing
+import sqlite3
+
 from playwright.sync_api import expect, sync_playwright
 
 from tests.test_doctor_itemized_approval_playwright import (
@@ -48,6 +51,17 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             task_id = _prepare_review_fixture(page)
             document_id = _import_knowledge_fixture(page)
             revision_before = int(page.evaluate("window.__MRA_APP_STATE__.currentExportReadiness.revision_id"))
+            original_source_spans = page.evaluate(
+                "async id => (await api(`/api/tasks/${id}`)).result_json.fields.chief_complaint.source_spans",
+                task_id,
+            )
+            assert original_source_spans
+            database_uri = f"file:{(server.root / 'edge.sqlite3').as_posix()}?mode=ro"
+            with closing(sqlite3.connect(database_uri, uri=True)) as connection:
+                original_revision = connection.execute(
+                    "SELECT * FROM record_revision WHERE id = ?", (revision_before,)
+                ).fetchone()
+            assert original_revision is not None
 
             page.click("#editRecordButton")
             expect(page.locator("#recordFields [data-record-field-input]")).to_have_count(7)
@@ -84,7 +98,18 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             )
             assert persisted["value"] == "患者发热39度，医生补充记录"
             assert persisted["status"] == "partial"
-            assert persisted["source_spans"] == []
+            # The editor clears client evidence, but normal saves retain the
+            # immediately previous server quotes for comparison only. Manual
+            # provenance must not become automatic evidence or confirmation.
+            assert persisted["source_spans"] == original_source_spans
+            assert persisted["doctor_review_note"].startswith("manual_doctor_edit_v1:")
+            assert persisted["confirmed_by_doctor"] is False
+            assert persisted["doctor_review_status"] == "pending"
+            assert persisted["confidence"] is None
+            with closing(sqlite3.connect(database_uri, uri=True)) as connection:
+                assert connection.execute(
+                    "SELECT * FROM record_revision WHERE id = ?", (revision_before,)
+                ).fetchone() == original_revision
             expect(page.locator('[data-field="chief_complaint"] .doctor-edit-origin')).to_have_text("医生已修改")
 
             page.click('[data-field="chief_complaint"] [data-knowledge-field="chief_complaint"]')

@@ -78,6 +78,22 @@ body.doctor-mode .alpha51-workspace .transcript-row-text, .workspace-aux-dialog 
 body.doctor-mode .alpha51-workspace .transcript-row-time, .workspace-aux-dialog .transcript-row-time { font-size: 14px; color: var(--ws-muted); }
 body.doctor-mode .alpha51-workspace .transcript-role-tag, .workspace-aux-dialog .transcript-role-tag { font-size: 14px; }
 body.doctor-mode .alpha51-workspace .transcript-audio-player { flex: none; }
+/* The player follows its narrow column, not the window's desktop breakpoint. */
+body.doctor-mode .alpha51-workspace .transcript-audio-player { gap: 4px; padding: 6px 12px; }
+body.doctor-mode .alpha51-workspace .audio-player-primary {
+  grid-template-columns: 38px minmax(0, 1fr) 84px;
+  grid-template-areas: "play time time" "play seek seek" "mute volume rate";
+  gap: 4px 8px;
+}
+body.doctor-mode .alpha51-workspace #audioPlayPauseButton { grid-area: play; }
+body.doctor-mode .alpha51-workspace #audioTimeLabel { grid-area: time; min-width: 0; font-size: 14px; line-height: 1.5; }
+body.doctor-mode .alpha51-workspace #audioSeekRange { grid-area: seek; }
+body.doctor-mode .alpha51-workspace #audioMuteButton { grid-area: mute; }
+body.doctor-mode .alpha51-workspace #audioVolumeRange { grid-area: volume; }
+body.doctor-mode .alpha51-workspace #audioPlaybackRate { grid-area: rate; width: 100%; min-width: 0; font-size: 14px; }
+body.doctor-mode .alpha51-workspace .audio-seek-range,
+body.doctor-mode .alpha51-workspace .audio-volume-range { width: 100%; min-width: 0; height: 18px; min-height: 0; margin: 0; padding: 0; }
+body.doctor-mode .alpha51-workspace .transcript-audio-player .form-help { margin: 0; font-size: 14px; line-height: 1.5; }
 body.doctor-mode .alpha51-workspace .field-list { display: flex; flex-direction: column; gap: 0; padding: 0 16px 24px; background: white; }
 body.doctor-mode .alpha51-workspace .field-card.doctor-summary-card {
   flex: none; min-height: 0; max-height: none; padding: 24px 0; gap: 8px;
@@ -284,3 +300,17 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
 .clinical-reference-context { margin-top: 24px; border-top: 1px solid var(--line-strong); padding-top: 16px; }
 .clinical-reference-context > summary { cursor: pointer; padding: 8px 0; font-size: 16px; font-weight: 700; }
 .clinical-reference-context[open] > summary { margin-bottom: 16px; }
+
+body.doctor-mode .alpha51-workspace .transcript-source-notice {
+  flex: none;
+  white-space: pre-line;
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+body.doctor-mode .alpha51-workspace .transcript-table-row-text {
+  grid-template-columns: minmax(0, 1fr) auto;
+}

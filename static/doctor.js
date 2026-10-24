@@ -4896,8 +4896,21 @@ function activeTranscriptSegment(rows) {
 }
 
 function visibleTranscriptRows(rows) {
-  if (appState.transcriptPacing !== "follow") return rows;
-  return rows.filter((row) => row.startTime != null && row.startTime <= appState.audioCurrentTime + 0.2);
+  if (!transcriptHasAudioSource() || appState.transcriptPacing !== "follow") return rows;
+  return rows.filter((row) => row.startTime == null || row.startTime <= appState.audioCurrentTime + 0.2);
+}
+
+function transcriptHasAudioSource() {
+  const source = appState.currentAsrResult;
+  if (source?.engine === "text-import" || source?.audio_id === "text-import") return false;
+  return Boolean(appState.currentAudioId || appState.currentAsrSessionId || source
+    || appState.browserRecordingStatus === "recording" || appState.browserRecordingStatus === "paused");
+}
+
+function transcriptTimeMarkup(item) {
+  if (!transcriptHasAudioSource()) return "";
+  const label = item.startTime == null ? "时间未记录" : item.time;
+  return `<span class="transcript-row-time">${escapeHtml(label)}</span>`;
 }
 
 function buildSpeakerAliasMap(rows) {
@@ -5046,12 +5059,17 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
 function renderTranscript() {
   const asr = appState.currentAsrResult;
   const rows = transcriptRows();
+  const hasAudioSource = transcriptHasAudioSource();
   const isStreaming = appState.currentAsrSessionId && appState.taskStatus === "TRANSCRIBING" && !asr;
   const hasTranscriptIssue = Boolean(appState.asrLastError || appState.asrChunkLastError);
   const friendlyIssue = doctorFacingTranscriptionIssue();
   const progressPercent = asrProgressPercent();
   renderAudioPlayer();
-  if ($("transcriptHeading")) $("transcriptHeading").textContent = !asr && appState.currentInputText ? "输入原文" : "问诊转写";
+  if ($("transcriptHeading")) $("transcriptHeading").textContent = !hasAudioSource && rows.length ? "输入原文" : "问诊转写";
+  if ($("transcriptSourceNotice")) {
+    $("transcriptSourceNotice").hidden = hasAudioSource || !rows.length;
+    $("transcriptSourceNotice").textContent = "文本输入 · 未关联录音\n本病例没有音频时间";
+  }
 
   if (!rows.length && !asr && !appState.currentAsrSessionId) {
     const restoreStatus = appState.transcriptRestoreStatus;
@@ -5066,14 +5084,16 @@ function renderTranscript() {
   }
 
   const progressLabel = appState.asrProgressKind === "actual" ? ` · ${progressPercent}%` : "";
-  $("transcriptBadge").textContent = asr
+  $("transcriptBadge").textContent = !hasAudioSource
+    ? `文本输入 · ${rows.length}条`
+    : asr
     ? `转写完成 · ${rows.length}段`
     : isStreaming
       ? `${asrPhaseLabel()}${progressLabel} · ${rows.length}段`
       : `${rows.length}条`;
 
   const visibleRows = visibleTranscriptRows(rows);
-  const activeSegment = activeTranscriptSegment(rows);
+  const activeSegment = hasAudioSource ? activeTranscriptSegment(rows) : null;
   appState.activeTranscriptSegmentId = activeSegment?.segmentId || "";
   const speakerCount = new Set(rows.map((row) => row.speakerId).filter(Boolean)).size;
   const speakerAliases = buildSpeakerAliasMap(rows);
@@ -5092,7 +5112,7 @@ function renderTranscript() {
       </div>
     `
     : "";
-  const followEmptyBlock = appState.transcriptPacing === "follow" && rows.length && !visibleRows.length
+  const followEmptyBlock = hasAudioSource && appState.transcriptPacing === "follow" && rows.length && !visibleRows.length
     ? `<div class="empty-state transcript-empty">已识别 ${rows.length} 段。播放音频后，文字会跟随播放位置出现。</div>`
     : "";
   const issueBlock = hasTranscriptIssue
@@ -5100,24 +5120,24 @@ function renderTranscript() {
     : "";
 
   $("transcriptList").innerHTML = `
-    <label class="transcript-follow-toggle">
+    ${hasAudioSource ? `<label class="transcript-follow-toggle">
       <input type="checkbox" data-transcript-auto-follow ${appState.transcriptAutoFollow ? "checked" : ""}>
       <span>自动跟随最新内容</span>
-    </label>
+    </label>` : ""}
     ${issueBlock}
     ${streamingEmptyBlock}
     ${followEmptyBlock}
     <div class="transcript-table" role="list" aria-label="对话转写列表">
       ${visibleRows.map((item, index) => `
         <div
-          class="transcript-table-row ${item.segmentId === appState.activeTranscriptSegmentId ? "transcript-row-active" : ""} ${item.provisional ? "provisional" : ""}"
+          class="transcript-table-row ${hasAudioSource ? "" : "transcript-table-row-text"} ${item.segmentId === appState.activeTranscriptSegmentId ? "transcript-row-active" : ""} ${item.provisional ? "provisional" : ""}"
           data-segment-index="${item.index}"
           data-segment-id="${escapeHtml(item.segmentId)}"
-          ${item.startTime != null ? `data-segment-start="${item.startTime}"` : ""}
+          ${hasAudioSource && item.startTime != null ? `data-segment-start="${item.startTime}"` : ""}
           role="listitem"
           tabindex="0"
         >
-          <span class="transcript-row-time">${escapeHtml(item.time)}</span>
+          ${transcriptTimeMarkup(item)}
           <span class="transcript-role-cell">
             <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount, speakerAliases))}】</span>
             ${item.roleWarning ? `<span class="transcript-role-warning">系统自动推定</span>` : ""}
@@ -5135,6 +5155,7 @@ function renderTranscript() {
 
 function renderTranscriptDetailContent(target = "all") {
   const rows = transcriptRows();
+  const hasAudioSource = transcriptHasAudioSource();
   if (!rows.length) return `<div class="empty-state">暂无对话转写。</div>`;
   const selectedIndex = Number(target);
   const identityReviewMode = target === "role-review";
@@ -5165,8 +5186,8 @@ function renderTranscriptDetailContent(target = "all") {
     </div>
   `;
   return `
-    ${detailSection("转写状态", `
-      <div class="detail-kv"><span>引擎</span><strong>${escapeHtml(appState.currentAsrResult?.engine || appState.selectedEngine || "ASR")}</strong></div>
+    ${detailSection(hasAudioSource ? "转写状态" : "输入来源", `
+      <div class="detail-kv"><span>${hasAudioSource ? "引擎" : "来源"}</span><strong>${hasAudioSource ? escapeHtml(appState.currentAsrResult?.engine || appState.selectedEngine || "ASR") : "文本输入（未关联录音）"}</strong></div>
       <div class="detail-kv"><span>分段</span><strong>${rows.length} 条</strong></div>
       <div class="detail-kv"><span>说话人身份</span><strong>${escapeHtml(canEdit ? (unreviewedCount ? `${unreviewedCount} 位说话人需确认` : "说话人角色已自动识别") : "只读")}</strong></div>
       <p class="detail-note">${escapeHtml(reviewHint)}</p>
@@ -5195,7 +5216,7 @@ function renderTranscriptDetailContent(target = "all") {
         ${rows.map((item) => `
           <div class="transcript-review-row ${Number.isFinite(selectedIndex) && selectedIndex === item.index ? "focus" : ""}" data-segment-index="${item.index}">
             <div class="transcript-review-meta">
-              <span class="transcript-row-time">${escapeHtml(item.time)}</span>
+              ${transcriptTimeMarkup(item)}
               <strong class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerGroups.length, speakerAliases))}】</strong>
             </div>
             <textarea data-detail-segment-text ${canEdit ? "" : "readonly"}>${escapeHtml(item.text)}</textarea>

@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
     <link rel="stylesheet" href="./doctor.css?v=alpha51-history-20261020" />
     <link rel="stylesheet" href="./doctor-ui-v2.css?v=alpha51-task-layout-20261016" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-task-layout-20261016" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-transcript-time-20261024" />
   </head>
   <body class="doctor-mode standard-mode">
     <div class="doctor-app">
@@ -305,6 +305,7 @@
               <span id="transcriptBadge" class="status-badge info transcript-badge-inline">-</span>
             </div>
           </div>
+          <p id="transcriptSourceNotice" class="transcript-source-notice" role="note" hidden></p>
           <div class="transcript-input-toolbar" aria-label="其他问诊输入">
             <button type="button" data-input-method="audio">上传音频</button>
             <button type="button" data-input-method="text">文本输入</button>
@@ -388,7 +389,7 @@
               </div>
               <span id="audioProcessingSummary" class="audio-processing-summary">等待音频</span>
             </div>
-            <p class="form-help">即时显示已返回转写；切换不会重新识别。</p>
+            <p class="form-help">切换已返回转写，不重新识别。</p>
           </footer>
         </section>
 
@@ -644,6 +645,6 @@
       <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=alpha51-history-20261020"></script>
+    <script src="./doctor.js?v=alpha51-transcript-time-20261024"></script>
   </body>
 </html>

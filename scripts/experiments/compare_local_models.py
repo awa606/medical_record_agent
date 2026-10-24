@@ -18,7 +18,8 @@ from urllib import request
 
 from app.schemas import MedicalRecordFields
 from app.services.field_grounding import FIELD_KEYS, ground_fields
-from app.services.llm.llm_record_generator import LLMRecordGenerator
+from app.services.llm.base import LLMProviderUnavailableError
+from app.services.llm.llm_record_generator import ExtractionOutputError, LLMRecordGenerator
 from app.services.llm.ollama_provider import OllamaLLMProvider
 from app.services.privacy import anonymize_text
 from scripts.experiments.run_evidence_selection import inputs
@@ -71,6 +72,64 @@ def quality_checks(key: str, fields: MedicalRecordFields, source: str) -> dict[s
     else:
         checks["no_unmentioned_fields"] = active <= {"chief_complaint", "present_illness"}
     return checks
+
+
+def explicit_no_facts_refusal(error, diagnostics=None, provider_name=None):
+    if isinstance(error, ExtractionOutputError):
+        return str(error).split(":", 1)[0] == "LLM_NO_SUPPORTED_FACTS"
+    if not isinstance(error, LLMProviderUnavailableError) or not provider_name:
+        return False
+    if not isinstance(diagnostics, list) or len(diagnostics) != 1:
+        return False
+    attempt = diagnostics[0]
+    reason = attempt.get("error", "")
+    if (not isinstance(reason, str) or reason.split(":", 1)[0] != "LLM_NO_SUPPORTED_FACTS"
+            or str(error) != f"{provider_name} field extraction failed: {reason}"):
+        return False
+    # Only a completed grounding stage can explain this refusal. A transport
+    # failure with similar words cannot supply these actual Generator stages.
+    if not all(stage in attempt for stage in ("raw_response", "reconciled", "evidence_validated", "grounded")):
+        return False
+    grounded = attempt["grounded"]
+    return isinstance(grounded, dict) and all(
+        isinstance(grounded.get(k), dict) and grounded[k].get("value") in (None, "")
+        and grounded[k].get("missing") is True and grounded[k].get("status") == "missing"
+        for k in FIELD_KEYS)
+
+
+def comparison_verdict(key, source, first_fields, first_checks, conflicts, final=None, pipeline_error=None,
+                       *, diagnostics=None, provider_name=None):
+    """Keep first-output quality, grounding and final-pipeline results separate.
+
+    The two no-patient-fact inputs may pass only through the declared empty
+    result rejection. A parser, transport or arbitrary pipeline error is not a
+    successful refusal, and a refusal never counts as a generated draft.
+    """
+    first_passed = bool(first_checks) and all(first_checks.values())
+    empty_first = not any(getattr(first_fields, k).value for k in FIELD_KEYS)
+    safe_refusal = (
+        key in {"question", "family"} and empty_first and final is None
+        and explicit_no_facts_refusal(pipeline_error, diagnostics, provider_name)
+    )
+    final_checks = quality_checks(key, final, source) if final is not None else {}
+    final_conflicts = {k: getattr(final, k).hint for k in FIELD_KEYS
+        if final is not None and getattr(final, k).status == "conflicting"}
+    has_draft = final is not None and any(
+        getattr(final, k).value and not getattr(final, k).missing for k in FIELD_KEYS)
+    pipeline_passed = safe_refusal or (
+        key not in {"question", "family"} and pipeline_error is None
+        and has_draft and bool(final_checks) and all(final_checks.values()) and not final_conflicts
+    )
+    return {
+        "first_output_passed": first_passed,
+        "grounding_passed": not conflicts,
+        "pipeline_checks": final_checks,
+        "pipeline_conflicts": final_conflicts,
+        "pipeline_passed": bool(pipeline_passed),
+        "expected_safe_refusal": bool(safe_refusal),
+        "generated_draft": bool(has_draft),
+        "passed": bool(first_passed and not conflicts and pipeline_passed),
+    }
 
 
 def capture_production_call(provider, source, timeout):
@@ -128,7 +187,7 @@ def main():
                 "model_digest": tag["digest"], "runs_per_case": 3, "cases": [p[0] for p in prepared],
                 "deadline": args.deadline, "retries": 0, "manual_corrections": 0,
                 "contract": "unchanged production Provider payload; model is the comparison variable",
-                "criteria": "quality_checks plus unchanged grounding; 21/21 required; no held-out expansion on failure"}
+                "criteria": "first-output checks, grounding and final-pipeline checks all required; question/family only allow explicit LLM_NO_SUPPORTED_FACTS refusal; refusals counted separately from drafts; 21/21 required; no held-out expansion on failure"}
     write(args.output / "protocol.json", protocol)
     write(args.output / "inputs.private.json", [{"id": k, "source": s, "trusted": t, "case": c} for k,s,t,c in prepared])
     report = {**protocol, "started_at": datetime.now(timezone.utc).isoformat(), "calls": []}
@@ -163,11 +222,20 @@ def main():
                 replay.model = args.model; replay.model_digest = tag["digest"]
                 generator = LLMRecordGenerator(provider=replay, mode="edge", allow_mock_fallback=False)
                 generator.max_retries = 0; generator.source_segments = trusted
-                final = generator.extract_fields(source)
+                generator.diagnostics_enabled = True
+                final, pipeline_error = None, None
+                try:
+                    final = generator.extract_fields(source)
+                except (ExtractionOutputError, LLMProviderUnavailableError) as exc:
+                    pipeline_error = exc
                 assert replay.calls == 1
-                record.update(pipeline=final.model_dump(mode="json"), repairs=generator.field_repairs,
-                              pipeline_checks=quality_checks(key, final, safe))
-                record["passed"] = all(record["first_output_checks"].values()) and not record["conflicts"]
+                record.update(pipeline=final.model_dump(mode="json") if final is not None else None,
+                              repairs=generator.field_repairs,
+                              pipeline_error=str(pipeline_error) if pipeline_error else None,
+                              pipeline_diagnostics=getattr(generator, "diagnostic_attempts", []))
+                record.update(comparison_verdict(key, safe, raw_fields, record["first_output_checks"],
+                    record["conflicts"], final, pipeline_error,
+                    diagnostics=record["pipeline_diagnostics"], provider_name=replay.name))
                 record["ollama_timing"] = {k:v for k,v in captured[0]["response"].items()
                     if k in ["total_duration", "load_duration", "prompt_eval_count", "prompt_eval_duration", "eval_count", "eval_duration", "done_reason"]}
             except Exception as exc:
@@ -175,7 +243,7 @@ def main():
             record["seconds"] = round(time.monotonic() - started, 3)
             path = args.output / f"{key}-{run}.private.json"
             write(path, record)
-            summary = {k:record.get(k) for k in ["input_id", "run", "model", "passed", "seconds", "provider_error", "error", "first_output_checks", "conflicts", "metrics", "request_without_model_sha256", "ollama_timing"]}
+            summary = {k:record.get(k) for k in ["input_id", "run", "model", "passed", "seconds", "provider_error", "error", "first_output_checks", "first_output_passed", "conflicts", "grounding_passed", "pipeline_checks", "pipeline_conflicts", "pipeline_passed", "pipeline_error", "expected_safe_refusal", "generated_draft", "metrics", "request_without_model_sha256", "ollama_timing"]}
             summary["raw_sha256"] = sha(path.read_bytes())
             report["calls"].append(summary)
             write(args.output / "report.json", report)
@@ -186,6 +254,8 @@ def main():
             break
     report.update(completed_at=datetime.now(timezone.utc).isoformat(), total=len(report["calls"]),
                   passed=sum(r["passed"] for r in report["calls"]))
+    report["stage_counts"] = {key: sum(bool(r.get(key)) for r in report["calls"])
+        for key in ("first_output_passed", "grounding_passed", "pipeline_passed", "expected_safe_refusal", "generated_draft")}
     report["gate"] = "SMALL_SPIKE_PASS" if report["total"] == report["passed"] == 21 else "REJECTED"
     write(args.output / "report.json", report)
     print(json.dumps({k:report[k] for k in ["model", "gate", "passed", "total"]}), flush=True)

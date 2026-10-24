@@ -1,10 +1,13 @@
 import io
 import json
+from types import SimpleNamespace
 from unittest.mock import patch
+
+import pytest
 
 from app.schemas import MedicalRecordFields
 from app.services.llm.ollama_provider import OllamaLLMProvider
-from scripts.experiments.compare_local_models import capture_production_call, quality_checks
+from scripts.experiments.compare_local_models import capture_production_call, comparison_verdict, explicit_no_facts_refusal, quality_checks
 
 
 def blank():
@@ -66,3 +69,141 @@ def test_truncation_keeps_raw_response_and_does_not_retry():
             OllamaLLMProvider(base_url="http://isolated:11434", model="qwen3:4b"), "患者：头痛。", 10)
     assert result is None and "LLM_OUTPUT_TRUNCATED" in error
     assert len(captured) == 1 and captured[0]["response"]["done_reason"] == "length"
+
+
+def test_comparison_rejects_pipeline_fact_loss_even_when_first_output_passes(tmp_path, monkeypatch):
+    """The runner's aggregate must include the actual Generator result."""
+    from scripts.experiments import compare_local_models as comparison
+
+    source = "患者：我没有花生过敏。"
+    raw = {"allergy_history": {"value": "我没有花生过敏", "missing": False,
+        "source_spans": [{"text": "我没有花生过敏", "index": 0}]}}
+
+    class LosesAllergy:
+        def __init__(self, provider, **kwargs):
+            self.provider = provider
+            self.field_repairs = []
+
+        def extract_fields(self, text):
+            self.provider.calls += 1
+            return blank()
+
+    monkeypatch.setattr(comparison, "inputs", lambda: [("negative_allergy", source, [], None)])
+    monkeypatch.setattr(comparison, "anonymize_text", lambda text: text)
+    monkeypatch.setattr(comparison, "ground_fields", lambda fields, *args: fields)
+    monkeypatch.setattr(comparison, "LLMRecordGenerator", LosesAllergy)
+    monkeypatch.setattr(comparison, "OllamaLLMProvider", lambda **kwargs: object())
+    monkeypatch.setattr(comparison.request, "urlopen", lambda *args, **kwargs: io.BytesIO(
+        json.dumps({"models": [{"name": "qwen3:4b", "digest": "a" * 64}]}).encode()))
+    monkeypatch.setattr(comparison, "capture_production_call", lambda *args: (
+        SimpleNamespace(content=json.dumps(raw)), None,
+        [{"request": {"model": "qwen3:4b"}, "response": {"done_reason": "stop"}}]))
+    output = tmp_path / "comparison"
+    monkeypatch.setattr("sys.argv", ["compare", "--model", "qwen3:4b", "--url", "http://unused",
+        "--expected-digest", "a" * 64, "--output", str(output), "--base-sha", "b" * 40,
+        "--deadline", "2099-01-01T00:00:00+00:00"])
+
+    comparison.main()
+
+    report = json.loads((output / "report.json").read_text())
+    assert all(all(row["first_output_checks"].values()) for row in report["calls"])
+    assert report["passed"] == 0
+    assert report["stage_counts"]["first_output_passed"] == 3
+    assert report["stage_counts"]["pipeline_passed"] == 0
+
+
+@pytest.mark.parametrize("key", ["question", "family"])
+def test_expected_refusal_is_separate_from_a_generated_draft(key):
+    from app.services.llm.llm_record_generator import ExtractionOutputError
+
+    fields = blank()
+    result = comparison_verdict(key, "医生：有没有胸痛？", fields,
+        quality_checks(key, fields, "医生：有没有胸痛？"), {},
+        pipeline_error=ExtractionOutputError("LLM_NO_SUPPORTED_FACTS: 未找到可用病历信息"))
+    assert result["passed"] and result["expected_safe_refusal"]
+    assert not result["generated_draft"]
+
+
+@pytest.mark.parametrize("error", [
+    ValueError("LLM_NO_SUPPORTED_FACTS: wrong exception type"),
+    RuntimeError("network unavailable"),
+    None,
+])
+def test_other_failures_are_not_successful_refusals(error):
+    result = comparison_verdict("question", "医生：有没有胸痛？", blank(),
+        {"no_patient_fact": True}, {}, pipeline_error=error)
+    assert not result["passed"]
+    assert not result["expected_safe_refusal"]
+
+
+def test_empty_contradiction_and_false_raw_facts_cannot_count_as_refusal():
+    from app.services.llm.llm_record_generator import ExtractionOutputError
+
+    error = ExtractionOutputError("LLM_OUTPUT_CONTRADICTION: all fields rejected")
+    assert not comparison_verdict("family", "患者：我父亲发热。", blank(),
+        {"no_patient_fact": True}, {}, pipeline_error=error)["passed"]
+    fields = MedicalRecordFields.model_validate({"chief_complaint": {"value": "发热", "missing": False}})
+    error = ExtractionOutputError("LLM_NO_SUPPORTED_FACTS: all fields removed")
+    result = comparison_verdict("family", "患者：我父亲发热。", fields,
+        {"no_patient_fact": False}, {}, pipeline_error=error)
+    assert not result["passed"] and not result["expected_safe_refusal"]
+
+
+def test_pipeline_conflict_fails_even_if_legacy_token_checks_pass():
+    source = "患者：我没有花生过敏。"
+    raw = MedicalRecordFields.model_validate({"allergy_history": {"value": "我没有花生过敏",
+        "missing": False, "source_spans": [{"text": "我没有花生过敏", "index": 0}]}})
+    final = raw.model_copy(deep=True)
+    final.allergy_history.status = "conflicting"
+    assert all(quality_checks("negative_allergy", final, source).values())
+    result = comparison_verdict("negative_allergy", source, raw,
+        quality_checks("negative_allergy", raw, source), {}, final)
+    assert result["first_output_passed"] and not result["pipeline_passed"]
+    assert not result["passed"]
+
+
+def test_correct_first_and_pipeline_results_still_pass():
+    source = "患者：我没有花生过敏。"
+    fields = MedicalRecordFields.model_validate({"allergy_history": {"value": "我没有花生过敏",
+        "missing": False, "source_spans": [{"text": "我没有花生过敏", "index": 0}]}})
+    result = comparison_verdict("negative_allergy", source, fields,
+        quality_checks("negative_allergy", fields, source), {}, fields.model_copy(deep=True))
+    assert result["passed"] and result["generated_draft"]
+    assert not result["expected_safe_refusal"]
+
+
+def test_comparison_recognizes_real_generator_wrapped_empty_refusal(tmp_path, monkeypatch):
+    from scripts.experiments import compare_local_models as comparison
+
+    raw = blank().model_dump(mode="json")
+    monkeypatch.setattr(comparison, "inputs", lambda: [("question", "医生：有没有胸痛？", [], None)])
+    monkeypatch.setattr(comparison, "anonymize_text", lambda text: text)
+    monkeypatch.setattr("app.services.llm.llm_record_generator.anonymize_text", lambda text: text)
+    monkeypatch.setattr(comparison, "OllamaLLMProvider", lambda **kwargs: object())
+    monkeypatch.setattr(comparison.request, "urlopen", lambda *args, **kwargs: io.BytesIO(
+        json.dumps({"models": [{"name": "qwen3:4b", "digest": "a" * 64}]}).encode()))
+    monkeypatch.setattr(comparison, "capture_production_call", lambda *args: (
+        SimpleNamespace(content=json.dumps(raw)), None,
+        [{"request": {"model": "qwen3:4b"}, "response": {"done_reason": "stop"}}]))
+    output = tmp_path / "wrapped-refusal"
+    monkeypatch.setattr("sys.argv", ["compare", "--model", "qwen3:4b", "--url", "http://unused",
+        "--expected-digest", "a" * 64, "--output", str(output), "--base-sha", "b" * 40,
+        "--deadline", "2099-01-01T00:00:00+00:00"])
+    comparison.main()
+    report = json.loads((output / "report.json").read_text())
+    assert report["passed"] == 3
+    assert report["stage_counts"]["expected_safe_refusal"] == 3
+    assert report["stage_counts"]["generated_draft"] == 0
+
+
+@pytest.mark.parametrize("diagnostics", [
+    [],
+    [{"error": "LLM_NO_SUPPORTED_FACTS: transport words only"}],
+    [{"error": "LLM_NO_SUPPORTED_FACTS: transport words only", "raw_response": "{}",
+      "reconciled": {}, "evidence_validated": {}, "grounded": {}}],
+])
+def test_wrapped_provider_error_needs_completed_empty_grounding(diagnostics):
+    from app.services.llm.base import LLMProviderUnavailableError
+
+    error = LLMProviderUnavailableError("recorded-output-replay field extraction failed: LLM_NO_SUPPORTED_FACTS: transport words only")
+    assert not explicit_no_facts_refusal(error, diagnostics, "recorded-output-replay")

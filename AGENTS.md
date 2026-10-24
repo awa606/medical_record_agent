@@ -38,3 +38,5 @@ PM的正式任务删除、Phase迁移、Gate标准修改、大规模WBS调整、
 ## MRA 工程汇报
 
 本项目迭代交付遵循 [mra-engineering-report](docs/engineering/skills/mra-engineering-report/SKILL.md) 的六项汇报结构，必要时追加备注。此规则不替代上面的PM／Research／Design门禁，也不要求无事实变化时产生提交。
+
+每轮实质交付收尾时，实际读取并应用 [mra-iteration-audit](docs/engineering/skills/mra-iteration-audit/SKILL.md)，检查受影响功能、模型首次结果、人工审核、演示操作及恢复边界。已通过且未受影响的证据注明原版本、时间与校验值后复用，不重复执行；未验、失败和医院独立路线不得被演示成功覆盖。该Skill是本项目工作约定，不是后台自动化或临床认证。

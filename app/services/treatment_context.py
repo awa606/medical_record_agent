@@ -13,6 +13,10 @@ _PROPOSED = re.compile(r"建议|计划|准备|打算|拟|考虑|可以|应该|�
 _NEGATED = re.compile(r"否认|没有|未曾|未|没|不再|不曾|不能|不要|不$")
 _FOLLOWED_ADVICE = re.compile(r"(?:已经|已|曾经|曾)(?:按照|按|遵照|遵循)(?:医生|医师)?的?(?:建议|医嘱)$")
 _SEQUENTIAL_ACTION = re.compile(r"就(?=(?:自行|已经|按时|规律|立即|马上)?$)")
+_CAUSAL = re.compile(r"因为|由于|为了|以免|防止")
+_CONTRAST = re.compile("而")
+_COMPLETED_ACTION = re.compile(r"服用了|口服了|吃了|用了|注射了")
+_INTENT_SUFFIX = re.compile(r"的(?:打算|计划|想法|意图|准备)")
 
 
 @dataclass(frozen=True)
@@ -24,6 +28,30 @@ class TreatmentContext:
     proposed: bool
 
 
+def _action_boundaries(text: str):
+    """Split a bare 而 only before an explicitly completed second intake.
+
+    A condition, recommendation or uncertainty may govern both actions. Keep
+    that whole clause intact so a selected suffix cannot discard its scope.
+    Other uses of 而 (including causal phrases) keep the existing behaviour.
+    """
+    start = 0
+    for boundary in [*_BREAK.finditer(text), None]:
+        end = boundary.start() if boundary else len(text)
+        for contrast in _CONTRAST.finditer(text, start, end):
+            position = contrast.start()
+            following = position + 1
+            prefix = text[start:position]
+            if (_COMPLETED_ACTION.match(text, following) and _ACTION.search(prefix)
+                    and not _PROPOSED.search(prefix) and not _UNCERTAIN.search(prefix)
+                    and not _CAUSAL.search(prefix)
+                    and not _INTENT_SUFFIX.search(text[following:end])):
+                yield contrast
+        if boundary:
+            yield boundary
+            start = boundary.end()
+
+
 def treatment_contexts(text: str) -> list[TreatmentContext]:
     """Keep original clauses, with negation attached to intake, not its effect.
 
@@ -32,7 +60,7 @@ def treatment_contexts(text: str) -> list[TreatmentContext]:
     """
     rows = []
     start = 0
-    for boundary in [*_BREAK.finditer(text), None]:
+    for boundary in [*_action_boundaries(text), None]:
         end = boundary.start() if boundary else len(text)
         raw = text[start:end]
         role = _ROLE.match(raw)

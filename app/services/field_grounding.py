@@ -5,33 +5,129 @@ import re
 from typing import Any
 
 from app.schemas import MedicalRecordFields, SourceSpan
-from app.services.clinical_facts import split_clinical_segments
+from app.services.clinical_facts import clinical_experiencer, clinical_segment_contexts, extract_clinical_facts, split_clinical_segments
+from app.services.treatment_context import treatment_grounding_errors
 
 FIELD_KEYS = ("chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms", "past_history", "allergy_history", "physical_exam")
+_TIME_QUALIFIERS = ("昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏")
 
 def compact(text: str) -> str:
     return re.sub(r"[\s，,。；;、：:！？!?]", "", text).replace("发烧", "发热").replace("摄氏度", "℃")
 
 
+def _treatment_time_scope(value: str, context: str) -> str:
+    """Scope time checks only when every selected clause is uniquely located.
+
+    Keep full original clauses, including prefixes omitted by the model. A
+    separate time-only prefix still qualifies the following clause. Ambiguous
+    or non-extractive values retain the previous whole-context protection.
+    Other subject, negation, modality and citation checks use the full source.
+    """
+    clauses = [part for part in re.split(r"[，,。；;\n]+", context) if part.strip()]
+    selected = [compact(part) for part in re.split(r"[，,。；;\n]+", value) if compact(part)]
+    if not selected:
+        return context
+    indexes: set[int] = set()
+    for text in selected:
+        matches = [index for index, clause in enumerate(clauses) if text in compact(clause)]
+        if len(matches) != 1:
+            return context
+        index = matches[0]
+        indexes.add(index)
+        while index > 0:
+            prefix = re.sub(
+                r"^\s*(?:[\[【](?:患者|病人|医生|医师|家属|家长)[\]】]\s*[:：]?|(?:患者|病人|医生|医师|家属|家长)\s*[:：])\s*",
+                "", clauses[index - 1],
+            )
+            if not re.fullmatch(r"(?:在)?(?:" + "|".join(_TIME_QUALIFIERS) + r")", compact(prefix)):
+                break
+            index -= 1
+            indexes.add(index)
+    return "\n".join(clauses[index] for index in sorted(indexes))
+
+
+def _guardian_child_quote(span_text: str, matching_contexts: list) -> bool:
+    """A cited child's statement may omit its subject in a patient field.
+
+    Require one matching source sentence, an explicit child reference and
+    patient ownership of every quoted clause. Other sentences cannot supply
+    the subject, and questions never qualify. The evidence itself is unchanged.
+    """
+    if len(matching_contexts) != 1:
+        return False
+    context = matching_contexts[0]
+    if (context.speaker not in {"家属", "家长"} or context.patient_target != "child"
+            or context.question or not re.search(r"孩子|儿子|女儿", context.text)):
+        return False
+    clauses = [part.strip() for part in re.split(r"[，,。；;\n]+|但是|不过|然而|但", span_text) if part.strip()]
+    return bool(clauses) and all(
+        context.text.find(clause) >= 0
+        and clinical_experiencer(context.text, speaker=context.speaker,
+                             patient_target=context.patient_target,
+                             position=context.text.find(clause) + len(clause)) == "patient"
+        for clause in clauses
+    )
+
+
+def _selected_child_clauses(value: str, span_text: str, matching_contexts: list) -> list[str]:
+    """Scope subject checks to explicitly selected child facts in a wide quote.
+
+    The quote and original index remain unchanged. Every selected clause must
+    name the child, occur verbatim in this one source sentence, and resolve to
+    that child. An adjacent parent fact cannot supply the selected subject.
+    All quote existence, role, negation and qualifier guards still run normally.
+    """
+    if len(matching_contexts) != 1:
+        return []
+    context = matching_contexts[0]
+    if (context.speaker not in {"家属", "家长"} or context.patient_target != "child"
+            or context.question):
+        return []
+    clauses = [part.strip() for part in re.split(r"[，,。；;\n]+", value) if part.strip()]
+    for clause in clauses:
+        position = context.text.find(clause)
+        if (not re.search(r"孩子|儿子|女儿", clause) or clause not in span_text or position < 0
+                or clinical_experiencer(context.text, speaker=context.speaker,
+                    patient_target=context.patient_target, position=position + len(clause)) != "patient"):
+            return []
+    return clauses
+
+
 def reconcile_extractive_fields(
     fields: MedicalRecordFields,
     trusted_segments: list[dict[str, Any]] | None,
+    *,
+    source: str,
 ) -> tuple[MedicalRecordFields, dict[str, dict[str, Any]]]:
-    """Replace model paraphrases with uniquely matched, role-safe source quotes.
+    """Bind already supported extracts to reviewed audio segment identities.
 
     The language model is still responsible for selecting the fields and spans.
-    This function only canonicalizes a selected span when it maps to exactly one
-    reviewed source segment. Unsupported spans are removed from the field value
-    instead of being allowed to survive as a paraphrase. The normal grounding
-    gate runs afterwards and remains authoritative.
+    Validate the original value and citations before binding identity/timing.
+    Keep selected values, quote text and original sentence indices unchanged:
+    expanding them to a whole audio segment mixes independent clinical fields.
+    Invalid fields remain intact and conflicting for review. The normal
+    grounding gate runs again against the resulting audio references.
     """
 
     if not trusted_segments:
         return fields, {}
 
+    # Validate a copy: ground_fields may bind segment IDs. Preserve the model's
+    # original values/spans on a rejected field, including its incorrect index.
+    original_check = ground_fields(fields.model_copy(deep=True), source, trusted_segments)
     repairs: dict[str, dict[str, Any]] = {}
     for key in FIELD_KEYS:
         field = getattr(fields, key)
+        checked = getattr(original_check, key)
+        if checked.status == "conflicting":
+            field.status = "conflicting"
+            field.hint = checked.hint
+            repairs[key] = {
+                "strategy": "preserve_original_conflict",
+                "original_value_changed": False,
+                "original_validation_reason": checked.hint,
+            }
+            continue
         if not field.value or not field.source_spans:
             continue
 
@@ -71,15 +167,15 @@ def reconcile_extractive_fields(
                 continue
 
             segment_id = str(segment.get("segment_id") or "") or None
-            dedupe_key = (segment_id, text)
+            dedupe_key = (segment_id, span_text)
             if dedupe_key in seen:
                 continue
             seen.add(dedupe_key)
             canonical.append(
                 SourceSpan(
-                    text=text,
+                    text=span.text,
                     segment_id=segment_id,
-                    index=None,
+                    index=span.index,
                     start_time=segment.get("start_time"),
                     end_time=segment.get("end_time"),
                 )
@@ -107,8 +203,6 @@ def reconcile_extractive_fields(
             }
             continue
 
-        original_value = field.value
-        field.value = "；".join(span.text.rstrip("，,。；; ") for span in canonical)
         field.source_spans = canonical
         field.missing = False
         if rejected:
@@ -120,8 +214,8 @@ def reconcile_extractive_fields(
             field.status = "complete"
             field.hint = None
         repairs[key] = {
-            "strategy": "canonical_source_quotes",
-            "original_value_changed": compact(original_value) != compact(field.value),
+            "strategy": "bind_source_identity",
+            "original_value_changed": False,
             "accepted_span_count": len(canonical),
             "rejected_span_count": len(rejected),
             "rejected_reasons": sorted(set(rejected)),
@@ -131,6 +225,7 @@ def reconcile_extractive_fields(
 
 def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: list[dict] | None = None) -> MedicalRecordFields:
     segments = split_clinical_segments(source)
+    contexts = clinical_segment_contexts(source)
     for key in FIELD_KEYS:
         field = getattr(fields, key)
         field.confirmed_by_doctor = False
@@ -139,6 +234,7 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
         if not field.value:
             continue
         errors = []
+        guardian_child_quotes: set[str] = set()
         if field.missing:
             errors.append("非空字段不能标记为未提及")
         if not field.source_spans and not manual_doctor_edit:
@@ -169,12 +265,46 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
                 else:
                     errors.append("引用匹配多个音频片段，必须明确片段身份")
             context = segments[span.index] if span.index is not None and 0 <= span.index < len(segments) else "\n".join(matching)
+            errors.extend(treatment_grounding_errors(field.value, context, previous_treatment=key == "previous_treatment"))
+            matching_contexts = [c for c in contexts if span.text and compact(span.text) in compact(c.text)]
+            if span.index is not None:
+                matching_contexts = [c for c in matching_contexts if c.index == span.index]
+            guardian_child_quote = _guardian_child_quote(span.text, matching_contexts)
+            if guardian_child_quote:
+                guardian_child_quotes.add(span.text)
+            if any(c.question for c in matching_contexts):
+                errors.append("未回答的提问不能作为患者事实")
+            selected_child = _selected_child_clauses(field.value, span.text, matching_contexts)
+            subject_clauses = selected_child or re.split(r"[，,。；;\n]+", span.text)
+            for clause in subject_clauses:
+                if clause.strip() and any(clinical_experiencer(c.text, speaker=c.speaker, patient_target=c.patient_target, position=c.text.find(clause) + len(clause)) in {"family", "other", "unknown"} for c in matching_contexts):
+                    # No disease lookup: even an unfamiliar family condition is rejected.
+                    errors.append("家属或他人事实不能归入患者本人字段，需医生核对归属")
             if re.search(r"(?:医生|医师|doctor)[\]】\s：:].*(?:吗|么|有没有|是否|[?？])", context, re.I):
                 errors.append("医生提问不能作为患者事实")
             if re.search(r"忽略.{0,12}(?:规则|指令|提示)|(?:伪造|编造).{0,12}(?:病历|症状|诊断)|绕过.{0,12}(?:审核|审批)|ignore.{0,20}instructions", context, re.I):
                 errors.append("转写中的操作指令不能作为患者事实")
-            for token in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子", "昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏", "不确定", "不知道"):
-                if token in context and token not in field.value:
+            # A leading role label identifies the speaker, not the experiencer.
+            # Exclude only that label from qualifier checks; never edit the
+            # source/quote or relax trusted audio role checks above. First-person
+            # and unspecified family statements remain ineligible patient facts.
+            family_statement = re.fullmatch(
+                r"\s*(?:(?:家属|家长)\s*[:：]|\[(?:家属|家长)\]\s*[:：]?|【(?:家属|家长)】\s*[:：]?)\s*(.+)",
+                context, re.S,
+            )
+            if family_statement:
+                context = family_statement.group(1)
+                referent = re.match(r"(?:患者|病人|她|他)", context)
+                if not guardian_child_quote and (not referent or referent.group(0) not in field.value):
+                    errors.append("家属发言缺少明确且保留的患者主体，需医生核对归属")
+                if re.search(r"吗|么|有没有|是否|[?？]", context):
+                    errors.append("家属提问不能作为已确认的患者事实")
+            time_context = _treatment_time_scope(field.value, context) if key == "previous_treatment" else context
+            for token in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子", *_TIME_QUALIFIERS, "不确定", "不知道"):
+                if token == "孩子" and guardian_child_quote:
+                    continue
+                qualifier_context = time_context if token in _TIME_QUALIFIERS else context
+                if token in qualifier_context and token not in field.value:
                     errors.append("引用截断了主体、时间、确定性或状态限定")
             for symptom in ("发热", "发烧", "咳嗽", "胸痛", "气促", "呼吸困难", "过敏", "高血压", "糖尿病"):
                 if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, context) and not re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, field.value):
@@ -190,6 +320,11 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
             continue
         # Require extractive clauses. Negation, subject, time, numbers and units
         # therefore survive unchanged; confidence cannot override this gate.
+        # These seven fields describe the patient. An accurately quoted family
+        # fact still belongs to another person, even if the model kept “父亲”.
+        # Retain it for review; do not silently move, rewrite or approve it.
+        if any(fact.experiencer in {"family", "other"} for fact in extract_clinical_facts(field.value)) and not any(c.patient_target == "child" and c.speaker in {"家属", "家长"} for c in contexts):
+            errors.append("家属或他人事实不能归入患者本人字段，需医生核对归属")
         clauses = [x for x in re.split(r"[，,。；;\n]+", field.value) if x.strip()]
         if not clauses or any(compact(x) not in compact(evidence) for x in clauses):
             errors.append("字段改写不能由引用逐项支持，需医生修正")
@@ -197,10 +332,14 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
             if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, evidence) and not re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, field.value):
                 errors.append("否定状态与证据矛盾")
         for subject in ("父亲", "母亲", "家属", "孩子", "丈夫", "妻子"):
-            if subject in evidence and subject not in field.value:
+            subject_required = any(subject in span.text and not (
+                subject == "孩子" and span.text in guardian_child_quotes
+            ) for span in field.source_spans)
+            if subject_required and subject not in field.value:
                 errors.append("主体归属丢失，不能写成患者本人事实")
-        for timing in ("昨天", "既往", "曾经", "以前", "已缓解", "已退热", "已停止", "已经脱敏"):
-            if timing in evidence and timing not in field.value:
+        time_evidence = _treatment_time_scope(field.value, evidence) if key == "previous_treatment" else evidence
+        for timing in _TIME_QUALIFIERS:
+            if timing in time_evidence and timing not in field.value:
                 errors.append("时间或状态限定丢失")
         for uncertainty in ("不确定", "不知道", "说不清", "可能", "疑似"):
             if uncertainty in evidence and uncertainty not in field.value:

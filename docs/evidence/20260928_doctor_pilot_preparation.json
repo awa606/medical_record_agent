@@ -1,0 +1,744 @@
+{
+  "date": "2026-09-28",
+  "wbs": "5.1",
+  "status": "VERIFY",
+  "production_changed": false,
+  "app_git_sha": "ee0b5f0a84461fd7d531cf54de4e16c2ce6588a1",
+  "experiment_base_sha": "875fb99912b33a50e3fc4d264bd14b6a4cf02ca1",
+  "model": "qwen3:4b",
+  "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+  "parameters": {
+    "temperature": 0,
+    "num_ctx": 8192,
+    "num_predict": 2048,
+    "think": false,
+    "llm_max_retries": 0
+  },
+  "candidates": [
+    {
+      "candidate": 1,
+      "script_sha256": "74b1f4c0c9e67e37e3baf8e5d7def282ca823315f814fa5626f14b77c09390a0",
+      "known_inputs": [
+        {
+          "input_id": "realtek13",
+          "repeat": 1,
+          "passed": false,
+          "grounded": [
+            "present_illness",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "present_illness",
+            "allergy_history"
+          ],
+          "seconds": 92.17
+        },
+        {
+          "input_id": "realtek13",
+          "repeat": 2,
+          "passed": false,
+          "grounded": [
+            "present_illness",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "present_illness",
+            "allergy_history"
+          ],
+          "seconds": 8.36
+        },
+        {
+          "input_id": "realtek13",
+          "repeat": 3,
+          "passed": false,
+          "grounded": [
+            "present_illness",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "present_illness",
+            "allergy_history"
+          ],
+          "seconds": 8.35
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 1,
+          "passed": true,
+          "grounded": [],
+          "valid_citations": [],
+          "seconds": 6.2
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 2,
+          "passed": true,
+          "grounded": [],
+          "valid_citations": [],
+          "seconds": 5.89
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 3,
+          "passed": true,
+          "grounded": [],
+          "valid_citations": [],
+          "seconds": 6.05
+        }
+      ],
+      "decision": "REJECTED",
+      "reason": "主诉及伴随症状漏提"
+    },
+    {
+      "candidate": 2,
+      "script_sha256": "579de8461486858fa53ff3437ff29e542c26096f0e0bce279ac740ba84a34c8f",
+      "known_inputs": [
+        {
+          "input_id": "realtek13",
+          "repeat": 1,
+          "passed": false,
+          "grounded": [
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "seconds": 10.32
+        },
+        {
+          "input_id": "realtek13",
+          "repeat": 2,
+          "passed": false,
+          "grounded": [
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "seconds": 9.35
+        },
+        {
+          "input_id": "realtek13",
+          "repeat": 3,
+          "passed": false,
+          "grounded": [
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "seconds": 8.97
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 1,
+          "passed": true,
+          "grounded": [],
+          "valid_citations": [],
+          "seconds": 6.11
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 2,
+          "passed": true,
+          "grounded": [],
+          "valid_citations": [],
+          "seconds": 5.88
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 3,
+          "passed": true,
+          "grounded": [],
+          "valid_citations": [],
+          "seconds": 6.04
+        }
+      ],
+      "decision": "REJECTED",
+      "reason": "主诉漏提"
+    },
+    {
+      "candidate": 3,
+      "script_sha256": "e2d9e62381e69e066e729a6c198adaa4b2ea934b84449ccf9e84d71c4be684bc",
+      "known_inputs": [
+        {
+          "input_id": "realtek13",
+          "repeat": 1,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "seconds": 76.0
+        },
+        {
+          "input_id": "realtek13",
+          "repeat": 2,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "seconds": 10.25
+        },
+        {
+          "input_id": "realtek13",
+          "repeat": 3,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "seconds": 10.11
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 1,
+          "passed": true,
+          "grounded": [],
+          "valid_citations": [],
+          "seconds": 5.9
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 2,
+          "passed": true,
+          "grounded": [],
+          "valid_citations": [],
+          "seconds": 6.12
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 3,
+          "passed": true,
+          "grounded": [],
+          "valid_citations": [],
+          "seconds": 5.87
+        }
+      ],
+      "decision": "REJECTED",
+      "reason": "多个原本正确的主诉变为空，验证例35还把过敏史放入既往处理",
+      "splits": {
+        "development": {
+          "historical_baseline": {
+            "cases": 30,
+            "schema_valid": 30,
+            "nonempty_fields": 58,
+            "grounded_fields": 54,
+            "conflicting_fields": 4,
+            "expected_facts": 72,
+            "recovered_facts": 49,
+            "p95_seconds": 8.918,
+            "max_seconds": 11.668,
+            "mock_fallback_count": 0
+          },
+          "candidate": {
+            "cases": 30,
+            "schema_valid": 30,
+            "nonempty_fields": 43,
+            "grounded_fields": 40,
+            "conflicting_fields": 3,
+            "expected_facts": 72,
+            "recovered_facts": 49,
+            "p95_seconds": 9.194,
+            "max_seconds": 13.177,
+            "mock_fallback_count": 0
+          },
+          "report_sha256": "307d9027cffa3b656315cb01b0c5ed8d75db914e5f9076f4598981833b01b57e"
+        },
+        "validation": {
+          "historical_baseline": {
+            "cases": 10,
+            "schema_valid": 10,
+            "nonempty_fields": 18,
+            "grounded_fields": 15,
+            "conflicting_fields": 3,
+            "expected_facts": 21,
+            "recovered_facts": 10,
+            "p95_seconds": 7.073,
+            "max_seconds": 7.073,
+            "mock_fallback_count": 0
+          },
+          "candidate": {
+            "cases": 10,
+            "schema_valid": 10,
+            "nonempty_fields": 13,
+            "grounded_fields": 12,
+            "conflicting_fields": 1,
+            "expected_facts": 21,
+            "recovered_facts": 10,
+            "p95_seconds": 6.903,
+            "max_seconds": 6.903,
+            "mock_fallback_count": 0
+          },
+          "report_sha256": "f87df0c9025ea0b1ff505e6cc3b7707d7044ae18738271692de82d7da9e99ce0"
+        },
+        "frozen": {
+          "historical_baseline": {
+            "cases": 20,
+            "schema_valid": 20,
+            "nonempty_fields": 38,
+            "grounded_fields": 32,
+            "conflicting_fields": 6,
+            "expected_facts": 43,
+            "recovered_facts": 29,
+            "p95_seconds": 6.72,
+            "max_seconds": 49.782,
+            "mock_fallback_count": 0
+          },
+          "candidate": {
+            "cases": 20,
+            "schema_valid": 20,
+            "nonempty_fields": 26,
+            "grounded_fields": 25,
+            "conflicting_fields": 1,
+            "expected_facts": 43,
+            "recovered_facts": 29,
+            "p95_seconds": 7.332,
+            "max_seconds": 8.383,
+            "mock_fallback_count": 0
+          },
+          "report_sha256": "b8f5b4f416d9b3e68f06cdf17cacc6c8c8adbd9612e068d2c3dde9d0bf1122a4"
+        }
+      }
+    },
+    {
+      "candidate": 4,
+      "script_sha256": "a2e47f9dfa16faf368cd846ab7689ce5e6ec86a1a8141afb94d4833f18dde799",
+      "known_inputs": [
+        {
+          "input_id": "realtek13",
+          "repeat": 1,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "seconds": 8.67
+        },
+        {
+          "input_id": "realtek13",
+          "repeat": 2,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "seconds": 5.75
+        },
+        {
+          "input_id": "realtek13",
+          "repeat": 3,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness",
+            "accompanying_symptoms",
+            "allergy_history"
+          ],
+          "seconds": 5.79
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 1,
+          "passed": true,
+          "grounded": [],
+          "valid_citations": [],
+          "seconds": 3.68
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 2,
+          "passed": true,
+          "grounded": [
+            "present_illness"
+          ],
+          "valid_citations": [
+            "present_illness"
+          ],
+          "seconds": 4.19
+        },
+        {
+          "input_id": "dev006",
+          "repeat": 3,
+          "passed": true,
+          "grounded": [
+            "present_illness"
+          ],
+          "valid_citations": [
+            "present_illness"
+          ],
+          "seconds": 4.06
+        },
+        {
+          "input_id": "dev001",
+          "repeat": 1,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "seconds": 4.76
+        },
+        {
+          "input_id": "dev001",
+          "repeat": 2,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "seconds": 4.69
+        },
+        {
+          "input_id": "dev001",
+          "repeat": 3,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "seconds": 4.81
+        },
+        {
+          "input_id": "dev004",
+          "repeat": 1,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "seconds": 4.7
+        },
+        {
+          "input_id": "dev004",
+          "repeat": 2,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "seconds": 4.66
+        },
+        {
+          "input_id": "dev004",
+          "repeat": 3,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "seconds": 4.72
+        },
+        {
+          "input_id": "dev005",
+          "repeat": 1,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "seconds": 4.37
+        },
+        {
+          "input_id": "dev005",
+          "repeat": 2,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "seconds": 4.38
+        },
+        {
+          "input_id": "dev005",
+          "repeat": 3,
+          "passed": true,
+          "grounded": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "valid_citations": [
+            "chief_complaint",
+            "present_illness"
+          ],
+          "seconds": 4.32
+        }
+      ],
+      "decision": "REJECTED",
+      "reason": "验证例35把过敏史放入既往处理；若干明确主诉漏提",
+      "splits": {
+        "development": {
+          "historical_baseline": {
+            "cases": 30,
+            "schema_valid": 30,
+            "nonempty_fields": 58,
+            "grounded_fields": 54,
+            "conflicting_fields": 4,
+            "expected_facts": 72,
+            "recovered_facts": 49,
+            "p95_seconds": 8.918,
+            "max_seconds": 11.668,
+            "mock_fallback_count": 0
+          },
+          "candidate": {
+            "cases": 30,
+            "schema_valid": 30,
+            "nonempty_fields": 56,
+            "grounded_fields": 53,
+            "conflicting_fields": 3,
+            "expected_facts": 72,
+            "recovered_facts": 49,
+            "p95_seconds": 5.655,
+            "max_seconds": 6.52,
+            "mock_fallback_count": 0
+          },
+          "report_sha256": "a9d35776bb26726dcfa636fa1ac7c05425acdb0853826e32f4bcdf3116caffb5"
+        },
+        "validation": {
+          "historical_baseline": {
+            "cases": 10,
+            "schema_valid": 10,
+            "nonempty_fields": 18,
+            "grounded_fields": 15,
+            "conflicting_fields": 3,
+            "expected_facts": 21,
+            "recovered_facts": 10,
+            "p95_seconds": 7.073,
+            "max_seconds": 7.073,
+            "mock_fallback_count": 0
+          },
+          "candidate": {
+            "cases": 10,
+            "schema_valid": 10,
+            "nonempty_fields": 17,
+            "grounded_fields": 15,
+            "conflicting_fields": 2,
+            "expected_facts": 21,
+            "recovered_facts": 10,
+            "p95_seconds": 7.002,
+            "max_seconds": 7.002,
+            "mock_fallback_count": 0
+          },
+          "report_sha256": "ffc9046e9092821fbf614593c338c623b779bebd9f09e5fe6b4adc52f4c09d63"
+        },
+        "frozen": {
+          "historical_baseline": {
+            "cases": 20,
+            "schema_valid": 20,
+            "nonempty_fields": 38,
+            "grounded_fields": 32,
+            "conflicting_fields": 6,
+            "expected_facts": 43,
+            "recovered_facts": 29,
+            "p95_seconds": 6.72,
+            "max_seconds": 49.782,
+            "mock_fallback_count": 0
+          },
+          "candidate": {
+            "cases": 20,
+            "schema_valid": 20,
+            "nonempty_fields": 34,
+            "grounded_fields": 33,
+            "conflicting_fields": 1,
+            "expected_facts": 43,
+            "recovered_facts": 29,
+            "p95_seconds": 7.858,
+            "max_seconds": 8.41,
+            "mock_fallback_count": 0
+          },
+          "report_sha256": "4ecc3b2bd2f2f25438d1f3d22fd1a32e548cbe44d2825c2001c25ec2488f1d41"
+        }
+      }
+    }
+  ],
+  "rules": {
+    "dataset": "data\\semantic_safety\\clinical_assertion_v1.jsonl",
+    "case_count": 240,
+    "expected_fact_count": 206,
+    "matched_fact_count": 206,
+    "exact_case_count": 240,
+    "exact_case_rate": 1.0,
+    "dangerous_polarity_flips": 0,
+    "unsupported_fact_count": 0,
+    "missing_fact_count": 0,
+    "question_leakage_count": 0,
+    "experiencer_errors": 0,
+    "temporality_errors": 0,
+    "certainty_errors": 0,
+    "value_unit_errors": 0,
+    "category_counts": {
+      "allergy_absent": 20,
+      "allergy_double_negative": 20,
+      "allergy_family": 20,
+      "allergy_present": 20,
+      "allergy_question": 20,
+      "allergy_question_answer_absent": 20,
+      "allergy_resolved": 20,
+      "allergy_uncertain": 20,
+      "symptom_absent": 10,
+      "symptom_family": 10,
+      "symptom_present": 10,
+      "symptom_question": 10,
+      "symptom_resolved": 10,
+      "symptom_uncertain": 10,
+      "temperature_question": 10,
+      "temperature_value": 10
+    },
+    "failure_counts": {},
+    "safety_gate_pass": true
+  },
+  "workflow": {
+    "scope": "real local Qwen text workflow with explicit scripted doctor correction, not clinical review",
+    "status": "passed",
+    "encounter_id": 8,
+    "task_id": 7,
+    "initial_revision": {
+      "revisionId": 14,
+      "revisionNumber": 3,
+      "contentHash": "c451367588e8c37b741391d66fffc0fb25846280e7ca4c5d12d7c83a38e12a10"
+    },
+    "initial_field_statuses": {
+      "chief_complaint": "partial",
+      "present_illness": "complete",
+      "previous_treatment": "missing",
+      "accompanying_symptoms": "complete",
+      "past_history": "missing",
+      "allergy_history": "complete",
+      "physical_exam": "missing"
+    },
+    "unapproved_export_http": 400,
+    "saved_revision": {
+      "revisionId": 15,
+      "revisionNumber": 4,
+      "contentHash": "10ae0e8f0e62aea57de26f0cfde10b244bbd3f603bd2ea14ee1d1489bce16313"
+    },
+    "manual_edit_count": 1,
+    "knowledge_drawer": true,
+    "docx_sha256": "52e3b25332665b2b6a7c6b4f79a717ee28ce500f48983627afbb84dbc011e703",
+    "export_contents_checked": true,
+    "reopened": {
+      "encounter_id": 8,
+      "task_id": 7,
+      "stage": "exported",
+      "revision": {
+        "revisionId": 15,
+        "revisionNumber": 4,
+        "contentHash": "10ae0e8f0e62aea57de26f0cfde10b244bbd3f603bd2ea14ee1d1489bce16313"
+      },
+      "chief": "患者今天发热三十八点二度，伴有咳嗽和咽痛，没有胸痛，也没有药物过敏史。"
+    },
+    "manual_edit_scope": "本例从Revision12到15累计3次脚本模拟医生保存，均为同一主诉字段；最终通过流程从14到15。首次模型冲突保留。"
+  },
+  "pytest": {
+    "full_passed": 605,
+    "skipped": 1,
+    "warning": "Starlette/httpx deprecation",
+    "launcher_targeted_after_final_edits": 15
+  },
+  "release_gate": "NEEDS_VALIDATION",
+  "not_executed": [
+    "new physical microphone path",
+    "actual display zoom",
+    "final version isolated restore",
+    "5.3 five consecutive E2E",
+    "clinical validation"
+  ],
+  "private_evidence_root": ".artifacts/doctor-pilot-v1-20260928",
+  "controller_restart": {
+    "tables_checked": 30,
+    "unchanged": true,
+    "changed": [],
+    "idempotent_start": true
+  }
+}

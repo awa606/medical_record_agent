@@ -1,0 +1,61 @@
+{
+  "schema_version": "mra-alpha51-preview-evidence-v3.2",
+  "recorded_at": "2026-09-23T17:02:36+08:00",
+  "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
+  "branch": "codex/alpha51-demo-visual-e2e",
+  "previous_version_commit": "8bf700c",
+  "user_feedback": "三栏目前问题不大，三栏上方，模拟患者上下这个部分需要调整",
+  "visual_review": "NEEDS_ADJUSTMENT",
+  "baseline_approved": false,
+  "research_gate": "NEEDS_MORE_EVIDENCE",
+  "design_gate": "NEEDS_VALIDATION",
+  "changes": [
+    "三栏字体、间距、比例和内容保持V3.1",
+    "患者/就诊信息与五步流程合为一个区域",
+    "样稿标记和场景选择移入顶栏，保留未执行真实模型提示"
+  ],
+  "tests": {
+    "command": "npm test --prefix tests/visual",
+    "stats": {
+      "startTime": "2026-09-23T09:00:33.018Z",
+      "duration": 31572.928,
+      "expected": 68,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "report_sha256": "e45b97ae603ef0dedb1047710e4374a521d7249fccea820c82ebaaf9c194dd4e",
+    "viewports": [
+      [
+        1366,
+        768
+      ],
+      [
+        1440,
+        900
+      ],
+      [
+        1920,
+        1080
+      ],
+      [
+        1000,
+        720
+      ]
+    ]
+  },
+  "source_sha256": {
+    "docs/prototypes/doctor-workspace-v3/index.html": "0cca4a7f090a056939dd77b17039ee41d0c6c554278f9b6f23c23c84be011883",
+    "docs/prototypes/doctor-workspace-v3/README.md": "22b546d1b2c041aa7ae3abd417c0c28d1e4b6e8ed3d9ceae28079a63ada2976b",
+    "docs/prototypes/doctor-workspace-v3/workspace.css": "394ab433863b7d6488a6cab4690be8fb37afcb36105b4fb24a2c318e634ce753",
+    "docs/prototypes/doctor-workspace-v3/workspace.js": "197fadf000ea156bd4a1f93829b1438437cda6e14b44734cee393f4e01b72276"
+  },
+  "test_source_sha256": "aac22214d98df5ba9b113be5e33d93dc65ab030736b8a7651720350e9f7e52bd",
+  "visual_inspection": "1440x900及1000x720开发测试截图已查看；Edge已确认V3.2。实际125%/150%缩放及Chrome验收尚未完成。",
+  "production_files_changed": false,
+  "real_model_e2e": "NOT_TESTED",
+  "offline_restore": "NOT_TESTED",
+  "official_wbs_status": "backlog",
+  "next_task": "确认V3.2顶部与整页布局；认可后固定截图并接既有业务",
+  "user_feedback_on_v32": "字太小，不能与其他模块做区分，每个部分的边界不清晰；场景不符合医生点击录音后专心问诊、再查看病历的流程"
+}

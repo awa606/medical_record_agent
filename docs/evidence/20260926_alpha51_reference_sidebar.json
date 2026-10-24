@@ -1,0 +1,90 @@
+{
+  "recorded_at": "2026-09-26T23:24:49+08:00",
+  "wbs": "5.1",
+  "base_sha": "5d1080e0ccd7ddab936e3509aa3281bc88535b7e",
+  "branch": "codex/alpha51-demo-visual-e2e",
+  "pr": 113,
+  "implementation": "existing doctor.html, native frontend; backend/API/DB/providers unchanged",
+  "fixture": "anonymous synthetic long-content case on real page and local test API; not real model or physical microphone evidence",
+  "full_pytest": {
+    "passed": 549,
+    "subtests_passed": 8,
+    "seconds": 267.48,
+    "log_sha256": "0136c6985f71dbcab6084db99661199ee5086cf1961e9cfb4fd18e77facbaaef"
+  },
+  "chrome_regression": {
+    "passed": 8,
+    "mode": "installed Chrome headless",
+    "log_sha256": "fb1ebd118239b948f7e3566c13700007693fab3b03a1f5dd863164a269648497"
+  },
+  "prototype_checks": {
+    "passed": 76,
+    "scope": "unchanged prototype regression, not current real page visual acceptance",
+    "log_sha256": "607631ed7e6e3f2494fe9dc2a576e7cab86dd77f9a2cb394fd2d216b8b30e1da"
+  },
+  "viewports": [
+    [
+      1366,
+      768
+    ],
+    [
+      1440,
+      900
+    ],
+    [
+      1920,
+      1080
+    ],
+    [
+      1093,
+      614
+    ],
+    [
+      910,
+      512
+    ]
+  ],
+  "actual_edge_zoom": "NOT VERIFIED: Windows Computer Use URL safety check stopped interactive control; no bypass",
+  "visual_approval": "PENDING",
+  "baseline_updated": false,
+  "task_status": "VERIFY",
+  "new_release_created": false,
+  "docker": "unavailable named pipe; no container or frozen archive change",
+  "local_artifacts": ".artifacts/alpha51-reference-20260926",
+  "screenshots": {
+    "after-1093.png": {
+      "sha256": "7076165a3d45379614840bc30e1f4dd274a7c8908f8558647aa720a7042dacf7",
+      "bytes": 250939
+    },
+    "after-1366.png": {
+      "sha256": "42623167f9d7210ee99940c43f3fc2893e17ee55d541799950a06f4813977055",
+      "bytes": 112227
+    },
+    "after-1440.png": {
+      "sha256": "d076bfa87c84bf08666e9092e4213204e2c305cab3fcae8daea59e2af0b56189",
+      "bytes": 122696
+    },
+    "after-1920.png": {
+      "sha256": "65a72ea65a9d7ef1e457665bf999f96b68f02665b6ba52b36d165b1fd8a734ae",
+      "bytes": 134466
+    },
+    "after-910.png": {
+      "sha256": "36468fd672100a60c6b7d231aa7f3fdc0067978f339b73d91d6a536b8dbadb56",
+      "bytes": 244892
+    },
+    "before-1440.png": {
+      "sha256": "f30ac48720df80cfadedacfdb4a4b72ba641de0224c4b6a4e402d7d1b2085623",
+      "bytes": 144959
+    }
+  },
+  "source_sha256": {
+    "static/doctor.js": "7ad7914b32b29d10d49f88b0b2dabc7b6e58ff4eab2ec99b54903d817af2c7ca",
+    "static/doctor.html": "66d49dea86f9a46f7c51a122430a6756d64aa2ca329170e0268704e01f6d7c64",
+    "static/doctor-ui-v2.css": "fc392b5ac8f4be9629b7a7527972942f4c90fc33ebdfb8753bfe553e4a717de3"
+  },
+  "failed_runs_retained": [
+    "full-pytest.txt: 3 failed / 546 passed; stale presentation assertions and test fixture NameError",
+    "final-pytest.txt: 3 failed / 546 passed; ERR_UNSAFE_PORT, fixture bypassing drawer opening and loaded stale assertion"
+  ],
+  "next": "Review new layout and actual Edge 125%/150%; then rebuild/restore matching release candidate before 5.1 DONE"
+}

@@ -1,0 +1,276 @@
+{
+  "schema": "mra-review-quality-v1",
+  "date": "2026-09-27",
+  "wbs": "5.1",
+  "gate": "VERIFY",
+  "input_audio": {
+    "input_sha256": "c58c6ff5b5437a2152a2472d2cd8e10be64b42dc213bb3157611ee4333fa732c",
+    "audio_id": "eb8bafb12f2740dca9b16aa242da8b2f",
+    "shape": {
+      "sample_rate": 48000,
+      "channels": 1,
+      "sample_width": 2,
+      "frames": 643072,
+      "duration": 13.397333333333334
+    },
+    "backend": "funasr",
+    "engine": "funasr-paraformer-zh",
+    "request_id": "56280b0481c9489690568c51d62d6a4c",
+    "rtf": 0.4212,
+    "processing_seconds": 5.2212,
+    "wall_seconds": 6.741,
+    "role_quality": {
+      "status": "blocked",
+      "reasons": [
+        "存在待确认的整位说话人角色，生成病历前需要一次全局确认。",
+        "人工确认率超过说话人角色质量策略阈值。",
+        "单人输入不能伪造成医生和患者两人对话。"
+      ],
+      "metrics": {
+        "segment_count": 1,
+        "speaker_count": 1,
+        "speaker_ids": [
+          "spk0"
+        ],
+        "speaker_assignment_count": 1,
+        "low_confidence_clinical_role_count": 0,
+        "unmapped_speaker_count": 0,
+        "unresolved_assignment_count": 1,
+        "mixed_utterance_candidate_count": 0,
+        "mixed_utterance_candidate_rate": 0.0,
+        "manual_confirmation_rate": 1.0,
+        "role_accuracy": null,
+        "auto_accept_accuracy": null,
+        "auto_accept_coverage": 0.0,
+        "auto_accept_count": 0,
+        "high_confidence_error_count": 0,
+        "confidence_threshold": 0.9,
+        "max_manual_confirmation_rate": 0.35,
+        "max_mixed_utterance_rate": 0.05
+      },
+      "policy_version": "speaker-role-policy-v1",
+      "decisions": [
+        {
+          "speaker_id": "spk0",
+          "provider": "rules",
+          "provider_version": "rules-v1",
+          "policy_version": "speaker-role-policy-v1",
+          "raw_confidence": 0.0,
+          "calibrated_confidence": 0.0,
+          "predicted_role": "其他",
+          "reason_code": "single_speaker_counterexample",
+          "action": "blocked"
+        }
+      ],
+      "pending_confirmation": [
+        {
+          "speaker_id": "spk0",
+          "provider": "rules",
+          "provider_version": "rules-v1",
+          "policy_version": "speaker-role-policy-v1",
+          "raw_confidence": 0.0,
+          "calibrated_confidence": 0.0,
+          "predicted_role": "其他",
+          "reason_code": "single_speaker_counterexample",
+          "action": "blocked"
+        }
+      ],
+      "low_confidence_clinical_roles": [],
+      "unmapped_speakers": [],
+      "unresolved_assignments": [
+        {
+          "speaker_id": "spk0",
+          "provider": "rules",
+          "provider_version": "rules-v1",
+          "policy_version": "speaker-role-policy-v1",
+          "raw_confidence": 0.0,
+          "calibrated_confidence": 0.0,
+          "predicted_role": "其他",
+          "reason_code": "single_speaker_counterexample",
+          "action": "blocked"
+        }
+      ],
+      "mixed_utterance_candidates": []
+    },
+    "raw_result_sha256": "2369dbee2a24b702ca37115fe447074aa974dea7cafd883363f6862ee81f9304",
+    "input_kind": "reused_real_Realtek_capture_not_new_microphone_test",
+    "signal": {
+      "peak_dbfs": -0.772,
+      "rms_dbfs": -25.595,
+      "clipped_sample_fraction": 0.0,
+      "note": "Amplitude checks only; not calibrated SNR or clinical completeness"
+    }
+  },
+  "paired_extraction": {
+    "same_case_id": "Realtek-fever-13s",
+    "manual_equals_asr": true,
+    "cer": 0.0,
+    "expected_populated_fields": [
+      "chief_complaint",
+      "present_illness",
+      "accompanying_symptoms",
+      "allergy_history"
+    ],
+    "runs": [
+      {
+        "input": "manual",
+        "first_raw_nonempty_expected_fields": [
+          "chief_complaint",
+          "present_illness",
+          "accompanying_symptoms",
+          "allergy_history"
+        ],
+        "grounded_nonempty_expected_fields": [
+          "present_illness",
+          "accompanying_symptoms",
+          "allergy_history"
+        ],
+        "omitted_expected_fields": [
+          "chief_complaint"
+        ],
+        "conflicting_fields": [],
+        "latency_seconds": 52.934,
+        "first_output_calls": 1,
+        "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+        "fallback": false,
+        "private_result_sha256": "7549e651093e8b597bcf53b864cc85ba93540737a51407a005c541b61b7f3ff7",
+        "doctor_edits": 0
+      },
+      {
+        "input": "asr",
+        "first_raw_nonempty_expected_fields": [
+          "chief_complaint",
+          "present_illness",
+          "accompanying_symptoms",
+          "allergy_history"
+        ],
+        "grounded_nonempty_expected_fields": [
+          "present_illness",
+          "accompanying_symptoms",
+          "allergy_history"
+        ],
+        "omitted_expected_fields": [
+          "chief_complaint"
+        ],
+        "conflicting_fields": [],
+        "latency_seconds": 10.671,
+        "first_output_calls": 1,
+        "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+        "fallback": false,
+        "private_result_sha256": "d7fe1563f7b31e1523a9f91cfcfc1770f7e99ce6618280f337be20e4e86b9844",
+        "doctor_edits": 0
+      }
+    ],
+    "quality": "PARTIAL",
+    "failure_layer": "LLM citation text",
+    "failure": "chief_complaint citation contains malformed suffix; current grounding rejects it and leaves chief complaint missing",
+    "clinical_validation": false,
+    "role_assumption": "patient label fixed only in extraction unit comparison; API single-speaker gate remains unresolved"
+  },
+  "training_gate": "NEEDS MORE EVIDENCE",
+  "new_training": false,
+  "source_ui_baseline": "bdc24c9a32f83743f3b9e8184d8ba0398a66d1db",
+  "local_evidence": ".artifacts/alpha51-review-quality-20260927/",
+  "validation": {
+    "targeted_browser": "12 passed before final save-verification follow-up",
+    "editor_faults_final": "4 passed",
+    "full_suite": "585 passed; 8 subtests passed",
+    "observed_quote_regression": "56 passed including added observed failure",
+    "prototype": "76 passed, not visual approval",
+    "node_syntax": "passed",
+    "diff_check": "passed",
+    "preserved_tables": 11,
+    "static_resources": "HTTP SHA matches source ee0b5f0",
+    "native_zoom": "NOT_TESTED_THIS_RUN",
+    "physical_mic": "NOT_TESTED_THIS_RUN",
+    "snapshot_sources": "173 source hashes verified"
+  },
+  "release_status": "NOT_FROZEN",
+  "remaining": [
+    "final code physical microphone path",
+    "external display real zoom",
+    "same-version three paths and isolated recovery"
+  ],
+  "deployment": {
+    "health": 200,
+    "image": "sha256:79fb4046290ec25f3c056b03ff9a4f06edb9a4fb94dd7b79ce9100feb2cbe2d1",
+    "code_sha": "ee0b5f0a84461fd7d531cf54de4e16c2ce6588a1",
+    "resources": {
+      "doctor.html": "1b4eb543965168cfee00081443ec53cc1bf66180573afc4a5a660c1df94553c4",
+      "doctor.js": "83f6ef1e164c37da3c6aa608b48c35b7f756e6743211994be7a4c36162ac922b",
+      "doctor-workspace.css": "e3c46a32c8f363a3d7f5a8d29fe99e9d2580bfc139beb20cfb15b03698800c4b"
+    },
+    "anonymous_knowledge": 401,
+    "knowledge_health": {
+      "source_count": 5,
+      "document_count": 7,
+      "active_document_count": 4,
+      "chunk_count": 116,
+      "embedding_count": 96,
+      "audit_count": 3,
+      "index_available": true,
+      "embedding_model": "BAAI/bge-small-zh-v1.5"
+    },
+    "query_mode": "hybrid_v1",
+    "query_results": 5,
+    "single_speaker_generation": 409,
+    "historical_task3": {
+      "stage": "exported",
+      "revision_id": 7
+    },
+    "ready_http": 200
+  },
+  "workflow": {
+    "scope": "real local Qwen text workflow with explicit scripted doctor correction, not clinical review",
+    "status": "passed",
+    "initial_revision": {
+      "revisionId": 8,
+      "revisionNumber": 1,
+      "contentHash": "9717a33510e624f9aa94c7dba4b27e5467bc13b76551b531ed424b5a26a318ef"
+    },
+    "initial_field_statuses": {
+      "chief_complaint": "conflicting",
+      "present_illness": "complete",
+      "previous_treatment": "missing",
+      "accompanying_symptoms": "complete",
+      "past_history": "missing",
+      "allergy_history": "complete",
+      "physical_exam": "missing"
+    },
+    "unapproved_export_http": 400,
+    "saved_revision": {
+      "revisionId": 9,
+      "revisionNumber": 2,
+      "contentHash": "c5901e7595590c9aad0735e4ad881018c953c66761fbd28f105392edb532e083"
+    },
+    "manual_edit_count": 1,
+    "knowledge_drawer": true,
+    "docx_sha256": "30f21610ce6446a8c600feec70bd42780ba67d7df3b7dc7e00a948d32900a854",
+    "export_contents_checked": true,
+    "reopened": {
+      "encounter_id": 6,
+      "task_id": 5,
+      "stage": "exported",
+      "revision": {
+        "revisionId": 9,
+        "revisionNumber": 2,
+        "contentHash": "c5901e7595590c9aad0735e4ad881018c953c66761fbd28f105392edb532e083"
+      }
+    }
+  },
+  "screenshots": {
+    "after-review-same-case.png": "b75b36ea9731d381a5e4469c61709ae84e2f1ccd34a25eb7d87d0ddd2c6da699",
+    "before-review.png": "6b5591954f91ca9a625efba99b64c9df4bb704c82b43916c811b5862a4aafc01",
+    "first-model-conflict.png": "1894ba1559569d9364796e09d281fc0af5b92ea8d10bb29dc72fc8377187462c",
+    "knowledge-reference.png": "fc2d83d55e62204b8ce31930f621494b26e108eab7970f0e2139193a3b7a289a",
+    "review-exported-reopened.png": "22aebc9a52b40f2dde340bec133f003fdf620bc029e53664d38702c96f1e8ccf"
+  },
+  "next_task": "在开发集验证主诉引用错误的单变量修复，再独立复跑验证和冻结集；5.1保持VERIFY",
+  "pm_snapshot_at": "2026-09-27T19:49:09.077701+08:00",
+  "pm_snapshot_counts": {
+    "done": 8,
+    "verify": 3,
+    "blocked": 1,
+    "backlog": 4
+  }
+}

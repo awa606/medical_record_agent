@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}MediListen 数据与知识查看器（只读快照）{% endblock %}
+{% block content %}
+<h1>MediListen 数据与知识查看器 <span class="tag">只读快照</span></h1>
+<p class="intro">查看匿名就诊、病历版本和指南之间的关联。这里不能编辑病历或维护知识资料；这些操作请回到医生工作台或知识管理。</p>
+<section class="snapshot-context" aria-label="快照说明">
+  <strong>🔒 仅本机授权访问 · 不是实时数据库</strong>
+  <p>来源：{{ mra_context.source_label }}<br>采样时间：{{ mra_context.captured_at }}</p>
+  <p>需要最新数据时，在对应版本启动器中重新打开“数据与知识查看器”以刷新快照。停用资料保留供历史核对，不表示医生检索会使用。</p>
+</section>
+{% for heading, start, end, relation in [("就诊数据",0,7,"患者 → 就诊 → 病历版本 → 审核 → 导出"),("知识资料",7,11,"资料来源 → 文档版本 → 知识片段 → 语义索引")] %}
+<section class="catalog"><h2>{{ heading }}</h2><p class="relation">{{ relation }}</p><div class="catalog-grid">
+{% for key, info in mra_tables.items() %}{% if loop.index0 >= start and loop.index0 < end %}
+<a class="catalog-item" href="{{ urls.table('mra_snapshot',key) }}"><strong>{{ info[0] }}</strong><small class="technical">{{ key }}</small><span>{{ info[1] }}</span><span>{{ mra_context.counts.get(key,0) }} 条记录</span></a>
+{% endif %}{% endfor %}
+</div></section>{% endfor %}
+{% endblock %}

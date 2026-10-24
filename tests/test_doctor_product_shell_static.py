@@ -94,7 +94,7 @@ def test_medilisten_productized_shell_copy_and_failure_metadata() -> None:
 
     assert "<title>MediListen - AI 智能病历助手</title>" in html
     assert "<h1>MediListen</h1>" in html
-    assert "LISTEN · TRANSCRIBE · GENERATE · REVIEW" in html
+    assert "聆听 · 转写 · 整理 · 审核" in html
     assert 'id="transcriptionFailureCode"' in html
     assert 'id="transcriptionFailureStage"' in html
     assert 'id="transcriptionFailureAudioState"' in html
@@ -143,7 +143,7 @@ def test_demo_v2_state_consistency_markup_and_helpers() -> None:
     assert "转写服务暂时不可用" in js
     assert "请先重新转写或改用文本输入" in js
     assert "音频已安全保存" in js
-    assert "医生已确认未采集" in js
+    assert "医生确认本次未询问" in js
     assert "doctorFacingTranscriptionIssue() ||" in js
     assert "setTimeout" in js and "3800" in js
     assert "clearToast()" in js
@@ -198,14 +198,15 @@ def test_novice_workbench_uses_task_stats_and_recoverable_empty_actions() -> Non
     js = read_static("doctor.js")
     ui_css = read_static("doctor-ui-v2.css")
 
-    assert "dashboard-stat-card" in html
+    assert "dashboard-status-filters" in html
+    assert 'data-dashboard-filter="pendingReview"' in html
     assert "function encounterInputMethodLabel" in js
     assert "function encounterPhaseLabel" in js
     assert "pendingInput" in js
     assert "exceptions" in js
     assert "dashboard-empty-state" in js
-    assert 'data-input-method="audio"' in js
-    assert 'data-input-method="text"' in js
+    assert 'data-input-method="audio"' in html
+    assert 'data-input-method="text"' in html
     assert ".encounter-worklist-meta" in ui_css
     assert ".empty-state-actions" in ui_css
 

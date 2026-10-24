@@ -1,0 +1,10 @@
+{
+  "confirmed_synthetic": true,
+  "reviewed_by": "Codex: checked explicit synthetic preparation scripts and local evidence on 2026-09-28",
+  "synthetic_patient_ids": [
+    "SIM-DEMO-0929-FEVER",
+    "SIM-DEMO-0929-NEGATION",
+    "SIM-DEMO-0929-LIVE",
+    "SIM-RESTORE-0927-JSON"
+  ]
+}

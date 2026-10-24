@@ -8,24 +8,24 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-22T15:57:12+08:00`
-- Source hash: `655cbfebfe6ece0ef557ef2fac1cdb0c9fb6263eb7304fc5eb895f71ba4d82d8`
+- Updated at: `2026-10-24T16:43:47.233Z`
+- Source hash: `9e812bae5156e0091d5c2bea82faadf36b5fe6da55b52c9c7c64b448b247af19`
 - Phase: **Alpha**
-- Repo: `codex/alpha33-doctor-edit-review-export@b3374fd50b71e12f9e7a7eb5e3b410b6953455a4`
-- Base main: `b5cc5369ae9503f28910feca6b1d402add408671`
-- Active PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · DRAFT
-- Last merged PR: [#111](https://github.com/awa606/medical_record_agent/pull/111) · MERGED · `b5cc5369ae9503f28910feca6b1d402add408671`
-- Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
+- Repo: `codex/alpha51-demo-visual-e2e@db9985f423778ef6b78b311c57c21eedd6f279d5`
+- Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
+- Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
+- Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
+- Forecast Alpha Exit: **5.1仍VERIFY95%，5.3仍BACKLOG0%，M1至M4保持OPEN；16项99h、正式日期及硬件延期不变。当前为在线审核展示候选；局部约束兼容不等于本地模型质量或稳定医生试用通过。**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 5 | 0 | 0 | 1 | 2 | 8 | 99 |
+| 4 | 0 | 0 | 1 | 3 | 8 | 99 |
 
 ## Current Task
 
-**5.1 · 三条主路径E2E Smoke** — `BACKLOG`
+**5.1 · 项目内资源互斥后固定本地约束诊断3/3；现病史仍漏选，8798 DeepSeek原版恢复，新截图受工具阻断** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: WBS 5.1：文本、上传音频、浏览器录音三条完整路径E2E Smoke与首个可恢复冻结候选
-- Parallel waiting task: 1.2目标硬件验证继续DEFERRED，不占用当前软件支线
+- Single next task: 基于已保存三次响应验证合法事实的自主多字段覆盖；不部署强制非空，不重复旧提示词和已通过展示检查。
+- Parallel waiting task: 11月2日展示维持当前DeepSeek审核流程；硬件延期、离线生成、5.3连续五次和医院部署分别判断。
 
 ## Manual Actions
 
-- 无
+- 当前无需用户重复录音或病例。截图工具恢复后只补当前E25恢复状态图；不修改安全设置。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

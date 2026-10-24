@@ -1,0 +1,14 @@
+# Limited showcase overlay: retain the verified running backend and providers.
+# Build from a git-archive context; no local database, credentials or uploads.
+ARG MRA_BASE_IMAGE
+FROM ${MRA_BASE_IMAGE}
+USER root
+COPY --chown=appuser:appuser static/ /app/static/
+COPY --chown=appuser:appuser app/api/auth.py /app/app/api/auth.py
+ARG CODE_SHA
+ARG BACKEND_SHA
+RUN test -n "$CODE_SHA" && test -n "$BACKEND_SHA"
+LABEL org.opencontainers.image.revision=$CODE_SHA
+LABEL org.medilisten.backend.revision=$BACKEND_SHA
+LABEL org.medilisten.build.scope="showcase-static-and-cookie-overlay"
+USER appuser

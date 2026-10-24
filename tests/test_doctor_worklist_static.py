@@ -4,18 +4,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_doctor_worklist_drawer_is_present() -> None:
+def test_doctor_worklist_controls_are_on_workbench() -> None:
     html = (ROOT / "static" / "doctor.html").read_text(encoding="utf-8")
 
     assert 'id="openWorklistButton"' in html
-    assert 'id="encounterWorklistPanel"' in html
+    assert 'id="encounterWorklistPanel"' not in html
     assert 'id="encounterSearchInput"' in html
     assert 'id="encounterStatusFilter"' in html
     assert 'id="refreshWorklistButton"' in html
-    assert 'id="encounterWorklist"' in html
+    assert 'id="dashboardEncounterList"' in html
     assert 'id="localEncounterForm"' in html
-    assert 'id="localPatientDeidentifiedId"' in html
-    assert 'id="localPatientDisplayName"' in html
+    assert 'id="localSyntheticPatient"' in html
+    assert 'id="localPatientDisplayName"' not in html
     assert 'id="createLocalEncounterButton"' in html
 
 

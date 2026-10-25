@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-25T11:31:49.376Z`
-- Source hash: `f49c47204bd258a08ecc5bd40520f105894e4c309bd968af21f60919ab6f9a1f`
+- Updated at: `2026-10-25T12:31:07.697Z`
+- Source hash: `edbc815c4f48ff0550bbc9b071c2ff3ce13781f234e3591c3b57a9bf1a2ec762`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@b21dcd913d4017906e28b41e4defb8cb7827a058`
+- Repo: `codex/alpha51-demo-visual-e2e@440818b2bf30e2a1d40435f84550528302351993`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1仍VERIFY95%，交付/验收false；5.3 BACKLOG0%，M1至M4 OPEN。16项99h、正式日期、依赖及硬件延期不变；本地固定正例不抵消自纠反例失败，源码规则保护未部署，不能称稳定医生试用或医院级通过。**
+- Forecast Alpha Exit: **5.1仍VERIFY95%，交付/验收false；5.3 BACKLOG0%，M1至M4 OPEN。16项99h、正式日期、依赖及硬件延期不变；本地固定正例不抵消自纠反例失败，撤回主诉保护已部署但等价改写误拦仍待修；最终同版本流程、独立恢复及正式门禁未齐，不能称稳定医生试用或医院级通过。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 内存解卡；本地固定正例3/3但自纠反例失败；撤回主诉校验保护已修源码待隔离发布** — `VERIFY`
+**5.1 · 撤回主诉保护已部署8798；本地补整句反例失败；待修等价否定误拦** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 先隔离验证已修复的撤回主诉校验保护；8798继续保留DeepSeek展示流程。
+- Single next task: 先修复“没有发热→否认发热”等价表述的局部误拦，并在隔离候选验证；8798继续DeepSeek受控展示。
 - Parallel waiting task: 11月2日展示维持DeepSeek审核候选；本地模型Research NME、正式5.1/5.3、离线生成和医院放行分别判断。
 
 ## Manual Actions

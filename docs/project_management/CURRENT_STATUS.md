@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-25T06:05:42.388Z`
-- Source hash: `8c214cd9a67d26d777d3fed8bb6169ff4041e6f8ab485e552b62ec262de82c8b`
+- Updated at: `2026-10-25T11:31:49.376Z`
+- Source hash: `f49c47204bd258a08ecc5bd40520f105894e4c309bd968af21f60919ab6f9a1f`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@233ab05b2ef210ea376ba60faad21b7943885b3d`
+- Repo: `codex/alpha51-demo-visual-e2e@b21dcd913d4017906e28b41e4defb8cb7827a058`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1保持VERIFY95%且acceptance未通过，5.3保持BACKLOG0%，M1至M4仍OPEN；16项99h和正式日期、硬件延期不变。E26单次在线生成不代替本地模型质量、完整病历召回或稳定医生试用放行。**
+- Forecast Alpha Exit: **5.1仍VERIFY95%，交付/验收false；5.3 BACKLOG0%，M1至M4 OPEN。16项99h、正式日期、依赖及硬件延期不变；本地固定正例不抵消自纠反例失败，源码规则保护未部署，不能称稳定医生试用或医院级通过。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798失效代理已修，启动器55项回归及一次真实在线生成通过；本地固定诊断仍受内存前提阻断** — `VERIFY`
+**5.1 · 内存解卡；本地固定正例3/3但自纠反例失败；撤回主诉校验保护已修源码待隔离发布** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 确认可用内存达到原8GiB启动线后，复用固定Ollama0.40.10协议执行同运行时基线及最多3次自由布尔选择；无新资源证据不重复暂停8798。
-- Parallel waiting task: 11月2日展示保持DeepSeek显式直连审核链；未更换模型、提示词或数据库。5.3、离线生成和医院部署分别验收。
+- Single next task: 先隔离验证已修复的撤回主诉校验保护；8798继续保留DeepSeek展示流程。
+- Parallel waiting task: 11月2日展示维持DeepSeek审核候选；本地模型Research NME、正式5.1/5.3、离线生成和医院放行分别判断。
 
 ## Manual Actions
 
-- 本轮无需用户重复病例、录音或缩放。当前E26在线草稿与E25历史状态已有实际截图；本地诊断待资源前提满足。
+- 本轮无需用户重复录音或病例；最终物理麦克风及实际缩放保留原版本边界，按发布安排补验。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

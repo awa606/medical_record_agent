@@ -5,7 +5,10 @@ import re
 from typing import Any
 
 from app.schemas import MedicalRecordFields, SourceSpan
-from app.services.clinical_facts import clinical_experiencer, clinical_segment_contexts, extract_clinical_facts, split_clinical_segments
+from app.services.clinical_facts import (
+    _FAMILY_WORDS, _RESPIRATORY_SYMPTOMS, clinical_experiencer, clinical_segment_contexts,
+    extract_clinical_facts, split_clinical_segments,
+)
 from app.services.treatment_context import treatment_grounding_errors
 
 FIELD_KEYS = ("chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms", "past_history", "allergy_history", "physical_exam")
@@ -13,6 +16,69 @@ _TIME_QUALIFIERS = ("昨天", "既往", "曾经", "以前", "已缓解", "已退
 
 def compact(text: str) -> str:
     return re.sub(r"[\s，,。；;、：:！？!?]", "", text).replace("发烧", "发热").replace("摄氏度", "℃")
+
+
+def _explicitly_retracted_chief(value: str, matching_contexts: list) -> bool:
+    """Reject an old positive selected without its explicit same-patient denial.
+
+    Only one patient sentence with a uniquely located selected clause qualifies.
+    A correction must explicitly deny the same symptom after a prior "said"
+    reference. Resolution, another symptom/person and later positive evidence
+    cannot supply that relation. Original values and spans are never rewritten.
+    """
+    if len(matching_contexts) != 1:
+        return False
+    context = matching_contexts[0]
+    if context.speaker != "患者" or context.question:
+        return False
+    # Do not infer a self-correction in a sentence mentioning another person;
+    # the denied symptom can have a postposed subject ("没有发热的是他").
+    if any(token in context.text for token in (*_FAMILY_WORDS, "家长", "他", "她")):
+        return False
+    # "Said earlier" dates the utterance, not the clinical event. If the
+    # remaining sentence dates an occurrence/resolution, do not infer that a
+    # denial at another time retracts it. Existing time/negation guards remain.
+    clinical_context = re.sub(r"(?:刚才|刚刚|方才|前面|之前)(?:我)?说(?:过)?", "", context.text)
+    if any(token in clinical_context for token in (
+        *_TIME_QUALIFIERS, "昨晚", "前天", "今天", "现在", "目前", "早上", "上午",
+        "中午", "下午", "晚上", "刚才", "刚刚", "退了", "退烧", "退热",
+    )):
+        return False
+    clauses = [part.strip() for part in re.split(r"[，,。；;\n]+", value) if part.strip()]
+    for aliases in _RESPIRATORY_SYMPTOMS.values():
+        symptom = "(?:" + "|".join(re.escape(alias) for alias in aliases) + ")"
+        # A retained negative/correction is not an unqualified positive claim.
+        if re.search(r"(?:没有|没|无|未|否认)\s*" + symptom, value):
+            continue
+        mentions = list(re.finditer(
+            r"(?:刚才|刚刚|方才|前面|之前)(?:我)?说(?:过)?[^，,；;。！？!?\n]{0,12}?" + symptom,
+            context.text,
+        ))
+        corrections = list(re.finditer(
+            r"(?:其实|实际上|实际|更正(?:一下)?|纠正(?:一下)?|我?说错了)"
+            r"[，,；;：:\s]*(?:我|本人|患者)?(?:并)?(?:没有|没|无|未|否认)\s*" + symptom,
+            context.text,
+        ))
+        for clause in clauses:
+            locations = list(re.finditer(re.escape(clause), context.text))
+            if len(locations) != 1:
+                continue
+            selected = locations[0]
+            for occurrence in re.finditer(symptom, clause):
+                position = selected.start() + occurrence.start()
+                for mention in mentions:
+                    if not mention.start() <= position < mention.end():
+                        continue
+                    if clinical_experiencer(context.text, speaker=context.speaker,
+                            patient_target=context.patient_target, position=mention.end()) != "patient":
+                        continue
+                    if any(correction.start() >= mention.end()
+                           and clinical_experiencer(context.text, speaker=context.speaker,
+                               patient_target=context.patient_target,
+                               position=correction.end()) == "patient"
+                           for correction in corrections):
+                        return True
+    return False
 
 
 def _treatment_time_scope(value: str, context: str) -> str:
@@ -269,6 +335,8 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
             matching_contexts = [c for c in contexts if span.text and compact(span.text) in compact(c.text)]
             if span.index is not None:
                 matching_contexts = [c for c in matching_contexts if c.index == span.index]
+            if key == "chief_complaint" and _explicitly_retracted_chief(field.value, matching_contexts):
+                errors.append("原文已明确撤回该症状，不能作为当前阳性主诉")
             guardian_child_quote = _guardian_child_quote(span.text, matching_contexts)
             if guardian_child_quote:
                 guardian_child_quotes.add(span.text)

@@ -71,6 +71,80 @@ def test_online_endpoint_is_pinned_even_between_official_forms(online_registered
         pilot.validate(config)
 
 
+@pytest.mark.parametrize("proxy", [
+    "", "http://host.docker.internal:7890", "http://localhost:1", "http://127.0.0.1:65535",
+])
+def test_online_registration_pins_proxy_route(online_registered, tmp_path, monkeypatch, proxy):
+    config, items = online_registered
+    items["app"]["Config"]["Env"].append("ONLINE_LLM_PROXY_URL=" + proxy)
+    monkeypatch.setattr(pilot, "inspect", lambda name: items[next(s for s in items if f"-{s}-" in name)])
+    monkeypatch.setattr(pilot, "command", lambda *args: json.dumps([{"Config": {"Labels": {
+        "org.opencontainers.image.revision": "a" * 40,
+    }}}]))
+    monkeypatch.setattr(pilot, "fetch", lambda port, path: (404, b"") if path.endswith("deployment.json") else (200, b"current"))
+
+    actual = pilot.configure(config["project"], config["port"], tmp_path / "online.json",
+                             provider_profile="online_deepseek")
+
+    assert actual["online_proxy_url"] == proxy
+    assert "test-key-not-a-credential" not in json.dumps(actual)
+
+
+@pytest.mark.parametrize("proxy", [
+    "http://user:proxy-password@127.0.0.1:7890", "http://@localhost:7890",
+    "http://remote.example:7890", "https://127.0.0.1:7890",
+    "http://127.0.0.1:7890/", "http://127.0.0.1:7890/path",
+    "http://127.0.0.1:7890?", "http://127.0.0.1:7890#fragment",
+    "http://127.0.0.1:0", "http://127.0.0.1:65536", "http://127.0.0.1",
+    "http://127.0.0.1:7890\n", " http://127.0.0.1:7890",
+])
+def test_online_registration_rejects_unsafe_proxy_before_persisting(online_registered, tmp_path, monkeypatch, proxy):
+    config, items = online_registered
+    items["app"]["Config"]["Env"].append("ONLINE_LLM_PROXY_URL=" + proxy)
+    monkeypatch.setattr(pilot, "inspect", lambda name: items[next(s for s in items if f"-{s}-" in name)])
+    def forbidden(*args):
+        raise AssertionError("unsafe proxy must fail before further command or HTTP")
+    monkeypatch.setattr(pilot, "command", forbidden)
+    monkeypatch.setattr(pilot, "fetch", forbidden)
+    path = tmp_path / "online.json"
+
+    with pytest.raises(pilot.PilotError, match="PROVIDER_MISMATCH") as failed:
+        pilot.configure(config["project"], config["port"], path, provider_profile="online_deepseek")
+
+    assert proxy not in str(failed.value)
+    assert "proxy-password" not in str(failed.value)
+    assert not path.exists()
+
+
+@pytest.mark.parametrize("pinned,actual", [
+    ("http://host.docker.internal:7890", ""),
+    ("", "http://host.docker.internal:7890"),
+    ("http://host.docker.internal:7890", "http://host.docker.internal:7891"),
+])
+def test_online_registered_proxy_change_is_rejected(online_registered, pinned, actual):
+    config, items = online_registered
+    config["online_proxy_url"] = pinned
+    items["app"]["Config"]["Env"].append("ONLINE_LLM_PROXY_URL=" + actual)
+
+    with pytest.raises(pilot.PilotError, match="PROVIDER_MISMATCH"):
+        pilot.validate(config)
+
+
+@pytest.mark.parametrize("pin,actual", [
+    ("", None), ("", ""),
+    ("http://host.docker.internal:7890", "http://host.docker.internal:7890"),
+    (None, "http://host.docker.internal:7890"),
+])
+def test_online_proxy_compatibility_preserves_registered_or_legacy_route(online_registered, pin, actual):
+    config, items = online_registered
+    if pin is not None:
+        config["online_proxy_url"] = pin
+    if actual is not None:
+        items["app"]["Config"]["Env"].append("ONLINE_LLM_PROXY_URL=" + actual)
+
+    assert set(pilot.validate(config)) == {"app", "gateway"}
+
+
 def test_unknown_profile_and_extra_ollama_are_rejected(online_registered):
     config, items = online_registered
     with pytest.raises(pilot.PilotError, match="INVALID_CONFIG"):

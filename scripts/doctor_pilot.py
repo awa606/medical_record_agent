@@ -122,6 +122,10 @@ def check_real(items: dict, project: str, port: int, *, profile: str = "local_qw
             raise PilotError("PROJECT_MISMATCH: 容器不属于登记项目。")
     e = env(items["app"])
     if profile == "online_deepseek":
+        proxy = e.get("ONLINE_LLM_PROXY_URL", "")
+        proxy_match = re.fullmatch(r"http://(127\.0\.0\.1|localhost|host\.docker\.internal):([0-9]{1,5})", proxy) if proxy else None
+        if proxy and (not proxy_match or not 1 <= int(proxy_match.group(2)) <= 65535):
+            raise PilotError("PROVIDER_MISMATCH: 在线代理须为无凭据的本地HTTP地址及有效端口。")
         expected = {"RECORD_PROVIDER_MODE": "live", "MEDICAL_RECORD_AGENT_ASR_ENGINE": "funasr",
                     "MEDICAL_RECORD_AGENT_REQUIRE_FUNASR": "1", "LLM_PROVIDER": "online",
                     "ONLINE_LLM_PROFILE": "deepseek_demo", "ONLINE_LLM_MODEL": ONLINE_MODEL,
@@ -173,6 +177,7 @@ def configure(project: str, port: int, path: Path, *, provider_profile: str = "l
     else:
         # No credential, credential fingerprint or local model metadata is persisted.
         model_config = {"online_api_base": env(app)["ONLINE_LLM_API_BASE"], "online_model": ONLINE_MODEL,
+                        "online_proxy_url": env(app).get("ONLINE_LLM_PROXY_URL", ""),
                         "credential_file": env(app).get("ONLINE_LLM_API_KEY_FILE", "")}
     resources = {}
     for resource in (*RESOURCES, *BRAND_RESOURCES):
@@ -217,6 +222,7 @@ def validate(config: dict) -> dict:
         e = env(items["app"])
         if (config.get("online_api_base") != e.get("ONLINE_LLM_API_BASE")
                 or config.get("online_model") != e.get("ONLINE_LLM_MODEL")
+                or ("online_proxy_url" in config and config["online_proxy_url"] != e.get("ONLINE_LLM_PROXY_URL", ""))
                 or config.get("credential_file", "") != e.get("ONLINE_LLM_API_KEY_FILE", "")):
             raise PilotError("PROVIDER_MISMATCH: 在线服务或凭据来源与登记配置不同。")
     if config.get("cookie_name") and env(items["app"]).get("MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME") != config["cookie_name"]:

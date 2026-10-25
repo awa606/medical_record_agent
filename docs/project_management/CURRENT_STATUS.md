@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-25T02:44:24.599Z`
-- Source hash: `9a702926f190b1714508895b3e77f54f0077e12370c5a6e99d010bf5224ef201`
+- Updated at: `2026-10-25T06:05:42.388Z`
+- Source hash: `8c214cd9a67d26d777d3fed8bb6169ff4041e6f8ab485e552b62ec262de82c8b`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@121f9c16a71992c9a99f88f35cc21fbc42adec07`
+- Repo: `codex/alpha51-demo-visual-e2e@233ab05b2ef210ea376ba60faad21b7943885b3d`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1仍VERIFY95%，5.3仍BACKLOG0%，M1至M4保持OPEN；16项99h、正式日期及硬件延期不变。当前为在线审核展示候选；局部约束兼容不等于本地模型质量或稳定医生试用通过。**
+- Forecast Alpha Exit: **5.1保持VERIFY95%且acceptance未通过，5.3保持BACKLOG0%，M1至M4仍OPEN；16项99h和正式日期、硬件延期不变。E26单次在线生成不代替本地模型质量、完整病历召回或稳定医生试用放行。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 研究目录子句串用与用药资格缺陷已修，18项离线回归通过；8798 DeepSeek未变，本地质量未晋级** — `VERIFY`
+**5.1 · 8798失效代理已修，启动器55项回归及一次真实在线生成通过；本地固定诊断仍受内存前提阻断** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 执行固定旧用药目录的逐事实多字段自由布尔选择Spike，最多3次；不强制true、不自动复制字段，不重复旧提示词。
-- Parallel waiting task: 11月2日展示维持当前DeepSeek审核流程；硬件延期、离线生成、5.3连续五次和医院部署分别判断。
+- Single next task: 确认可用内存达到原8GiB启动线后，复用固定Ollama0.40.10协议执行同运行时基线及最多3次自由布尔选择；无新资源证据不重复暂停8798。
+- Parallel waiting task: 11月2日展示保持DeepSeek显式直连审核链；未更换模型、提示词或数据库。5.3、离线生成和医院部署分别验收。
 
 ## Manual Actions
 
-- 当前无需用户重复录音或病例。截图工具恢复后只补当前E25恢复状态图；不修改安全设置。
+- 本轮无需用户重复病例、录音或缩放。当前E26在线草稿与E25历史状态已有实际截图；本地诊断待资源前提满足。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

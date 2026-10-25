@@ -41,7 +41,7 @@ def catalog(source: str) -> tuple[str, tuple[FactUnit, ...]]:
     for context in clinical_segment_contexts(safe):
         # Resolve each occurrence separately; semantic deduplication must not
         # erase the second citation when two sentences contain identical facts.
-        facts = extract_clinical_facts(f"{context.speaker}：{context.text}")
+        sentence_facts = extract_clinical_facts(f"{context.speaker}：{context.text}")
         parts = list(re.finditer(r"[^，,；;]+", context.text))
         anchor = ""
         for part in parts:
@@ -52,6 +52,13 @@ def catalog(source: str) -> tuple[str, tuple[FactUnit, ...]]:
             text = context.text[start:part.end()].strip()
             if not text:
                 continue
+            # Scope symptoms and medication to the exact clause: a later
+            # actual intake or earlier negation must not label another quote.
+            # Keep the other fact types' existing contract, including allergy
+            # uncertainty; this patch does not revise their scope or certainty.
+            facts = [fact for fact in extract_clinical_facts(f"{context.speaker}：{text}")
+                     if fact.type in {"symptom", "treatment"}]
+            facts += [fact for fact in sentence_facts if fact.type not in {"symptom", "treatment"}]
             subject = clinical_experiencer(context.text, speaker=context.speaker,
                 patient_target=context.patient_target, position=part.end())
             matched = []
@@ -63,7 +70,7 @@ def catalog(source: str) -> tuple[str, tuple[FactUnit, ...]]:
                 elif fact.type == "duration":
                     present = bool(fact.value and fact.value in text)
                 elif fact.type == "treatment":
-                    present = bool(re.search(r"布洛芬|退热药|退烧药|吃了|服用|用药", text))
+                    present = bool(fact.value and fact.value in text)
                 if present:
                     matched.append(fact)
             types = tuple(sorted({fact.type for fact in matched}))
@@ -79,7 +86,7 @@ def catalog(source: str) -> tuple[str, tuple[FactUnit, ...]]:
                     allowed.append("accompanying_symptoms")
                 if "allergy" in types:
                     allowed.append("allergy_history")
-                if "treatment" in types and not re.search(r"没有|未|不清楚|不知道", text):
+                if any(f.type == "treatment" and f.assertion == "present" for f in matched):
                     allowed.append("previous_treatment")
                 if not types and re.search(r"既往|以前患|曾患|患有", text):
                     allowed.append("past_history")

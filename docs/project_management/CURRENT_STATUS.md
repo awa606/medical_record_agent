@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-24T16:43:47.233Z`
-- Source hash: `9e812bae5156e0091d5c2bea82faadf36b5fe6da55b52c9c7c64b448b247af19`
+- Updated at: `2026-10-25T02:44:24.599Z`
+- Source hash: `9a702926f190b1714508895b3e77f54f0077e12370c5a6e99d010bf5224ef201`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@db9985f423778ef6b78b311c57c21eedd6f279d5`
+- Repo: `codex/alpha51-demo-visual-e2e@121f9c16a71992c9a99f88f35cc21fbc42adec07`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 项目内资源互斥后固定本地约束诊断3/3；现病史仍漏选，8798 DeepSeek原版恢复，新截图受工具阻断** — `VERIFY`
+**5.1 · 研究目录子句串用与用药资格缺陷已修，18项离线回归通过；8798 DeepSeek未变，本地质量未晋级** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 基于已保存三次响应验证合法事实的自主多字段覆盖；不部署强制非空，不重复旧提示词和已通过展示检查。
+- Single next task: 执行固定旧用药目录的逐事实多字段自由布尔选择Spike，最多3次；不强制true、不自动复制字段，不重复旧提示词。
 - Parallel waiting task: 11月2日展示维持当前DeepSeek审核流程；硬件延期、离线生成、5.3连续五次和医院部署分别判断。
 
 ## Manual Actions

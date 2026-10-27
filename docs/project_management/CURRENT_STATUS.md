@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-27T14:00:05.960Z`
-- Source hash: `320d21b64a4018bab635bfd72ae29da9256d8a4aaa6118681b2596ef81a3903e`
+- Updated at: `2026-10-27T15:09:35.823Z`
+- Source hash: `d7b0918bb6e999eb96c52bf0e4aa410feb081cbf22a10bf17dd104bed48d13a0`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@137624909913a014c7d34f411f9d4927a60ea1ea`
+- Repo: `codex/alpha51-demo-visual-e2e@1672d3c8abedda7894929971d87e9eaf31d36a5d`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **阶段A完成采访本地8/8块、37:07、9568字符/834段及三私密稿，尚未全量回听；R6合成病例真实按钮R1→R2→历史→审核→DOCX→正常退出通过，已停候选并恢复原8798 cd56/d181，原业务及59条账本保持。1376249三静态资源/两测试定向40项和JS检查通过，但新前端未部署/未视觉验收，该提交CI结论另核。不自动关闭5.1或开始5.3，不宣称稳定/医院使用通过；16项99h、日期、硬件与Gate不变。**
+- Forecast Alpha Exit: **阶段B已实际推广8798：前端1376249、后端1cafa、镜像7381196，继续FunASR＋DeepSeek；健康/就绪200，原业务/知识组合及59条账本保持，候选合成库未回灌、旧容器镜像保留。生产E-25只读实屏确认医患色块、真实时间/01:00播放器、章节和审核缺失说明，独立视觉及框架/功能均仅scope PASS。代码CI b5ea verify40520881972成功，最终证据提交CI另核。采访8/8与v2文稿不代表逐字准确，句级估计时间待复听。实际缩放、未出现角色、新版完整路径/恢复及5.3未齐；5.1仍VERIFY95，不宣称稳定或医院使用通过，16项99h/日期/硬件/Gate不变。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 采访初稿与旧保护按钮已验，1376249撰写页待隔离视觉验证** — `VERIFY`
+**5.1 · 8798撰写页已升级1376249/1cafa，5.1最终缺项待补** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: 以1376249前端/1cafa后端候选完成角色、章节、审核后缺失说明的实际截图、受影响按钮和实际缩放；通过后按受控备份回退流程升级8798。
-- Parallel waiting task: 硬件1.1–1.4仍延期；5.2依赖5.1/1.2、5.3依赖5.1、5.4依赖5.2/5.3。本地模型漏提独立保留，采访ASR和合成保护回放不计提取质量或真实三路径。
+- Single next task: 仅补当前运行版本的实际缩放、最终路径与隔离恢复缺项，复用已通过且未受影响的证据；按5.1原标准收口后才进入5.3，不扩页面或模型实验。
+- Parallel waiting task: 硬件1.1–1.4仍延期，5.2依赖5.1/1.2、5.4依赖5.2/5.3。本地模型漏提独立保留。采访v2三稿与两审查留本机，自动估计时间需复听，先限第七块255—300秒局部核对，不自动重跑37分钟。
 
 ## Manual Actions
 

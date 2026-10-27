@@ -171,7 +171,7 @@ def make_html(key, d, out):
     n=0
     for i,page in enumerate(d['pages']):
         pieces.append('<section class="page">')
-        if i==0: pieces.append(f'<header><h1>{d["title"]}</h1><p>{d["subtitle"]}</p><p class="meta">资料日期 {DATE}　适用运行版本 {VERSION}　现场电脑 8798</p></header>')
+        if i==0: pieces.append(f'<header><h1>{d["title"]}</h1><p>{d["subtitle"]}</p><p class="meta">资料日期 {DATE}　材料基线版本 {VERSION}　现场电脑 8798；实际前端和后端以试用首页为准。</p></header>')
         for b in page:
             n+=1;pieces.append(html_block(b,n))
         pieces.append(f'<p class="pagefoot">{d["title"]}　{i+1} / {len(d["pages"])}</p></section>')
@@ -206,7 +206,7 @@ def make_pdf(key,d,out):
             q=Paragraph(html.escape(text).replace('\n','<br/>'),styles[style]);qw,qh=q.wrap(width,1000)
             q.drawOn(c,left,y-qh);y-=qh+gap
         if idx==0:
-            draw(d['title'],'title',7);draw(d['subtitle'],'sub',5);draw(f'资料日期 {DATE}  |  适用运行版本 {VERSION}  |  现场电脑 8798','sub',15)
+            draw(d['title'],'title',7);draw(d['subtitle'],'sub',5);draw(f'资料日期 {DATE}  |  材料基线版本 {VERSION}  |  现场电脑 8798','sub',15)
         else:
             draw(d['title'],'sub',15)
         for b in page:

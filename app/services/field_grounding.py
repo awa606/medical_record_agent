@@ -461,7 +461,14 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
         if any(fact.experiencer in {"family", "other"} for fact in extract_clinical_facts(field.value)) and not any(c.patient_target == "child" and c.speaker in {"家属", "家长"} for c in contexts):
             errors.append("家属或他人事实不能归入患者本人字段，需医生核对归属")
         clauses = [x for x in re.split(r"[，,。；;\n]+", field.value) if x.strip()]
-        unsupported = [clause for clause in clauses if compact(clause) not in compact(evidence)]
+        # A clause must be supported within one selected quote. Flattening all
+        # quotes would manufacture statements such as "否认发热" from "否认"
+        # in a chest-pain denial and "发热" in a separate positive statement.
+        # Independent clauses may still cite different spans; keep the exact
+        # selected text and identity for review rather than repairing a quote.
+        unsupported = [clause for clause in clauses if not any(
+            compact(clause) in compact(span.text) for span in field.source_spans
+        )]
         doctor_negative_equivalence = bool(unsupported) and key in (source_corrected_fields or set()) and key in {
             "chief_complaint", "present_illness",
         } and all(_doctor_negative_equivalent_clause(clause, field, contexts) for clause in unsupported)

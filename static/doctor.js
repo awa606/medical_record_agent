@@ -510,14 +510,18 @@ function encounterPatientLabel(encounter) {
   return syntheticDemoLabel(encounter) || testPatientLabel(encounter) || `脱敏患者 ${encounter?.patient_id || ""}`.trim();
 }
 
-function encounterSwitchBlocked() {
+function encounterSwitchBlocked(action = "切换就诊") {
   if (["requesting", "recording", "paused", "finalizing", "uploading"].includes(appState.browserRecordingStatus)
       || (appState.browserRecordingStatus === "recorded" && !appState.browserRecordingSubmitted)) {
-    showToast("请先结束并提交或取消当前录音，再切换就诊。");
+    showToast(`请先结束并提交或取消当前录音，再${action}。`);
+    return true;
+  }
+  if (appState.recordEditConflict?.error_code === "saved_revision_refresh_failed") {
+    showToast(`修改已提交，请点击“加载最新版本”核验后再${action}。`);
     return true;
   }
   if (appState.recordEditDirty || appState.roleReviewDirty || appState.recordEditConflict) {
-    showToast("当前有未保存修改或待处理冲突，请先保存或取消编辑，再切换就诊。");
+    showToast(`当前有未保存修改或待处理冲突，请先保存或取消编辑，再${action}。`);
     return true;
   }
   return false;
@@ -697,6 +701,11 @@ async function submitLogin(event) {
 }
 
 async function logout() {
+  if (appState.busy) {
+    showToast("当前操作尚未完成，请等待完成后再退出登录。");
+    return;
+  }
+  if (encounterSwitchBlocked("退出登录")) return;
   try {
     await fetch("/api/auth/logout", { method: "POST" });
   } finally {

@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-27T09:57:06.183Z`
-- Source hash: `af82e7d7327cc5379b1a888160ce02a296e677504f45c1680ead5e093f4b23d2`
+- Updated at: `2026-10-27T11:21:34.999Z`
+- Source hash: `3252d2ed1b90ca18601650cf4f8389607c0282b87fdac0793050de5da09a03f8`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@1cafa2ae8701444ee3bf57b1620fb4f96cf0a365`
+- Repo: `codex/alpha51-demo-visual-e2e@36d0bd6e8c6a69962136fbf0b42230efd088a7e9`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1保持VERIFY95/交付验收false，5.3 BACKLOG；16项99h及原日期/Gate/硬件不变。本批两项源码局部缺陷已修，固定回放/真实JS函数及237相关回归通过，三类代理已复核。8798保持cd56/d181和DeepSeek，本轮未部署。浏览器URL识别停止使新截图/按钮NOT_TESTED，不称稳定试用、本地质量或医院使用通过。**
+- Forecast Alpha Exit: **16项99h/日期/Gate不变，5.1 VERIFY95/交付验收false，5.3 BACKLOG。本轮18030候选1cafa实际启动、单合成回放与普通doctor HTTP读取及恢复原8798 PASS；候选已停，原cd56/d181已恢复，原业务/登记/59次账本不变。无真实生成或ASR业务调用，不抵三路径3/3；browser disabled使按钮/新截图NOT_TESTED。5.1 LLM本地范围原文有歧义，撤回强加本地LLM门槛；5.2断网另验。未推广或宣称稳定/完整Alpha/医院使用通过。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 跨引文漏拦与退出丢稿源码已修；8798仍d181，待隔离按钮验收** — `VERIFY`
+**5.1 · 5.1候选运行回放与恢复原版已验，真实按钮仍待连接；8798保持d181** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 在可靠浏览器且无未保存活动后，只补跨引文冲突隔离和退出保稿的隔离按钮验收；通过再按既有备份回退升级8798。
-- Parallel waiting task: 本地I01漏提和自我纠正尚未改善，本轮未调用模型；旧失败候选不重复。D盘受限恢复副本仍未启动，后续另补实际恢复。
+- Single next task: 取得受控MediListen标签页后，显式恢复同一已停1cafa候选，只补证据查看及退出保稿按钮验收；通过后升级8798并补最终路径，5.1满足原标准后再开始5.3。
+- Parallel waiting task: 硬件1.1–1.4继续暂缓；5.2依赖5.1/1.2，5.4依赖5.2/5.3。Qwen质量研究不新增为5.1前置，现役FunASR/DeepSeek分别记录；D盘r5完整业务恢复材料未启动。
 
 ## Manual Actions
 
-- 当前不需要新资料、采购、录音或重复旧测试；切换前仅在无法确认未保存状态时请求保存退出。
+- 本轮保存退出确认已用于完成运行窗口，8798已恢复；浏览器连接仍返回禁用，需实际可控制的MediListen标签页引用后才能继续按钮验收。无需重做旧病例、录音或缩放。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

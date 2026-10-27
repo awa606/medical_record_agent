@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-27T09:05:57.598Z`
-- Source hash: `46c39a2c69cc76c4604e9bcc6c26eb0e88fd4c709d20b87d286e785ee705bef4`
+- Updated at: `2026-10-27T09:57:06.183Z`
+- Source hash: `af82e7d7327cc5379b1a888160ce02a296e677504f45c1680ead5e093f4b23d2`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@7b753c07677e09b43f7d2626b45c975b10f8eaba`
+- Repo: `codex/alpha51-demo-visual-e2e@1cafa2ae8701444ee3bf57b1620fb4f96cf0a365`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1 VERIFY95/交付验收false，5.3 BACKLOG；16项99h、正式日期/依赖/Gate及硬件不变。当前front cd56/backend d181，DeepSeek审核可用。本轮准备21患者受限恢复子集并排除E19/E20关联数据/附件，原源与账本保持；没有新容器、模型或ASR调用。新环境实际恢复/截图未验，不能写完整恢复或稳定医生试用PASS。在线展示、本地原Alpha验收和医院独立路线继续分别判断。**
+- Forecast Alpha Exit: **5.1保持VERIFY95/交付验收false，5.3 BACKLOG；16项99h及原日期/Gate/硬件不变。本批两项源码局部缺陷已修，固定回放/真实JS函数及237相关回归通过，三类代理已复核。8798保持cd56/d181和DeepSeek，本轮未部署。浏览器URL识别停止使新截图/按钮NOT_TESTED，不称稳定试用、本地质量或医院使用通过。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798 d181保持可用；受限恢复输入已准备，实际恢复启动与页面未验** — `VERIFY`
+**5.1 · 跨引文漏拦与退出丢稿源码已修；8798仍d181，待隔离按钮验收** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 浏览器控制可靠且确认无未保存内容后，互斥启动D盘r5受限恢复副本，补历史病历/版本/知识/文件关联实际验收，再恢复原8798；不重做已通过修正链。
-- Parallel waiting task: 本地I01仍是模型跨字段漏选，10/16复选提示与10/25布尔候选已失败；不同Ollama版本不可作纯单变量对照。研究保持NEEDS MORE EVIDENCE，不阻塞已授权DeepSeek展示的独立收尾。
+- Single next task: 在可靠浏览器且无未保存活动后，只补跨引文冲突隔离和退出保稿的隔离按钮验收；通过再按既有备份回退升级8798。
+- Parallel waiting task: 本地I01漏提和自我纠正尚未改善，本轮未调用模型；旧失败候选不重复。D盘受限恢复副本仍未启动，后续另补实际恢复。
 
 ## Manual Actions
 
-- 当前无需补数据、采购、录音或重做病例；E19/E20按本轮用户选择封存保留且不入恢复副本。切换服务前若无法确认未保存内容，才另请保存退出。
+- 当前不需要新资料、采购、录音或重复旧测试；切换前仅在无法确认未保存状态时请求保存退出。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

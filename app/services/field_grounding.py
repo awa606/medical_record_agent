@@ -18,7 +18,8 @@ def compact(text: str) -> str:
     return re.sub(r"[\s，,。；;、：:！？!?]", "", text).replace("发烧", "发热").replace("摄氏度", "℃")
 
 
-def _explicitly_retracted_chief(value: str, matching_contexts: list) -> bool:
+def _explicitly_retracted_chief(value: str, matching_contexts: list,
+                              *, symptom_aliases: tuple[str, ...] | None = None) -> bool:
     """Reject an old positive selected without its explicit same-patient denial.
 
     Only one patient sentence with a uniquely located selected clause qualifies.
@@ -45,7 +46,8 @@ def _explicitly_retracted_chief(value: str, matching_contexts: list) -> bool:
     )):
         return False
     clauses = [part.strip() for part in re.split(r"[，,。；;\n]+", value) if part.strip()]
-    for aliases in _RESPIRATORY_SYMPTOMS.values():
+    alias_groups = (symptom_aliases,) if symptom_aliases is not None else _RESPIRATORY_SYMPTOMS.values()
+    for aliases in alias_groups:
         symptom = "(?:" + "|".join(re.escape(alias) for alias in aliases) + ")"
         # A retained negative/correction is not an unqualified positive claim.
         if re.search(r"(?:没有|没|无|未|否认)\s*" + symptom, value):
@@ -79,6 +81,70 @@ def _explicitly_retracted_chief(value: str, matching_contexts: list) -> bool:
                            for correction in corrections):
                         return True
     return False
+
+
+def _doctor_negative_equivalent_clause(clause: str, field: Any, contexts: list) -> bool:
+    """Support only a doctor's direct 没有/否认 interchange, never a new quote.
+
+    The caller must have a server-validated source correction. One exact quoted
+    negative clause in one explicit patient context must support the same known
+    symptom. Do not infer negation across subjects, clinical times or unresolved
+    positive evidence. This comparison cannot erase any other grounding error.
+    """
+    aliases = sorted({compact(alias) for values in _RESPIRATORY_SYMPTOMS.values()
+                      for alias in values}, key=len, reverse=True)
+    symptom_pattern = "(?:" + "|".join(re.escape(alias) for alias in aliases) + ")"
+    negative_pattern = re.compile(
+        r"^(?:(?:患者|病人|本人|我)[:：]?)?(?:没有|否认)(" + symptom_pattern + r")$"
+    )
+    target = negative_pattern.fullmatch(compact(clause))
+    if not target:
+        return False
+    symptom = target.group(1)
+    concept_aliases = next(values for values in _RESPIRATORY_SYMPTOMS.values()
+                           if symptom in {compact(alias) for alias in values})
+    same_concept = {compact(alias) for alias in concept_aliases}
+    matched = {}
+    for span in field.source_spans:
+        for context in contexts:
+            if span.index is not None and span.index != context.index:
+                continue
+            quote = compact(span.text)
+            if not quote or compact(context.text).count(quote) != 1:
+                continue
+            parts = [part.strip() for part in re.split(r"[，,。；;\n]+", context.text) if part.strip()]
+            for position, part in enumerate(parts):
+                direct = re.sub(r"^\s*(?:[\[【](?:患者|病人)[\]】]\s*[:：]?|(?:患者|病人)\s*[:：])\s*", "", part)
+                direct = re.sub(r"^(?:其实|实际上|实际)\s*", "", direct)
+                negative = negative_pattern.fullmatch(compact(direct))
+                if negative and negative.group(1) == symptom and compact(direct) in quote:
+                    matched[(context.index, position)] = (context, parts)
+    if len(matched) != 1:
+        return False
+    (index, selected), (context, parts) = next(iter(matched.items()))
+    if (context.speaker != "患者" or context.question
+            or any(word in context.text for word in (*_FAMILY_WORDS, "家长", "他", "她"))):
+        return False
+    clinical_context = re.sub(r"(?:刚才|刚刚|方才|前面|之前)(?:我)?说(?:过)?", "", context.text)
+    if any(word in clinical_context for word in (
+        *_TIME_QUALIFIERS, "昨晚", "前天", "今天", "现在", "目前", "之前", "刚才", "刚刚",
+        "早上", "上午", "中午", "下午", "晚上", "可能", "疑似", "不确定", "不清楚", "不知道",
+        "说不清", "建议", "计划", "如果", "是否", "有没有", "是不是", "吗", "么", "?", "？",
+        "不是没有", "并非没有", "不能否认", "不否认", "未否认",
+    )):
+        return False
+    # Another occurrence is not silently resolved by taking the last negative.
+    for position, part in enumerate(parts):
+        if position != selected and any(alias in compact(part) for alias in same_concept):
+            if not _explicitly_retracted_chief(part, [context], symptom_aliases=concept_aliases):
+                return False
+    # Other patient statements containing the same symptom need a separate
+    # scope decision. A doctor's unanswered question is not an assertion.
+    if any(other.index != index and not other.question and any(alias in compact(other.text) for alias in same_concept)
+           for other in contexts):
+        return False
+    return clinical_experiencer(context.text, speaker=context.speaker,
+                               patient_target=context.patient_target) == "patient"
 
 
 def _treatment_time_scope(value: str, context: str) -> str:
@@ -289,7 +355,8 @@ def reconcile_extractive_fields(
 
     return fields, repairs
 
-def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: list[dict] | None = None) -> MedicalRecordFields:
+def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: list[dict] | None = None,
+                  *, source_corrected_fields: set[str] | None = None) -> MedicalRecordFields:
     segments = split_clinical_segments(source)
     contexts = clinical_segment_contexts(source)
     for key in FIELD_KEYS:
@@ -394,7 +461,11 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
         if any(fact.experiencer in {"family", "other"} for fact in extract_clinical_facts(field.value)) and not any(c.patient_target == "child" and c.speaker in {"家属", "家长"} for c in contexts):
             errors.append("家属或他人事实不能归入患者本人字段，需医生核对归属")
         clauses = [x for x in re.split(r"[，,。；;\n]+", field.value) if x.strip()]
-        if not clauses or any(compact(x) not in compact(evidence) for x in clauses):
+        unsupported = [clause for clause in clauses if compact(clause) not in compact(evidence)]
+        doctor_negative_equivalence = bool(unsupported) and key in (source_corrected_fields or set()) and key in {
+            "chief_complaint", "present_illness",
+        } and all(_doctor_negative_equivalent_clause(clause, field, contexts) for clause in unsupported)
+        if not clauses or (unsupported and not doctor_negative_equivalence):
             errors.append("字段改写不能由引用逐项支持，需医生修正")
         for symptom in ("发热", "发烧", "咳嗽", "胸痛", "气促", "呼吸困难", "过敏", "高血压", "糖尿病"):
             if symptom in field.value and re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, evidence) and not re.search(r"(?:否认|没有|无|未|不).{0,8}" + symptom, field.value):
@@ -415,6 +486,9 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
         if errors:
             field.status = "conflicting"
             field.hint = "；".join(dict.fromkeys(errors))
+        elif doctor_negative_equivalence:
+            field.status = "partial"
+            field.hint = "医生根据原文修正否定表述；仍须审核当前病历版本。"
         elif field.status == "conflicting":
             field.status = "complete"
             field.hint = None

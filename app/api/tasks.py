@@ -341,6 +341,34 @@ def _mark_manual_doctor_edits(
     return changed
 
 
+def _retained_source_corrections(
+    fields: MedicalRecordFields,
+    previous: MedicalRecordFields | None,
+    trace: dict[str, Any],
+) -> set[str]:
+    """Carry successful source correction only from unchanged server history.
+
+    Inspect submitted values/citations before _mark_manual_doctor_edits restores
+    any prior citations. A client note cannot establish this provenance.
+    """
+    if previous is None:
+        return set()
+    history = trace.get("field_resolution_history") or []
+    retained = set()
+    for key in ("chief_complaint", "present_illness"):
+        old, new = getattr(previous, key), getattr(fields, key)
+        if (old.status == "conflicting"
+                or not str(old.doctor_review_note or "").startswith("doctor_source_correction_v1:")
+                or (old.value, old.missing, old.fact_ids) != (new.value, new.missing, new.fact_ids)
+                or [s.model_dump() for s in old.source_spans] != [s.model_dump() for s in new.source_spans]):
+            continue
+        if any(isinstance(item, dict) and item.get("field") == key
+               and item.get("method") == "source_correction" and item.get("value") == old.value
+               for item in history):
+            retained.add(key)
+    return retained
+
+
 def _validate_field_resolutions(payload: ReviewRequest, previous: MedicalRecordFields | None) -> None:
     manual, corrected = payload.manual_takeover_fields, payload.source_corrected_fields
     if (len(manual) != len(set(manual)) or len(corrected) != len(set(corrected))
@@ -621,6 +649,9 @@ def review_task(
         previous_fields = None
     _validate_field_resolutions(review_payload, previous_fields)
     fields = _reset_review_state(review_payload.fields)
+    trusted_source_corrections = set(review_payload.source_corrected_fields) | _retained_source_corrections(
+        fields, previous_fields, result.get("llm_trace") or {},
+    )
     manual_edited_fields = _mark_manual_doctor_edits(
         fields, previous_fields,
         manual_takeover_fields=review_payload.manual_takeover_fields,
@@ -630,7 +661,8 @@ def review_task(
         from app.services.field_grounding import ground_fields
         from app.services.privacy import anonymize_text
         fields = ground_fields(fields, anonymize_text(task.get("input_text") or result.get("conversation_text") or ""),
-                               (result.get("asr_source") or {}).get("segments"))
+                               (result.get("asr_source") or {}).get("segments"),
+                               source_corrected_fields=trusted_source_corrections)
     if previous_fields:
         resolved = set(review_payload.manual_takeover_fields + review_payload.source_corrected_fields)
         for key, _label, field in _field_items(fields):

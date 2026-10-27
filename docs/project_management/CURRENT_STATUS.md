@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-27T02:17:39.276Z`
-- Source hash: `fc44b5d38e78663ad0a7bc7a233174eb7d95af3584e0dfe7e73b4e579b28a571`
+- Updated at: `2026-10-27T04:05:48.076Z`
+- Source hash: `134144702fb6111bc5852f33028eeddb020fc911541fd6569f7500ac4334581b`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@01ca33b36b195f9045eda32f1b0518c02dad2ec8`
+- Repo: `codex/alpha51-demo-visual-e2e@d181aee61223f16efa0e88094d3b892077d0a97c`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1仍VERIFY95%，交付/验收false；5.3 BACKLOG0%，M1至M4 OPEN。16项99h、正式日期、依赖及硬件延期不变。运行front cd56/backend b21；修复源码2583e30仅构建镜像22eedbd5并准备停机状态独立候选；真实按钮NOT_TESTED。局部规则和人工修订改善不等于本地模型漏提/混放通过；最终同版本流程、独立恢复和正式门禁未齐，不能称稳定医生试用或医院级通过。**
+- Forecast Alpha Exit: **5.1保持VERIFY95/交付验收false，5.3BACKLOG；16项99h、正式日期、Gate与硬件不变。运行front cd56/backend b21；d181aee为本批修复源码，尚未推广。质量误导源于按引文子句检查丢失撤回上下文；review限定source修复与裸矛盾反例已通过定向与独立API检查，等待新UI。最终流程和恢复门禁未齐，不称稳定医生试用或医院级产品。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 原8798与查看器已恢复；医生否定修正候选已构建，待实际按钮验收** — `VERIFY`
+**5.1 · 8798原版可用；18027因导出假覆盖提示HOLD，窄修复已锁定待新候选按钮验收** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 完成18027候选“根据原文修正→保存R2→审核导出→历史对照”的实际按钮及截图验收，通过后才升级8798；保持DeepSeek审核主线。
-- Parallel waiting task: 本地I01首次选择漏提已离线定位；下一研究仅复用既有3份响应作覆盖差集审计，不调用模型或自动补答案。实时角色、诊疗、医院放行仍独立。
+- Single next task: 构建18028独立候选，只补医生修正→R2审核导出→仅改现病史R3→重新审核导出的实际按钮和DOCX，消除假阳性覆盖提示且保留真实缺失；通过后才推广8798。
+- Parallel waiting task: I01三份原始响应的零调用审计已完成：现病史四项漏选，其他字段选择不算该字段覆盖；不补答案、不改旧score/status、不宣称模型改善。后续研究须另立最小实验。
 
 ## Manual Actions
 
-- 当前无需新资料、采购、重复录音或重做旧缩放；浏览器网址识别工具阻断已记录，不绕过。后续实际按钮工具恢复后补验，未齐前不推广。
+- 当前无需新资料、采购、录音、旧缩放或用户重做病例。原8798已恢复并保留DeepSeek，18027停止且失败证据保留。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

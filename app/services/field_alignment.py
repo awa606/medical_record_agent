@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import re
 
-from app.schemas import MedicalRecordFields
-from app.services.clinical_facts import extract_clinical_facts
-from app.services.field_grounding import FIELD_KEYS, compact
+from app.schemas import MedicalField, MedicalRecordFields
+from app.services.clinical_facts import _RESPIRATORY_SYMPTOMS, clinical_segment_contexts, extract_clinical_facts
+from app.services.field_grounding import (
+    FIELD_KEYS, _doctor_negative_equivalent_clause, _explicitly_retracted_chief, compact,
+)
 from app.services.treatment_context import treatment_contexts
 
 
@@ -136,7 +138,49 @@ def excluded_replacement(fact, text, present):
             and fact_identity(replacement[0]) in present)
 
 
-def coverage_missing(key, value, spans):
+def _covered_retracted_symptom(fact, value, span, spans, source):
+    """A review may omit an old claim only when its exact source retracts it.
+
+    Reuse the narrow same-patient retraction and direct-negative comparison;
+    the trusted full source comes from the review's stored task, never a note.
+    No source/citation/value or model-generation status is rewritten here.
+    """
+    aliases = _RESPIRATORY_SYMPTOMS.get(fact.name)
+    if (not source or fact.type != "symptom" or fact.assertion != "present"
+            or fact.experiencer != "patient" or fact.temporality != "current"
+            or fact.certainty != "confirmed" or not aliases or type(span.index) is not int):
+        return False
+    if not any(other.type == "symptom" and other.name == fact.name
+               and other.assertion == "absent" and other.experiencer == "patient"
+               and other.temporality == "current" and other.certainty == "confirmed"
+               for other in field_facts("present_illness", value)):
+        return False
+    contexts = clinical_segment_contexts(source)
+    matching = [context for context in contexts if context.index == span.index
+                and span.text and context.text.count(span.text) == 1]
+    if not _explicitly_retracted_chief(span.text, matching, symptom_aliases=aliases):
+        return False
+    # The negative must itself be represented and supported by the retained
+    # real citations. Another current positive cannot be hidden by one denial.
+    quoted = MedicalField(value=value, source_spans=spans)
+    negative_covered = False
+    for clause in nonempty_clauses(value):
+        if not any(compact(alias) in compact(clause) for alias in aliases):
+            continue
+        direct = re.sub(r"^(?:其实|实际上|实际)\s*", "", comparison_without_role(clause))
+        if _doctor_negative_equivalent_clause(direct, quoted, contexts):
+            negative_covered = True
+        else:
+            # The retraction helper proves which source claim was withdrawn;
+            # it cannot turn a bare positive in the new body into reported speech.
+            retold = (any(clause == old.text.strip() for old in spans)
+                      and re.search(r"(?:刚才|刚刚|方才|前面|之前)(?:我)?说(?:过)?", clause))
+            if not retold or not _explicitly_retracted_chief(clause, matching, symptom_aliases=aliases):
+                return False
+    return negative_covered
+
+
+def coverage_missing(key, value, spans, *, source: str | None = None):
     if key not in {"present_illness", "previous_treatment"}:
         return []
     present = {fact_identity(fact) for fact in field_facts(key, value)}
@@ -145,6 +189,8 @@ def coverage_missing(key, value, spans):
         for fact in field_facts(key, span.text):
             if fact_identity(fact) not in present:
                 if excluded_replacement(fact, span.text, present):
+                    continue
+                if key == "present_illness" and _covered_retracted_symptom(fact, value, span, spans, source):
                     continue
                 state = {"present": "有", "absent": "无", "uncertain": "不确定", "resolved": "已缓解"}.get(fact.assertion, fact.assertion)
                 detail = fact.value if fact.type in {"measurement", "duration", "treatment"} else fact.name
@@ -156,7 +202,9 @@ def coverage_missing(key, value, spans):
     return list(dict.fromkeys(missing))
 
 
-def refresh_existing_coverage_hints(fields: MedicalRecordFields) -> MedicalRecordFields:
+def refresh_existing_coverage_hints(
+    fields: MedicalRecordFields, *, source: str | None = None,
+) -> MedicalRecordFields:
     """Refresh only our existing coverage findings after an explicit review save.
 
     Call after authoritative grounding. Manual edits with retained, checked
@@ -176,7 +224,7 @@ def refresh_existing_coverage_hints(fields: MedicalRecordFields) -> MedicalRecor
             continue
         unrelated = [item for item in field.missing_elements
                      if not item.startswith(COVERAGE_GAP_PREFIXES)]
-        missing = coverage_missing(key, field.value, field.source_spans)
+        missing = coverage_missing(key, field.value, field.source_spans, source=source)
         field.missing_elements = list(dict.fromkeys([*unrelated, *missing]))
         if not missing and not manual_source:
             field.hint = None

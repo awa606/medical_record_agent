@@ -657,10 +657,12 @@ def review_task(
         manual_takeover_fields=review_payload.manual_takeover_fields,
         source_corrected_fields=review_payload.source_corrected_fields,
     )
+    coverage_source = None
     if os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}:
         from app.services.field_grounding import ground_fields
         from app.services.privacy import anonymize_text
-        fields = ground_fields(fields, anonymize_text(task.get("input_text") or result.get("conversation_text") or ""),
+        coverage_source = anonymize_text(task.get("input_text") or result.get("conversation_text") or "")
+        fields = ground_fields(fields, coverage_source,
                                (result.get("asr_source") or {}).get("segments"),
                                source_corrected_fields=trusted_source_corrections)
     if previous_fields:
@@ -672,7 +674,7 @@ def review_task(
     for key in review_payload.source_corrected_fields:
         getattr(fields, key).doctor_review_note = "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。"
     from app.services.field_alignment import refresh_existing_coverage_hints
-    fields = refresh_existing_coverage_hints(fields)
+    fields = refresh_existing_coverage_hints(fields, source=coverage_source)
     generator = _record_generator_or_503()
     draft = generator.generate_draft(fields)
     safety_check = generator.safety_check(draft, fields)

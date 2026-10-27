@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-10-27T11:21:34.999Z",
-  "source_hash": "3252d2ed1b90ca18601650cf4f8389607c0282b87fdac0793050de5da09a03f8",
+  "updated_at": "2026-10-27T14:00:05.960Z",
+  "source_hash": "320d21b64a4018bab635bfd72ae29da9256d8a4aaa6118681b2596ef81a3903e",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "36d0bd6e8c6a69962136fbf0b42230efd088a7e9",
+  "repo_sha": "137624909913a014c7d34f411f9d4927a60ea1ea",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/alpha51-demo-visual-e2e",
   "active_pr": {
@@ -38,7 +38,7 @@
   "planned_hours": 99,
   "current_task": {
     "wbs": "5.1",
-    "title": "5.1候选运行回放与恢复原版已验，真实按钮仍待连接；8798保持d181",
+    "title": "采访初稿与旧保护按钮已验，1376249撰写页待隔离视觉验证",
     "status": "VERIFY"
   },
   "milestones": [
@@ -93,17 +93,15 @@
     }
   },
   "purchase_decision": "DEFERRED",
-  "next_task": "取得受控MediListen标签页后，显式恢复同一已停1cafa候选，只补证据查看及退出保稿按钮验收；通过后升级8798并补最终路径，5.1满足原标准后再开始5.3。",
-  "parallel_waiting_task": "硬件1.1–1.4继续暂缓；5.2依赖5.1/1.2，5.4依赖5.2/5.3。Qwen质量研究不新增为5.1前置，现役FunASR/DeepSeek分别记录；D盘r5完整业务恢复材料未启动。",
-  "manual_actions": [
-    "本轮保存退出确认已用于完成运行窗口，8798已恢复；浏览器连接仍返回禁用，需实际可控制的MediListen标签页引用后才能继续按钮验收。无需重做旧病例、录音或缩放。"
-  ],
-  "forecast_alpha_exit": "16项99h/日期/Gate不变，5.1 VERIFY95/交付验收false，5.3 BACKLOG。本轮18030候选1cafa实际启动、单合成回放与普通doctor HTTP读取及恢复原8798 PASS；候选已停，原cd56/d181已恢复，原业务/登记/59次账本不变。无真实生成或ASR业务调用，不抵三路径3/3；browser disabled使按钮/新截图NOT_TESTED。5.1 LLM本地范围原文有歧义，撤回强加本地LLM门槛；5.2断网另验。未推广或宣称稳定/完整Alpha/医院使用通过。",
+  "next_task": "以1376249前端/1cafa后端候选完成角色、章节、审核后缺失说明的实际截图、受影响按钮和实际缩放；通过后按受控备份回退流程升级8798。",
+  "parallel_waiting_task": "硬件1.1–1.4仍延期；5.2依赖5.1/1.2、5.3依赖5.1、5.4依赖5.2/5.3。本地模型漏提独立保留，采访ASR和合成保护回放不计提取质量或真实三路径。",
+  "manual_actions": [],
+  "forecast_alpha_exit": "阶段A完成采访本地8/8块、37:07、9568字符/834段及三私密稿，尚未全量回听；R6合成病例真实按钮R1→R2→历史→审核→DOCX→正常退出通过，已停候选并恢复原8798 cd56/d181，原业务及59条账本保持。1376249三静态资源/两测试定向40项和JS检查通过，但新前端未部署/未视觉验收，该提交CI结论另核。不自动关闭5.1或开始5.3，不宣称稳定/医院使用通过；16项99h、日期、硬件与Gate不变。",
   "source_files": {
     ".obsidian/plugins/project-planner-engineering/main.js": "e4006974bdcc45cb5ab80aebc5b9fd721a24c451ea883fd7d7e5239676017cca",
     ".obsidian/plugins/project-planner-engineering/manifest.json": "23672403c65ab17af6d28d84bbd822fab00ceeac1961612eb5cf9d514befa979",
     "Projects/Medical_Record_Agent/0 Alpha工程版交付包.md": "4bbfbde20927f571d673cf59c31b172af0fa742c4825695eb13682f4dff2231d",
-    "Projects/Medical_Record_Agent/00_Project_Home.md": "1f51f83b17892d2d296a7cc7d1d6012cea851ba37b27f9a76e639156bd4ef3eb",
+    "Projects/Medical_Record_Agent/00_Project_Home.md": "b55a65e5186c889d17d7b720bb1570a350312e2ed8a00eca266926cece621db0",
     "Projects/Medical_Record_Agent/01_Project_Charter.md": "a4f99c0402a0eb280d477a24b9276e41d372bef50ac4e9b5dd7e6aef620e3440",
     "Projects/Medical_Record_Agent/02_PBS.md": "b7639872df85c6d9de9bcc22407d48de9a97ecc4a5921b335aaf50ea6ca6af36",
     "Projects/Medical_Record_Agent/03_Architecture.md": "08ddf9216a9772fe3ae225489535b8095a43b56aeb481966db4a06a4594a522d",
@@ -159,7 +157,7 @@
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_只读数据浏览器与Schema候选拒绝_20260928.md": "1e0823aa0f0e446e02fc2c7535c20264e772f9d22787165334843d0fd8e798d9",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_品牌接入与证据选择实验_20260928.md": "65b21790b79e9a2d2e59ede04b4e6a8648212271438bcb2a4ad3fce77c45c431",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_响应脱敏与并发核验_20261015.md": "2b1566cf66e902f1d3e1e08cdee73f9146a6a2ccacfe8b42fc1335ebe22d4811",
-    "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_在线审核展示与输出修复_20261019.md": "fd3cde6e23984b25dc3cdae10b734e68cbf69d74d40c20c5554cb52541b70be0",
+    "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_在线审核展示与输出修复_20261019.md": "3ff9fd442681f601d02f2457d772a6dd3b5715131539b1dc45a6e54f5e07a2ff",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_完整离线归档与独立恢复_20261012.md": "6f8eaf2a9acf7b8a876692b4b8d5d954789493f70ee9c9739e640028a8a12e51",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_展示入口与家属代述校验_20260929.md": "3455eb5eae69877ea56166d4c779e7475ac7196458d2dca1e7b41f97755e1651",
     "Projects/Medical_Record_Agent/Evidence/Alpha/MRA-ALPHA-5.1_工作区与事实来源迭代_20261016.md": "9c4550c3c99481bbe8b71952d709a6bdeebb3449c2377efbea9f8a0bc8f89a26",
@@ -224,7 +222,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "8d8fb0e6c90c567bcc6b63df060e03478dbc38a1de44fcb9b214ae0b12b40c38",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "b18d5c994f4733359831a506c120e7a7f67779e4343c8e8b53525d119c71344b",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -237,7 +235,7 @@
     "Projects/Medical_Record_Agent/Risks/R08 本地环境与演示环境不一致.md": "9d9e6d6b283f8280fcd11202155b74718181eb799d75a9c9dc35c8983be22ae2",
     "Projects/Medical_Record_Agent/Risks/R09 单人关键任务集中造成阻塞.md": "7a63e214205397276a84f70e10c905257ad6b2ab7a638ce83aa80d7e7e83182b",
     "Projects/Medical_Record_Agent/Risks/R10 最终真实音频验收失败.md": "a8be1990be641494c191c3b1c257e610c1034b34f49b401a881d33344744fb1d",
-    "Projects/Medical_Record_Agent/Risks/R11 87小时估计不足或D15修复回归超时.md": "ecbb15551d250413bc63d94d8bdcabb2bad04d259f3a06e18d72f9d565758b82",
+    "Projects/Medical_Record_Agent/Risks/R11 87小时估计不足或D15修复回归超时.md": "f8d748005229b3b7e2d9786add1d311c4beba626e99049f403dc6feb2e53a822",
     "Projects/Medical_Record_Agent/Risks/R12 接口外壳或散热不兼容导致无法装配.md": "8dfbe6cd178ff467934dbe850b16acbd993472fcaf57c35454fff3a925ce6450",
     "Projects/Medical_Record_Agent/Roadmap.md": "77042df0811c8899ecfc21bd931c0e0fb17ce184696af16d2b7535250d2dbce5",
     "Projects/Medical_Record_Agent/Tasks/1.1 目标硬件与BOM基线.md": "e2a97826a25b65428c0d6d6f3421ab4ddfa625ad2fd36586e6188087f39ac9ef",
@@ -252,7 +250,7 @@
     "Projects/Medical_Record_Agent/Tasks/3.3 医生修改、审核与导出.md": "b2d325c1534f4b696f90766e9a0cddde2b71ebda4b27d4640d5a263a0edbafaf",
     "Projects/Medical_Record_Agent/Tasks/4.1 Encounter _ Transcript _ Draft基础持久化.md": "ac396168165bbc5b8ce20ec77fdbb8b0c52d9d57fb0aa21783b39a431c143939",
     "Projects/Medical_Record_Agent/Tasks/4.2 病历证据与Revision版本关联.md": "caa937a1f5f28c8ae4a817d7ca692217560256101c390e4d585152c392949054",
-    "Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke.md": "417f83acbda8fbd638138a865fcb6f0ab52c20b67fb0998448fe01c391703863",
+    "Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke.md": "6400391b9426baed7399efe003833572779d68ca0c45b28cfcc89054bf6e821a",
     "Projects/Medical_Record_Agent/Tasks/5.2 断网本地运行验证.md": "9cbfed70e6f73c9199e7031611a2a2760b4b30eed8268f4385f35426c45aecda",
     "Projects/Medical_Record_Agent/Tasks/5.3 连续5次真实音频E2E.md": "128e7dd1c17ce42c2ff5ff9ceda13283eaa860b981673c621e81d05dff7dd5c3",
     "Projects/Medical_Record_Agent/Tasks/5.4 Alpha缺陷回归和证据归档.md": "f904dcf687858ef01903e7fb53eca97c004f7b56656186dc8fae38fa240b1157",
@@ -299,16 +297,15 @@
     "Projects/Medical_Record_Agent/Work_Packages/Beta/4.4 最终回归与EVT Gate.md": "a1147d48183c3b7bc176339f072777e3967efae61b1705ba8c77a20fce445509"
   },
   "extra_source_files": {
+    ".artifacts/interview-003-20261027/first.receipt.json": "ff888eb17f27756491673761a452d1aad9bb73572d388143cf6b698d434a1e39",
+    ".artifacts/interview-003-20261027/remaining.receipt.json": "af7feb0b874058726ee11916ccc12dbd26714edd153c4feaa44a588a651f2951",
+    ".artifacts/interview-ui-20261027/pm-a/append-receipt.json": "0875d9c500692a487011fc17404cba1d600ea07939c85f0572953db6739ff9f6",
+    ".artifacts/interview-ui-20261027/pm-a/post-sync-summary.json": "9a3613b0686c285aa2926c1acd22120523d53bf54b0582aac04fada7715b232c",
+    ".artifacts/interview-ui-20261027/pm-a/verified-facts.json": "5b9d158f8ecf1c8b5ff87055773a8a5b52abe4983d45541aa39b4ba9b5af3078",
+    ".artifacts/interview-ui-20261027/r6-export-content.json": "74d208854316404a2953ecb86d45eef78ec541054de3931f96b6b06492dd205f",
+    ".artifacts/interview-ui-20261027/r6-ui-acceptance.json": "26b15df59ae594dcc2ac107e65b7cc718b9612da36cb4253540f80f2a7e2c5b7",
     ".artifacts/online-demo-20261019/pm-hardware-gates.json": "80bc286c3f03a9cdc361ffa84e89f64bba265e7f3f0c0c067c2cf2c3d0142d26",
-    ".artifacts/wbs-acceptance-20261027-r6/browser-connection-status.json": "e9f935f18d6d5a44e9f76dfc62a1d119fc868d2e3cf30e08504f23a2cab19f6f",
-    ".artifacts/wbs-acceptance-20261027-r6/framework-runtime-review.json": "2211d2ecc756492d4fa984a25b6b957e87fd88016db2ee739cbb31eec87f4b17",
-    ".artifacts/wbs-acceptance-20261027-r6/function-runtime-review.json": "2aa63874d92419ef3905c00a927e5cb6c7e946a0f4e6dace6eb548485909668e",
-    ".artifacts/wbs-acceptance-20261027-r6/pm/append-receipt.json": "ca71b3578298a272cd615f7a6ba6226a976048c1066c988763cd0398d8ce5e82",
-    ".artifacts/wbs-acceptance-20261027-r6/pm/post-sync-summary.json": "bc0b68a3e30529a8010dcf453e392625b2a7396e54ddc9491cb7b4cb1eadb4f1",
-    ".artifacts/wbs-acceptance-20261027-r6/pm/provider-scope-clarification.json": "3269dfff98466b449b36bd4d1e110962267ac2ab5c2182e0d19a16326ed0630c",
-    ".artifacts/wbs-acceptance-20261027-r6/pm/verified-facts.json": "1403114ca61a517c1032c6cd0b3b3b3b0627194f113a98975a7a649a7a4ec4ae",
-    ".artifacts/wbs-acceptance-20261027-r6/runtime-smoke-summary.json": "9092c3163115e81ecfe428cfdfc065b8124734524d26a962c9cbc55b973328ba",
-    ".artifacts/wbs-acceptance-20261027-r6/visual-runtime-boundaries.json": "009516287ff6f2a8d8203a6459d2fb57098154ac50d3b56f85754e43b9b56636"
+    "docs/evidence/20261027_interview_authoring_iteration.md": "c837e8c7fea94d5adc8b9f5d33080f68e524762b370891203228203012c34780"
   },
   "snapshot_verification": {
     "result": "PASS",

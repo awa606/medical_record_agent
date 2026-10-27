@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-27T11:21:34.999Z`
-- Source hash: `3252d2ed1b90ca18601650cf4f8389607c0282b87fdac0793050de5da09a03f8`
+- Updated at: `2026-10-27T14:00:05.960Z`
+- Source hash: `320d21b64a4018bab635bfd72ae29da9256d8a4aaa6118681b2596ef81a3903e`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@36d0bd6e8c6a69962136fbf0b42230efd088a7e9`
+- Repo: `codex/alpha51-demo-visual-e2e@137624909913a014c7d34f411f9d4927a60ea1ea`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **16项99h/日期/Gate不变，5.1 VERIFY95/交付验收false，5.3 BACKLOG。本轮18030候选1cafa实际启动、单合成回放与普通doctor HTTP读取及恢复原8798 PASS；候选已停，原cd56/d181已恢复，原业务/登记/59次账本不变。无真实生成或ASR业务调用，不抵三路径3/3；browser disabled使按钮/新截图NOT_TESTED。5.1 LLM本地范围原文有歧义，撤回强加本地LLM门槛；5.2断网另验。未推广或宣称稳定/完整Alpha/医院使用通过。**
+- Forecast Alpha Exit: **阶段A完成采访本地8/8块、37:07、9568字符/834段及三私密稿，尚未全量回听；R6合成病例真实按钮R1→R2→历史→审核→DOCX→正常退出通过，已停候选并恢复原8798 cd56/d181，原业务及59条账本保持。1376249三静态资源/两测试定向40项和JS检查通过，但新前端未部署/未视觉验收，该提交CI结论另核。不自动关闭5.1或开始5.3，不宣称稳定/医院使用通过；16项99h、日期、硬件与Gate不变。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 5.1候选运行回放与恢复原版已验，真实按钮仍待连接；8798保持d181** — `VERIFY`
+**5.1 · 采访初稿与旧保护按钮已验，1376249撰写页待隔离视觉验证** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 取得受控MediListen标签页后，显式恢复同一已停1cafa候选，只补证据查看及退出保稿按钮验收；通过后升级8798并补最终路径，5.1满足原标准后再开始5.3。
-- Parallel waiting task: 硬件1.1–1.4继续暂缓；5.2依赖5.1/1.2，5.4依赖5.2/5.3。Qwen质量研究不新增为5.1前置，现役FunASR/DeepSeek分别记录；D盘r5完整业务恢复材料未启动。
+- Single next task: 以1376249前端/1cafa后端候选完成角色、章节、审核后缺失说明的实际截图、受影响按钮和实际缩放；通过后按受控备份回退流程升级8798。
+- Parallel waiting task: 硬件1.1–1.4仍延期；5.2依赖5.1/1.2、5.3依赖5.1、5.4依赖5.2/5.3。本地模型漏提独立保留，采访ASR和合成保护回放不计提取质量或真实三路径。
 
 ## Manual Actions
 
-- 本轮保存退出确认已用于完成运行窗口，8798已恢复；浏览器连接仍返回禁用，需实际可控制的MediListen标签页引用后才能继续按钮验收。无需重做旧病例、录音或缩放。
+- 无
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

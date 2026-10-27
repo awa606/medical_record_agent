@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-27T04:05:48.076Z`
-- Source hash: `134144702fb6111bc5852f33028eeddb020fc911541fd6569f7500ac4334581b`
+- Updated at: `2026-10-27T04:41:52.253Z`
+- Source hash: `8b8b3a7d4ddb9b332c03e81b29c7f661f4d717726b6d6d181d47c458e25f97b2`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@d181aee61223f16efa0e88094d3b892077d0a97c`
+- Repo: `codex/alpha51-demo-visual-e2e@fd4bc6e5822bca0910876367b4cab4c359db7930`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1保持VERIFY95/交付验收false，5.3BACKLOG；16项99h、正式日期、Gate与硬件不变。运行front cd56/backend b21；d181aee为本批修复源码，尚未推广。质量误导源于按引文子句检查丢失撤回上下文；review限定source修复与裸矛盾反例已通过定向与独立API检查，等待新UI。最终流程和恢复门禁未齐，不称稳定医生试用或医院级产品。**
+- Forecast Alpha Exit: **5.1保持VERIFY95、交付验收false，5.3BACKLOG，16项99h及正式日期/硬件/Gate不变。运行front cd56f59d/backend d181aee，DeepSeek legacy/零重试，医生修正及导出误提示经18028真实按钮、两DOCX、三角色复核和CI通过后已推广；原数据和账本保留。原18027 FAIL/HOLD长期保留。本地I01审计不等于模型改善；完整发布/最终版恢复及连续五次未齐，不称稳定医生独立试用或医院级通过。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798原版可用；18027因导出假覆盖提示HOLD，窄修复已锁定待新候选按钮验收** — `VERIFY`
+**5.1 · 8798已升级d181aee；医生原文修正、覆盖误提示及R2/R3审核导出通过本批验收** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 构建18028独立候选，只补医生修正→R2审核导出→仅改现病史R3→重新审核导出的实际按钮和DOCX，消除假阳性覆盖提示且保留真实缺失；通过后才推广8798。
-- Parallel waiting task: I01三份原始响应的零调用审计已完成：现病史四项漏选，其他字段选择不算该字段覆盖；不补答案、不改旧score/status、不宣称模型改善。后续研究须另立最小实验。
+- Single next task: 整理当前d181aee审核版的终版验收证据矩阵和恢复清单，仅补真实缺项，复用未受影响证据；满足5.1完整放行条件后才进入5.3。
+- Parallel waiting task: I01三份历史响应的现病史跨字段漏提已零调用定位，原模型score/status不变；本地自纠/漏提/混放未晋级，后续另立最小研究，不替换DeepSeek展示流程。
 
 ## Manual Actions
 
-- 当前无需新资料、采购、录音、旧缩放或用户重做病例。原8798已恢复并保留DeepSeek，18027停止且失败证据保留。
+- 当前无需新资料、采购、录音、旧缩放或重做病例；8798可继续使用，教师入口版本已核对。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-27T04:41:52.253Z`
-- Source hash: `8b8b3a7d4ddb9b332c03e81b29c7f661f4d717726b6d6d181d47c458e25f97b2`
+- Updated at: `2026-10-27T09:05:57.598Z`
+- Source hash: `e661b9d639227c8d73c4d4077c4e0f666507f623e0bf502fcfe0a78e0e315a2e`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@fd4bc6e5822bca0910876367b4cab4c359db7930`
+- Repo: `codex/alpha51-demo-visual-e2e@38af62ed1b21bb079d71b539398690353d1b9114`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1保持VERIFY95、交付验收false，5.3BACKLOG，16项99h及正式日期/硬件/Gate不变。运行front cd56f59d/backend d181aee，DeepSeek legacy/零重试，医生修正及导出误提示经18028真实按钮、两DOCX、三角色复核和CI通过后已推广；原数据和账本保留。原18027 FAIL/HOLD长期保留。本地I01审计不等于模型改善；完整发布/最终版恢复及连续五次未齐，不称稳定医生独立试用或医院级通过。**
+- Forecast Alpha Exit: **5.1 VERIFY95/交付验收false，5.3 BACKLOG；16项99h、正式日期/依赖/Gate及硬件不变。当前front cd56/backend d181，DeepSeek审核可用。本轮准备21患者受限恢复子集并排除E19/E20关联数据/附件，原源与账本保持；没有新容器、模型或ASR调用。新环境实际恢复/截图未验，不能写完整恢复或稳定医生试用PASS。在线展示、本地原Alpha验收和医院独立路线继续分别判断。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798已升级d181aee；医生原文修正、覆盖误提示及R2/R3审核导出通过本批验收** — `VERIFY`
+**5.1 · 8798 d181保持可用；受限恢复输入已准备，实际恢复启动与页面未验** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 整理当前d181aee审核版的终版验收证据矩阵和恢复清单，仅补真实缺项，复用未受影响证据；满足5.1完整放行条件后才进入5.3。
-- Parallel waiting task: I01三份历史响应的现病史跨字段漏提已零调用定位，原模型score/status不变；本地自纠/漏提/混放未晋级，后续另立最小研究，不替换DeepSeek展示流程。
+- Single next task: 浏览器控制可靠且确认无未保存内容后，互斥启动D盘r5受限恢复副本，补历史病历/版本/知识/文件关联实际验收，再恢复原8798；不重做已通过修正链。
+- Parallel waiting task: 本地I01仍是模型跨字段漏选，10/16复选提示与10/25布尔候选已失败；不同Ollama版本不可作纯单变量对照。研究保持NEEDS MORE EVIDENCE，不阻塞已授权DeepSeek展示的独立收尾。
 
 ## Manual Actions
 
-- 当前无需新资料、采购、录音、旧缩放或重做病例；8798可继续使用，教师入口版本已核对。
+- 当前无需补数据、采购、录音或重做病例；E19/E20按本轮用户选择封存保留且不入恢复副本。切换服务前若无法确认未保存内容，才另请保存退出。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

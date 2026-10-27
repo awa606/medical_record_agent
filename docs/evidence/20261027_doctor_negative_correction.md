@@ -61,3 +61,23 @@
 本机原件位于`.artifacts/doctor-negative-20261027-r1/`，包括`restore-result.json`、`viewer-restored.json`、`api-before.log`、`api-frozen-final.log`、`pytest-full.log`、`pytest-budget-focused.log`、`pytest-budget-d-location.log`、三角色审查JSON及`8798-E25-restored.jpg`。截图、原始响应、数据库、认证及运行配置不提交到Git。
 
 下一步只补新候选的“根据原文修正→保存新版本→审核导出→历史对照”实际按钮验收；通过后才升级8798。已有录音、缩放、知识与历史流程证据按未受影响范围复用。本地I01漏提仍另作离线定位，不用规则或医生修订成功冒充模型首次正确；最终版本三路径及独立恢复未齐前，不宣布稳定试用版。
+
+## 同轮补充：已固定的候选与I01离线定位
+
+实质代码提交为 `2583e304c54e31b14e0927635acde6e81284db28`。已从该提交的Git blob制作候选镜像，避免Windows工作区换行差异：
+
+| 项目 | 记录 |
+| --- | --- |
+| 候选镜像 | `mra51-doctor-negative:2583e304c54e`；完整ID `sha256:22eedbd5e29df2bf27c3a2256ab18ce01b212c1c5400c52fe63f1f7c6b08d8fd` |
+| 基础镜像 | `mra51-self-correction:b21dcd913d40`；完整ID `sha256:3fdf4af466a04ad23ba09457025bda31ad6289ec74fe7d2329366f06827146bf` |
+| 镜像差分 | `/app/app/api/tasks.py`、`/app/app/services/field_grounding.py`；其他应用、静态、配置和脚本内容指纹不变；用户、命令、入口及环境配置不变 |
+| 候选目录 | `D:/MediListen_离线归档/candidate-doctor-negative-2583e304-20261027-r1`；预留18027、独立Cookie、新业务库及知识副本；没有回灌生产数据 |
+| 准备结果 | 创建并核对独立容器、挂载和版本，`services_started=false`；没有暂停8798，不把“已准备”记为“已运行验收” |
+
+本机`release.py`只从已提交的两文件构建。后续步骤为启动隔离候选、录制响应建立独立验收病例、实际按钮验收，明确通过后才推广；当前`acceptance-decision`没有放行。原8798及数据库、旧容器、登记启动器和费用账本继续保留。
+
+I01离线追踪使用10月12日已有的3次事实选择响应，没有重新请求模型。发热病程及咳嗽咽痛已经进入目录，`allowed_fields`同时允许主诉和现病史，Schema也允许同一事实进入两字段；3次原始选择均只选主诉，现病史未选。映射及grounding没有删除已选择ID，最终现病史虽标为`complete`，原覆盖评分仍失败。因此本例是**首次选择漏提**，不是目录没有候选或后续校验删去；`complete`不能作为事实覆盖完整的证明。
+
+完整Schema旧基线还保留2/3主诉错引、3/3父亲病史混入并被规则拦截的结果，不能因另一契约的引用映射合法便写成整体质量通过。10月25日自纠反例的上下文丢失是独立问题，不用于解释所有I01漏选。
+
+原件路径、SHA和既有调用时间见本机`i01-offline-trace.json`（SHA256 `d09dfbe94c10bd83b2e4b9687019a48af737454fbb2212e4f18b1da948ddd8d9`）。没有找到新近I01调用及对应实际界面截图的原件，明确记为不可观察，不补造。下一项最小研究是对这3份原始输出作零调用覆盖差集审计，标出漏选，不自动补到模型答案。

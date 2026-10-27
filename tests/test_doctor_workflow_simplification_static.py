@@ -35,7 +35,7 @@ def test_role_quality_blocks_generation_until_identity_review_passes() -> None:
     assert "qualityPassed = roleQualityPassed(savedResult)" in script
     assert "!pendingCount\n        && qualityPassed" in script
     assert "if (pendingCount || !qualityPassed)" in script
-    assert "系统自动推定" in script
+    assert "系统推定，待核对" in script
     assert "startRecordGenerationFromAudio(transcribed.audio_id)" in script
     assert "await startRecordGenerationFromAudio(appState.currentAudioId)" in script
 

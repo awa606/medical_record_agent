@@ -3064,6 +3064,18 @@ function draftFieldValue(fields, key) {
   return fieldValue(fields, key);
 }
 
+// Presentation only: an approved missing field must describe its recorded review,
+// while the original value/hint remains available for history and exports.
+function recordFieldDisplayValue(fields, key, isApprovedDisplay = false) {
+  const field = fields?.[key];
+  if (!isApprovedDisplay || ["preliminary_diagnosis", "treatment_plan"].includes(key)
+      || readableStoredText(field?.value) || fieldStatus(field, key).key !== "missing") return draftFieldValue(fields, key);
+  return {
+    not_asked_confirmed: "本次未询问（医生已确认）",
+    missing_accepted: "本次资料缺失（医生已接受）",
+  }[field?.doctor_review_status] || "该字段无记录；历史病历已审核，未记录分项处理原因";
+}
+
 function draftFieldEvidence(fields, key) {
   if (!fields) return "暂无证据片段。";
   if (key === "preliminary_diagnosis") {
@@ -3466,20 +3478,30 @@ function renderFieldDetailContent(key) {
   }
   const field = fields[key] || null;
   const status = fieldStatus(field, key);
+  const isApprovedDisplay = ["approved", "exported"].includes(doctorDisplayState().key);
+  const isApprovedMissing = isApprovedDisplay && status.key === "missing" && !readableStoredText(field?.value)
+    && !["preliminary_diagnosis", "treatment_plan"].includes(key);
+  const displayValue = recordFieldDisplayValue(fields, key, isApprovedDisplay);
+  const statusLabel = isApprovedMissing
+    ? recordedMissingReason(field) || "历史病历已审核，字段无记录"
+    : status.label;
   const confidence = key === "treatment_plan" ? null : field?.confidence;
   const qualityItem = fieldQualityItem(key);
   return `
     ${detailSection(title, `
       <div class="detail-kv">
         <span>状态</span>
-        <strong>${escapeHtml(status.label)}</strong>
+        <strong>${escapeHtml(statusLabel)}</strong>
       </div>
       <div class="detail-kv">
         <span>置信度</span>
         <strong>${escapeHtml(confidence == null ? "需医生复核" : `${Math.round(confidence * 100)}%`)}</strong>
       </div>
-      <div class="detail-text">${escapeHtml(fieldValue(fields, key))}</div>
+      <div class="detail-text">${escapeHtml(displayValue)}</div>
     `)}
+    ${isApprovedMissing && readableStoredText(field?.hint)
+      ? detailSection("生成时提示（历史记录）", `<div class="detail-text">${escapeHtml(readableStoredText(field.hint))}</div><p>保留生成时的提示供追溯，不表示当前仍待审核。</p>`)
+      : ""}
     ${qualityItem ? detailSection("质量判断", `
       <div class="detail-kv"><span>质量状态</span><strong>${escapeHtml(fieldQualityLabel(key))}</strong></div>
       <div class="detail-kv"><span>证据数量</span><strong>${escapeHtml(String(qualityItem.evidence_count ?? 0))}</strong></div>
@@ -4053,7 +4075,7 @@ function renderFields() {
     if (status.key === "missing") missingCount += 1;
     const value = isEditing
       ? readableStoredText(fields?.[key]?.value)
-      : appState.viewMode === "doctor" ? draftFieldValue(fields, key) : fieldValue(fields, key);
+      : appState.viewMode === "doctor" ? recordFieldDisplayValue(fields, key, isApprovedDisplay) : fieldValue(fields, key);
     const evidence = appState.viewMode === "doctor" ? draftFieldEvidence(fields, key) : fieldEvidence(fields?.[key] || null, key);
     const qualityLabel = fieldQualityLabel(key);
     const confidence = appState.viewMode === "doctor"
@@ -4083,9 +4105,9 @@ function renderFields() {
       ? `<label class="record-field-editor"><span class="sr-only">编辑${escapeHtml(title)}</span><textarea data-record-field-input="${escapeHtml(key)}" rows="4" placeholder="本次未采集可留空">${escapeHtml(value)}</textarea></label>`
       : `<div class="field-value">${value ? escapeHtml(value) : `<span class="draft-placeholder" aria-hidden="true">&nbsp;</span>`}</div>`;
     return `
-      <article class="field-card ${status.key} ${fieldWeightClass(key)} ${highlightClass} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${isApprovedDisplay && !isEditing ? "readonly-field" : ""} ${isEditing ? "editing" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}" tabindex="-1">
+      <article class="field-card ${status.key} ${fieldWeightClass(key)} ${highlightClass} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${isApprovedDisplay && !isEditing ? "readonly-field" : ""} ${isEditing ? "editing" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}" aria-labelledby="record-field-heading-${escapeHtml(key)}" tabindex="-1">
         <div class="field-head">
-          <span class="field-title">${escapeHtml(displayTitle)}</span>
+          <h3 class="field-title" id="record-field-heading-${escapeHtml(key)}">${escapeHtml(displayTitle)}</h3>
           ${appState.viewMode === "doctor"
             ? `<span class="field-status-inline"><span class="status-dot-label ${status.key}" title="${escapeHtml(compactStatusText || "待生成")}"></span><span class="field-status-text">${escapeHtml(status.label)}</span></span>`
             : `<span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>${qualityLabel ? `<span class="status-badge ${fieldQualityBadgeClass(qualityLabel)}">${escapeHtml(qualityLabel)}</span>` : ""}`}
@@ -4621,6 +4643,7 @@ function transcriptRowsFromText(text) {
     return { index, editable: false, sourceSegment: null, segmentId: `text-${index}`,
       startTime: null, endTime: null, speakerId: null, time: "--:--",
       speaker: role?.speaker || "unknown", label: role?.label || "角色未记录",
+      roleTrusted: Boolean(role && role.speaker !== "unknown"), roleSource: role ? "explicit_text" : "",
       text: role ? line.slice(role.prefixLength) : line };
   });
 }
@@ -4648,6 +4671,7 @@ function transcriptRows() {
         roleSource: displaySegment.role_source,
         roleNote: displaySegment.role_note,
         roleWarning: displaySegment.role_warning,
+        roleTrusted: isTrustedClinicalRole(displaySegment),
         needsReview: transcriptRoleNeedsReview(displaySegment, label),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
@@ -4676,6 +4700,7 @@ function transcriptRows() {
         roleSource: displaySegment.role_source,
         roleNote: displaySegment.role_note,
         roleWarning: displaySegment.role_warning,
+        roleTrusted: isTrustedClinicalRole(displaySegment),
         needsReview: transcriptRoleNeedsReview(displaySegment, label),
         reviewedByDoctor: Boolean(segment.reviewed_by_doctor),
       };
@@ -5065,6 +5090,17 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
   `;
 }
 
+// Use existing role decisions; styling must not infer a clinical role from text.
+function transcriptRowPresentation(row = {}) {
+  const role = ["doctor", "patient", "other"].includes(row.speaker) ? row.speaker : "unknown";
+  if (row.provisional) return { role, state: "provisional", warning: "临时转写" };
+  if (row.roleWarning) return { role, state: "inferred", warning: "系统推定，待核对" };
+  if (row.needsReview) return { role, state: "pending", warning: "角色待核对" };
+  if (role === "unknown") return { role, state: "unknown", warning: "" };
+  if (row.roleTrusted === true) return { role, state: "confirmed", warning: "" };
+  return { role, state: "pending", warning: "角色待核对" };
+}
+
 function renderTranscript() {
   const asr = appState.currentAsrResult;
   const rows = transcriptRows();
@@ -5137,9 +5173,13 @@ function renderTranscript() {
     ${streamingEmptyBlock}
     ${followEmptyBlock}
     <div class="transcript-table" role="list" aria-label="对话转写列表">
-      ${visibleRows.map((item, index) => `
+      ${visibleRows.map((item, index) => {
+        const presentation = transcriptRowPresentation(item);
+        return `
         <div
           class="transcript-table-row ${hasAudioSource ? "" : "transcript-table-row-text"} ${item.segmentId === appState.activeTranscriptSegmentId ? "transcript-row-active" : ""} ${item.provisional ? "provisional" : ""}"
+          data-role="${presentation.role}"
+          data-role-state="${presentation.state}"
           data-segment-index="${item.index}"
           data-segment-id="${escapeHtml(item.segmentId)}"
           ${hasAudioSource && item.startTime != null ? `data-segment-start="${item.startTime}"` : ""}
@@ -5149,12 +5189,12 @@ function renderTranscript() {
           ${transcriptTimeMarkup(item)}
           <span class="transcript-role-cell">
             <span class="transcript-role-tag ${escapeHtml(item.speaker)}">【${escapeHtml(speakerDisplayLabel(item, speakerCount, speakerAliases))}】</span>
-            ${item.roleWarning ? `<span class="transcript-role-warning">系统自动推定</span>` : ""}
+            ${presentation.warning ? `<span class="transcript-role-warning">${presentation.warning}</span>` : ""}
           </span>
           <span class="transcript-row-text">${escapeHtml(item.text || "（无文本）")}</span>
           <button type="button" class="transcript-row-link" data-open-detail="transcript:${item.index}" data-busy-allowed="true">详情</button>
         </div>
-      `).join("")}
+      `; }).join("")}
     </div>
   `;
   if (appState.transcriptAutoFollow && isStreaming) {

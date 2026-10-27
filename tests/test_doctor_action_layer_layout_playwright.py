@@ -268,7 +268,9 @@ def test_long_transcript_scrolls_inside_transcript_region_and_action_bar_is_clic
                 assert metrics["firstText"]["width"] >= 115
                 assert metrics["textWhiteSpace"] == "normal"
                 assert metrics["textWordBreak"] == "normal"
-                assert metrics["textOverflowWrap"] == "normal"
+                # Keep normal word breaking; allow long unbroken identifiers to
+                # wrap inside the role block instead of widening the column.
+                assert metrics["textOverflowWrap"] == "anywhere"
                 assert metrics["actionBar"]["top"] >= 0
                 assert metrics["actionBar"]["bottom"] <= height
 

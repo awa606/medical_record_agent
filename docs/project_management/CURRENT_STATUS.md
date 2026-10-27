@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-25T12:31:07.697Z`
-- Source hash: `edbc815c4f48ff0550bbc9b071c2ff3ce13781f234e3591c3b57a9bf1a2ec762`
+- Updated at: `2026-10-27T02:17:39.276Z`
+- Source hash: `fc44b5d38e78663ad0a7bc7a233174eb7d95af3584e0dfe7e73b4e579b28a571`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@440818b2bf30e2a1d40435f84550528302351993`
+- Repo: `codex/alpha51-demo-visual-e2e@01ca33b36b195f9045eda32f1b0518c02dad2ec8`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1仍VERIFY95%，交付/验收false；5.3 BACKLOG0%，M1至M4 OPEN。16项99h、正式日期、依赖及硬件延期不变；本地固定正例不抵消自纠反例失败，撤回主诉保护已部署但等价改写误拦仍待修；最终同版本流程、独立恢复及正式门禁未齐，不能称稳定医生试用或医院级通过。**
+- Forecast Alpha Exit: **5.1仍VERIFY95%，交付/验收false；5.3 BACKLOG0%，M1至M4 OPEN。16项99h、正式日期、依赖及硬件延期不变。运行front cd56/backend b21；修复源码2583e30仅构建镜像22eedbd5并准备停机状态独立候选；真实按钮NOT_TESTED。局部规则和人工修订改善不等于本地模型漏提/混放通过；最终同版本流程、独立恢复和正式门禁未齐，不能称稳定医生试用或医院级通过。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 撤回主诉保护已部署8798；本地补整句反例失败；待修等价否定误拦** — `VERIFY`
+**5.1 · 原8798与查看器已恢复；医生否定修正候选已构建，待实际按钮验收** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 先修复“没有发热→否认发热”等价表述的局部误拦，并在隔离候选验证；8798继续DeepSeek受控展示。
-- Parallel waiting task: 11月2日展示维持DeepSeek审核候选；本地模型Research NME、正式5.1/5.3、离线生成和医院放行分别判断。
+- Single next task: 完成18027候选“根据原文修正→保存R2→审核导出→历史对照”的实际按钮及截图验收，通过后才升级8798；保持DeepSeek审核主线。
+- Parallel waiting task: 本地I01首次选择漏提已离线定位；下一研究仅复用既有3份响应作覆盖差集审计，不调用模型或自动补答案。实时角色、诊疗、医院放行仍独立。
 
 ## Manual Actions
 
-- 本轮无需用户重复录音或病例；最终物理麦克风及实际缩放保留原版本边界，按发布安排补验。
+- 当前无需新资料、采购、重复录音或重做旧缩放；浏览器网址识别工具阻断已记录，不绕过。后续实际按钮工具恢复后补验，未齐前不推广。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

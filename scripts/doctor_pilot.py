@@ -322,6 +322,21 @@ def open_data_browser(config: dict) -> dict:
     items = validate(config)
     viewer_arguments = []
     if config.get("viewer_directory"):
+        # A SIM-TEST identifier is a label, not permission to expose the record.
+        # Consume the reviewed list unchanged; never infer or broaden consent.
+        try:
+            policy_path = Path(config["viewer_allowlist"])
+            policy = json.loads(policy_path.read_text(encoding="utf8"))
+            markers = policy.get("synthetic_patient_ids")
+            reviewer = policy.get("reviewed_by")
+            if (policy.get("confirmed_synthetic") is not True
+                    or not isinstance(reviewer, str) or not reviewer.strip()
+                    or not isinstance(markers, list) or not markers
+                    or any(not isinstance(value, str) or not value.strip() for value in markers)
+                    or len(set(markers)) != len(markers)):
+                raise ValueError("invalid reviewed allowlist")
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+            raise PilotError("VIEWER_ALLOWLIST_REQUIRED: 缺少有效的已审查匿名病例清单；请先核对资料来源。未自动加入患者，原查看器与医生数据保持不变。") from exc
         backup = Path(config["runtime"]) / "viewer-source.sqlite3"
         if not items["app"]["State"]["Running"]:
             raise PilotError("VIEWER_SOURCE_STOPPED: 请先启动本环境，确保快照来源和版本明确。")
@@ -329,13 +344,6 @@ def open_data_browser(config: dict) -> dict:
                 "import sqlite3; from contextlib import closing; "
                 "s=sqlite3.connect('file:/app/runtime/medical_record_agent.sqlite3?mode=ro',uri=True); "
                 "d=sqlite3.connect('/app/runtime/viewer-source.sqlite3'); s.backup(d); d.close(); s.close()")
-        if config.get("environment") == "test":
-            with sqlite3.connect(backup.as_uri() + "?mode=ro", uri=True) as connection:
-                identifiers = [row[0] for row in connection.execute("SELECT deidentified_id FROM patient")
-                               if re.fullmatch(r"SIM-TEST-[A-Z0-9-]+", row[0])]
-            Path(config["viewer_allowlist"]).write_text(json.dumps({
-                "confirmed_synthetic": True, "reviewed_by": "User-authorized synthetic/deidentified test environment; only explicit SIM-TEST identifiers",
-                "synthetic_patient_ids": identifiers}, ensure_ascii=False, indent=2), encoding="utf8")
         viewer_arguments = ["-Action", "Refresh", "-StateDirectory", config["viewer_directory"],
                             "-AllowlistPath", config["viewer_allowlist"], "-SourceDb", str(backup),
                             "-SourceLabel", config["environment_label"] + " · " + config["app_git_sha"]]

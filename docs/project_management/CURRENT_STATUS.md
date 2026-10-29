@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-29T13:41:39.125Z`
-- Source hash: `d837c76ec420baf29d92dd9262817a9467dda5af19f8df54c01f47a786a55e4c`
+- Updated at: `2026-10-29T14:39:48.466Z`
+- Source hash: `34d34f56b0143dceef647929590b9176a9d2a09af5a61d03bf49b06e95c45eb3`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@6eec35d71f8162b3b981c12594043c6ffc5611e0`
+- Repo: `codex/alpha51-demo-visual-e2e@b5451f5f3f4203970830fa852f8d15d89df05d34`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **8798原容器恢复，前端13762490/后端1cafa2ae及镜像7381196不变。T01在E27/task25真实按钮完成一次生成、R2修正、历史、审核、导出、刷新重开；首次两字段混放仍失败，人工修正流程通过。账本59→60，新增0.007432元，累计0.881210元。教师旧指纹入口已修复，8796为10月29日21:21原16人受限快照且已真实登录，E19/E20排除；启动器不自动扩大白名单，32项定向回归通过，三角色复核scope PASS。当前音频/物理录音、实际缩放与完整恢复尚未齐，5.1VERIFY95、5.3BACKLOG，正式16项99h/日期/Gate/硬件不变。**
+- Forecast Alpha Exit: **8798本轮仅两份显示资源更新：前端b5451f5f、后端1cafa2ae不变，镜像84507f2b；健康/就绪200、业务和账本前后相同，旧容器保留。时间左上、角色右上、详情下方已在实际8798文本/音频历史记录截图核对；680px响应式初次失败与修复保留，不算实际缩放。教师入口版本匹配；新增ASR/模型调用0。上轮E27文本修正审核闭环复用，首次两字段混放仍失败；授权音频、物理录音、实际缩放和完整恢复缺项保留。5.1VERIFY95、5.3BACKLOG，正式16项99h/日期/Gate/硬件不变。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 8798恢复；E27文本审核闭环及查看器白名单修复通过，音频与恢复缺项待补** — `VERIFY`
+**5.1 · 转写条头排版已上线8798；授权音频闭环与同镜像恢复缺项待补** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 补当前13762490/1cafa2ae版本的授权音频真实按钮闭环，核对角色门禁和一次生成；通过后衔接同镜像受限业务恢复。复用有效证据，5.1原标准满足后再进入5.3。
+- Single next task: 补当前b5451f5f/1cafa2ae版本的授权音频真实按钮闭环，核对角色门禁和一次生成；通过后衔接同镜像受限业务恢复。转写条头小布局已完成，不重复已通过文本及无关检查；5.1原标准满足后再进入5.3。
 - Parallel waiting task: 硬件1.1–1.4仍延期，5.2依赖5.1/1.2、5.4依赖5.2/5.3。本地模型漏提独立保留。采访v2三稿与两审查留本机，自动估计时间需复听，先限第七块255—300秒局部核对，不自动重跑37分钟。
 
 ## Manual Actions

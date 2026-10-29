@@ -1,0 +1,120 @@
+{
+  "schema_version": "knowledge_version_locator_v1",
+  "dataset_id": "influenza_2025_locator_frozen_20260928",
+  "split": "version_migration_frozen",
+  "scope": "工程来源与页码定位，不是临床真值，不用于调参；与原20+20查询分别报告",
+  "frozen_at": "2026-09-28T13:14:00+08:00",
+  "source_id": "nhc-influenza-2025",
+  "queries": [
+    {
+      "query_id": "FLU25-01",
+      "query": "流感病毒的类型和病原学特点是什么？",
+      "relevant_source_ids": [
+        "nhc-influenza-2025"
+      ],
+      "expected_pages": [
+        1
+      ],
+      "expected_section_label": "一、病原学"
+    },
+    {
+      "query_id": "FLU25-02",
+      "query": "流感通过哪些途径传播？",
+      "relevant_source_ids": [
+        "nhc-influenza-2025"
+      ],
+      "expected_pages": [
+        2
+      ],
+      "expected_section_label": "传播途径"
+    },
+    {
+      "query_id": "FLU25-03",
+      "query": "流感潜伏期与常见临床表现是什么？",
+      "relevant_source_ids": [
+        "nhc-influenza-2025"
+      ],
+      "expected_pages": [
+        3
+      ],
+      "expected_section_label": "四、临床表现"
+    },
+    {
+      "query_id": "FLU25-04",
+      "query": "流感血常规和血生化检查有哪些表现？",
+      "relevant_source_ids": [
+        "nhc-influenza-2025"
+      ],
+      "expected_pages": [
+        4
+      ],
+      "expected_section_label": "五、实验室检查和影像学表现"
+    },
+    {
+      "query_id": "FLU25-05",
+      "query": "流感核酸检测和抗原检测如何帮助诊断？",
+      "relevant_source_ids": [
+        "nhc-influenza-2025"
+      ],
+      "expected_pages": [
+        5
+      ],
+      "expected_section_label": "核酸检测"
+    },
+    {
+      "query_id": "FLU25-06",
+      "query": "流感临床诊断和确定诊断需要什么证据？",
+      "relevant_source_ids": [
+        "nhc-influenza-2025"
+      ],
+      "expected_pages": [
+        6
+      ],
+      "expected_section_label": "临床诊断病例"
+    },
+    {
+      "query_id": "FLU25-07",
+      "query": "儿童重型流感的识别表现有哪些？",
+      "relevant_source_ids": [
+        "nhc-influenza-2025"
+      ],
+      "expected_pages": [
+        7
+      ],
+      "expected_section_label": "儿童符合下列任何一条"
+    },
+    {
+      "query_id": "FLU25-08",
+      "query": "哪些人群容易发展为重型或危重型流感？",
+      "relevant_source_ids": [
+        "nhc-influenza-2025"
+      ],
+      "expected_pages": [
+        8
+      ],
+      "expected_section_label": "高危人群"
+    },
+    {
+      "query_id": "FLU25-09",
+      "query": "流感医院感染控制如何分诊和隔离？",
+      "relevant_source_ids": [
+        "nhc-influenza-2025"
+      ],
+      "expected_pages": [
+        17
+      ],
+      "expected_section_label": "十一、医院感染控制措施"
+    },
+    {
+      "query_id": "FLU25-10",
+      "query": "流感疫苗优先推荐哪些人群接种？",
+      "relevant_source_ids": [
+        "nhc-influenza-2025"
+      ],
+      "expected_pages": [
+        18
+      ],
+      "expected_section_label": "接种"
+    }
+  ]
+}

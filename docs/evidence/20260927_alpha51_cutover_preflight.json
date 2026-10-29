@@ -1,0 +1,158 @@
+{
+  "schema_version": "mra-deployment-evidence-v1",
+  "recorded_at": "2026-09-27T15:05:59.086625+08:00",
+  "wbs": "5.1",
+  "task_status": "VERIFY",
+  "deployed_code_sha": "0d39d642405018e7e664f301c6b354d31c0c36ef",
+  "candidate_port": 8795,
+  "active_port": 2626,
+  "cutover_performed": false,
+  "manual_zoom": {
+    "125_percent": "NOT_TESTED",
+    "150_percent": "NOT_TESTED",
+    "method": "User Edge menu plus unobscured page/detail screenshots; not simulated viewport"
+  },
+  "candidate_image_id": "sha256:9608be1c2e8e24a30827423dcaced49898fd043d8c2d3e506f2ad3582dd2bd04",
+  "static_sha256": {
+    "static/doctor.html": "24659c654f7309d7e76dc6825909817a1c151faea60549393a8792c860d4aa10",
+    "static/doctor.js": "bf98047073b1705cea5aa51d739a1b10787b048771cf4cc655d0c74c37aa70ea",
+    "static/doctor-workspace.css": "d32481fbf729b1ca17b50504fdd40c765da9d8ed56b0f93bf5fdd68fa7fce364"
+  },
+  "health_http": 200,
+  "ready_http_sequence": [
+    503,
+    200
+  ],
+  "knowledge": {
+    "document_count": 4,
+    "chunk_count": 39,
+    "embedding_count": 0,
+    "retrieval_mode": "fts5_v1",
+    "hits": 5,
+    "citations_complete": true,
+    "source_details_http": {
+      "nhc-child-mpp-2025": 200,
+      "nhc-covid19-trial-v10": 200,
+      "nhc-influenza-2020": 200,
+      "nhc-record-standard-2010": 200
+    },
+    "bge_verified": false
+  },
+  "auth": {
+    "anonymous_before_admin_login": 401,
+    "anonymous_after_admin_login": 401,
+    "doctor_admin_http": 403
+  },
+  "persistence_after_recreate": {
+    "equal": true,
+    "tables": {
+      "agent_task": {
+        "rows": 1,
+        "sha256": "149c5fcbd11b7713c97179b008d1fab0bcdc596f41d2a094748f6d65221d0ff3"
+      },
+      "patient": {
+        "rows": 1,
+        "sha256": "7b996b737b54891ce85a6d38854132caff463205d030946eed9d8c8df0f1eaf6"
+      },
+      "encounter": {
+        "rows": 1,
+        "sha256": "a2b3aa3f2ea34969549adbf25bc815848cb7d70bb62a0afb799e71bdaf9917de"
+      },
+      "record_revision": {
+        "rows": 2,
+        "sha256": "38610fa8eab733f078c365c574d9bdcc27d5b90d7cb66131b7d7c361c0353516"
+      },
+      "approval": {
+        "rows": 1,
+        "sha256": "03636897bc5ca4fd35fc21601b57a32b82344ae4a04c6add17a309e85822764b"
+      },
+      "knowledge_source": {
+        "rows": 4,
+        "sha256": "3f94e3c685878bd047ceb69067c2aa4203fffda7ddc5ac68980038b1cd4724f7"
+      },
+      "knowledge_document": {
+        "rows": 4,
+        "sha256": "9b00ecec7c6ffcec04007dfc97c812f28feae152ac0389517a34f45cc128265f"
+      },
+      "knowledge_chunk": {
+        "rows": 39,
+        "sha256": "f51aab9dd551de699222135913b39bc11138416a9c68c75fbaf29602ea75ace9"
+      },
+      "knowledge_embedding": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    }
+  },
+  "real_providers": {
+    "source_audio_sha256": "49c1f264172f24032e21304e9fb46a35885eaa52e2bd5814d946c869612d5054",
+    "scope": "replay of approved anonymous WAV; not new microphone capture",
+    "audio_id": "6f3dfdff3a05410faffde81b0f6eaa10",
+    "transcribe_seconds": 9.625,
+    "result_keys": [
+      "audio_id",
+      "status",
+      "recognition_mode",
+      "audio_duration_seconds",
+      "processing_duration_seconds",
+      "rtf",
+      "backend",
+      "model",
+      "request_id",
+      "started_at",
+      "completed_at",
+      "asr_result"
+    ],
+    "unreviewed_generation_http": 409,
+    "wave_duration_seconds": 11.008,
+    "asr": {
+      "backend": "funasr",
+      "model": "funasr-paraformer-zh",
+      "request_id": "ae9e9ebb086c4ef5bc8f543017da4090",
+      "audio_duration_seconds": 10.365,
+      "processing_duration_seconds": 2.7272,
+      "rtf": 0.2631
+    },
+    "llm": {
+      "actual_provider": "ollama",
+      "model": "qwen3:4b",
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "fallback": false,
+      "fallback_allowed": false,
+      "mode": "edge"
+    },
+    "persisted_revision": {
+      "id": 4,
+      "revision_no": 2,
+      "content_hash": "f21757392a2e16ac15010d42662ed83a06b930971b625c46f35cab2c05e9fe6b"
+    },
+    "export": {
+      "sha256": "e830833ec15b0b3e3bcc4845ec1e7bd0cd9f80b7f8c20dcf2845a9045ca090e3",
+      "bytes": 1434,
+      "allergy_negations_preserved": true,
+      "snakebite_fixture_absent": true
+    },
+    "notes": [
+      "Existing authorized WAV replay, not new microphone recording.",
+      "Provider duration differs from WAV header; both retained.",
+      "Post-review trace latency is zero; not accepted as generation timing.",
+      "Pre-approval export 400; not evidence of stale approval invalidation."
+    ]
+  },
+  "verification": {
+    "targeted_pytest_passed": 8,
+    "full_pytest_rerun_this_turn": false,
+    "existing_verify_url": "https://github.com/awa606/medical_record_agent/actions/runs/36299533141",
+    "new_microphone_capture": false,
+    "three_paths_accepted": false,
+    "offline_restore_this_version": false
+  },
+  "rollback": {
+    "old_container": "medical-record-agent",
+    "old_image_id": "sha256:093306092787412fdf7f4be516c24dc964503edf642747ca447e35b68963aac7",
+    "old_container_stopped": false,
+    "backups": "local .artifacts/alpha51-cutover-preflight-20260927-1453",
+    "fresh_backup_required_before_actual_cutover": true
+  },
+  "next_task": "核验人工Edge125%/150%证据，通过后重新核对数据水位并切换2626"
+}

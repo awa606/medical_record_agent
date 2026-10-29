@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse
 from app.agents import MedicalRecordOrchestrator
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.api.records import ensure_record_provider_available, run_record_generation_task
-from app.db import bind_task_to_encounter, get_encounter, set_task_owner
+from app.db import bind_task_to_encounter, can_retry_failed_encounter, get_encounter, set_task_owner, update_task
 from app.schemas import ASREvaluationRequest, ASREvaluationResult, ASRResult, AudioRecord
 from app.services.asr import ASREvaluator, apply_manifest_role_strategy, create_asr_engine
 from app.services.asr.auto_roles import ensure_automatic_speaker_roles
@@ -165,7 +165,7 @@ def _generation_owner_for_encounter(encounter_id: int, request: Request | None) 
         raise HTTPException(status_code=409, detail="Encounter must be checked in before record generation")
     if check_in_status in {"completed", "cancelled"}:
         raise HTTPException(status_code=409, detail="Encounter is closed and cannot generate a record")
-    if encounter.get("task_id") is not None:
+    if encounter.get("task_id") is not None and not can_retry_failed_encounter(encounter_id):
         raise HTTPException(status_code=409, detail="Encounter is already bound to a task")
     return int(encounter_doctor_id)
 
@@ -429,8 +429,10 @@ def generate_record_from_audio(
                 encounter_id,
                 owner_user_id=encounter_owner_id,
                 check_in_status="in_progress",
+                allow_failed_replacement=True,
             )
         except ValueError as exc:
+            update_task(task_id, status="FAILED", current_stage="failed", error_message="Encounter binding rejected; generation was not started")
             raise HTTPException(status_code=409, detail=str(exc)) from exc
     elif user is not None:
         set_task_owner(task_id, user.id)

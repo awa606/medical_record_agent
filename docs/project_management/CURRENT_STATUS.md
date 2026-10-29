@@ -8,24 +8,24 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-09-22T15:57:12+08:00`
-- Source hash: `655cbfebfe6ece0ef557ef2fac1cdb0c9fb6263eb7304fc5eb895f71ba4d82d8`
+- Updated at: `2026-10-29T14:39:48.466Z`
+- Source hash: `34d34f56b0143dceef647929590b9176a9d2a09af5a61d03bf49b06e95c45eb3`
 - Phase: **Alpha**
-- Repo: `codex/alpha33-doctor-edit-review-export@b3374fd50b71e12f9e7a7eb5e3b410b6953455a4`
-- Base main: `b5cc5369ae9503f28910feca6b1d402add408671`
-- Active PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · DRAFT
-- Last merged PR: [#111](https://github.com/awa606/medical_record_agent/pull/111) · MERGED · `b5cc5369ae9503f28910feca6b1d402add408671`
-- Forecast Alpha Exit: **Software Lane 2026-10-07; Full M4 TBD / HARDWARE DEPENDENT**
+- Repo: `codex/alpha51-demo-visual-e2e@b5451f5f3f4203970830fa852f8d15d89df05d34`
+- Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
+- Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
+- Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
+- Forecast Alpha Exit: **8798本轮仅两份显示资源更新：前端b5451f5f、后端1cafa2ae不变，镜像84507f2b；健康/就绪200、业务和账本前后相同，旧容器保留。时间左上、角色右上、详情下方已在实际8798文本/音频历史记录截图核对；680px响应式初次失败与修复保留，不算实际缩放。教师入口版本匹配；新增ASR/模型调用0。上轮E27文本修正审核闭环复用，首次两字段混放仍失败；授权音频、物理录音、实际缩放和完整恢复缺项保留。5.1VERIFY95、5.3BACKLOG，正式16项99h/日期/Gate/硬件不变。**
 
 ## Progress
 
 | Backlog | Ready | In Progress | Blocked | Verify | Done | Planned Hours |
 |---:|---:|---:|---:|---:|---:|---:|
-| 5 | 0 | 0 | 1 | 2 | 8 | 99 |
+| 4 | 0 | 0 | 1 | 3 | 8 | 99 |
 
 ## Current Task
 
-**5.1 · 三条主路径E2E Smoke** — `BACKLOG`
+**5.1 · 转写条头排版已上线8798；授权音频闭环与同镜像恢复缺项待补** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: WBS 5.1：文本、上传音频、浏览器录音三条完整路径E2E Smoke与首个可恢复冻结候选
-- Parallel waiting task: 1.2目标硬件验证继续DEFERRED，不占用当前软件支线
+- Single next task: 补当前b5451f5f/1cafa2ae版本的授权音频真实按钮闭环，核对角色门禁和一次生成；通过后衔接同镜像受限业务恢复。转写条头小布局已完成，不重复已通过文本及无关检查；5.1原标准满足后再进入5.3。
+- Parallel waiting task: 硬件1.1–1.4仍延期，5.2依赖5.1/1.2、5.4依赖5.2/5.3。本地模型漏提独立保留。采访v2三稿与两审查留本机，自动估计时间需复听，先限第七块255—300秒局部核对，不自动重跑37分钟。
 
 ## Manual Actions
 

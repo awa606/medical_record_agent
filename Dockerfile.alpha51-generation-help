@@ -1,0 +1,10 @@
+# Reuse the locally verified dependency image; pin BASE_IMAGE to an image digest.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+USER root
+COPY app /app/app
+COPY scripts /app/scripts
+COPY static /app/static
+COPY docs/pilot/doctor-v1 /app/docs/pilot/doctor-v1
+RUN python /app/scripts/package_help.py --output /app/static/help
+USER appuser

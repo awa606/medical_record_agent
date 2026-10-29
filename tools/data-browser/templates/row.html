@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{ mra_label(table) }} · 数据查看器{% endblock %}
+
+{% block extra_head %}
+{{- super() -}}
+<style>
+@media only screen and (max-width: 576px) {
+{% for column in columns %}
+    .rows-and-columns td:nth-of-type({{ loop.index }}):before { content: "{{ mra_label(column)|escape_css_string }}"; }
+{% endfor %}
+}
+</style>
+{% endblock %}
+
+{% block body_class %}row db-{{ database|to_css_class }} table-{{ table|to_css_class }}{% endblock %}
+
+{% block crumbs %}
+{{ crumbs.nav(request=request, database=database, table=table) }}
+{% endblock %}
+
+{% block content %}
+<h1 style="padding-left: 10px; border-left: 10px solid #{{ database_color(database) }}">{{ mra_label(table) }}：{{ ', '.join(primary_key_values) }} <small class="technical">{{ table }}</small>{% if private %} 🔒{% endif %}</h1>
+
+{% block description_source_license %}{% include "_description_source_license.html" %}{% endblock %}
+
+<p>原始格式（字段名保持技术原名）： {% for name, url in renderers.items() %}<a href="{{ url }}">{{ name }}</a>{{ ", " if not loop.last }}{% endfor %}</p>
+
+{% include custom_table_templates %}
+
+{% if foreign_key_tables %}
+    <h2>关联记录</h2>
+    <ul>
+        {% for other in foreign_key_tables %}
+            <li>
+                <a href="{{ other.link }}">
+                    {{ mra_label(other.other_table) }} · {{ "{:,}".format(other.count) }} 条记录</a>
+                通过 {{ mra_label(other.other_column) }} <small>({{ other.other_table }}.{{ other.other_column }})</small>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+{% endblock %}

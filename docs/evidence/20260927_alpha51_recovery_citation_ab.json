@@ -1,0 +1,295 @@
+{
+  "schema_version": "mra-alpha51-citation-format-v1",
+  "recorded_at": "2026-09-27T23:25:25.422099+08:00",
+  "base_sha": "dd8afee6ea0ce7ef9cd722114a05b2d0bbb493c8",
+  "deployed_code_sha": "ee0b5f0a84461fd7d531cf54de4e16c2ce6588a1",
+  "candidate_deployed": false,
+  "hypothesis": "H-CITE-JSON",
+  "decision": "REJECTED",
+  "audio_sha256": "c58c6ff5b5437a2152a2472d2cd8e10be64b42dc213bb3157611ee4333fa732c",
+  "input_sha256": "2b381482e39a4ff2bd44fc78a39100a72d8d8172f3fd2d16c0587000cfaa817c",
+  "baseline_function_sha256": "ff6c6f08fd6f8b8400d113dc8c117fde946c9753238db7a871902e778a0acfcb",
+  "runs": [
+    {
+      "variant": "baseline",
+      "repeat": 1,
+      "status": "completed",
+      "grounded_expected": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 8.681
+    },
+    {
+      "variant": "baseline",
+      "repeat": 2,
+      "status": "completed",
+      "grounded_expected": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 9.502
+    },
+    {
+      "variant": "baseline",
+      "repeat": 3,
+      "status": "completed",
+      "grounded_expected": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 6.973
+    },
+    {
+      "variant": "json_source",
+      "repeat": 1,
+      "status": "completed",
+      "grounded_expected": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 5.816
+    },
+    {
+      "variant": "json_source",
+      "repeat": 2,
+      "status": "completed",
+      "grounded_expected": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 5.835
+    },
+    {
+      "variant": "json_source",
+      "repeat": 3,
+      "status": "completed",
+      "grounded_expected": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "raw_citation_valid": [
+        "present_illness",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "expected_count": 4,
+      "passed": false,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "seconds": 5.991
+    }
+  ],
+  "development_validation_frozen_run": false,
+  "runtime": {
+    "health_http": 200,
+    "ready_http": 200,
+    "sqlite_quick_check": "ok",
+    "knowledge": {
+      "source_count": 5,
+      "document_count": 7,
+      "active_document_count": 4,
+      "chunk_count": 116,
+      "embedding_count": 96,
+      "audit_count": 3,
+      "index_available": true,
+      "embedding_model": "BAAI/bge-small-zh-v1.5"
+    },
+    "preserved_records": {
+      "/api/tasks/3": {
+        "http": 200,
+        "result": {
+          "task_id": null,
+          "current_stage": "exported",
+          "current_record_revision_id": 7
+        }
+      },
+      "/api/tasks/5": {
+        "http": 200,
+        "result": {
+          "task_id": null,
+          "current_stage": "exported",
+          "current_record_revision_id": 9
+        }
+      }
+    }
+  },
+  "api_checks": {
+    "mode": "hybrid_v1",
+    "results": 5,
+    "anonymous_knowledge_http": 401,
+    "unconfirmed_role_http": 409,
+    "resources": {
+      "doctor.html": "1b4eb543965168cfee00081443ec53cc1bf66180573afc4a5a660c1df94553c4",
+      "doctor.js": "83f6ef1e164c37da3c6aa608b48c35b7f756e6743211994be7a4c36162ac922b",
+      "doctor-workspace.css": "e3c46a32c8f363a3d7f5a8d29fe99e9d2580bfc139beb20cfb15b03698800c4b"
+    }
+  },
+  "workflow": {
+    "scope": "real local Qwen text workflow with explicit scripted doctor correction, not clinical review",
+    "status": "passed",
+    "initial_revision": {
+      "revisionId": 10,
+      "revisionNumber": 1,
+      "contentHash": "d9f9b229475cd111bb2b2128f2f4d6588933dc000f5310615022d2cee862f52b"
+    },
+    "initial_field_statuses": {
+      "chief_complaint": "conflicting",
+      "present_illness": "complete",
+      "previous_treatment": "missing",
+      "accompanying_symptoms": "complete",
+      "past_history": "missing",
+      "allergy_history": "complete",
+      "physical_exam": "missing"
+    },
+    "unapproved_export_http": 400,
+    "saved_revision": {
+      "revisionId": 11,
+      "revisionNumber": 2,
+      "contentHash": "7c7c509bc4af7efce3465c9cbfe7f806253be2bc712470d5039201ada3a2c323"
+    },
+    "manual_edit_count": 1,
+    "knowledge_drawer": true,
+    "docx_sha256": "aae5605f2dd040ed16331552b3c10abe1ad703450f134458223cc64303553cb6",
+    "export_contents_checked": true
+  },
+  "reopened": {
+    "encounter_id": 7,
+    "task_id": 6,
+    "stage": "exported",
+    "revision": {
+      "revisionId": 11,
+      "revisionNumber": 2,
+      "contentHash": "7c7c509bc4af7efce3465c9cbfe7f806253be2bc712470d5039201ada3a2c323"
+    }
+  },
+  "rule_safety": {
+    "dataset": "data\\semantic_safety\\clinical_assertion_v1.jsonl",
+    "case_count": 240,
+    "expected_fact_count": 206,
+    "matched_fact_count": 206,
+    "exact_case_count": 240,
+    "exact_case_rate": 1.0,
+    "dangerous_polarity_flips": 0,
+    "unsupported_fact_count": 0,
+    "missing_fact_count": 0,
+    "question_leakage_count": 0,
+    "experiencer_errors": 0,
+    "temporality_errors": 0,
+    "certainty_errors": 0,
+    "value_unit_errors": 0,
+    "category_counts": {
+      "allergy_absent": 20,
+      "allergy_double_negative": 20,
+      "allergy_family": 20,
+      "allergy_present": 20,
+      "allergy_question": 20,
+      "allergy_question_answer_absent": 20,
+      "allergy_resolved": 20,
+      "allergy_uncertain": 20,
+      "symptom_absent": 10,
+      "symptom_family": 10,
+      "symptom_present": 10,
+      "symptom_question": 10,
+      "symptom_resolved": 10,
+      "symptom_uncertain": 10,
+      "temperature_question": 10,
+      "temperature_value": 10
+    },
+    "failure_counts": {},
+    "safety_gate_pass": true
+  },
+  "regression": {
+    "pytest": {
+      "passed": 586,
+      "warnings": 1,
+      "seconds": 394.35
+    },
+    "javascript_syntax": "PASS",
+    "diff_check": "PASS",
+    "production_source_changed": false
+  },
+  "artifact_sha256": {
+    "run_ab.py": "1d00515febfffad2519ff112bb0824fc83579b601e4c2d6ac4b5330bfd6c9f2b",
+    "ab/ab-report.json": "c9f1d7f1d3194f45ab7c4f5e2e89cacb68b9fe62bc8806be43b0f332b3a2bedd",
+    "ab/baseline.prompt.txt": "72b76e4ff2011745f7bcb27ef55b255e3cff360529df47cad5c4edd223ddf1a9",
+    "ab/json_source.prompt.txt": "abbf3616734662de8f968ec05d55f5b536ae0c6164aaf0a1b5fb19345894e676",
+    "ab/baseline-1.private.json": "26d66843bb1d6eea4408a1da38f973fa1994c85e1e99df3ab32edf13938ba026",
+    "ab/baseline-2.private.json": "bb46ea9e5d4c0667c12554959d50b57110ef2087136901f48bc95570cfa28ae3",
+    "ab/baseline-3.private.json": "bb0dcd21363b35079e7b3b76ae8fa8d7dce4bd169534c47a6ecbbbb1ed339f38",
+    "ab/json_source-1.private.json": "2910aeb88de343f2f1fbe23bfd3cf1dd808650a58fb6f490d1f5fdc6a3c25925",
+    "ab/json_source-2.private.json": "aa3650315049e74084a7a6f8f2348b072387a21c98acd6c6d7488b75e7356e86",
+    "ab/json_source-3.private.json": "d8c8a41a40ed934a64d6e67f33e6f408e785d295009550bf11233606c3a90e3a",
+    "workflow-result.json": "3d36a66baba9aa3b88a23d33d07461b2248cfd5e68c227fe274c539bbd524292",
+    "restored-api-validation.json": "c8d3600af8cfc2a545a43350009aa6b03522735b6572bbd477702770e7baac80"
+  },
+  "evidence_boundary": "Reused transcript; extraction-only controlled role; scripted doctor correction not clinical review; no new physical audio/zoom/offline release restore",
+  "wbs": {
+    "task": "5.1",
+    "status": "VERIFY",
+    "counts": {
+      "done": 8,
+      "verify": 3,
+      "blocked": 1,
+      "backlog": 4
+    },
+    "planned_hours": 99,
+    "task_count": 16
+  },
+  "next_minimal_test": "Isolated minimal SourceSpan schema versus full schema for same quote; no safety loosening",
+  "pm_snapshot": {
+    "captured_at": "2026-09-27T23:28:04.511041+08:00",
+    "source_files_verified": 174,
+    "counts": {
+      "verify": 3,
+      "blocked": 1,
+      "backlog": 4,
+      "done": 8
+    }
+  }
+}

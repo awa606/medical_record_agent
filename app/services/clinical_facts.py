@@ -6,6 +6,7 @@ from typing import Literal
 
 from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, SourceSpan
 from app.services.fever_respiratory_pack import infer_fever_respiratory_candidates
+from app.services.treatment_context import treatment_contexts
 
 
 FactType = Literal["symptom", "measurement", "duration", "treatment", "allergy"]
@@ -98,6 +99,82 @@ def split_clinical_segments(text: str) -> list[str]:
     return [part.strip(" ，,；;") for part in parts if part.strip(" ，,；;")]
 
 
+_ROLE_PREFIX = re.compile(
+    r"^\s*(?:[\[【](医生|医师|患者|病人|家属|家长|待确认|doctor|patient)[\]】]\s*[：:]?"
+    r"|(医生|医师|患者|病人|家属|家长|待确认|doctor|patient)(?:\s*[：:]|回答|说|称|问))\s*", re.I,
+)
+_CLAUSE_BREAK = re.compile(r"[，,；;]|但是|不过|然而|但")
+_SUBJECT = re.compile(r"父亲|母亲|家属|丈夫|妻子|爷爷|奶奶|孩子|儿子|女儿|患者|病人|本人|她|他|我(?=自己|本人|有|患|没|咳|发|胸|头|不舒服)")
+
+
+@dataclass(frozen=True)
+class ClinicalSegmentContext:
+    index: int
+    text: str
+    speaker: str
+    question: bool
+    patient_target: str
+
+
+def clinical_segment_contexts(text: str) -> list[ClinicalSegmentContext]:
+    """Annotate existing sentence IDs; never insert labels into source evidence."""
+    target = "child" if re.search(r"(?:家长|家属)[：:\]】\s].{0,12}(?:孩子|儿子|女儿)", text) else "unknown"
+    role = "unknown"
+    rows = []
+    for index, sentence in enumerate(split_clinical_segments(text)):
+        label = _ROLE_PREFIX.match(sentence)
+        if label:
+            role = label.group(1) or label.group(2)
+            role = {"doctor": "医生", "医师": "医生", "patient": "患者", "病人": "患者"}.get(role.lower(), role)
+        question = _is_unanswered_question(sentence) or (
+            role == "医生" and bool(re.search(r"有没有|是否|是不是|吗|么|什么|多少|何时|什么时候|[?？]", sentence))
+            and not re.search(r"(?:患者|病人)(?:回答|说|称)?[：:,，\s]*(?:有|没有|没|无|否认|不确定|不知道)", sentence)
+        ) or (
+            role in {"家属", "家长"}
+            and bool(re.search(r"有没有|是否|是不是|[?？]|(?:吗|么|呢)\s*$", sentence))
+        )
+        rows.append(ClinicalSegmentContext(index, sentence, role, question, target))
+    return rows
+
+
+def clinical_experiencer(text: str, *, speaker: str = "unknown", patient_target: str = "unknown", position: int | None = None) -> Experiencer:
+    """Resolve explicit subjects independently of the disease vocabulary."""
+    label = _ROLE_PREFIX.match(text)
+    if label:
+        speaker = label.group(1) or label.group(2)
+        text = text[label.end():]
+        if position is not None:
+            position = max(0, position - label.end())
+    subjects = [m for m in _SUBJECT.finditer(text) if position is None or m.start() < position]
+    if subjects:
+        subject = subjects[-1].group()
+        if subject in {"孩子", "儿子", "女儿"}:
+            return "patient" if patient_target == "child" and speaker in {"家属", "家长"} else "family"
+        if subject in _FAMILY_WORDS:
+            return "family"
+        if subject == "我":
+            return "family" if speaker in {"家属", "家长"} else "patient"
+        return "patient"
+    if speaker in {"家属", "家长", "待确认"}:
+        return "unknown"
+    return "patient"
+
+
+def _concept_scope(text: str, keyword: str) -> str:
+    """Keep polarity/certainty local; an unqualified resolution can refer back."""
+    position = text.find(keyword)
+    breaks = list(_CLAUSE_BREAK.finditer(text))
+    start = max((m.end() for m in breaks if m.end() <= position), default=0)
+    end = min((m.start() for m in breaks if m.start() > position), default=len(text))
+    scope = text[start:end]
+    tail = text[end:]
+    if (keyword in {"发热", "发烧", "体温"} and _RESOLVED_FEVER_RE.search(text)) or any(word in tail for word in _RESOLVED_WORDS):
+        # "昨天发烧，今天已经退了" has one fever and an anaphoric resolution.
+        if not any(alias in tail for aliases in _RESPIRATORY_SYMPTOMS.values() for alias in aliases) and "过敏" not in tail:
+            scope += tail
+    return scope
+
+
 def has_extractable_clinical_fact(text: str) -> bool:
     return bool(extract_clinical_facts(text))
 
@@ -151,23 +228,27 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
             continue
         add(type_=fact_type, name=name, assertion="absent", evidence=match, index=0)
 
-    for index, segment in enumerate(segments):
+    for context in clinical_segment_contexts(text):
+        index, segment = context.index, context.text
         normalized = _normalize_text(segment)
         if not normalized:
             continue
 
-        if _is_unanswered_question(normalized):
+        if context.question:
             continue
 
-        segment_experiencer = _experiencer(normalized)
+        segment_experiencer = clinical_experiencer(normalized, speaker=context.speaker, patient_target=context.patient_target)
         segment_temporality = _temporality(normalized)
+
+        def subject(keyword: str) -> Experiencer:
+            return clinical_experiencer(normalized, speaker=context.speaker, patient_target=context.patient_target, position=normalized.find(keyword))
 
         temp = _extract_temperature(normalized)
         if temp:
             add(
                 type_="measurement",
                 name="体温",
-                experiencer=segment_experiencer,
+                experiencer=subject(next((s for s in ("体温", "三十", "四十") if s in normalized), normalized)),
                 temporality=segment_temporality,
                 value=temp,
                 unit="℃",
@@ -177,10 +258,19 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
 
         duration = _extract_duration(normalized)
         if duration:
-            add(type_="duration", name="病程", experiencer=segment_experiencer, temporality=segment_temporality, value=duration, evidence=segment, index=index)
+            add(type_="duration", name="病程", experiencer=subject(duration), temporality=_temporality(_concept_scope(normalized, duration)), value=duration, evidence=segment, index=index)
 
-        if _contains_treatment(normalized):
-            add(type_="treatment", name="既往处理", experiencer=segment_experiencer, temporality=segment_temporality, value=_treatment_value(normalized), evidence=segment, index=index)
+        for treatment in treatment_contexts(segment):
+            if treatment.proposed:
+                continue
+            add(
+                type_="treatment", name="既往处理", assertion=treatment.assertion,
+                certainty="uncertain" if treatment.assertion == "uncertain" else "confirmed",
+                experiencer=clinical_experiencer(segment, speaker=context.speaker,
+                    patient_target=context.patient_target, position=treatment.action_start),
+                temporality=_temporality(treatment.text), value=treatment.text,
+                evidence=treatment.text, index=index,
+            )
 
         for allergy in _allergy_mentions(normalized):
             assertion, certainty = _semantic_assertion(normalized, allergy)
@@ -188,8 +278,8 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
                 type_="allergy",
                 name=allergy,
                 assertion=assertion,
-                experiencer=segment_experiencer,
-                temporality="resolved" if assertion == "resolved" else segment_temporality,
+                experiencer=subject(allergy),
+                temporality="resolved" if assertion == "resolved" else _temporality(_concept_scope(normalized, allergy)),
                 certainty=certainty,
                 evidence=segment,
                 index=index,
@@ -204,8 +294,8 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
                 type_="symptom",
                 name=symptom_name,
                 assertion=assertion,
-                experiencer=segment_experiencer,
-                temporality="resolved" if assertion == "resolved" else segment_temporality,
+                experiencer=subject(matched_keyword),
+                temporality="resolved" if assertion == "resolved" else _temporality(_concept_scope(normalized, matched_keyword)),
                 certainty=certainty,
                 evidence=segment,
                 index=index,
@@ -310,6 +400,10 @@ def _extract_temperature(text: str) -> str | None:
     if match:
         return f"{_format_temperature_value(match.group('value'))}℃"
     for chinese, arabic in _CHINESE_TEMPERATURES.items():
+        decimal = re.search(re.escape(chinese) + r"点([零〇一二两三四五六七八九]+)(?:摄氏)?度", text)
+        if decimal:
+            digits = "".join(str("零一二三四五六七八九".index(c.replace("〇", "零").replace("两", "二"))) for c in decimal.group(1))
+            return f"{_format_temperature_value(arabic + '.' + digits)}℃"
         if f"{chinese}度" in text or f"{chinese}摄氏度" in text:
             return f"{arabic}℃"
     return None
@@ -336,11 +430,7 @@ def _is_unanswered_question(text: str) -> bool:
 
 
 def _experiencer(text: str) -> Experiencer:
-    if any(word in text for word in _FAMILY_WORDS):
-        return "family"
-    if re.search(r"(?:患者|病人|我|本人)", text):
-        return "patient"
-    return "patient"
+    return clinical_experiencer(text)
 
 
 def _temporality(text: str) -> Temporality:
@@ -352,6 +442,9 @@ def _temporality(text: str) -> Temporality:
 
 
 def _semantic_assertion(text: str, keyword: str) -> tuple[Assertion, Certainty]:
+    if re.search(r"(?:医生|医师|doctor|问).*(?:吗|有没有|是否).*", text, re.I) and re.search(r"(?:患者|病人)(?:回答|说|称)?[：:,，\s]*(?:没有|没|无|否认)(?:。|$)", text):
+        return "absent", "confirmed"
+    text = _concept_scope(text, keyword)
     mention = text.find(keyword)
     prefix = text[max(0, mention - 12) : mention] if mention >= 0 else text
     local_prefix = re.split(r"[，,；;]", prefix)[-1]
@@ -416,22 +509,6 @@ def _extract_duration(text: str) -> str | None:
     if not match:
         return None
     return re.sub(r"\s+", "", match.group("duration"))
-
-
-def _contains_treatment(text: str) -> bool:
-    return any(keyword in text for keyword in ["布洛芬", "退热药", "退烧药", "吃了", "服用", "用药"])
-
-
-def _treatment_value(text: str) -> str:
-    if "布洛芬" in text:
-        if any(keyword in text for keyword in ["降下", "退了", "退热", "退烧"]):
-            return "服用布洛芬后体温下降"
-        return "服用布洛芬"
-    if "退热药" in text:
-        return "服用退热药"
-    if "退烧药" in text:
-        return "服用退烧药"
-    return "已自行处理，具体药物待补充"
 
 
 def _dedupe_facts(facts: list[ClinicalFact]) -> list[ClinicalFact]:

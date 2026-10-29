@@ -1,0 +1,108 @@
+{
+  "date": "2026-09-28",
+  "status": "REJECTED_QUALITY_GATE",
+  "runtime_sha": "8afc6bd537e3bccce9989529a6540005236677a4",
+  "experiment_sha": "ab55dc05f2a4b491b90af22262d2ace6ed483f8d",
+  "model_digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+  "quantization": "Q4_K_M",
+  "prewarm_seconds": 93.0900154530027,
+  "prewarm_pass": true,
+  "inference_timeout_seconds": 120,
+  "calls": 21,
+  "candidate_first_output_pass": 9,
+  "candidate_pipeline_pass": 9,
+  "baseline_first_output_pass": 12,
+  "baseline_pipeline_pass": 9,
+  "request_except_model_identical": true,
+  "auto_retry": 0,
+  "manual_correction": 0,
+  "cloud_or_mock": 0,
+  "heldout_expansion": false,
+  "rows": [
+    {
+      "input_id": "realtek13",
+      "calls": 3,
+      "baseline_first_output_pass": 0,
+      "baseline_pipeline_pass": 0,
+      "candidate_first_output_pass": 3,
+      "candidate_pipeline_pass": 3,
+      "candidate_failed_checks": []
+    },
+    {
+      "input_id": "case11",
+      "calls": 3,
+      "baseline_first_output_pass": 3,
+      "baseline_pipeline_pass": 0,
+      "candidate_first_output_pass": 0,
+      "candidate_pipeline_pass": 0,
+      "candidate_failed_checks": [
+        "fever_and_temperature_in_illness",
+        "headache_in_accompanying"
+      ]
+    },
+    {
+      "input_id": "question",
+      "calls": 3,
+      "baseline_first_output_pass": 3,
+      "baseline_pipeline_pass": 3,
+      "candidate_first_output_pass": 3,
+      "candidate_pipeline_pass": 3,
+      "candidate_failed_checks": []
+    },
+    {
+      "input_id": "family",
+      "calls": 3,
+      "baseline_first_output_pass": 0,
+      "baseline_pipeline_pass": 0,
+      "candidate_first_output_pass": 0,
+      "candidate_pipeline_pass": 0,
+      "candidate_failed_checks": []
+    },
+    {
+      "input_id": "negative_allergy",
+      "calls": 3,
+      "baseline_first_output_pass": 3,
+      "baseline_pipeline_pass": 3,
+      "candidate_first_output_pass": 0,
+      "candidate_pipeline_pass": 0,
+      "candidate_failed_checks": [
+        "allergy_only"
+      ]
+    },
+    {
+      "input_id": "treatment",
+      "calls": 3,
+      "baseline_first_output_pass": 0,
+      "baseline_pipeline_pass": 0,
+      "candidate_first_output_pass": 0,
+      "candidate_pipeline_pass": 0,
+      "candidate_failed_checks": [
+        "treatment_and_response"
+      ]
+    },
+    {
+      "input_id": "missing",
+      "calls": 3,
+      "baseline_first_output_pass": 3,
+      "baseline_pipeline_pass": 3,
+      "candidate_first_output_pass": 3,
+      "candidate_pipeline_pass": 3,
+      "candidate_failed_checks": []
+    }
+  ],
+  "timing_seconds": {
+    "min": 8.286,
+    "median": 9.655,
+    "max": 34.211
+  },
+  "resource_sampling": {
+    "host_available_min_gib": 3.606,
+    "system_gpu_peak_sample_mib": 7688,
+    "exclusive_to_model": false,
+    "true_peak_guaranteed": false,
+    "OOMKilled": false
+  },
+  "raw_evidence_local": ".artifacts/alpha51-8b-prewarm-demo-20260928",
+  "raw_report_sha256": "bdec899d4b9af4ff4f0ce5076117e406356fcdf32ebddf6e04cfd8b6e27106cb",
+  "boundary": "Engineering sample quality; not clinical validation. Current 4B restored; no candidate promotion."
+}

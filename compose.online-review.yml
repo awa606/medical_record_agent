@@ -1,0 +1,86 @@
+# Online review candidate; never use this as an offline recovery profile.
+# All paths are explicit. Only the API adapter sends anonymized source text.
+services:
+  app:
+    restart: "no"
+    image: ${MRA_APP_IMAGE:?verified image required}
+    environment:
+      PYTHONPATH: /app
+      MEDICAL_RECORD_AGENT_DB: /app/runtime/medical_record_agent.sqlite3
+      MEDICAL_RECORD_AGENT_UPLOAD_DIR: /app/runtime/uploads
+      MEDICAL_RECORD_AGENT_OUTPUT_DIR: /app/runtime/outputs
+      MEDICAL_RECORD_AGENT_SPEAKER_PROFILE_DIR: /app/runtime/speaker_profiles
+      MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME: ${MRA_COOKIE_NAME:?independent cookie name required}
+      MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD: ${MRA_BOOTSTRAP_PASSWORD:?local secret required}
+      RECORD_PROVIDER_MODE: live
+      MEDICAL_RECORD_AGENT_ASR_ENGINE: funasr
+      MEDICAL_RECORD_AGENT_REQUIRE_FUNASR: "1"
+      FUNASR_DEVICE: cpu
+      ASR_PREWARM_ENABLED: "1"
+      ASR_PREWARM_PROFILE: ${MRA_ASR_PROFILE:-upload}
+      SPEAKER_ROLE_PROVIDER: rules
+      LLM_PROVIDER: online
+      ONLINE_LLM_PROFILE: deepseek_demo
+      ONLINE_LLM_API_BASE: https://api.deepseek.com
+      ONLINE_LLM_MODEL: deepseek-flash
+      ONLINE_LLM_API_KEY_FILE: /run/secrets/deepseek.env
+      ONLINE_LLM_BUDGET_LEDGER: /app/online-private/cost-ledger.json
+      ONLINE_LLM_DIAGNOSTICS_DIR: /app/online-private/business-diagnostics
+      LLM_TIMEOUT_SECONDS: "120"
+      LLM_MAX_RETRIES: "0"
+      MRA_ANONYMIZE: "1"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      MODELSCOPE_CACHE: /app/model_cache/modelscope
+      HF_HOME: /app/model_cache/hf
+    volumes:
+      - type: bind
+        source: ${MRA_RUNTIME:?absolute isolated runtime required}
+        target: /app/runtime
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${MRA_MODELSCOPE_CACHE:?existing model cache required}
+        target: /app/model_cache/modelscope
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${MRA_HF_CACHE:?existing HF cache required}
+        target: /app/model_cache/hf
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${MRA_KEY_FILE:?local private env file required}
+        target: /run/secrets/deepseek.env
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${MRA_ONLINE_PRIVATE:?shared budget and diagnostic directory required}
+        target: /app/online-private
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${MRA_DEPLOYMENT_FILE:?version descriptor required}
+        target: /app/static/deployment.json
+        read_only: true
+        bind: {create_host_path: false}
+    networks: [internal, online]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+  gateway:
+    restart: "no"
+    image: ${MRA_APP_IMAGE:?verified image required}
+    depends_on: [app]
+    command: ["python", "/app/scripts/alpha51_gateway.py"]
+    user: "0:0"
+    cap_add: [NET_ADMIN]
+    ports:
+      - "127.0.0.1:${MRA_PORT:?isolated port required}:8000"
+    networks: [internal, frontend]
+networks:
+  internal:
+    internal: true
+  online: {}
+  frontend: {}

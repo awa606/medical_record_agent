@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -28,7 +29,9 @@ from app.services.auth import hash_session_token, new_session_token, verify_pass
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-SESSION_COOKIE_NAME = "medical_record_agent_session"
+SESSION_COOKIE_NAME = os.environ.get("MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME", "medical_record_agent_session")
+if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", SESSION_COOKIE_NAME):
+    raise ValueError("Invalid MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME")
 DEFAULT_SESSION_HOURS = 8
 
 

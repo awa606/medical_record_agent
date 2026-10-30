@@ -34,7 +34,7 @@
 - 前端只显示“下载 PDF 病历”，默认下载格式改为 `pdf`。
 - 依赖新增 `reportlab>=4,<5`。
 
-PDF 样张：`data/outputs/_pdf_smoke.pdf`（4.1KB，单页，中文正常渲染）。
+PDF 样张：`data/outputs/_pdf_smoke.pdf`（4.1KB，单页，中文正常渲染）。长病历按段落跨页，标题使用 `CondPageBreak(45mm)` 避免孤立；第 1 页可包含“现病史”正文，测试断言“辅助检查”与正文同页。
 
 ### 3. 帮助页返回
 

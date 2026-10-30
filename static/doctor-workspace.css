@@ -289,14 +289,6 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
 @media (max-width: 1100px) {
   .top-actions #openWorklistButton { display: inline-flex; }
 }
-@media (max-width: 1100px) and (min-width: 900px) {
-  body.doctor-mode .alpha51-workspace .workbench {
-    grid-template-columns: minmax(0, 32fr) minmax(0, 68fr);
-    grid-template-areas: "transcript record";
-  }
-  body.doctor-mode .alpha51-workspace .assist-column { display: none; }
-  .workspace-panel-switches { display: flex; }
-}
 @media (max-width: 899px) {
   body.doctor-mode .product-nav-item { min-width: 0; width: 100%; }
   body.doctor-mode .alpha51-workspace .workbench { grid-template-columns: minmax(0, 1fr); grid-template-areas: "record"; }

@@ -268,15 +268,6 @@ def run() -> dict:
             page.set_viewport_size({"width": 1024, "height": 768})
             page.wait_for_timeout(400)
             audit(page, "workspace_1024", steps)
-            page.click("#showReferenceButton")
-            page.wait_for_timeout(300)
-            steps.append({
-                "step": "reference_1024_access",
-                "ok": page.locator("#workspaceAuxDialog").evaluate("d => d.open"),
-                "detail": "1024px 可打开诊疗参考抽屉",
-            })
-            page.keyboard.press("Escape")
-            page.wait_for_timeout(300)
             page.set_viewport_size({"width": 1920, "height": 1080})
             page.wait_for_timeout(400)
             audit(page, "workspace_1920", steps)

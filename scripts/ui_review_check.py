@@ -192,12 +192,19 @@ def run() -> dict:
     if not (ROOT / "static" / "help" / "manual.html").exists() or not (ROOT / "static" / "help" / "help-nav.js").exists():
         subprocess.run([sys.executable, "scripts/package_help.py"], cwd=ROOT, check=True)
     steps: list[dict] = []
+    console_errors: list[str] = []
+
+    def watch(page) -> None:
+        page.on("pageerror", lambda error: console_errors.append(f"pageerror: {error}"))
+        page.on("requestfailed", lambda request: console_errors.append(f"requestfailed: {request.url}"))
+
     server = RunningServer()
     try:
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1440, "height": 900}, accept_downloads=True)
             page = context.new_page()
+            watch(page)
             page.goto(f"{server.base_url}/static/doctor.html")
             page.wait_for_timeout(500)
             audit(page, "login", steps)
@@ -534,6 +541,7 @@ def run() -> dict:
 
             upload_context = browser.new_context(viewport={"width": 1440, "height": 900})
             upload_page = upload_context.new_page()
+            watch(upload_page)
             _login(upload_page, server.base_url)
             if not upload_page.locator("#localSyntheticPatient").is_visible():
                 upload_page.locator("#localRegistrationDisclosure summary").click()
@@ -553,6 +561,7 @@ def run() -> dict:
 
             conflict_context = browser.new_context(viewport={"width": 1440, "height": 900})
             conflict_page = conflict_context.new_page()
+            watch(conflict_page)
             _login(conflict_page, server.base_url)
             if not conflict_page.locator("#localSyntheticPatient").is_visible():
                 conflict_page.locator("#localRegistrationDisclosure summary").click()
@@ -579,6 +588,8 @@ def run() -> dict:
             conflict_page.wait_for_timeout(400)
             audit(conflict_page, "conflict_export_state", steps)
             conflict_context.close()
+
+            steps.append({"step": "console_clean", "ok": not console_errors, "detail": console_errors[:5]})
 
             browser.close()
     finally:

@@ -84,6 +84,18 @@ python scripts/demo_flow.py --base-url http://127.0.0.1:26310 --admin-password c
 - 模型缓存必须放命名卷；Windows bind mount 下模型加载会长时间无响应。
 - 验收证据见 `docs/evidence/20261030_candidate_audio_acceptance.md`。
 
+## 真实 Provider 候选
+
+```powershell
+docker compose -f docker-compose.yml -f config/docker-compose.candidate.yml `
+  -f config/docker-compose.candidate-live.yml up -d
+```
+
+- 复用既有只读密钥挂载 `/run/secrets/deepseek.env`，账本写在候选运行目录。
+- live 模式必须设置 `ONLINE_LLM_DIAGNOSTICS_DIR`（绝对路径），否则 `/ready` 503。
+- 单次生成约 ¥0.01；`LLM_MAX_RETRIES=0`，不自动重试。
+- 证据见 `docs/evidence/20261030_candidate_live_llm.md`。
+
 ## 音频路径
 
 ```powershell

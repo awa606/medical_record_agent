@@ -267,6 +267,11 @@ def run() -> dict:
             }""")
             page.wait_for_timeout(300)
 
+            page.emulate_media(reduced_motion="reduce")
+            transition = page.evaluate("getComputedStyle(document.querySelector('.record-section-status')).transitionDuration")
+            steps.append({"step": "reduced_motion", "ok": transition in ("0.01ms", "1e-05s", "0s"), "detail": transition})
+            page.emulate_media(reduced_motion="no-preference")
+
             focus_issues = []
             for _ in range(20):
                 page.keyboard.press("Tab")
@@ -349,6 +354,10 @@ def run() -> dict:
                 "ok": page.locator(".help-nav-back").is_visible(),
                 "detail": "320px 独立帮助页返回按钮",
             })
+            for help_page in ("feedback", "maintenance", "dual-environment", "course-demo", "viewer-section"):
+                page.goto(f"{server.base_url}/static/help/{help_page}.html")
+                page.wait_for_timeout(300)
+                audit(page, f"help_{help_page}_320", steps)
             page.set_viewport_size({"width": 1440, "height": 900})
             page.goto(f"{server.base_url}/static/doctor.html")
             page.wait_for_timeout(600)

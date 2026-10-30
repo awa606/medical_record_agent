@@ -48,6 +48,20 @@ def test_pdf_export_keeps_hierarchy_notice_and_searchable_text(tmp_path, monkeyp
     assert any("NotoSansSC" in str(font[3]) for font in fonts), fonts
 
 
+def test_pdf_paginates_long_record_and_keeps_signature_on_last_page(tmp_path, monkeypatch):
+    long_text = "反复发热咳嗽两周，伴咽痛，无胸痛。" * 120
+    fields = MedicalRecordFields(
+        chief_complaint=MedicalField(value="发热咳嗽两周"),
+        present_illness=MedicalField(value=long_text),
+    )
+    _, _, pdf_path = _export(tmp_path, monkeypatch, fields)
+    with pymupdf.open(pdf_path) as document:
+        assert document.page_count >= 2
+        last_page = "".join(document[-1].get_text().split())
+    assert "医师签名" in last_page
+    assert "AI辅助生成" in last_page
+
+
 def test_reviewed_content_does_not_keep_generic_pending_message(tmp_path, monkeypatch):
     fields = MedicalRecordFields(chief_complaint=MedicalField(
         value="发热伴咳嗽2天", status="partial", missing_elements=["待医生补充"],

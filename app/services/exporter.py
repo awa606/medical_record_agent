@@ -255,6 +255,7 @@ def _pdf_meta_rows(
     rows: list[tuple[str, str]] = []
     patient_label = patient_display_name or patient_deidentified_id or "未关联患者"
     rows.append(("姓名", patient_label))
+    rows.append(("性别/年龄", "________ / ________"))
     allergy = fields.allergy_history
     allergy_text = str(allergy.value).strip() if allergy.value and not allergy.missing else "未提及/待补充"
     rows.append(("药物过敏史", allergy_text))

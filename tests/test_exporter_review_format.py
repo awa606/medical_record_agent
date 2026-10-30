@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pymupdf
+
 from app.schemas import MedicalField, MedicalRecordFields, SafetyCheckResult
 from app.services.exporter import (
     WORD_NOTICE,
@@ -26,9 +28,9 @@ def _export(tmp_path, monkeypatch, fields, *, approved=True):
     return markdown, [text for _kind, text in paragraphs], pdf_path
 
 
-def test_pdf_export_keeps_native_hierarchy_and_one_notice(tmp_path, monkeypatch):
+def test_pdf_export_keeps_hierarchy_notice_and_searchable_text(tmp_path, monkeypatch):
     fields = MedicalRecordFields(chief_complaint=MedicalField(value="发热伴咳嗽2天"))
-    markdown, paragraphs, _pdf = _export(tmp_path, monkeypatch, fields)
+    markdown, paragraphs, pdf_path = _export(tmp_path, monkeypatch, fields)
 
     assert markdown.startswith("# 门诊病历")
     assert paragraphs[0] == "门诊病历"
@@ -36,6 +38,14 @@ def test_pdf_export_keeps_native_hierarchy_and_one_notice(tmp_path, monkeypatch)
     assert sum(text.count(WORD_NOTICE) for text in paragraphs) == 1
     assert "草稿" not in "\n".join(paragraphs)
     assert "审核状态：已完成医生分项审核" in paragraphs
+
+    with pymupdf.open(pdf_path) as document:
+        text = "".join(document[0].get_text().split())
+        fonts = document[0].get_fonts()
+    assert "初诊病历记录" in text
+    assert "主诉" in text and "发热伴咳嗽2天" in text
+    assert "医师签名" in text
+    assert any("NotoSansSC" in str(font[3]) for font in fonts), fonts
 
 
 def test_reviewed_content_does_not_keep_generic_pending_message(tmp_path, monkeypatch):

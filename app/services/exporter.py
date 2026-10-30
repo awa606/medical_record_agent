@@ -14,6 +14,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     HRFlowable,
     KeepTogether,
@@ -31,6 +32,22 @@ from app.services.privacy import anonymize_text
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "data" / "outputs"
 WORD_NOTICE = "AI 辅助生成，病历内容以医生审核确认为准"
+PDF_FONT_PATH = PROJECT_ROOT / "assets" / "fonts" / "NotoSansSC-Regular.ttf"
+PDF_FONT_NAME = "NotoSansSC"
+PDF_FALLBACK_FONT = "STSong-Light"
+
+
+def _register_pdf_font() -> str:
+    """Embed an OFL CJK font so PDF text stays searchable and copyable."""
+    if PDF_FONT_NAME in pdfmetrics.getRegisteredFontNames():
+        return PDF_FONT_NAME
+    if PDF_FONT_PATH.is_file():
+        pdfmetrics.registerFont(TTFont(PDF_FONT_NAME, str(PDF_FONT_PATH)))
+        return PDF_FONT_NAME
+    if PDF_FALLBACK_FONT in pdfmetrics.getRegisteredFontNames():
+        return PDF_FALLBACK_FONT
+    pdfmetrics.registerFont(UnicodeCIDFont(PDF_FALLBACK_FONT))
+    return PDF_FALLBACK_FONT
 
 
 FIELD_LABELS = [
@@ -169,10 +186,10 @@ def write_docx(path: Path, markdown_text: str, *, paragraphs: list[tuple[str, st
 
 
 def _pdf_styles() -> dict[str, ParagraphStyle]:
-    pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+    font_name = _register_pdf_font()
     base = ParagraphStyle(
         "body",
-        fontName="STSong-Light",
+        fontName=font_name,
         fontSize=10.5,
         leading=18,
         textColor=colors.HexColor("#1f2937"),
@@ -342,7 +359,10 @@ def render_pdf(
         author="MediListen",
     )
     story: list[Any] = [
-        Paragraph("医疗机构名称：____________________", styles["subtitle"]),
+        Paragraph(
+            f"医疗机构名称：{os.environ.get('MRA_HOSPITAL_NAME', '').strip() or '____________________'}",
+            styles["subtitle"],
+        ),
         Paragraph("初 诊 病 历 记 录", styles["title"]),
         Paragraph("AI 辅助生成 · 医生审核确认后方可作为病历使用", styles["subtitle"]),
         Spacer(1, 4 * mm),
@@ -409,7 +429,7 @@ def render_pdf(
 
     def _footer(canvas, doc_obj) -> None:
         canvas.saveState()
-        canvas.setFont("STSong-Light", 8)
+        canvas.setFont(styles["body"].fontName, 8)
         canvas.setFillColor(colors.HexColor("#64748b"))
         canvas.drawRightString(A4[0] - 20 * mm, 10 * mm, f"第 {doc_obj.page} 页")
         canvas.drawString(20 * mm, 10 * mm, "MediListen · 门诊病历")

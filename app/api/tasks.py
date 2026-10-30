@@ -917,7 +917,14 @@ def _export_output_root() -> Path:
 def _resolve_export_download_path(exports: dict[str, str], export_format: str) -> tuple[Path, str, str]:
     config = EXPORT_DOWNLOADS.get(export_format)
     if config is None:
-        raise HTTPException(status_code=404, detail="Export format not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "unsupported_export_format",
+                "message": "仅支持 PDF 导出，请使用 /api/tasks/{task_id}/exports/pdf",
+                "format": export_format,
+            },
+        )
 
     raw_path = exports.get(config["path_key"])
     if not raw_path:

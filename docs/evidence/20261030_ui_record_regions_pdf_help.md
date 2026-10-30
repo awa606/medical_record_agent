@@ -27,6 +27,7 @@
 ### 2. 导出统一为 PDF
 
 - `app/services/exporter.py` 新增 `render_pdf()`：A4、医院门诊病历版式（医疗机构名称、初诊病历记录、姓名/药物过敏史/科别/门诊病历号/就诊时间、主诉/现病史/既往史/体格及专科检查/辅助检查/诊断/治疗意见、安全校验、医师签名/日期、页码）。
+- 使用 OFL 授权的 Noto Sans SC 子集字体并嵌入 PDF（`assets/fonts/NotoSansSC-Regular.ttf`），文字可复制/检索；医院名称可用 `MRA_HOSPITAL_NAME` 注入。
 - 版式对照黑龙江省卫健委《病历基础模板》中的“门（急）诊病历首页”和“初诊病历记录”（第 1–2 页），字段顺序与命名一致；另外参考东南大学附属医院《门（急）诊病历规范书写要求》对就诊时间、科别、初步诊断、处理意见和签名齐全的要求。
 - `export_record()` 只写 `task_{id}_medical_record.pdf`，返回 `{"pdf_path": ...}`。
 - `app/api/tasks.py` 的 `EXPORT_DOWNLOADS` 只保留 `pdf`；`/exports/docx`、`/exports/markdown` 返回 404。
@@ -53,7 +54,7 @@ PDF 样张：`data/outputs/_pdf_smoke.pdf`（4.1KB，单页，中文正常渲染
 
 自动化 UI 巡检脚本：`scripts/ui_review_check.py`（真实 Chromium、隔离临时库、Mock Provider）。
 
-结果（24 项，`.artifacts/ui-review-20261030/ui_review.json`）：
+结果（26 项，含 17 页 axe-core WCAG 2 A/AA 扫描；`.artifacts/ui-review-20261030/ui_review.json`）：
 
 ```text
 audit_login            contrast=0 overlap=0 overflowX=0
@@ -111,7 +112,7 @@ audit_chain                                           12 条 ok
 
 ## 边界
 
-- PDF 使用 `STSong-Light` CID 字体、未嵌入字体文件；阅读器需具备中文字体（Windows/macOS/主流阅读器可显示）。正式交付前应改为嵌入开源 CJK 字体。
+- PDF 已嵌入 Noto Sans SC 子集字体，文本可检索；字体文件约 7.2MB，随仓库分发，许可证见 `assets/fonts/OFL.txt`。
 - 巡检已覆盖登录、工作台、接诊、工作清单、管理后台（含知识检索）、帮助全部 6 个子页、`index.html`、`debug.html`；`debug.html` 的按钮级 API 流程未逐一点击。
 - 录音已转写并只取前端相关意见；左侧转写区未改。使用合成病例与 Mock Provider，未做真实医生视觉认可。
 - 病历版式已对照黑龙江省卫健委《病历基础模板》与东南大学附属医院规范；未与某一家医院实际打印单逐字核对。

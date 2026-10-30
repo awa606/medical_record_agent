@@ -19,6 +19,22 @@ from tests.test_doctor_itemized_approval_playwright import RunningServer, _login
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / ".artifacts" / "ui-review-20261030"
+AXE_JS = ROOT / "tests" / "assets" / "axe.min.js"
+
+AXE_RUN = r"""
+async () => {
+  if (typeof axe === "undefined") return { error: "axe-not-loaded", violations: [] };
+  const result = await axe.run(document, {
+    runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"] },
+  });
+  return {
+    error: null,
+    violations: result.violations
+      .filter((item) => ["serious", "critical"].includes(item.impact))
+      .map((item) => ({ id: item.id, impact: item.impact, nodes: item.nodes.length, help: item.help })),
+  };
+}
+"""
 
 AUDIT_JS = r"""
 () => {
@@ -130,8 +146,22 @@ AUDIT_JS = r"""
 
 def audit(page: Page, name: str, steps: list[dict]) -> None:
     result = page.evaluate(AUDIT_JS)
-    ok = result["textFailureCount"] == 0 and result["overlapCount"] == 0 and result["overflowX"] <= 1
-    steps.append({"step": f"audit_{name}", "ok": ok, "detail": result})
+    axe_result = {"error": "axe-missing", "violations": []}
+    if AXE_JS.is_file():
+        if not page.evaluate("typeof axe !== 'undefined'"):
+            page.add_script_tag(path=str(AXE_JS))
+        axe_result = page.evaluate(AXE_RUN)
+    ok = (
+        result["textFailureCount"] == 0
+        and result["overlapCount"] == 0
+        and result["overflowX"] <= 1
+        and not axe_result["violations"]
+    )
+    steps.append({
+        "step": f"audit_{name}",
+        "ok": ok,
+        "detail": {**result, "axe": axe_result},
+    })
     page.screenshot(path=str(OUT / f"audit_{name}.png"), full_page=True)
 
 
@@ -197,6 +227,9 @@ def run() -> dict:
             page.set_viewport_size({"width": 1280, "height": 800})
             page.wait_for_timeout(400)
             audit(page, "workspace_1280", steps)
+            page.set_viewport_size({"width": 1920, "height": 1080})
+            page.wait_for_timeout(400)
+            audit(page, "workspace_1920", steps)
             page.set_viewport_size({"width": 1440, "height": 900})
 
             page.click("#openEmbeddedHelpButton")
@@ -216,6 +249,16 @@ def run() -> dict:
             steps.append({"step": "help_back", "ok": "使用帮助" in index_heading, "detail": index_heading})
             page.click("#closeEmbeddedHelpButton")
             steps.append({"step": "help_close", "ok": not page.locator("#helpDialog").evaluate("d => d.open")})
+
+            page.click("#openEmbeddedHelpButton")
+            page.wait_for_timeout(400)
+            page.go_back()
+            page.wait_for_timeout(500)
+            steps.append({
+                "step": "help_browser_back",
+                "ok": not page.locator("#helpDialog").evaluate("d => d.open"),
+                "detail": "浏览器后退关闭帮助抽屉",
+            })
 
             for help_page in ("manual", "feedback", "maintenance", "dual-environment", "course-demo", "viewer-section"):
                 page.goto(f"{server.base_url}/static/help/{help_page}.html")

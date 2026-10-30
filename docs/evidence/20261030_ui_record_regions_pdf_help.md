@@ -100,10 +100,10 @@ local_patient_browser                       15 passed
 容器验证（第三轮）：
 
 ```text
-docker build -t medical-record-agent:ui-v1 .          成功
+docker build -t medical-record-agent:ui-v2 .          成功
 docker run -p 26320:8000 (mock provider)               /ready 200
 demo_flow.py --base-url http://127.0.0.1:26320        31 步全 PASS
-download_pdf                                          200, 5,202 bytes, %PDF
+download_pdf                                          200, 46,612 bytes, %PDF，文本可检索
 elapsed                                               2.28s
 audit_chain                                           12 条 ok
 ```

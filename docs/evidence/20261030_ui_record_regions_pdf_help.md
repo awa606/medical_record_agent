@@ -114,6 +114,15 @@ audit_chain                                           12 条 ok
 
 说明：直接 `docker run` 不传运行时路径时，默认数据库路径不可写；compose 已显式设置 `/app/runtime` 路径与卷，本次验证也按 compose 的方式传入了同组变量，未改默认值。
 
+真实 Provider（ui-v2，隔离端口 26320，DeepSeek）：
+
+```text
+field_extraction  actual_provider=online  model=deepseek-flash  latency=2338ms  fallback=false
+审核门禁           伴随症状证据冲突 → approve 409（按设计阻断）
+```
+
+同一镜像、真实 FunASR 音频路径 36 步全 PASS（30 段 / 2 说话人 / PDF 47,016 bytes / 44.67s）。
+
 ## 边界
 
 - PDF 已嵌入 Noto Sans SC 子集字体，文本可检索；字体文件约 7.2MB，随仓库分发，许可证见 `assets/fonts/OFL.txt`。

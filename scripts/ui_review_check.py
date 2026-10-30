@@ -149,10 +149,10 @@ AUDIT_JS = r"""
 """
 
 
-def audit(page: Page, name: str, steps: list[dict]) -> None:
+def audit(page: Page, name: str, steps: list[dict], *, check_axe: bool = True) -> None:
     result = page.evaluate(AUDIT_JS)
-    axe_result = {"error": "axe-missing", "violations": []}
-    if AXE_JS.is_file():
+    axe_result = {"error": "axe-skipped", "violations": []}
+    if check_axe and AXE_JS.is_file():
         if not page.evaluate("typeof axe !== 'undefined'"):
             page.add_script_tag(path=str(AXE_JS))
         axe_result = page.evaluate(AXE_RUN)
@@ -350,6 +350,11 @@ def run() -> dict:
             transition = page.evaluate("getComputedStyle(document.querySelector('.record-section-status')).transitionDuration")
             steps.append({"step": "reduced_motion", "ok": transition in ("0.01ms", "1e-05s", "0s"), "detail": transition})
             page.emulate_media(reduced_motion="no-preference")
+
+            page.emulate_media(forced_colors="active")
+            page.wait_for_timeout(300)
+            audit(page, "forced_colors_state", steps, check_axe=False)
+            page.emulate_media(forced_colors="none")
 
             focus_issues = []
             for _ in range(20):

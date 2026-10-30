@@ -512,6 +512,21 @@ def run() -> dict:
             _prepare_review_fixture(conflict_page)
             conflict_page.wait_for_timeout(1200)
             audit(conflict_page, "approval_conflict_state", steps)
+
+            conflict_page.locator('[data-field="physical_exam"] [data-field-resolution="doctor_entry"]').click()
+            conflict_page.locator('[data-record-field-input="physical_exam"]').fill("")
+            conflict_page.click("#saveDraftButton")
+            conflict_page.wait_for_function("!window.__MRA_APP_STATE__.recordEditMode", timeout=15000)
+            _select_all_review_items(conflict_page)
+            conflict_page.evaluate("confirmFields()")
+            conflict_page.wait_for_function("window.__MRA_APP_STATE__?.currentTask?.current_stage === 'approved'", timeout=20000)
+            conflict_page.wait_for_timeout(400)
+            audit(conflict_page, "conflict_resolved_state", steps)
+
+            conflict_page.evaluate("void exportRecord()")
+            conflict_page.wait_for_function("window.__MRA_APP_STATE__?.currentTask?.current_stage === 'exported'", timeout=20000)
+            conflict_page.wait_for_timeout(400)
+            audit(conflict_page, "conflict_export_state", steps)
             conflict_context.close()
 
             browser.close()

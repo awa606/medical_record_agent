@@ -386,3 +386,5 @@ body.doctor-mode .alpha51-workspace .record-section .field-card .field-value { m
 .record-section-status.conflict { color: #a11b1b; background: #fdecec; border-color: #f3c0c0; }
 .record-section-status.neutral { color: #475569; background: #f1f5f9; border-color: #d7e0ec; }
 .record-section-status:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+.skip-link { position: absolute; left: 8px; top: -60px; z-index: 200; padding: 10px 16px; border-radius: 6px; background: #172033; color: #ffffff; font-size: 15px; text-decoration: none; }
+.skip-link:focus { top: 8px; outline: 3px solid #7dd3fc; outline-offset: 2px; }

@@ -304,6 +304,21 @@ def run() -> dict:
                 "detail": page.evaluate("document.activeElement?.id"),
             })
 
+            page.goto(f"{server.base_url}/static/doctor.html")
+            page.wait_for_timeout(600)
+            page.keyboard.press("Tab")
+            skip_class = page.evaluate("document.activeElement?.className || ''")
+            page.keyboard.press("Enter")
+            page.wait_for_timeout(200)
+            skip_target = page.evaluate("document.activeElement?.id || ''")
+            steps.append({
+                "step": "skip_link",
+                "ok": "skip-link" in skip_class and skip_target == "mainContent",
+                "detail": {"first": skip_class, "target": skip_target},
+            })
+            page.goto(f"{server.base_url}/static/doctor.html")
+            page.wait_for_timeout(600)
+
             page.click("#openEmbeddedHelpButton")
             frame = page.frame_locator("#embeddedHelpFrame")
             frame.locator("h1").wait_for(timeout=20000)

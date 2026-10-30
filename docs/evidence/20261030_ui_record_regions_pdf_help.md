@@ -82,7 +82,7 @@ session_recovery / audit_session_recovery  刷新后同一任务与 5 个分区�
 upload_error_consistent / audit_upload_error_state  非法音频上传显示错误且布局通过
 audit_approval_conflict_state  证据冲突/高风险审批态通过
 audit_conflict_resolved_state  冲突修正后重新审批通过
-audit_conflict_export_state    冲突出处理后可导出状态通过
+audit_conflict_export_state    冲突修正后可导出状态通过
 audit_help_index       contrast=0 overlap=0 overflowX=0
 help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0

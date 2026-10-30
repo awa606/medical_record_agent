@@ -16,6 +16,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
+    CondPageBreak,
     HRFlowable,
     KeepTogether,
     Paragraph,
@@ -402,6 +403,8 @@ def render_pdf(
     for heading, body, note in _pdf_sections(fields):
         # Long sections must flow across pages. Keeping the whole block
         # together leaves a nearly empty page when one field exceeds a page.
+        # A conditional break keeps the heading from being stranded alone.
+        story.append(CondPageBreak(45 * mm))
         story.append(Paragraph(_pdf_text(heading), styles["heading"]))
         story.append(Paragraph(_pdf_text(body), styles["body"]))
         if note:

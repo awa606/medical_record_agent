@@ -68,12 +68,16 @@ def test_pdf_paginates_long_record_and_keeps_signature_on_last_page(tmp_path, mo
     _, _, pdf_path = _export(tmp_path, monkeypatch, fields)
     with pymupdf.open(pdf_path) as document:
         assert document.page_count >= 2
-        first_page = "".join(document[0].get_text().split())
-        last_page = "".join(document[-1].get_text().split())
+        pages = ["".join(page.get_text().split()) for page in document]
+    first_page = pages[0]
+    last_page = pages[-1]
     assert "现病史" in first_page
     assert "反复发热" in first_page
     assert "医师签名" in last_page
     assert "AI辅助生成" in last_page
+    for page_text in pages:
+        if "辅助检查" in page_text:
+            assert "本次未提供" in page_text
 
 
 def test_reviewed_content_does_not_keep_generic_pending_message(tmp_path, monkeypatch):

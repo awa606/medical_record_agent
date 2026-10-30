@@ -177,7 +177,7 @@ def _wait_session_result(
     session_id: str,
     steps: list[dict[str, Any]],
     *,
-    timeout: float = 90.0,
+    timeout: float = 300.0,
 ) -> dict[str, Any]:
     deadline = time.perf_counter() + timeout
     last: dict[str, Any] = {}
@@ -203,7 +203,7 @@ def _run_audio_path(
     """Uploaded-audio path: session -> audio -> role confirmation -> converge."""
     content = Path(audio_file).read_bytes()
     session = _require(steps, "asr_session_create", http.request(
-        "POST", "/api/asr/sessions?recognition_mode=fast", {}
+        "POST", "/api/asr/sessions?recognition_mode=follow", {}
     ), 200)
     session_id = str(session["session_id"])
     ids["asr_session_id"] = session_id

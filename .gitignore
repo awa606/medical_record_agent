@@ -79,3 +79,4 @@ homework/
 # Raw external medical QA data must stay local
 data/raw_external/*
 !data/raw_external/.gitkeep
+data/candidate_runtime/

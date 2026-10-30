@@ -72,13 +72,27 @@ python scripts/browser_demo.py --out-dir .artifacts/browser-demo-20261030
 | audit_chain | 管理员校验哈希链 `ok=true` |
 | metrics | `/metrics` 200 且含聚合计数 |
 
+## 候选部署（真实 ASR，隔离端口）
+
+```powershell
+docker volume create mra_candidate_models   # 首次：把既有模型缓存复制进卷
+docker compose -f docker-compose.yml -f config/docker-compose.candidate.yml up -d --build
+python scripts/demo_flow.py --base-url http://127.0.0.1:26310 --admin-password candidate-admin-123 --audio-file .\fever_90s_16k.wav
+```
+
+- 端口 26310；LLM 仍为 Mock，避免外部费用；ASR 为真实 FunASR，预热约 2 分钟。
+- 模型缓存必须放命名卷；Windows bind mount 下模型加载会长时间无响应。
+- 验收证据见 `docs/evidence/20261030_candidate_audio_acceptance.md`。
+
 ## 音频路径
 
 ```powershell
 python scripts/demo_flow.py --base-url http://127.0.0.1:2626 --audio-file .\demo.wav
 ```
 
-步骤改为：创建 ASR 会话 → 上传音频 → 等待转写（mock 返回 6 段）→ 按系统预测的说话人角色做一次显式确认 → `converge-record` 由音频生成 → 之后与文本路径共用修改、审核、导出、重开。
+步骤改为：创建 ASR 会话（`recognition_mode=follow`）→ 上传音频 → 等待转写 → 按系统预测的说话人角色做一次显式确认 → `converge-record` 由音频生成 → 之后与文本路径共用修改、审核、导出、重开。
+
+真实连续音频请用 follow 模式：fast 模式会把整段判为单一未分配说话人，混合语句率超阈值时角色门禁会按设计返回 409。
 
 真实音频与物理麦克风仍需在候选环境按 5.1 证据矩阵补；`--audio-file` 只证明上传链路与角色确认门禁。
 

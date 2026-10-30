@@ -96,6 +96,19 @@ local_patient_browser                       15 passed
 
 录音转写产物：`.artifacts/interview-20261030/transcript.txt`（9,672 字）。
 
+容器验证（第三轮）：
+
+```text
+docker build -t medical-record-agent:ui-v1 .          成功
+docker run -p 26320:8000 (mock provider)               /ready 200
+demo_flow.py --base-url http://127.0.0.1:26320        31 步全 PASS
+download_pdf                                          200, 5,202 bytes, %PDF
+elapsed                                               2.28s
+audit_chain                                           12 条 ok
+```
+
+说明：直接 `docker run` 不传运行时路径时，默认数据库路径不可写；compose 已显式设置 `/app/runtime` 路径与卷，本次验证也按 compose 的方式传入了同组变量，未改默认值。
+
 ## 边界
 
 - PDF 使用 `STSong-Light` CID 字体、未嵌入字体文件；阅读器需具备中文字体（Windows/macOS/主流阅读器可显示）。正式交付前应改为嵌入开源 CJK 字体。

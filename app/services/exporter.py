@@ -232,14 +232,21 @@ def _pdf_meta_rows(
     generated_at: datetime,
     department: str | None = None,
     encounter_created_at: str | None = None,
+    patient_deidentified_id: str | None = None,
+    patient_display_name: str | None = None,
 ) -> list[tuple[str, str]]:
     rows: list[tuple[str, str]] = []
+    patient_label = patient_display_name or patient_deidentified_id or "未关联患者"
+    rows.append(("姓名", patient_label))
+    allergy = fields.allergy_history
+    allergy_text = str(allergy.value).strip() if allergy.value and not allergy.missing else "未提及/待补充"
+    rows.append(("药物过敏史", allergy_text))
+    rows.append(("科别", department or "未关联科室"))
+    rows.append(("门诊病历号", f"E-{encounter_id}" if encounter_id is not None else "未关联就诊"))
     if encounter_created_at:
         rows.append(("就诊时间", str(encounter_created_at)[:16].replace("T", " ")))
-    rows.append(("科别", department or "未关联科室"))
     rows.extend(
         [
-            ("就诊编号", f"E-{encounter_id}" if encounter_id is not None else "未关联就诊"),
             ("任务编号", str(task_id)),
             ("导出时间", generated_at.strftime("%Y-%m-%d %H:%M")),
             ("审核状态", "已完成医生分项审核" if approved else "未完成医生分项审核"),
@@ -270,7 +277,6 @@ def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | Non
     accompanying = value_of("accompanying_symptoms")
     past = value_of("past_history")
     previous = value_of("previous_treatment")
-    allergy = value_of("allergy_history")
     exam = value_of("physical_exam")
 
     present_text = present or "未提及/待补充"
@@ -301,11 +307,10 @@ def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | Non
         ("主诉", chief or "未提及/待补充", None if chief else missing_note("chief_complaint")),
         ("现病史", present_text, None),
         ("既往史", past_text, None),
-        ("过敏史", allergy or "未提及/待补充", None if allergy else missing_note("allergy_history")),
-        ("体格检查", exam or "待医生查体补充", None if exam else missing_note("physical_exam")),
+        ("体格及专科检查", exam or "待医生查体补充", None if exam else missing_note("physical_exam")),
         ("辅助检查", "本次未提供；如有检验检查结果，请在病历系统中补录。", None),
-        ("初步诊断", diagnosis_text, "AI 候选诊断必须由医生确认，不构成诊断结论。"),
-        ("处理意见", "待医生补充。", "本系统不生成处方或治疗建议。"),
+        ("诊断", diagnosis_text, "AI 候选诊断必须由医生确认，不构成诊断结论。"),
+        ("治疗意见", "待医生补充。", "本系统不生成处方或治疗建议。"),
     ]
 
 
@@ -320,6 +325,8 @@ def render_pdf(
     generated_at: datetime | None = None,
     department: str | None = None,
     encounter_created_at: str | None = None,
+    patient_deidentified_id: str | None = None,
+    patient_display_name: str | None = None,
 ) -> Path:
     """Hospital-style outpatient record: meta header, sections, signature block."""
     styles = _pdf_styles()
@@ -335,7 +342,8 @@ def render_pdf(
         author="MediListen",
     )
     story: list[Any] = [
-        Paragraph("门 诊 病 历", styles["title"]),
+        Paragraph("医疗机构名称：____________________", styles["subtitle"]),
+        Paragraph("初 诊 病 历 记 录", styles["title"]),
         Paragraph("AI 辅助生成 · 医生审核确认后方可作为病历使用", styles["subtitle"]),
         Spacer(1, 4 * mm),
     ]
@@ -348,6 +356,8 @@ def render_pdf(
         generated_at=generated_at,
         department=department,
         encounter_created_at=encounter_created_at,
+        patient_deidentified_id=patient_deidentified_id,
+        patient_display_name=patient_display_name,
     )
     meta_table = Table(
         [[Paragraph(f"<b>{_pdf_text(k)}</b>", styles["note"]), Paragraph(_pdf_text(v), styles["note"])] for k, v in meta_rows],
@@ -428,6 +438,8 @@ def export_record(task_id: int, result: dict[str, Any]) -> dict[str, str]:
         encounter_id=int(encounter_id) if encounter_id is not None else None,
         department=result.get("encounter_department"),
         encounter_created_at=result.get("encounter_created_at"),
+        patient_deidentified_id=result.get("patient_deidentified_id"),
+        patient_display_name=result.get("patient_display_name"),
     )
     return {"pdf_path": str(pdf_path)}
 

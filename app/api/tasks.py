@@ -19,6 +19,7 @@ from app.db import (
     create_export_event_for_task,
     get_active_approval_for_task,
     get_audit_logs,
+    get_encounter,
     get_record_revision,
     get_task,
     get_task_encounter,
@@ -846,9 +847,12 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
 
     try:
         encounter = get_task_encounter(task_id) or {}
+        encounter_detail = get_encounter(encounter["id"]) if encounter.get("id") else {}
         result["encounter_id"] = task.get("encounter_id") or encounter.get("id")
         result["encounter_department"] = encounter.get("department_id")
         result["encounter_created_at"] = encounter.get("created_at")
+        result["patient_deidentified_id"] = encounter_detail.get("patient_deidentified_id")
+        result["patient_display_name"] = encounter_detail.get("patient_display_name")
         exports = export_record(task_id, result)
     except Exception as exc:
         create_audit_log(

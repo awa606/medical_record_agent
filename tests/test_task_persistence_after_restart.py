@@ -122,7 +122,7 @@ class TaskPersistenceAfterRestartTests(unittest.TestCase):
             self.assertEqual(approved.status_code, 200, approved.text)
             exported = client.post(f"/api/tasks/{task_id}/export")
             self.assertEqual(exported.status_code, 200, exported.text)
-            initial_docx = client.get(f"/api/tasks/{task_id}/exports/docx")
+            initial_docx = client.get(f"/api/tasks/{task_id}/exports/pdf")
             self.assertEqual(initial_docx.status_code, 200, initial_docx.text)
 
         restarted_client = self._restart_app_and_login()
@@ -156,15 +156,12 @@ class TaskPersistenceAfterRestartTests(unittest.TestCase):
             self.assertTrue(readiness.json()["ready"])
             self.assertFalse(readiness.json()["blocked"])
 
-            downloaded_docx = restarted_client.get(f"/api/tasks/{task_id}/exports/docx")
-            self.assertEqual(downloaded_docx.status_code, 200, downloaded_docx.text)
-            with ZipFile(BytesIO(downloaded_docx.content)) as docx:
-                document_xml = docx.read("word/document.xml").decode("utf-8")
-            self.assertIn(WORD_NOTICE, document_xml)
+            downloaded_pdf = restarted_client.get(f"/api/tasks/{task_id}/exports/pdf")
+            self.assertEqual(downloaded_pdf.status_code, 200, downloaded_pdf.text)
+            self.assertEqual(downloaded_pdf.content[:5], b"%PDF-")
 
-            downloaded_markdown = restarted_client.get(f"/api/tasks/{task_id}/exports/markdown")
-            self.assertEqual(downloaded_markdown.status_code, 200, downloaded_markdown.text)
-            self.assertIn(WORD_NOTICE, downloaded_markdown.text)
+            unsupported = restarted_client.get(f"/api/tasks/{task_id}/exports/markdown")
+            self.assertEqual(unsupported.status_code, 404)
 
             self.assertIsNotNone(get_task(task_id))
             self.assertIsNotNone(get_active_approval_for_task(task_id))

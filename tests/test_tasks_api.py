@@ -2,9 +2,7 @@ import os
 import tempfile
 import unittest
 
-from io import BytesIO
 from pathlib import Path
-from zipfile import ZipFile
 
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
@@ -31,6 +29,7 @@ from app.db import (
 )
 from app.main import app
 from app.services import WORD_NOTICE
+from app.services.exporter import render_markdown
 from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, SafetyCheckResult, SourceSpan
 from tests.auth_helpers import create_user, login_as_user
 
@@ -308,21 +307,12 @@ class TaskApiTests(unittest.TestCase):
         exported = export_task(task_id)
         self.assertIn("export_readiness", exported)
         self.assertTrue(exported["export_readiness"]["ready"])
-        markdown_path = Path(exported["exports"]["markdown_path"])
-        word_path = Path(exported["exports"]["word_path"])
-
-        self.assertTrue(markdown_path.exists())
-        self.assertTrue(word_path.exists())
-        self.assertIn(WORD_NOTICE, markdown_path.read_text(encoding="utf-8"))
-        with ZipFile(word_path) as docx:
-            document_xml = docx.read("word/document.xml").decode("utf-8")
-        self.assertIn(WORD_NOTICE, document_xml)
-        self.assertIn("门诊病历", document_xml)
-        self.assertIn("主诉", document_xml)
-        self.assertIn("现病史", document_xml)
-        self.assertIn("医生修订", document_xml)
-        self.assertNotIn("鍙戠儹", document_xml)
-        self.assertNotIn("涓昏瘔", document_xml)
+        pdf_path = Path(exported["exports"]["pdf_path"])
+        self.assertTrue(pdf_path.exists())
+        pdf_bytes = pdf_path.read_bytes()
+        self.assertEqual(pdf_bytes[:5], b"%PDF-")
+        self.assertGreater(len(pdf_bytes), 800)
+        # Content semantics are covered in tests/test_exporter_review_format.py.
 
     def test_deleted_ai_diagnoses_remain_auditable_but_are_not_exported(self):
         result = MedicalRecordOrchestrator().run_from_text("左手手掌被咬了，大概两个小时左右，用酒精冲洗，牙龈出血。")
@@ -335,15 +325,18 @@ class TaskApiTests(unittest.TestCase):
         diagnoses = approved["result_json"]["fields"]["candidate_diagnoses"]
         self.assertTrue(all(d["deleted_by_doctor"] for d in diagnoses))
         exported = export_task(task_id)
-        markdown = Path(exported["exports"]["markdown_path"]).read_text(encoding="utf-8")
-        with ZipFile(exported["exports"]["word_path"]) as docx:
-            xml = docx.read("word/document.xml").decode("utf-8")
-        for body in (markdown, xml):
-            self.assertNotIn("医生已确认", body)
-            self.assertIn("无保留的候选诊断", body)
+        pdf_bytes = Path(exported["exports"]["pdf_path"]).read_bytes()
+        self.assertEqual(pdf_bytes[:5], b"%PDF-")
+        body = render_markdown(
+            MedicalRecordFields.model_validate(approved["result_json"]["fields"]),
+            SafetyCheckResult(passed=True),
+            approved=True,
+        )
+        self.assertNotIn("医生已确认", body)
+        self.assertIn("无保留的候选诊断", body)
         self.assertEqual(len(read_task(task_id)["result_json"]["fields"]["candidate_diagnoses"]), len(diagnoses))
 
-    def test_export_download_route_returns_docx_after_approval(self):
+    def test_export_download_route_returns_pdf_after_approval(self):
         client = TestClient(app)
         doctor = create_user(client, username="download-doctor")
         result = MedicalRecordOrchestrator().run_from_text("patient has fever for three days")
@@ -356,24 +349,14 @@ class TaskApiTests(unittest.TestCase):
         exported = client.post(f"/api/tasks/{task_id}/export")
         self.assertEqual(exported.status_code, 200, exported.text)
 
-        downloaded = client.get(f"/api/tasks/{task_id}/exports/docx")
+        downloaded = client.get(f"/api/tasks/{task_id}/exports/pdf")
         self.assertEqual(downloaded.status_code, 200, downloaded.text)
-        self.assertEqual(
-            downloaded.headers["content-type"],
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
+        self.assertEqual(downloaded.headers["content-type"], "application/pdf")
         self.assertIn(
-            f"task_{task_id}_medical_record.docx",
+            f"task_{task_id}_medical_record.pdf",
             downloaded.headers.get("content-disposition", ""),
         )
-        with ZipFile(BytesIO(downloaded.content)) as docx:
-            document_xml = docx.read("word/document.xml").decode("utf-8")
-        self.assertIn(WORD_NOTICE, document_xml)
-        self.assertIn("门诊病历", document_xml)
-        self.assertIn("主诉", document_xml)
-        self.assertIn("现病史", document_xml)
-        self.assertNotIn("鍙戠儹", document_xml)
-        self.assertNotIn("涓昏瘔", document_xml)
+        self.assertEqual(downloaded.content[:5], b"%PDF-")
 
     def test_export_download_route_enforces_task_owner(self):
         client = TestClient(app)
@@ -389,7 +372,7 @@ class TaskApiTests(unittest.TestCase):
         client.post("/api/auth/logout")
 
         login_as_user(client, username="download-other")
-        forbidden = client.get(f"/api/tasks/{task_id}/exports/docx")
+        forbidden = client.get(f"/api/tasks/{task_id}/exports/pdf")
         self.assertEqual(forbidden.status_code, 403)
 
     def test_empty_approval_request_is_rejected(self):
@@ -578,7 +561,7 @@ class TaskApiTests(unittest.TestCase):
         exported = export_task(task_id)
 
         self.assertTrue(exported["export_readiness"]["ready"])
-        self.assertTrue(Path(exported["exports"]["word_path"]).exists())
+        self.assertTrue(Path(exported["exports"]["pdf_path"]).exists())
 
     def test_export_readiness_blocks_provider_fallback_trace(self):
         result = MedicalRecordOrchestrator().run_from_text(

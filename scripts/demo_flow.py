@@ -389,14 +389,13 @@ def run_flow(
     _step(steps, "export_files", bool(exported.get("exports")), exported.get("exports"))
 
     if download_exports:
-        for export_format in ("docx", "markdown"):
-            response = doctor_http.request("GET", f"/api/tasks/{task_id}/exports/{export_format}")
-            _step(
-                steps,
-                f"download_{export_format}",
-                response.status == 200 and len(response.body) > 0,
-                {"status": response.status, "bytes": len(response.body)},
-            )
+        response = doctor_http.request("GET", f"/api/tasks/{task_id}/exports/pdf")
+        _step(
+            steps,
+            "download_pdf",
+            response.status == 200 and response.body[:5] == b"%PDF-",
+            {"status": response.status, "bytes": len(response.body)},
+        )
 
     reopened = _require(steps, "reopen_encounter", doctor_http.request(
         "GET", f"/api/encounters/{encounter_id}"

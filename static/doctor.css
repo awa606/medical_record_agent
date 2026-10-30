@@ -8,7 +8,7 @@
   --line: #e5e7eb;
   --line-strong: #d1d5db;
   --text: #111827;
-  --muted: #6b7280;
+  --muted: #475569;
   --red: #ef4444;
   --red-soft: #fef2f2;
   --yellow: #f59e0b;
@@ -1811,8 +1811,8 @@ body.doctor-mode .step-prompt {
 }
 
 .workflow-step.done .workflow-index {
-  border-color: #1fb36b;
-  background: #1fb36b;
+  border-color: #0b7a43;
+  background: #0b7a43;
   color: #fff;
 }
 
@@ -2101,7 +2101,7 @@ body.doctor-mode .start-guide {
 }
 
 .chat-card.reviewed {
-  border-left: 3px solid #1fb36b;
+  border-left: 3px solid #0b7a43;
 }
 
 .chat-tools {
@@ -2262,7 +2262,7 @@ body.doctor-mode .start-guide {
 .assist-number-list em {
   display: block;
   margin-top: 2px;
-  color: #6b7280;
+  color: #475569;
   font-size: 12px;
   font-style: normal;
   line-height: 1.4;
@@ -2275,7 +2275,7 @@ body.doctor-mode .start-guide {
 
 .assist-diagnosis-summary p {
   margin: 0;
-  color: #64748b;
+  color: #475569;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -2295,7 +2295,7 @@ body.doctor-mode .start-guide {
 .assist-mini-grid span {
   display: block;
   margin-bottom: 4px;
-  color: #6b7280;
+  color: #475569;
   font-size: 12px;
   font-weight: 800;
 }
@@ -2346,7 +2346,7 @@ body.doctor-mode .start-guide {
 }
 
 .assist-check-row.success span {
-  background: #1fb36b;
+  background: #0b7a43;
 }
 
 .assist-check-row.warning span {
@@ -2635,7 +2635,7 @@ body.doctor-mode .start-guide {
 .display-scale-switch button {
   border: 0;
   background: transparent;
-  color: #6b7280;
+  color: #475569;
 }
 
 .display-scale-switch button.active {
@@ -2959,7 +2959,7 @@ body.doctor-mode .start-guide {
 }
 
 .summary-note {
-  color: #6b7280;
+  color: #475569;
   font-size: 11px;
   font-weight: 800;
 }
@@ -3025,7 +3025,7 @@ body.doctor-mode .start-guide {
 }
 
 .detail-kv span {
-  color: #6b7280;
+  color: #475569;
   font-weight: 800;
 }
 
@@ -3058,7 +3058,7 @@ body.doctor-mode .start-guide {
 
 .detail-transcript-row span,
 .detail-transcript-row strong {
-  color: #6b7280;
+  color: #475569;
   font-size: 12px;
 }
 
@@ -3855,7 +3855,7 @@ body.care-mode .field-card {
 
 body.standard-mode .field-card.confirmed,
 body.care-mode .field-card.confirmed {
-  border-left-color: #1fb36b;
+  border-left-color: #0b7a43;
 }
 
 body.standard-mode .field-card.missing,
@@ -3917,7 +3917,7 @@ body.care-mode .field-card button {
 body.standard-mode .transcript-status-panel,
 body.care-mode .transcript-status-panel {
   border: 1px solid #cfecd9;
-  border-left: 4px solid #1fb36b;
+  border-left: 4px solid #0b7a43;
   border-radius: 8px;
   padding: 10px 12px;
   background: #f3fcf6;
@@ -4380,7 +4380,7 @@ body.care-mode .legend-dot {
 
 body.standard-mode .legend-dot.confirmed,
 body.care-mode .legend-dot.confirmed {
-  background: #1fb36b;
+  background: #0b7a43;
 }
 
 body.standard-mode .legend-dot.missing,
@@ -4745,7 +4745,7 @@ body.care-mode .transcript-list,
 }
 
 .transcript-row-time {
-  color: #6b7280;
+  color: #475569;
   font-size: 13px;
   font-weight: 900;
   white-space: nowrap;
@@ -4779,7 +4779,7 @@ body.care-mode .transcript-list,
 
 .transcript-row-link {
   justify-self: end;
-  color: #64748b;
+  color: #475569;
   font-size: 12px;
   font-weight: 900;
   white-space: nowrap;
@@ -4803,7 +4803,7 @@ body.care-mode .transcript-list,
 
 .detail-note {
   margin: 6px 0 0;
-  color: #6b7280;
+  color: #475569;
   font-size: 13px;
   line-height: 1.55;
 }
@@ -4896,7 +4896,7 @@ body.care-mode .transcript-list,
 }
 
 .speaker-role-group small {
-  color: #64748b;
+  color: #475569;
 }
 
 .speaker-role-group select {
@@ -4993,7 +4993,7 @@ body.care-mode .transcript-list,
 }
 
 .speaker-profile-control small {
-  color: #64748b;
+  color: #475569;
 }
 
 .browser-recording-panel {
@@ -5014,7 +5014,7 @@ body.care-mode .transcript-list,
 }
 
 .browser-recording-meter span {
-  color: #64748b;
+  color: #475569;
   font-weight: 700;
 }
 
@@ -5041,7 +5041,7 @@ body.care-mode .transcript-list,
 
 .recording-message {
   min-height: 20px;
-  color: #64748b;
+  color: #475569;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -5253,7 +5253,7 @@ button.transcript-row-link:focus-visible {
   border-radius: 0;
   padding: 5px 9px;
   background: #fff;
-  color: #64748b;
+  color: #475569;
   font-size: 12px;
   font-weight: 900;
 }
@@ -5270,7 +5270,7 @@ button.transcript-row-link:focus-visible {
 .audio-processing-summary {
   min-width: 0;
   overflow: hidden;
-  color: #64748b;
+  color: #475569;
   font-size: 12px;
   font-weight: 800;
   text-overflow: ellipsis;
@@ -5370,7 +5370,7 @@ body.care-mode .transcript-pace-control button {
 }
 
 .settings-label {
-  color: #64748b;
+  color: #475569;
   font-size: 12px;
   font-weight: 900;
 }
@@ -5483,7 +5483,7 @@ body.doctor-mode .field-card .field-title {
 }
 
 .field-status-text {
-  color: #64748b;
+  color: #475569;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -5571,7 +5571,7 @@ body.doctor-mode .transcript-table-row {
 }
 
 body.doctor-mode .transcript-row-link {
-  color: #64748b;
+  color: #475569;
 }
 
 body.doctor-mode .doctor-assist-overview {
@@ -5650,7 +5650,7 @@ body.doctor-mode .operation-heading span {
 body.doctor-mode #exportButton.blocked-action {
   border-color: #d6dee9;
   background: #e5e7eb;
-  color: #64748b;
+  color: #475569;
 }
 
 /* v0.9.6 final product polish: keep the topbar stable and simplify the
@@ -6157,7 +6157,7 @@ body.doctor-mode .input-method-popover button {
 
 .dashboard-hero p {
   margin: 0;
-  color: var(--muted-text, #64748b);
+  color: var(--muted-text, #475569);
 }
 
 .dashboard-actions {
@@ -6183,7 +6183,7 @@ body.doctor-mode .input-method-popover button {
 
 .dashboard-status-card span,
 .admin-list-row span {
-  color: var(--muted-text, #64748b);
+  color: var(--muted-text, #475569);
   font-size: 13px;
 }
 
@@ -6227,20 +6227,20 @@ body.doctor-mode .input-method-popover button {
 .knowledge-catalog-table th:nth-child(3) { width: 12%; }
 .knowledge-catalog-table th:nth-child(4) { width: 7%; }
 .knowledge-catalog-table th:nth-child(5) { width: 20%; }
-.knowledge-catalog-table small { display: block; color: #64748b; font-size: 13px; font-weight: 400; margin-top: 7px; }
+.knowledge-catalog-table small { display: block; color: #475569; font-size: 13px; font-weight: 400; margin-top: 7px; }
 .knowledge-catalog-table .knowledge-title-button { padding: 0; text-align: left; background: none; border: 0; box-shadow: none; color: #174d78; font-size: 16px; line-height: 1.6; font-weight: 650; height: auto; white-space: normal; }
 .knowledge-document-actions, .knowledge-admin-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .knowledge-document-actions button { min-height: 36px; padding: 5px 9px; font-size: 14px; font-weight: 500; }
 .knowledge-test-search { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(200px, 1fr) auto; align-items: end; gap: 12px; margin: 16px 0; }
 .knowledge-test-search button { min-height: 40px; }
-.knowledge-empty { padding: 28px 12px; color: #64748b; line-height: 1.7; }
+.knowledge-empty { padding: 28px 12px; color: #475569; line-height: 1.7; }
 .knowledge-search-summary { padding: 12px 0; border-bottom: 1px solid #dbe4ee; font-size: 14px; color: #52627a; }
 .knowledge-search-hit { padding: 20px 4px; border-bottom: 1px solid #dbe4ee; }
 .knowledge-search-hit h3, .knowledge-dialog h3 { font-size: 18px; line-height: 1.6; margin: 0 0 12px; }
 .knowledge-passage-preview { line-height: 1.85; font-size: 16px; }
 .knowledge-passage { white-space: pre-wrap; line-height: 1.85; font-size: 16px; max-height: none; overflow-wrap: anywhere; }
 .knowledge-health-list, .knowledge-metadata { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; line-height: 1.7; font-size: 15px; margin: 20px 0; }
-.knowledge-health-list dt, .knowledge-metadata dt { color: #64748b; }
+.knowledge-health-list dt, .knowledge-metadata dt { color: #475569; }
 .knowledge-health-list dd, .knowledge-metadata dd { margin: 0; overflow-wrap: anywhere; }
 .knowledge-dialog { width: min(720px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); box-sizing: border-box; overflow-y: auto; border: 1px solid #dbe4ee; border-radius: 12px; padding: 24px; color: #172d41; background: #fff; }
 .knowledge-dialog::backdrop { background: rgb(15 35 55 / 38%); }

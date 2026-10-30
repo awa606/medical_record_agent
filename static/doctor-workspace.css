@@ -348,3 +348,27 @@ body.doctor-mode .alpha51-workspace .transcript-source-notice {
   body.doctor-mode .alpha51-workspace .transcript-table-row:focus-visible,
   body.doctor-mode .workspace-aux-dialog .transcript-table-row:focus-visible { outline-color: Highlight; }
 }
+
+/* 2026-10-30 record region layout + readability */
+.record-section { flex: none; margin: 0 0 14px; border: 1px solid #d7e0ec; border-radius: 10px; background: #ffffff; overflow: hidden; }
+.record-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #f3f6fb; border-bottom: 1px solid #d7e0ec; }
+.record-section-head h3 { margin: 0; font-size: 16px; line-height: 1.4; color: #172033; letter-spacing: 0.01em; }
+.record-section-head p { margin: 2px 0 0; font-size: 13px; line-height: 1.5; color: #475569; }
+.record-section-body { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; }
+.record-section .field-card { margin: 0; padding: 0 0 10px; border: 0; border-bottom: 1px solid #edf1f6; border-radius: 0; background: transparent; box-shadow: none; }
+.record-section .field-card:last-child { border-bottom: 0; padding-bottom: 0; }
+.record-section .field-card .field-head { margin-bottom: 6px; }
+.record-section .field-title { font-size: 15px; line-height: 1.4; color: #172033; }
+.record-section .field-value, .record-section .field-evidence { font-size: 15px; line-height: 1.65; color: #1f2937; }
+.record-meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; margin: 0; padding: 12px 14px 14px; }
+.record-meta-grid > div { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.record-meta-grid dt { flex: 0 0 auto; font-size: 13px; color: #475569; }
+.record-meta-grid dd { margin: 0; min-width: 0; font-size: 14px; font-weight: 600; color: #172033; overflow-wrap: anywhere; }
+@media (max-width: 1280px) { .record-meta-grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+/* 2026-10-30 help drawer navigation */
+.help-drawer-actions { display: flex; align-items: center; gap: 8px; }
+.help-drawer-actions button { min-height: 34px; }
+.help-drawer-actions button[disabled] { opacity: 0.45; cursor: not-allowed; }

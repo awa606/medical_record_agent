@@ -1262,8 +1262,7 @@ function renderExportReadinessDetail(readiness = appState.currentExportReadiness
 function exportDownloadDescriptors(exports = appState.currentExports) {
   if (!exports) return [];
   const items = [];
-  if (exports.word_path) items.push({ format: "docx", label: "下载 DOCX 病历" });
-  if (exports.markdown_path) items.push({ format: "markdown", label: "下载 Markdown 备份" });
+  if (exports.pdf_path) items.push({ format: "pdf", label: "下载 PDF 病历" });
   return items;
 }
 
@@ -2514,7 +2513,7 @@ function nextActionState() {
     return {
       tone: "ready",
       title: "导出已完成",
-      detail: "DOCX 文件已生成。需要再次下载时，可继续使用导出按钮。",
+      detail: "PDF 文件已生成。需要再次下载时，可继续使用导出按钮。",
       actions: singlePrimaryAction({ key: "export-record", label: "再次下载" }),
     };
   }
@@ -2653,6 +2652,34 @@ function renderTranscriptionFailurePanel() {
 let detailReturnFocus = null;
 let detailDrawerVersion = 0;
 let helpReturnFocus = null;
+let helpPushedState = false;
+
+function updateHelpBackState() {
+  const button = $("helpBackButton");
+  if (!button) return;
+  let canGoBack = false;
+  try {
+    const win = $("embeddedHelpFrame")?.contentWindow;
+    canGoBack = Boolean(win && win.history && win.history.length > 1);
+  } catch {
+    canGoBack = false;
+  }
+  button.disabled = !canGoBack;
+}
+
+function helpGoBack() {
+  const frame = $("embeddedHelpFrame");
+  try {
+    if (frame?.contentWindow?.history?.length > 1) {
+      frame.contentWindow.history.back();
+      window.setTimeout(updateHelpBackState, 200);
+      return;
+    }
+  } catch {
+    // Cross-origin or detached frame: fall back to closing the drawer.
+  }
+  closeEmbeddedHelp();
+}
 
 function openEmbeddedHelp() {
   const dialog = $("helpDialog");
@@ -2660,15 +2687,33 @@ function openEmbeddedHelp() {
     helpReturnFocus = document.activeElement;
     if (!$("embeddedHelpFrame").getAttribute("src")) $("embeddedHelpFrame").src = "./help/index.html";
     dialog.showModal();
+    if (window.location.hash !== "#help") {
+      history.pushState({ help: true }, "", "#help");
+      helpPushedState = true;
+    }
     $("closeEmbeddedHelpButton").focus();
+    updateHelpBackState();
   }
 }
 
-function closeEmbeddedHelp() {
-  $("helpDialog").close();
-  if (helpReturnFocus?.isConnected) helpReturnFocus.focus({preventScroll: true});
+function closeEmbeddedHelp({ fromHistory = false } = {}) {
+  const dialog = $("helpDialog");
+  if (dialog.open) dialog.close();
+  if (helpReturnFocus?.isConnected) helpReturnFocus.focus({ preventScroll: true });
   helpReturnFocus = null;
+  if (helpPushedState && !fromHistory) {
+    helpPushedState = false;
+    history.back();
+    return;
+  }
+  helpPushedState = false;
   if (window.location.hash === "#help") history.replaceState(null, "", `#${appState.productView || "workbench"}`);
+}
+
+if (typeof window.addEventListener === "function") {
+  window.addEventListener("popstate", () => {
+    if ($("helpDialog")?.open) closeEmbeddedHelp({ fromHistory: true });
+  });
 }
 
 function wireEmbeddedHelp() {
@@ -2702,6 +2747,7 @@ function wireEmbeddedHelp() {
     const boundary = event.shiftKey ? focusable[0] : focusable[focusable.length - 1];
     if (doc.activeElement === boundary) { event.preventDefault(); $("closeEmbeddedHelpButton").focus(); }
   });
+  updateHelpBackState();
 }
 let workspaceAuxiliary = null;
 
@@ -4061,7 +4107,8 @@ function renderFields() {
   const displayFieldDefs = isEditing
     ? EDITABLE_FIELD_DEFS
     : appState.viewMode === "doctor" ? DRAFT_FIELD_DEFS : FIELD_DEFS;
-  const cards = displayFieldDefs.map(([key, title]) => {
+  const cardHtmlByKey = new Map();
+  displayFieldDefs.forEach(([key, title]) => {
     let status = appState.viewMode === "doctor"
       ? draftFieldStatus(fields, key)
       : fieldStatus(fields?.[key] || null, key);
@@ -4108,7 +4155,7 @@ function renderFields() {
     const valueMarkup = isEditing
       ? `<label class="record-field-editor"><span class="sr-only">编辑${escapeHtml(title)}</span><textarea data-record-field-input="${escapeHtml(key)}" rows="4" placeholder="本次未采集可留空">${escapeHtml(value)}</textarea></label>`
       : `<div class="field-value">${value ? escapeHtml(value) : `<span class="draft-placeholder" aria-hidden="true">&nbsp;</span>`}</div>`;
-    return `
+    cardHtmlByKey.set(key, `
       <article class="field-card ${status.key} ${fieldWeightClass(key)} ${highlightClass} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${isApprovedDisplay && !isEditing ? "readonly-field" : ""} ${isEditing ? "editing" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}" aria-labelledby="record-field-heading-${escapeHtml(key)}" tabindex="-1">
         <div class="field-head">
           <h3 class="field-title" id="record-field-heading-${escapeHtml(key)}">${escapeHtml(displayTitle)}</h3>
@@ -4120,8 +4167,8 @@ function renderFields() {
         ${!isPreview ? fieldResolutionMarkup(key, fields?.[key], isEditing) : ""}
         ${meta}
       </article>
-    `;
-  }).join("");
+    `);
+  });
 
   const diagnoses = appState.viewMode === "doctor" ? "" : (fields?.candidate_diagnoses || []).map((diagnosis, index) => `
     <article class="field-card candidate" data-field="diagnosis-${index}">
@@ -4186,8 +4233,48 @@ function renderFields() {
   const recovery = appState.recordEditRecovery;
   const recoveryNotice = recovery && recovery.taskId === appState.currentTaskId && !isEditing
     ? `<details class="record-recovery"><summary>本次冲突前的本地修改 · 尚未保存</summary><p>当前显示服务器最新版本。下面仅保留您修改过的字段，请与最新内容核对。</p>${EDITABLE_FIELD_DEFS.filter(([key]) => String(recovery.fields[key]?.value || "") !== String(recovery.baseline?.[key]?.value || "")).map(([key, title]) => `<p><strong>${escapeHtml(title)}</strong>：${escapeHtml(recovery.fields[key]?.value || "（留空）")}</p>`).join("")}<button type="button" data-record-reapply>将这些修改带入当前版本继续编辑</button></details>` : "";
+  const encounter = appState.currentEncounter || {};
+  const metaSection = `
+    <section class="record-section record-meta" aria-labelledby="record-meta-heading">
+      <header class="record-section-head"><div><h3 id="record-meta-heading">就诊信息</h3><p>患者标识与本次就诊</p></div></header>
+      <dl class="record-meta-grid">
+        <div><dt>患者标识</dt><dd>${escapeHtml(encounter.patient_deidentified_id || "未关联")}</dd></div>
+        <div><dt>就诊编号</dt><dd>${encounter.id ? `E-${escapeHtml(encounter.id)}` : "未关联"}</dd></div>
+        <div><dt>当前版本</dt><dd>${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"}</dd></div>
+        <div><dt>审核状态</dt><dd>${isApprovedDisplay ? "医生已审核" : "待医生审核"}</dd></div>
+      </dl>
+    </section>`;
+  const clinicalSections = [
+    ["主诉与现病史", ["chief_complaint", "present_illness", "accompanying_symptoms"], "本次就诊的主要症状与演变"],
+    ["既往史与过敏", ["past_history", "previous_treatment", "allergy_history"], "既往疾病、用药与过敏信息"],
+    ["体格检查", ["physical_exam"], "查体记录与缺失提示"],
+    ["诊断与处理", ["preliminary_diagnosis", "treatment_plan"], "候选诊断需医生确认，处理意见由医生填写"],
+  ];
+  const usedKeys = new Set();
+  const sections = clinicalSections.map(([title, keys, desc]) => {
+    const inner = keys.map((key) => {
+      if (!cardHtmlByKey.has(key)) return "";
+      usedKeys.add(key);
+      return cardHtmlByKey.get(key);
+    }).join("");
+    const extra = title === "诊断与处理" ? diagnoses : "";
+    if (!inner && !extra) return "";
+    return `
+      <section class="record-section" aria-label="${escapeHtml(title)}">
+        <header class="record-section-head"><div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(desc)}</p></div></header>
+        <div class="record-section-body">${inner}${extra}</div>
+      </section>`;
+  }).join("");
+  const leftover = [...cardHtmlByKey.entries()]
+    .filter(([key]) => !usedKeys.has(key))
+    .map(([, html]) => html)
+    .join("");
+  const leftoverSection = leftover
+    ? `<section class="record-section" aria-label="其他字段"><header class="record-section-head"><div><h3>其他字段</h3></div></header><div class="record-section-body">${leftover}</div></section>`
+    : "";
+
   $("recordFields").innerHTML = previewNotice + historicalNotice + versionNotice + editNotice + recoveryNotice
-    + (isEditing ? "" : renderApprovalChecklist(fields)) + cards + diagnoses + summaryFooter + draftLegend;
+    + (isEditing ? "" : renderApprovalChecklist(fields)) + metaSection + sections + leftoverSection + summaryFooter + draftLegend;
 }
 
 function classifySpeaker(line, segment = {}) {
@@ -7802,7 +7889,7 @@ function filenameFromContentDisposition(disposition, fallback) {
   return asciiMatch ? asciiMatch[1] : fallback;
 }
 
-async function downloadTaskExport(format = "docx") {
+async function downloadTaskExport(format = "pdf") {
   if (!appState.currentTaskId) throw new Error("暂无可下载的导出文件");
   const response = await fetch(`/api/tasks/${encodeURIComponent(appState.currentTaskId)}/exports/${encodeURIComponent(format)}`);
   if (!response.ok) {
@@ -7814,7 +7901,7 @@ async function downloadTaskExport(format = "docx") {
     throw new Error(errorMessage);
   }
   const blob = await response.blob();
-  const extension = format === "markdown" ? "md" : "docx";
+  const extension = "pdf";
   const filename = filenameFromContentDisposition(
     response.headers.get("content-disposition"),
     `task_${appState.currentTaskId}_medical_record.${extension}`,
@@ -7865,7 +7952,7 @@ async function exportRecord() {
     setBusy(false);
     openDetailDrawer("导出完成", renderExportReadinessDetail(appState.currentExportReadiness));
     try {
-      const filename = await downloadTaskExport("docx");
+      const filename = await downloadTaskExport("pdf");
       showToast(`导出完成，${filename} 下载已开始`);
     } catch (downloadError) {
       showToast(`导出已生成，请在详情中手动下载：${downloadError.message}`);
@@ -9448,8 +9535,9 @@ function bindEvents() {
   $("openEmbeddedHelpButton").addEventListener("click", openEmbeddedHelp);
   $("loginHelpButton").addEventListener("click", openEmbeddedHelp);
   $("closeEmbeddedHelpButton").addEventListener("click", closeEmbeddedHelp);
+  $("helpBackButton").addEventListener("click", helpGoBack);
   $("helpDialog").addEventListener("cancel", (event) => { event.preventDefault(); closeEmbeddedHelp(); });
-  $("embeddedHelpFrame").addEventListener("load", wireEmbeddedHelp);
+  $("embeddedHelpFrame").addEventListener("load", () => { wireEmbeddedHelp(); updateHelpBackState(); });
   document.querySelectorAll("[data-workspace-panel]").forEach(button => {
     button.addEventListener("click", () => openWorkspaceAuxiliary(button.dataset.workspacePanel));
   });

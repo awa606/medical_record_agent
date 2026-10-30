@@ -1,0 +1,95 @@
+# 2026-10-30 前端迭代：病历分区、PDF 导出、帮助返回
+
+## 版本隔离
+
+- 新工作树：`病历/08_UI_ITERATION/mra_ui_hospital_record`
+- 新分支：`codex/ui-hospital-record-v1`，基线 `0286a4a`
+- 原 `07_HARDENING_WORK/mra_enterprise_hardening` 与候选 26310 未改动、未覆盖。
+
+## 完成的修改
+
+### 1. 中间病历区按医院病历分区
+
+`static/doctor.js` 的 `renderFields()` 不再平铺字段卡，改为固定区域：
+
+| 区域 | 内容 |
+|---|---|
+| 就诊信息 | 患者标识、就诊编号、当前版本、审核状态 |
+| 主诉与现病史 | 主诉、现病史、伴随症状 |
+| 既往史与过敏 | 既往史、既往处理、过敏史 |
+| 体格检查 | 查体与缺失提示 |
+| 诊断与处理 | 候选诊断（待确认）、处理意见 |
+
+每区带标题、说明和独立容器；CSS 增加 `.record-section`，并修正 flex 收缩导致的“只有标题、内容被压成 0 高”的问题（`flex: none`）。编辑模式、审核清单、证据/依据按钮仍在原 DOM 内，事件委托不变。
+
+### 2. 导出统一为 PDF
+
+- `app/services/exporter.py` 新增 `render_pdf()`：A4、医院门诊病历版式（标题、就诊信息表、主诉/现病史/既往史/过敏史/查体/辅助检查/初步诊断/处理意见、安全校验、医师签名/日期、页码）。
+- `export_record()` 只写 `task_{id}_medical_record.pdf`，返回 `{"pdf_path": ...}`。
+- `app/api/tasks.py` 的 `EXPORT_DOWNLOADS` 只保留 `pdf`；`/exports/docx`、`/exports/markdown` 返回 404。
+- 前端只显示“下载 PDF 病历”，默认下载格式改为 `pdf`。
+- 依赖新增 `reportlab>=4,<5`。
+
+PDF 样张：`data/outputs/_pdf_smoke.pdf`（4.1KB，单页，中文正常渲染）。
+
+### 3. 帮助页返回
+
+- 帮助抽屉新增“返回上一页”，调用 iframe 内部 `history.back()`；无历史时退回关闭。
+- 打开帮助 `pushState(#help)`，关闭/浏览器后退通过 `popstate` 同步关闭，焦点回到触发按钮。
+- 保留原有对 `doctor.html` 链接的拦截，避免帮助 iframe 内嵌整个工作台。
+- 兼容无 `window.addEventListener` 的测试 harness。
+
+### 4. 可读性与动效
+
+- 全局替换低对比灰 `#64748b/#6b7280/#718197/#7b8da1` → `#475569`（白底 7.58:1）。
+- 成功绿 `#1fb36b` → `#0b7a43`（白底约 5.9:1）。
+- 新增 `prefers-reduced-motion` 关闭动画/过渡。
+- 病历区正文 15px / 行高 1.65；区域标题 16px。
+
+## 验证
+
+自动化 UI 巡检脚本：`scripts/ui_review_check.py`（真实 Chromium、隔离临时库、Mock Provider）。
+
+结果（`.artifacts/ui-review-20261030/ui_review.json`）：
+
+```text
+audit_login            contrast=0 overlap=0 overflowX=0
+record_sections        5 个区域全部存在
+audit_workspace        contrast=0 overlap=0 overflowX=0
+audit_workspace_1280   contrast=0 overlap=0 overflowX=0
+audit_help_index       contrast=0 overlap=0 overflowX=0
+help_manual            进入操作手册
+audit_help_manual      contrast=0 overlap=0 overflowX=0
+help_back              返回帮助首页
+help_close             关闭
+audit_worklist         contrast=0 overlap=0 overflowX=0
+audit_admin            contrast=0 overlap=0 overflowX=0
+```
+
+截图：`01_record_sections.png`、`02_help_index.png`、`03_help_manual.png`、`04_help_back.png`、`audit_workspace_1280.png` 等。
+
+测试：
+
+```text
+pytest -k "export or docx or download"     53 passed
+test_demo_flow + history_restore +
+itemized_approval_playwright +
+task_persistence                            19 passed
+test_doctor_product_shell_static +
+local_patient_browser                       15 passed
+```
+
+## 边界
+
+- PDF 使用 `STSong-Light` CID 字体、未嵌入字体文件；阅读器需具备中文字体（Windows/macOS/主流阅读器可显示）。正式交付前应改为嵌入开源 CJK 字体。
+- 巡检覆盖登录、工作台、接诊、工作清单、管理后台、帮助首页/手册；未逐页遍历帮助内全部子页。
+- 使用合成病例与 Mock Provider；未做真实医生视觉认可，也未处理 `采访 003.m4a`。
+- 真实医院病历版式仅按公开规范实现，未与具体医院模板核对。
+
+## 复现
+
+```powershell
+python scripts/package_help.py
+python scripts/ui_review_check.py
+python -m pytest tests/test_tasks_api.py tests/test_exporter_review_format.py -q
+```

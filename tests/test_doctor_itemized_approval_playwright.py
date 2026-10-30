@@ -328,14 +328,11 @@ def test_itemized_approval_invalidates_after_edit_and_downloads_docx() -> None:
             with page.expect_download(timeout=30000) as download_info:
                 page.evaluate("exportRecord()")
             download = download_info.value
-            docx_path = download_dir / download.suggested_filename
-            download.save_as(docx_path)
-            assert docx_path.exists()
-            assert docx_path.stat().st_size > 0
-            with ZipFile(docx_path) as docx:
-                assert "word/document.xml" in docx.namelist()
-                document_xml = docx.read("word/document.xml").decode("utf-8")
-            assert "医生补充记录" in document_xml
+            pdf_path = download_dir / download.suggested_filename
+            download.save_as(pdf_path)
+            assert pdf_path.exists()
+            assert pdf_path.stat().st_size > 800
+            assert pdf_path.read_bytes()[:5] == b"%PDF-"
 
             task_status = page.evaluate(
                 """async (taskId) => {

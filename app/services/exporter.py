@@ -1,10 +1,28 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 from html import escape
 from pathlib import Path
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile
+
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.platypus import (
+    HRFlowable,
+    KeepTogether,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 from app.schemas import MedicalRecordFields, SafetyCheckResult
 from app.services.privacy import anonymize_text
@@ -86,8 +104,6 @@ def _record_paragraphs(
 def _paragraphs_markdown(paragraphs: list[tuple[str, str]]) -> str:
     prefixes = {"title": "# ", "heading": "## ", "note": "> ", "list": "- "}
     return "\n\n".join(prefixes.get(kind, "") + text for kind, text in paragraphs) + "\n"
-
-
 def render_markdown(
     fields: MedicalRecordFields, safety_check: SafetyCheckResult, *, approved: bool = False
 ) -> str:
@@ -152,23 +168,251 @@ def write_docx(path: Path, markdown_text: str, *, paragraphs: list[tuple[str, st
         docx.writestr("word/document.xml", _document_xml(markdown_text, paragraphs))
 
 
+def _pdf_styles() -> dict[str, ParagraphStyle]:
+    pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+    base = ParagraphStyle(
+        "body",
+        fontName="STSong-Light",
+        fontSize=10.5,
+        leading=18,
+        textColor=colors.HexColor("#1f2937"),
+    )
+    return {
+        "title": ParagraphStyle(
+            "title",
+            parent=base,
+            fontSize=19,
+            leading=26,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#111827"),
+        ),
+        "subtitle": ParagraphStyle(
+            "subtitle",
+            parent=base,
+            fontSize=9,
+            leading=14,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#52627a"),
+        ),
+        "heading": ParagraphStyle(
+            "heading",
+            parent=base,
+            fontSize=12,
+            leading=20,
+            textColor=colors.HexColor("#0f3d75"),
+        ),
+        "body": base,
+        "note": ParagraphStyle(
+            "note",
+            parent=base,
+            fontSize=9,
+            leading=14,
+            textColor=colors.HexColor("#52627a"),
+        ),
+        "signature": ParagraphStyle(
+            "signature",
+            parent=base,
+            fontSize=10.5,
+            leading=22,
+            textColor=colors.HexColor("#1f2937"),
+        ),
+    }
+
+
+def _pdf_text(value: str) -> str:
+    return escape(str(value)).replace("\n", "<br/>")
+
+
+def _pdf_meta_rows(
+    fields: MedicalRecordFields,
+    *,
+    task_id: int,
+    encounter_id: int | None,
+    approved: bool,
+    generated_at: datetime,
+) -> list[tuple[str, str]]:
+    return [
+        ("就诊编号", f"E-{encounter_id}" if encounter_id is not None else "未关联就诊"),
+        ("任务编号", str(task_id)),
+        ("导出时间", generated_at.strftime("%Y-%m-%d %H:%M")),
+        ("审核状态", "已完成医生分项审核" if approved else "未完成医生分项审核"),
+    ]
+
+
+def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | None]]:
+    def value_of(name: str) -> str:
+        field = getattr(fields, name)
+        return str(field.value).strip() if field.value and not field.missing else ""
+
+    def missing_note(name: str) -> str | None:
+        field = getattr(fields, name)
+        if field.value and not field.missing:
+            if field.status == "conflicting":
+                return f"证据冲突，需医生复核：{field.hint or '请核对原始转写'}"
+            return None
+        if field.confirmed_by_doctor and field.doctor_review_status == "not_asked_confirmed":
+            return "未询问（医生确认）；本项信息未采集"
+        if field.confirmed_by_doctor and field.doctor_review_status == "missing_accepted":
+            return "信息缺失（医生已接受本次缺失）；不代表否认或正常"
+        return "未提及/待补充"
+
+    chief = value_of("chief_complaint")
+    present = value_of("present_illness")
+    accompanying = value_of("accompanying_symptoms")
+    past = value_of("past_history")
+    previous = value_of("previous_treatment")
+    allergy = value_of("allergy_history")
+    exam = value_of("physical_exam")
+
+    present_text = present or "未提及/待补充"
+    if accompanying:
+        present_text = f"{present_text}\n伴随症状：{accompanying}"
+    past_text = past or "未提及/待补充"
+    if previous:
+        past_text = f"{past_text}\n既往处理：{previous}"
+
+    retained = [
+        diagnosis
+        for diagnosis in fields.candidate_diagnoses
+        if not diagnosis.deleted_by_doctor and diagnosis.doctor_review_status != "ai_candidate_deleted"
+    ]
+    if retained:
+        diagnosis_text = "\n".join(
+            f"{index + 1}. {diagnosis.name}（"
+            + ("医生已确认候选" if diagnosis.doctor_review_status == "candidate_confirmed" else "候选/待医生确认")
+            + "）"
+            for index, diagnosis in enumerate(retained)
+        )
+    elif fields.candidate_diagnoses:
+        diagnosis_text = "无保留的候选诊断；AI 候选已移除（不代表临床排除）；审核记录保留"
+    else:
+        diagnosis_text = "未记录候选诊断"
+
+    return [
+        ("主诉", chief or "未提及/待补充", None if chief else missing_note("chief_complaint")),
+        ("现病史", present_text, None),
+        ("既往史", past_text, None),
+        ("过敏史", allergy or "未提及/待补充", None if allergy else missing_note("allergy_history")),
+        ("体格检查", exam or "待医生查体补充", None if exam else missing_note("physical_exam")),
+        ("辅助检查", "本次未提供；如有检验检查结果，请在病历系统中补录。", None),
+        ("初步诊断", diagnosis_text, "AI 候选诊断必须由医生确认，不构成诊断结论。"),
+        ("处理意见", "待医生补充。", "本系统不生成处方或治疗建议。"),
+    ]
+
+
+def render_pdf(
+    path: Path,
+    fields: MedicalRecordFields,
+    safety_check: SafetyCheckResult,
+    *,
+    approved: bool,
+    task_id: int,
+    encounter_id: int | None = None,
+    generated_at: datetime | None = None,
+) -> Path:
+    """Hospital-style outpatient record: meta header, sections, signature block."""
+    styles = _pdf_styles()
+    generated_at = generated_at or datetime.now()
+    doc = SimpleDocTemplate(
+        str(path),
+        pagesize=A4,
+        leftMargin=20 * mm,
+        rightMargin=20 * mm,
+        topMargin=18 * mm,
+        bottomMargin=18 * mm,
+        title=f"门诊病历 E-{encounter_id}" if encounter_id is not None else "门诊病历",
+        author="MediListen",
+    )
+    story: list[Any] = [
+        Paragraph("门 诊 病 历", styles["title"]),
+        Paragraph("AI 辅助生成 · 医生审核确认后方可作为病历使用", styles["subtitle"]),
+        Spacer(1, 4 * mm),
+    ]
+
+    meta_rows = _pdf_meta_rows(
+        fields,
+        task_id=task_id,
+        encounter_id=encounter_id,
+        approved=approved,
+        generated_at=generated_at,
+    )
+    meta_table = Table(
+        [[Paragraph(f"<b>{_pdf_text(k)}</b>", styles["note"]), Paragraph(_pdf_text(v), styles["note"])] for k, v in meta_rows],
+        colWidths=[30 * mm, 140 * mm],
+    )
+    meta_table.setStyle(
+        TableStyle(
+            [
+                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#dfe6ef")),
+                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f3f6fa")),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
+    story.extend([meta_table, Spacer(1, 5 * mm), HRFlowable(width="100%", color=colors.HexColor("#c9d4e3"))])
+
+    for heading, body, note in _pdf_sections(fields):
+        block: list[Any] = [
+            Paragraph(_pdf_text(heading), styles["heading"]),
+            Paragraph(_pdf_text(body), styles["body"]),
+        ]
+        if note:
+            block.append(Paragraph(_pdf_text(note), styles["note"]))
+        block.append(Spacer(1, 3 * mm))
+        story.append(KeepTogether(block))
+
+    story.extend(
+        [
+            Spacer(1, 4 * mm),
+            HRFlowable(width="100%", color=colors.HexColor("#c9d4e3")),
+            Spacer(1, 2 * mm),
+            Paragraph(
+                _pdf_text(
+                    f"自动安全校验：{'通过' if safety_check.passed else '未通过'}；"
+                    f"导出阻断：{'是' if safety_check.blocked else '否'}"
+                ),
+                styles["note"],
+            ),
+            Spacer(1, 8 * mm),
+            Paragraph("医师签名：__________________　　日期：______年____月____日", styles["signature"]),
+            Spacer(1, 3 * mm),
+            Paragraph(WORD_NOTICE, styles["note"]),
+        ]
+    )
+
+    def _footer(canvas, doc_obj) -> None:
+        canvas.saveState()
+        canvas.setFont("STSong-Light", 8)
+        canvas.setFillColor(colors.HexColor("#64748b"))
+        canvas.drawRightString(A4[0] - 20 * mm, 10 * mm, f"第 {doc_obj.page} 页")
+        canvas.drawString(20 * mm, 10 * mm, "MediListen · 门诊病历")
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
+    return path
+
+
 def export_record(task_id: int, result: dict[str, Any]) -> dict[str, str]:
     fields = MedicalRecordFields.model_validate(result["fields"])
     safety_check = SafetyCheckResult.model_validate(result["safety_check"])
     # The API verifies the live approval and Revision before entering here.
     # Never infer approval from nonempty or individually confirmed fields.
-    paragraphs = _record_paragraphs(fields, safety_check, approved=result.get("approved") is True)
-    markdown_text = _paragraphs_markdown(paragraphs)
-
+    approved = result.get("approved") is True
+    encounter_id = result.get("encounter_id")
     output_dir = Path(os.environ.get("MEDICAL_RECORD_AGENT_OUTPUT_DIR", DEFAULT_OUTPUT_DIR))
     output_dir.mkdir(parents=True, exist_ok=True)
-    markdown_path = output_dir / f"task_{task_id}_medical_record.md"
-    word_path = output_dir / f"task_{task_id}_medical_record.docx"
+    pdf_path = output_dir / f"task_{task_id}_medical_record.pdf"
+    render_pdf(
+        pdf_path,
+        fields,
+        safety_check,
+        approved=approved,
+        task_id=task_id,
+        encounter_id=int(encounter_id) if encounter_id is not None else None,
+    )
+    return {"pdf_path": str(pdf_path)}
 
-    markdown_path.write_text(markdown_text, encoding="utf-8")
-    write_docx(word_path, markdown_text, paragraphs=paragraphs)
-
-    return {
-        "markdown_path": str(markdown_path),
-        "word_path": str(word_path),
-    }

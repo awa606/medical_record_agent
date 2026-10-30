@@ -51,7 +51,7 @@ class FakeSmokeClient:
                 "content_hash": "hash-42",
             }
         if method.upper() == "POST" and path == "/api/tasks/42/export":
-            return {"task_id": 42, "exports": {"markdown_path": "out.md", "word_path": "out.docx"}}
+            return {"task_id": 42, "exports": {"pdf_path": "out.pdf"}}
         raise AssertionError(f"unexpected request: {method} {path}")
 
     def _fields(self) -> dict[str, Any]:

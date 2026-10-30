@@ -37,15 +37,10 @@ from app.services.exporter import DEFAULT_OUTPUT_DIR
 router = APIRouter(prefix="/tasks", tags=["tasks"], dependencies=[Depends(require_current_user)])
 TERMINAL_EVENTS = {"WAITING_DOCTOR_REVIEW", "FAILED"}
 EXPORT_DOWNLOADS = {
-    "markdown": {
-        "path_key": "markdown_path",
-        "extension": "md",
-        "media_type": "text/markdown; charset=utf-8",
-    },
-    "docx": {
-        "path_key": "word_path",
-        "extension": "docx",
-        "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "pdf": {
+        "path_key": "pdf_path",
+        "extension": "pdf",
+        "media_type": "application/pdf",
     },
 }
 
@@ -850,6 +845,7 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=readiness)
 
     try:
+        result["encounter_id"] = task.get("encounter_id")
         exports = export_record(task_id, result)
     except Exception as exc:
         create_audit_log(

@@ -408,24 +408,22 @@ def render_pdf(
         block.append(Spacer(1, 3 * mm))
         story.append(KeepTogether(block))
 
-    story.extend(
-        [
-            Spacer(1, 4 * mm),
-            HRFlowable(width="100%", color=colors.HexColor("#c9d4e3")),
-            Spacer(1, 2 * mm),
-            Paragraph(
-                _pdf_text(
-                    f"自动安全校验：{'通过' if safety_check.passed else '未通过'}；"
-                    f"导出阻断：{'是' if safety_check.blocked else '否'}"
-                ),
-                styles["note"],
+    story.append(KeepTogether([
+        Spacer(1, 4 * mm),
+        HRFlowable(width="100%", color=colors.HexColor("#c9d4e3")),
+        Spacer(1, 2 * mm),
+        Paragraph(
+            _pdf_text(
+                f"自动安全校验：{'通过' if safety_check.passed else '未通过'}；"
+                f"导出阻断：{'是' if safety_check.blocked else '否'}"
             ),
-            Spacer(1, 8 * mm),
-            Paragraph("医师签名：__________________　　日期：______年____月____日", styles["signature"]),
-            Spacer(1, 3 * mm),
-            Paragraph(WORD_NOTICE, styles["note"]),
-        ]
-    )
+            styles["note"],
+        ),
+        Spacer(1, 8 * mm),
+        Paragraph("医师签名：__________________　　日期：______年____月____日", styles["signature"]),
+        Spacer(1, 3 * mm),
+        Paragraph(WORD_NOTICE, styles["note"]),
+    ]))
 
     def _footer(canvas, doc_obj) -> None:
         canvas.saveState()

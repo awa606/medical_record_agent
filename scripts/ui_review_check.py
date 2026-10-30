@@ -165,6 +165,30 @@ def run() -> dict:
                 "ok": all(name in headings for name in ("就诊信息", "主诉与现病史", "既往史与过敏", "体格检查", "诊断与处理")),
                 "detail": headings,
             })
+            section_cards = page.evaluate("""() => [...document.querySelectorAll('#recordFields .record-section')].map(section => ({
+                title: section.querySelector('.record-section-head h3')?.textContent.trim() || '',
+                cards: section.querySelectorAll('.field-card').length,
+            }))""")
+            steps.append({
+                "step": "section_contents",
+                "ok": all(item["cards"] >= 1 for item in section_cards if item["title"] != "就诊信息"),
+                "detail": section_cards,
+            })
+            section_status = page.evaluate("""() => [...document.querySelectorAll('#recordFields .record-section-status')].map(button => ({
+                text: button.textContent.trim(),
+                tone: [...button.classList].find(name => ['done', 'pending', 'conflict', 'neutral'].includes(name)) || '',
+            }))""")
+            steps.append({
+                "step": "section_status",
+                "ok": len(section_status) >= 4 and all(item["tone"] for item in section_status),
+                "detail": section_status,
+            })
+            pending_badge = page.locator("#recordFields .record-section-status.pending, #recordFields .record-section-status.conflict").first
+            if pending_badge.count():
+                pending_badge.click()
+                page.wait_for_timeout(500)
+                focused_field = page.evaluate("document.activeElement?.getAttribute('data-field') || ''")
+                steps.append({"step": "section_jump", "ok": bool(focused_field), "detail": focused_field})
             audit(page, "workspace", steps)
 
             page.set_viewport_size({"width": 1280, "height": 800})
@@ -190,6 +214,14 @@ def run() -> dict:
             page.click("#closeEmbeddedHelpButton")
             steps.append({"step": "help_close", "ok": not page.locator("#helpDialog").evaluate("d => d.open")})
 
+            for help_page in ("manual", "feedback", "maintenance", "dual-environment", "course-demo", "viewer-section"):
+                page.goto(f"{server.base_url}/static/help/{help_page}.html")
+                page.wait_for_timeout(400)
+                audit(page, f"help_{help_page}", steps)
+
+            page.goto(f"{server.base_url}/static/doctor.html")
+            page.wait_for_timeout(600)
+
             page.click("#openWorklistButton")
             page.wait_for_timeout(500)
             audit(page, "worklist", steps)
@@ -198,6 +230,17 @@ def run() -> dict:
             page.click('button[data-product-view-target="admin"]')
             page.wait_for_timeout(600)
             audit(page, "admin", steps)
+
+            page.click("#knowledgeTabSearch")
+            page.fill("#knowledgeTestQuery", "流感的临床表现")
+            page.click("#knowledgeTestSearchForm button[type=submit]")
+            page.wait_for_timeout(900)
+            audit(page, "admin_knowledge_search", steps)
+
+            for path, name in (("/static/index.html", "app_index"), ("/static/debug.html", "debug")):
+                page.goto(f"{server.base_url}{path}")
+                page.wait_for_timeout(500)
+                audit(page, name, steps)
 
             browser.close()
     finally:

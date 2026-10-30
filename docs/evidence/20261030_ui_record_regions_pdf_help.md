@@ -20,7 +20,9 @@
 | 体格检查 | 查体与缺失提示 |
 | 诊断与处理 | 候选诊断（待确认）、处理意见 |
 
-每区带标题、说明和独立容器；CSS 增加 `.record-section`，并修正 flex 收缩导致的“只有标题、内容被压成 0 高”的问题（`flex: none`）。编辑模式、审核清单、证据/依据按钮仍在原 DOM 内，事件委托不变。
+每个临床区域标题右侧带状态徽标：`已完成`（绿）、`N 项待补充`（黄）、`N 项需修正`（红）；点击徽标滚动并聚焦到本区第一个待处理字段。左侧转写区未改。
+
+> 录音《采访 003》转写 9,672 字（约 37 分钟）。与本轮相关的意见集中在：界面要更可视、更可理解，减少“信息扑面而来”；病历区有问题的项要标红并可跳到对应输入框直接改；已确认用绿、待处理用黄；最终输出应能打印成医院单据（PDF）。转写中的其他内容（模型训练、权限、课程演示）未作为本轮前端依据。
 
 ### 2. 导出统一为 PDF
 
@@ -62,11 +64,22 @@ help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0
 help_back              返回帮助首页
 help_close             关闭
+audit_help_feedback / maintenance / dual-environment / course-demo / viewer-section
+                       contrast=0 overlap=0 overflowX=0
 audit_worklist         contrast=0 overlap=0 overflowX=0
 audit_admin            contrast=0 overlap=0 overflowX=0
+audit_admin_knowledge_search  contrast=0 overlap=0 overflowX=0
+audit_app_index        contrast=0 overlap=0 overflowX=0
+audit_debug            contrast=0 overlap=0 overflowX=0
 ```
 
-截图：`01_record_sections.png`、`02_help_index.png`、`03_help_manual.png`、`04_help_back.png`、`audit_workspace_1280.png` 等。
+第二轮补充：
+- 遍历帮助全部 6 个子页（manual、feedback、maintenance、dual-environment、course-demo、viewer-section）、管理后台知识检索、`index.html`、`debug.html`。
+- 修复 course-demo 页头三段链接被 flex 压成竖排重叠的问题。
+- 修复 `index.html/style.css` 的 `--muted #6b7280`（对浅底 4.44:1）与 debug 页蓝/红按钮白字不足 4.5 的问题：`--primary #1d4ed8`、`--red #b91c1c`、`--muted #475569`。
+- PDF 就诊信息新增“就诊时间/科别”，由任务关联 encounter 填充；参考东南大学附属医院《门（急）诊病历规范书写要求》与《病历书写基本规范》的字段顺序。
+
+截图：`01_record_sections.png`、`02_help_index.png`、`03_help_manual.png`、`04_help_back.png`、`audit_workspace_1280.png`、`audit_debug.png` 等。
 
 测试：
 
@@ -77,7 +90,10 @@ itemized_approval_playwright +
 task_persistence                            19 passed
 test_doctor_product_shell_static +
 local_patient_browser                       15 passed
+全量（排除本地浏览器用例）                  1636 passed, 5 skipped
 ```
+
+录音转写产物：`.artifacts/interview-20261030/transcript.txt`（9,672 字）。
 
 ## 边界
 

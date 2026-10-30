@@ -4108,6 +4108,7 @@ function renderFields() {
     ? EDITABLE_FIELD_DEFS
     : appState.viewMode === "doctor" ? DRAFT_FIELD_DEFS : FIELD_DEFS;
   const cardHtmlByKey = new Map();
+  const fieldStatusByKey = new Map();
   displayFieldDefs.forEach(([key, title]) => {
     let status = appState.viewMode === "doctor"
       ? draftFieldStatus(fields, key)
@@ -4124,6 +4125,7 @@ function renderFields() {
       };
     }
     if (status.key === "missing") missingCount += 1;
+    fieldStatusByKey.set(key, status);
     const value = isEditing
       ? readableStoredText(fields?.[key]?.value)
       : appState.viewMode === "doctor" ? recordFieldDisplayValue(fields, key, isApprovedDisplay) : fieldValue(fields, key);
@@ -4252,6 +4254,23 @@ function renderFields() {
   ];
   const usedKeys = new Set();
   const sections = clinicalSections.map(([title, keys, desc]) => {
+    const statuses = keys.map((key) => fieldStatusByKey.get(key)).filter(Boolean);
+    const conflictCount = statuses.filter((status) => status.key === "conflicting").length;
+    const pendingCount = statuses.filter((status) => ["missing", "partial", "low", "pending"].includes(status.key)).length;
+    const focusKey = keys.find((key) => fieldStatusByKey.has(key) && fieldStatusByKey.get(key).key !== "confirmed")
+      || keys.find((key) => fieldStatusByKey.has(key));
+    let statusTone = "done";
+    let statusText = "已完成";
+    if (conflictCount) {
+      statusTone = "conflict";
+      statusText = `${conflictCount} 项需修正`;
+    } else if (pendingCount) {
+      statusTone = "pending";
+      statusText = `${pendingCount} 项待补充`;
+    } else if (!statuses.length) {
+      statusTone = "neutral";
+      statusText = "无字段";
+    }
     const inner = keys.map((key) => {
       if (!cardHtmlByKey.has(key)) return "";
       usedKeys.add(key);
@@ -4261,7 +4280,7 @@ function renderFields() {
     if (!inner && !extra) return "";
     return `
       <section class="record-section" aria-label="${escapeHtml(title)}">
-        <header class="record-section-head"><div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(desc)}</p></div></header>
+        <header class="record-section-head"><div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(desc)}</p></div><button type="button" class="record-section-status ${statusTone}" data-record-section-focus="${escapeHtml(focusKey || "")}" title="定位到本区待处理字段">${escapeHtml(statusText)}</button></header>
         <div class="record-section-body">${inner}${extra}</div>
       </section>`;
   }).join("");
@@ -9826,6 +9845,18 @@ function bindEvents() {
     if (event.target.matches('.approval-disclosure') && event.target.isConnected) appState.approvalDisclosureOpen = event.target.open;
   }, true);
   $("recordFields").addEventListener("click", (event) => {
+    const sectionFocus = event.target.closest("[data-record-section-focus]");
+    if (sectionFocus) {
+      const key = sectionFocus.dataset.recordSectionFocus;
+      const card = key ? $("recordFields").querySelector(`[data-field="${CSS.escape(key)}"]`) : null;
+      if (card) {
+        card.scrollIntoView({ block: "center", behavior: "smooth" });
+        card.classList.add("record-field-updated");
+        window.setTimeout(() => card.classList.remove("record-field-updated"), 1600);
+        card.focus({ preventScroll: true });
+      }
+      return;
+    }
     const resolve = event.target.closest("[data-field-resolution]");
     if (resolve) { beginFieldResolution(resolve.dataset.resolutionKey, resolve.dataset.fieldResolution); return; }
     const editField = event.target.closest("[data-record-edit-field]");

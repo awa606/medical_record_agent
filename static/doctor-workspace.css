@@ -372,3 +372,10 @@ body.doctor-mode .alpha51-workspace .transcript-source-notice {
 .help-drawer-actions { display: flex; align-items: center; gap: 8px; }
 .help-drawer-actions button { min-height: 34px; }
 .help-drawer-actions button[disabled] { opacity: 0.45; cursor: not-allowed; }
+/* 2026-10-30 per-region status and jump target */
+.record-section-status { flex: none; min-height: 30px; padding: 4px 10px; border-radius: 999px; border: 1px solid transparent; font-size: 13px; line-height: 1.4; font-weight: 600; cursor: pointer; }
+.record-section-status.done { color: #0b6b3a; background: #e7f6ee; border-color: #b7e4c9; }
+.record-section-status.pending { color: #8a5a00; background: #fff4dc; border-color: #f0d49a; }
+.record-section-status.conflict { color: #a11b1b; background: #fdecec; border-color: #f3c0c0; }
+.record-section-status.neutral { color: #475569; background: #f1f5f9; border-color: #d7e0ec; }
+.record-section-status:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }

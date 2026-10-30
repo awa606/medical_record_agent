@@ -230,13 +230,22 @@ def _pdf_meta_rows(
     encounter_id: int | None,
     approved: bool,
     generated_at: datetime,
+    department: str | None = None,
+    encounter_created_at: str | None = None,
 ) -> list[tuple[str, str]]:
-    return [
-        ("就诊编号", f"E-{encounter_id}" if encounter_id is not None else "未关联就诊"),
-        ("任务编号", str(task_id)),
-        ("导出时间", generated_at.strftime("%Y-%m-%d %H:%M")),
-        ("审核状态", "已完成医生分项审核" if approved else "未完成医生分项审核"),
-    ]
+    rows: list[tuple[str, str]] = []
+    if encounter_created_at:
+        rows.append(("就诊时间", str(encounter_created_at)[:16].replace("T", " ")))
+    rows.append(("科别", department or "未关联科室"))
+    rows.extend(
+        [
+            ("就诊编号", f"E-{encounter_id}" if encounter_id is not None else "未关联就诊"),
+            ("任务编号", str(task_id)),
+            ("导出时间", generated_at.strftime("%Y-%m-%d %H:%M")),
+            ("审核状态", "已完成医生分项审核" if approved else "未完成医生分项审核"),
+        ]
+    )
+    return rows
 
 
 def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | None]]:
@@ -309,6 +318,8 @@ def render_pdf(
     task_id: int,
     encounter_id: int | None = None,
     generated_at: datetime | None = None,
+    department: str | None = None,
+    encounter_created_at: str | None = None,
 ) -> Path:
     """Hospital-style outpatient record: meta header, sections, signature block."""
     styles = _pdf_styles()
@@ -335,6 +346,8 @@ def render_pdf(
         encounter_id=encounter_id,
         approved=approved,
         generated_at=generated_at,
+        department=department,
+        encounter_created_at=encounter_created_at,
     )
     meta_table = Table(
         [[Paragraph(f"<b>{_pdf_text(k)}</b>", styles["note"]), Paragraph(_pdf_text(v), styles["note"])] for k, v in meta_rows],
@@ -413,6 +426,8 @@ def export_record(task_id: int, result: dict[str, Any]) -> dict[str, str]:
         approved=approved,
         task_id=task_id,
         encounter_id=int(encounter_id) if encounter_id is not None else None,
+        department=result.get("encounter_department"),
+        encounter_created_at=result.get("encounter_created_at"),
     )
     return {"pdf_path": str(pdf_path)}
 

@@ -845,7 +845,10 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=readiness)
 
     try:
-        result["encounter_id"] = task.get("encounter_id")
+        encounter = get_task_encounter(task_id) or {}
+        result["encounter_id"] = task.get("encounter_id") or encounter.get("id")
+        result["encounter_department"] = encounter.get("department_id")
+        result["encounter_created_at"] = encounter.get("created_at")
         exports = export_record(task_id, result)
     except Exception as exc:
         create_audit_log(

@@ -184,6 +184,10 @@ def run() -> dict:
             page.goto(f"{server.base_url}/static/doctor.html")
             page.wait_for_timeout(500)
             audit(page, "login", steps)
+            page.set_viewport_size({"width": 320, "height": 640})
+            page.wait_for_timeout(300)
+            audit(page, "login_320", steps)
+            page.set_viewport_size({"width": 1440, "height": 900})
             _login(page, server.base_url)
 
             if not page.locator("#localSyntheticPatient").is_visible():
@@ -285,8 +289,7 @@ def run() -> dict:
                 "ok": page.evaluate("appState.productView") == "workbench" and page.locator("#encounterSearchInput").is_visible(),
                 "detail": "320px 可打开查找就诊",
             })
-            page.keyboard.press("Escape")
-            page.wait_for_timeout(200)
+            audit(page, "worklist_320", steps)
             page.click('button[data-product-view-target="admin"]')
             page.wait_for_timeout(300)
             steps.append({
@@ -294,6 +297,7 @@ def run() -> dict:
                 "ok": page.locator("#adminHome").is_visible(),
                 "detail": "320px 可进入管理后台",
             })
+            audit(page, "admin_320", steps)
             page.click('button[data-product-view-target="encounter"]')
             page.wait_for_timeout(300)
             page.set_viewport_size({"width": 1440, "height": 900})
@@ -480,6 +484,10 @@ def run() -> dict:
                 page.goto(f"{server.base_url}{path}")
                 page.wait_for_timeout(500)
                 audit(page, name, steps)
+                page.set_viewport_size({"width": 320, "height": 640})
+                page.wait_for_timeout(300)
+                audit(page, f"{name}_320", steps)
+                page.set_viewport_size({"width": 1440, "height": 900})
 
             upload_context = browser.new_context(viewport={"width": 1440, "height": 900})
             upload_page = upload_context.new_page()

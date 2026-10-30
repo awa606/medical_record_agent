@@ -224,6 +224,14 @@ def run() -> dict:
                 steps.append({"step": "section_jump", "ok": bool(focused_field), "detail": focused_field})
             audit(page, "workspace", steps)
 
+            page.click("#editRecordButton")
+            page.wait_for_timeout(400)
+            page.locator('textarea[data-record-field-input="present_illness"]').evaluate("el => { el.focus(); el.scrollIntoView({ block: 'center' }); }")
+            page.wait_for_timeout(300)
+            audit(page, "record_edit_mode", steps)
+            page.click("#cancelRecordEditButton")
+            page.wait_for_timeout(300)
+
             page.set_viewport_size({"width": 1280, "height": 800})
             page.wait_for_timeout(400)
             audit(page, "workspace_1280", steps)
@@ -239,6 +247,11 @@ def run() -> dict:
             page.set_viewport_size({"width": 320, "height": 640})
             page.wait_for_timeout(400)
             audit(page, "workspace_320_reflow", steps)
+            page.click("#openEmbeddedHelpButton")
+            page.frame_locator("#embeddedHelpFrame").locator("h1").wait_for(timeout=20000)
+            audit(page, "help_drawer_320", steps)
+            page.click("#closeEmbeddedHelpButton")
+            page.wait_for_timeout(300)
             page.click("#openWorklistButton")
             page.wait_for_timeout(300)
             steps.append({

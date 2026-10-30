@@ -125,7 +125,7 @@ body.doctor-mode .alpha51-workspace #audioPlaybackRate { grid-area: rate; width:
 body.doctor-mode .alpha51-workspace .audio-seek-range,
 body.doctor-mode .alpha51-workspace .audio-volume-range { width: 100%; min-width: 0; height: 18px; min-height: 0; margin: 0; padding: 0; }
 body.doctor-mode .alpha51-workspace .transcript-audio-player .form-help { margin: 0; font-size: 14px; line-height: 1.5; }
-body.doctor-mode .alpha51-workspace .field-list { display: flex; flex-direction: column; gap: 0; padding: 0 16px 24px; background: white; }
+body.doctor-mode .alpha51-workspace .field-list { display: flex; flex-direction: column; gap: 0; padding: 0 16px 100px; background: white; scroll-padding-bottom: 120px; }
 body.doctor-mode .alpha51-workspace .field-card.doctor-summary-card {
   flex: none; min-height: 0; max-height: none; padding: 0 0 24px; gap: 8px;
   border: 0; border-radius: 0; background: white; box-shadow: none;
@@ -277,7 +277,7 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   body.doctor-mode .alpha51-workspace { padding: 8px; }
   body.doctor-mode .alpha51-workspace .workbench { gap: 8px; }
   body.doctor-mode .alpha51-workspace .column > .panel-header { padding: 8px 12px; }
-  body.doctor-mode .alpha51-workspace .field-list { padding-inline: 16px; }
+  body.doctor-mode .alpha51-workspace .field-list { padding-inline: 16px; padding-bottom: 100px; }
   body.doctor-mode .alpha51-workspace .assist-list { padding: 12px; }
   body.doctor-mode .alpha51-workspace .workflow-step { gap: 4px; padding-inline: 4px; }
   body.doctor-mode .alpha51-workspace .patient-identity-cell { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 8px; }

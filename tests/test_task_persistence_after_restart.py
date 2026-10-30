@@ -4,8 +4,6 @@ import os
 import tempfile
 import unittest
 from copy import deepcopy
-from io import BytesIO
-from zipfile import ZipFile
 
 from fastapi.testclient import TestClient
 
@@ -18,7 +16,6 @@ from app.db import (
     list_record_revisions_for_task,
 )
 from app.main import app
-from app.services import WORD_NOTICE
 from tests.auth_helpers import create_user, login_as_user
 
 

@@ -9,7 +9,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from zipfile import ZipFile
 
 from playwright.sync_api import expect, sync_playwright
 from tests.auth_helpers import DEFAULT_ADMIN_PASSWORD

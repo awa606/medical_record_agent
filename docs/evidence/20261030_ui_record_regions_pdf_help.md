@@ -69,7 +69,10 @@ keyboard_escape_help   Escape 关闭帮助并回到触发按钮
 help_manual_320 / help_*_320   全部帮助页 320px 无溢出
 help_back_button_320           320px 返回按钮可见
 reduced_motion                 transition=1e-05s
-skip_link                      Tab→Enter 落到 #mainContent\nrecord_edit_mode               编辑态无遮挡\nhelp_drawer_320                320px 帮助抽屉无溢出\nworklist_320_access / admin_320_access  320px 功能可达
+skip_link                      Tab→Enter 落到 #mainContent
+record_edit_mode               编辑态无遮挡
+help_drawer_320                320px 帮助抽屉无溢出
+worklist_320_access / admin_320_access  320px 功能可达
 audit_help_index       contrast=0 overlap=0 overflowX=0
 help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0

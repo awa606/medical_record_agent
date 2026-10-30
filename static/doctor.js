@@ -681,7 +681,11 @@ async function submitLogin(event) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.detail || "用户名或密码错误。");
+      const detail = data.detail;
+      const message = typeof detail === "string"
+        ? detail
+        : (detail && detail.message) || "用户名或密码错误。";
+      throw new Error(message);
     }
     appState.authUser = data.user;
     appState.authStatus = "authenticated";

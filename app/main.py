@@ -15,6 +15,7 @@ from app.api import (
     llm_router,
     records_router,
     runtime_router,
+    security_router,
     speaker_profiles_router,
     tasks_router,
 )
@@ -63,6 +64,7 @@ app.include_router(audio_router, prefix="/api")
 app.include_router(capabilities_router, prefix="/api")
 app.include_router(llm_router, prefix="/api")
 app.include_router(records_router, prefix="/api")
+app.include_router(security_router, prefix="/api")
 app.include_router(speaker_profiles_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
 app.include_router(runtime_router)

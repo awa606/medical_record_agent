@@ -54,7 +54,7 @@ PDF 样张：`data/outputs/_pdf_smoke.pdf`（4.1KB，单页，中文正常渲染
 
 自动化 UI 巡检脚本：`scripts/ui_review_check.py`（真实 Chromium、隔离临时库、Mock Provider）。
 
-结果（48 项，含 17 页 axe-core WCAG 2 A/AA 扫描、320/375/720/1280/1440/1920 宽度、长文本与键盘焦点；`.artifacts/ui-review-20261030/ui_review.json`）：
+结果（52 项，含 17 页 axe-core WCAG 2 A/AA 扫描、320/375/720/1280/1440/1920 宽度、长文本与键盘焦点；`.artifacts/ui-review-20261030/ui_review.json`）：
 
 ```text
 audit_login            contrast=0 overlap=0 overflowX=0
@@ -69,7 +69,7 @@ keyboard_escape_help   Escape 关闭帮助并回到触发按钮
 help_manual_320 / help_*_320   全部帮助页 320px 无溢出
 help_back_button_320           320px 返回按钮可见
 reduced_motion                 transition=1e-05s
-skip_link                      Tab→Enter 落到 #mainContent
+skip_link                      Tab→Enter 落到 #mainContent\nrecord_edit_mode               编辑态无遮挡\nhelp_drawer_320                320px 帮助抽屉无溢出\nworklist_320_access / admin_320_access  320px 功能可达
 audit_help_index       contrast=0 overlap=0 overflowX=0
 help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0

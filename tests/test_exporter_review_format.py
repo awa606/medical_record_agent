@@ -68,7 +68,10 @@ def test_pdf_paginates_long_record_and_keeps_signature_on_last_page(tmp_path, mo
     _, _, pdf_path = _export(tmp_path, monkeypatch, fields)
     with pymupdf.open(pdf_path) as document:
         assert document.page_count >= 2
+        first_page = "".join(document[0].get_text().split())
         last_page = "".join(document[-1].get_text().split())
+    assert "现病史" in first_page
+    assert "反复发热" in first_page
     assert "医师签名" in last_page
     assert "AI辅助生成" in last_page
 

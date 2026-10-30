@@ -400,14 +400,13 @@ def render_pdf(
     story.extend([meta_table, Spacer(1, 5 * mm), HRFlowable(width="100%", color=colors.HexColor("#c9d4e3"))])
 
     for heading, body, note in _pdf_sections(fields):
-        block: list[Any] = [
-            Paragraph(_pdf_text(heading), styles["heading"]),
-            Paragraph(_pdf_text(body), styles["body"]),
-        ]
+        # Long sections must flow across pages. Keeping the whole block
+        # together leaves a nearly empty page when one field exceeds a page.
+        story.append(Paragraph(_pdf_text(heading), styles["heading"]))
+        story.append(Paragraph(_pdf_text(body), styles["body"]))
         if note:
-            block.append(Paragraph(_pdf_text(note), styles["note"]))
-        block.append(Spacer(1, 3 * mm))
-        story.append(KeepTogether(block))
+            story.append(Paragraph(_pdf_text(note), styles["note"]))
+        story.append(Spacer(1, 3 * mm))
 
     story.append(KeepTogether([
         Spacer(1, 4 * mm),

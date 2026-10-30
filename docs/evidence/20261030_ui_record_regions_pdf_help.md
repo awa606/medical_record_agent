@@ -53,7 +53,7 @@ PDF 样张：`data/outputs/_pdf_smoke.pdf`（4.1KB，单页，中文正常渲染
 
 自动化 UI 巡检脚本：`scripts/ui_review_check.py`（真实 Chromium、隔离临时库、Mock Provider）。
 
-结果（`.artifacts/ui-review-20261030/ui_review.json`）：
+结果（24 项，`.artifacts/ui-review-20261030/ui_review.json`）：
 
 ```text
 audit_login            contrast=0 overlap=0 overflowX=0
@@ -112,9 +112,9 @@ audit_chain                                           12 条 ok
 ## 边界
 
 - PDF 使用 `STSong-Light` CID 字体、未嵌入字体文件；阅读器需具备中文字体（Windows/macOS/主流阅读器可显示）。正式交付前应改为嵌入开源 CJK 字体。
-- 巡检覆盖登录、工作台、接诊、工作清单、管理后台、帮助首页/手册；未逐页遍历帮助内全部子页。
-- 使用合成病例与 Mock Provider；未做真实医生视觉认可，也未处理 `采访 003.m4a`。
-- 真实医院病历版式仅按公开规范实现，未与具体医院模板核对。
+- 巡检已覆盖登录、工作台、接诊、工作清单、管理后台（含知识检索）、帮助全部 6 个子页、`index.html`、`debug.html`；`debug.html` 的按钮级 API 流程未逐一点击。
+- 录音已转写并只取前端相关意见；左侧转写区未改。使用合成病例与 Mock Provider，未做真实医生视觉认可。
+- 病历版式已对照黑龙江省卫健委《病历基础模板》与东南大学附属医院规范；未与某一家医院实际打印单逐字核对。
 
 ## 复现
 

@@ -68,7 +68,8 @@ keyboard_focus         20 次 Tab 均有可见焦点、未被遮挡
 keyboard_escape_help   Escape 关闭帮助并回到触发按钮
 help_manual_320 / help_*_320   全部帮助页 320px 无溢出
 help_back_button_320           320px 返回按钮可见
-reduced_motion                 transition=1e-05s\nskip_link                      Tab→Enter 落到 #mainContent
+reduced_motion                 transition=1e-05s
+skip_link                      Tab→Enter 落到 #mainContent
 audit_help_index       contrast=0 overlap=0 overflowX=0
 help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0

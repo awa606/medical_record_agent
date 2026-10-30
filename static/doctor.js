@@ -4256,6 +4256,7 @@ function renderFields() {
   const sections = clinicalSections.map(([title, keys, desc]) => {
     const statuses = keys.map((key) => fieldStatusByKey.get(key)).filter(Boolean);
     const conflictCount = statuses.filter((status) => status.key === "conflicting").length;
+    const candidateCount = statuses.filter((status) => status.key === "candidate").length;
     const pendingCount = statuses.filter((status) => ["missing", "partial", "low", "pending"].includes(status.key)).length;
     const focusKey = keys.find((key) => fieldStatusByKey.has(key) && fieldStatusByKey.get(key).key !== "confirmed")
       || keys.find((key) => fieldStatusByKey.has(key));
@@ -4264,9 +4265,12 @@ function renderFields() {
     if (conflictCount) {
       statusTone = "conflict";
       statusText = `${conflictCount} 项需修正`;
-    } else if (pendingCount) {
+    } else if (pendingCount || candidateCount) {
       statusTone = "pending";
-      statusText = `${pendingCount} 项待补充`;
+      statusText = [
+        pendingCount ? `${pendingCount} 项待补充` : "",
+        candidateCount ? `${candidateCount} 项待确认` : "",
+      ].filter(Boolean).join(" · ");
     } else if (!statuses.length) {
       statusTone = "neutral";
       statusText = "无字段";

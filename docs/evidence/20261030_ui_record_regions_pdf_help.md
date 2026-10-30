@@ -54,7 +54,7 @@ PDF 样张：`data/outputs/_pdf_smoke.pdf`（4.1KB，单页，中文正常渲染
 
 自动化 UI 巡检脚本：`scripts/ui_review_check.py`（真实 Chromium、隔离临时库、Mock Provider）。
 
-结果（71 项，含 17 页 axe-core WCAG 2 A/AA 扫描、320/375/720/1024/1280/1440/1920 宽度、长文本与键盘焦点；`.artifacts/ui-review-20261030/ui_review.json`）：
+结果（72 项，含 17 页 axe-core WCAG 2 A/AA 扫描、320/375/720/1024/1280/1440/1920 宽度、长文本与键盘焦点；`.artifacts/ui-review-20261030/ui_review.json`）：
 
 ```text
 audit_login            contrast=0 overlap=0 overflowX=0
@@ -86,6 +86,7 @@ audit_conflict_export_state    冲突修正后可导出状态通过
 audit_login_320 / app_index_320 / debug_320  320px 全部通过
 audit_worklist_320 / admin_320  320px 功能页布局通过
 audit_forced_colors_state     强制高对比模式下布局通过
+audit_admin_knowledge_320     320px 知识检索结果布局通过
 audit_help_index       contrast=0 overlap=0 overflowX=0
 help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0

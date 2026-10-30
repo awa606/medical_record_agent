@@ -48,6 +48,17 @@ def test_pdf_export_keeps_hierarchy_notice_and_searchable_text(tmp_path, monkeyp
     assert any("NotoSansSC" in str(font[3]) for font in fonts), fonts
 
 
+def test_pdf_renders_empty_record_and_hospital_name(tmp_path, monkeypatch):
+    monkeypatch.setenv("MRA_HOSPITAL_NAME", "测试医院")
+    fields = MedicalRecordFields()
+    _, _, pdf_path = _export(tmp_path, monkeypatch, fields, approved=False)
+    with pymupdf.open(pdf_path) as document:
+        text = "".join(document[0].get_text().split())
+    assert "测试医院" in text
+    assert "未提及/待补充" in text
+    assert "未完成医生分项审核" in text
+
+
 def test_pdf_paginates_long_record_and_keeps_signature_on_last_page(tmp_path, monkeypatch):
     long_text = "反复发热咳嗽两周，伴咽痛，无胸痛。" * 120
     fields = MedicalRecordFields(

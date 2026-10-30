@@ -167,7 +167,7 @@ def audit(page: Page, name: str, steps: list[dict]) -> None:
 
 def run() -> dict:
     OUT.mkdir(parents=True, exist_ok=True)
-    if not (ROOT / "static" / "help" / "manual.html").exists():
+    if not (ROOT / "static" / "help" / "manual.html").exists() or not (ROOT / "static" / "help" / "help-nav.js").exists():
         subprocess.run([sys.executable, "scripts/package_help.py"], cwd=ROOT, check=True)
     steps: list[dict] = []
     server = RunningServer()
@@ -236,6 +236,9 @@ def run() -> dict:
             page.set_viewport_size({"width": 375, "height": 812})
             page.wait_for_timeout(400)
             audit(page, "workspace_375", steps)
+            page.set_viewport_size({"width": 320, "height": 640})
+            page.wait_for_timeout(400)
+            audit(page, "workspace_320_reflow", steps)
             page.set_viewport_size({"width": 1440, "height": 900})
 
             page.click("#openEmbeddedHelpButton")

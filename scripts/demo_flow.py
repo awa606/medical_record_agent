@@ -192,6 +192,18 @@ def _wait_session_result(
     raise RuntimeError(f"ASR session result did not complete in {timeout}s")
 
 
+def _audio_recognition_mode(http: HttpClient, steps: list[dict[str, Any]], override: str | None) -> str:
+    if override in {"fast", "follow"}:
+        return override
+    # Real models produce per-turn segments in follow mode; the mock engine
+    # returns a fixed transcript in fast mode. Pick by what is actually warm.
+    response = http.request("GET", "/api/asr/prewarm/status")
+    components = (response.json() or {}).get("components") or []
+    mode = "follow" if components else "fast"
+    _step(steps, "asr_mode", True, {"mode": mode, "components": components})
+    return mode
+
+
 def _run_audio_path(
     steps: list[dict[str, Any]],
     ids: dict[str, Any],
@@ -199,11 +211,13 @@ def _run_audio_path(
     *,
     encounter_id: int,
     audio_file: str,
+    recognition_mode: str | None = None,
 ) -> dict[str, Any]:
     """Uploaded-audio path: session -> audio -> role confirmation -> converge."""
     content = Path(audio_file).read_bytes()
+    mode = _audio_recognition_mode(http, steps, recognition_mode)
     session = _require(steps, "asr_session_create", http.request(
-        "POST", "/api/asr/sessions?recognition_mode=follow", {}
+        "POST", f"/api/asr/sessions?recognition_mode={mode}", {}
     ), 200)
     session_id = str(session["session_id"])
     ids["asr_session_id"] = session_id
@@ -254,6 +268,7 @@ def run_flow(
     download_exports: bool = True,
     seed_only: bool = False,
     audio_file: str | None = None,
+    audio_recognition_mode: str | None = None,
 ) -> dict[str, Any]:
     """Run the continuous demo path: login → register → generate → review → export → reopen."""
     steps: list[dict[str, Any]] = []
@@ -318,6 +333,7 @@ def run_flow(
             doctor_http,
             encounter_id=encounter_id,
             audio_file=audio_file,
+            recognition_mode=audio_recognition_mode,
         )
     else:
         generated = _require(steps, "generate_record", doctor_http.request(
@@ -434,6 +450,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--doctor-password", default="demo-pass-123")
     parser.add_argument("--conversation-file", type=str, default=None)
     parser.add_argument("--audio-file", type=str, default=None, help="Upload this audio instead of using text.")
+    parser.add_argument(
+        "--recognition-mode",
+        choices=("fast", "follow"),
+        default=None,
+        help="Override the audio recognition mode (default: follow when real ASR models are warm).",
+    )
     parser.add_argument("--no-download", action="store_true")
     parser.add_argument("--seed-only", action="store_true", help="Only ensure the demo doctor exists.")
     parser.add_argument("--json-out", type=str, default=None)
@@ -453,6 +475,7 @@ def main(argv: list[str] | None = None) -> int:
         download_exports=not args.no_download,
         seed_only=args.seed_only,
         audio_file=args.audio_file,
+        audio_recognition_mode=args.recognition_mode,
     )
     _print_report(report)
     if args.json_out:

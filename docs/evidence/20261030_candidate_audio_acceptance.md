@@ -28,7 +28,7 @@ docker compose -f docker-compose.yml -f config/docker-compose.candidate.yml up -
 
 1. **Windows 绑定挂载导致预热卡死**：首次把 5.8GB 模型缓存以 bind mount 方式挂进容器，模型加载约 45 分钟无进展且 `/health` 超时；改为命名卷（容器内 ext4）后 **112.8s** 完成预热。
 2. **HF 联网挂起风险**：候选 profile 增加 `HF_HUB_OFFLINE=1`、`TRANSFORMERS_OFFLINE=1`，离线使用缓存。
-3. **fast 模式对真实连续音频过严**：fast 单文件转写把整段判为一个 `speaker_unassigned`，混合语句率 0.5–1.0，角色门禁按设计返回 409；改用 `recognition_mode=follow` 后得到 30 段/2 说话人，门禁可通过。演示脚本已改为 follow 模式。
+3. **fast 模式对真实连续音频过严**：fast 单文件转写把整段判为一个 `speaker_unassigned`，混合语句率 0.5–1.0，角色门禁按设计返回 409；改用 `recognition_mode=follow` 后得到 30 段/2 说话人，门禁可通过。演示脚本现按环境自动选择：真实模型已预热（`/api/asr/prewarm/status` 有 components）→ follow，Mock → fast，可用 `--recognition-mode` 覆盖。
 
 ## 真实音频运行
 
@@ -49,6 +49,8 @@ python scripts/demo_flow.py --base-url http://127.0.0.1:26310 `
 | 重开 / 完成 | 未丢状态，encounter completed |
 | 审计链 | 19 条，`ok=true` |
 | 指标 | `/metrics` 200 |
+
+自动化模式复验（`asr_mode=follow` 自动选择）：30 段、2 说话人、角色确认、生成、导出、重开、完成全 PASS，198.19s，审计链 32 条；报告 `.artifacts/candidate-acceptance-20261030/audio_acceptance_auto.json`。
 
 ## 边界
 

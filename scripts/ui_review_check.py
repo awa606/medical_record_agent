@@ -301,6 +301,11 @@ def run() -> dict:
                 "detail": "320px 可进入管理后台",
             })
             audit(page, "admin_320", steps)
+            page.click("#knowledgeTabSearch")
+            page.fill("#knowledgeTestQuery", "流感的临床表现")
+            page.click("#knowledgeTestSearchForm button[type=submit]")
+            page.wait_for_timeout(900)
+            audit(page, "admin_knowledge_320", steps)
             page.click('button[data-product-view-target="encounter"]')
             page.wait_for_timeout(300)
             page.set_viewport_size({"width": 1440, "height": 900})

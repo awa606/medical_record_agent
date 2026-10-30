@@ -11,6 +11,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urljoin
 
 from playwright.sync_api import Page, sync_playwright
 
@@ -430,6 +431,15 @@ def run() -> dict:
             audit(page, "help_index", steps)
             help_index_frame = next(f for f in page.frames if f.url.endswith("/static/help/index.html"))
             audit_frame(help_index_frame, "help_index_frame", steps)
+            link_failures = []
+            for href in help_index_frame.evaluate("Array.from(document.querySelectorAll('a[href]')).map(a => a.getAttribute('href'))"):
+                if not href or href.startswith(("#", "mailto:", "javascript:")):
+                    continue
+                target = urljoin(help_index_frame.url, href)
+                response = page.request.get(target)
+                if response.status >= 400:
+                    link_failures.append({"href": href, "status": response.status})
+            steps.append({"step": "help_links_ok", "ok": not link_failures, "detail": link_failures[:5]})
 
             frame.locator('a[href="manual.html"]').first.click()
             page.wait_for_timeout(1200)

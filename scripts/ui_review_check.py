@@ -188,9 +188,17 @@ def run() -> dict:
             page.locator('#dashboardEncounterList [data-encounter-action="start"]').click()
             page.wait_for_timeout(600)
 
+            audit(page, "empty_record_state", steps)
+
             page.evaluate("createRecordTask('患者发热咳嗽两天，最高38.2度，没有胸痛，没有药物过敏史。')")
             page.wait_for_selector("#recordFields .record-section", timeout=60000)
             page.wait_for_timeout(1800)
+
+            page.evaluate("void exportRecord()")
+            page.wait_for_timeout(900)
+            audit(page, "export_blocked_state", steps)
+            page.evaluate("closeDrawer()")
+            page.wait_for_timeout(200)
 
             headings = page.locator("#recordFields .record-section-head h3").all_inner_texts()
             steps.append({"step": "record_sections", "ok": len(headings) >= 5, "detail": headings})

@@ -236,7 +236,7 @@ textarea:focus {
 .brand-block p,
 .brand-copy p {
   margin: 3px 0 0;
-  color: #748499;
+  color: #52627a;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -2090,7 +2090,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   border-radius: 9px;
   padding: 18px;
   background: #fafcfe;
-  color: #748499;
+  color: #52627a;
   font-size: 12px;
   line-height: 1.5;
   text-align: center;

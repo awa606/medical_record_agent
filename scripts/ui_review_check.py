@@ -8,6 +8,7 @@ doctor page with Chromium, and writes screenshots plus a JSON report to
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -136,6 +137,8 @@ def audit(page: Page, name: str, steps: list[dict]) -> None:
 
 def run() -> dict:
     OUT.mkdir(parents=True, exist_ok=True)
+    if not (ROOT / "static" / "help" / "manual.html").exists():
+        subprocess.run([sys.executable, "scripts/package_help.py"], cwd=ROOT, check=True)
     steps: list[dict] = []
     server = RunningServer()
     try:

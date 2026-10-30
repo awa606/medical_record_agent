@@ -14,7 +14,7 @@ from pathlib import Path
 
 from playwright.sync_api import Page, sync_playwright
 
-from tests.test_doctor_itemized_approval_playwright import RunningServer, _login
+from tests.test_doctor_itemized_approval_playwright import RunningServer, _login, _select_all_review_items
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -297,6 +297,14 @@ def run() -> dict:
                 renderFields();
             }""")
             page.wait_for_timeout(300)
+
+            page.evaluate("refreshExportReadiness()")
+            page.wait_for_function("window.__MRA_APP_STATE__?.currentExportReadiness?.revision_id", timeout=20000)
+            _select_all_review_items(page)
+            page.evaluate("confirmFields()")
+            page.wait_for_function("window.__MRA_APP_STATE__?.currentTask?.current_stage === 'approved'", timeout=20000)
+            page.wait_for_timeout(400)
+            audit(page, "approved_state", steps)
 
             page.emulate_media(reduced_motion="reduce")
             transition = page.evaluate("getComputedStyle(document.querySelector('.record-section-status')).transitionDuration")

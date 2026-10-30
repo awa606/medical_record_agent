@@ -286,6 +286,9 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   body.doctor-mode .alpha51-workspace .patient-identity-cell small { grid-area: 2 / 1 / auto / -1; }
   body.doctor-mode .alpha51-workspace .encounter-action-bar { gap: 8px; }
 }
+@media (max-width: 1100px) {
+  .top-actions #openWorklistButton { display: inline-flex; }
+}
 @media (max-width: 899px) {
   body.doctor-mode .product-nav-item { min-width: 0; width: 100%; }
   body.doctor-mode .alpha51-workspace .workbench { grid-template-columns: minmax(0, 1fr); grid-template-areas: "record"; }
@@ -298,16 +301,27 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   body.doctor-mode .alpha51-workspace .encounter-action-bar { flex-wrap: wrap; }
   body.doctor-mode .alpha51-workspace .encounter-action-bar .button-group { flex-wrap: wrap; }
 }
+@media (max-width: 760px) {
+  body.doctor-mode .alpha51-workspace { height: auto; max-height: none; overflow: visible; }
+  body.doctor-mode .alpha51-workspace .encounter-action-bar {
+    position: static; inset: auto; margin: 8px; width: auto;
+  }
+  body.doctor-mode .alpha51-workspace .field-list,
+  body.doctor-mode .alpha51-workspace .transcript-list { padding-bottom: 16px; }
+}
 @media (max-width: 680px) {
   body.doctor-mode .doctor-app {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-    grid-template-areas: "topbar" "main";
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: "topbar" "nav" "main";
   }
-  body.doctor-mode .product-nav { display: none; }
+  body.doctor-mode .product-nav { display: flex; flex-direction: row; gap: 4px; padding: 4px 8px; grid-area: nav; height: auto; min-height: 0; }
+  body.doctor-mode .product-nav-item { flex: 1 1 0; min-height: 44px; padding: 6px 2px; }
+  body.doctor-mode .product-nav-item span { font-size: 12px; }
+  body.doctor-mode .product-nav-foot { display: none; }
   body.doctor-mode .topbar { grid-area: topbar; flex-wrap: wrap; }
   body.doctor-mode .product-main { grid-area: main; min-width: 0; }
-  body.doctor-mode .alpha51-workspace { height: calc(100dvh - 88px); max-height: calc(100dvh - 88px); }
+  body.doctor-mode .alpha51-workspace { height: calc(100dvh - 150px); max-height: calc(100dvh - 150px); }
   body.doctor-mode .alpha51-workspace .encounter-review-cell { display: none; }
   body.doctor-mode .alpha51-workspace .workflow-step { font-size: 14px; gap: 4px; padding-inline: 2px; }
 }

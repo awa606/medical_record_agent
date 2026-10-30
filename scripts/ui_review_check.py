@@ -239,6 +239,24 @@ def run() -> dict:
             page.set_viewport_size({"width": 320, "height": 640})
             page.wait_for_timeout(400)
             audit(page, "workspace_320_reflow", steps)
+            page.click("#openWorklistButton")
+            page.wait_for_timeout(300)
+            steps.append({
+                "step": "worklist_320_access",
+                "ok": page.evaluate("appState.productView") == "workbench" and page.locator("#encounterSearchInput").is_visible(),
+                "detail": "320px 可打开查找就诊",
+            })
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(200)
+            page.click('button[data-product-view-target="admin"]')
+            page.wait_for_timeout(300)
+            steps.append({
+                "step": "admin_320_access",
+                "ok": page.locator("#adminHome").is_visible(),
+                "detail": "320px 可进入管理后台",
+            })
+            page.click('button[data-product-view-target="encounter"]')
+            page.wait_for_timeout(300)
             page.set_viewport_size({"width": 1440, "height": 900})
             page.wait_for_timeout(400)
             page.evaluate("""() => {

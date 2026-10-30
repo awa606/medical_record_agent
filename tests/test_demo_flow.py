@@ -36,8 +36,25 @@ class DemoHttpClient:
             response = self.client.get(path)
         elif method == "POST":
             response = self.client.post(path, json=payload)
+        elif method == "PATCH":
+            response = self.client.patch(path, json=payload)
         else:
             raise AssertionError(f"Unsupported method {method}")
+        return Response(
+            status=response.status_code,
+            body=response.content,
+            headers=dict(response.headers),
+        )
+
+    def upload_file(
+        self,
+        path: str,
+        *,
+        filename: str,
+        content: bytes,
+        content_type: str = "audio/wav",
+    ) -> Response:
+        response = self.client.post(path, files={"file": (filename, content, content_type)})
         return Response(
             status=response.status_code,
             body=response.content,
@@ -129,6 +146,26 @@ class DemoFlowTests(unittest.TestCase):
         self.assertIn("ensure_demo_doctor", names)
         self.assertNotIn("generate_record", names)
         self.assertNotIn("export", names)
+
+    def test_audio_upload_path_reaches_export(self):
+        audio_path = Path(self.temp_dir.name) / "demo.wav"
+        audio_path.write_bytes(b"RIFF" + b"\x00" * 128)
+        report = run_flow(*self._clients(), audio_file=str(audio_path))
+        failed = [step for step in report["steps"] if not step["ok"]]
+        self.assertEqual(failed, [], json.dumps(failed, ensure_ascii=False))
+        self.assertTrue(report["ok"])
+        self.assertTrue(report["ids"].get("audio_id"))
+        names = {step["step"] for step in report["steps"]}
+        for required in (
+            "asr_session_create",
+            "audio_upload",
+            "audio_transcript",
+            "role_confirmation",
+            "generate_record_from_audio",
+            "approve",
+            "export",
+        ):
+            self.assertIn(required, names)
 
 
 if __name__ == "__main__":

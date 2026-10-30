@@ -22,6 +22,7 @@ python scripts/demo_flow.py --base-url http://127.0.0.1:2626 --json-out .artifac
 | `--admin-user/--admin-password` | 管理员凭证 |
 | `--doctor-user/--doctor-password` | 演示医生账号，不存在时自动创建（重复运行复用） |
 | `--conversation-file` | 自定义合成对话文本 |
+| `--audio-file` | 改走上传音频路径：ASR 会话 → 上传 → 转写 → 角色确认 → 由音频生成 |
 | `--no-download` | 跳过 DOCX/Markdown 下载核对 |
 | `--json-out` | 输出机器可读报告 |
 
@@ -70,6 +71,16 @@ python scripts/browser_demo.py --out-dir .artifacts/browser-demo-20261030
 | complete_encounter | 就诊完成 200 |
 | audit_chain | 管理员校验哈希链 `ok=true` |
 | metrics | `/metrics` 200 且含聚合计数 |
+
+## 音频路径
+
+```powershell
+python scripts/demo_flow.py --base-url http://127.0.0.1:2626 --audio-file .\demo.wav
+```
+
+步骤改为：创建 ASR 会话 → 上传音频 → 等待转写（mock 返回 6 段）→ 按系统预测的说话人角色做一次显式确认 → `converge-record` 由音频生成 → 之后与文本路径共用修改、审核、导出、重开。
+
+真实音频与物理麦克风仍需在候选环境按 5.1 证据矩阵补；`--audio-file` 只证明上传链路与角色确认门禁。
 
 ## 输出示例
 

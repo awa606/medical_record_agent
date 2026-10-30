@@ -4,8 +4,10 @@ import argparse
 import json
 import sys
 import time
+import uuid
 from dataclasses import dataclass, field
 from http.cookiejar import CookieJar
+from pathlib import Path
 from typing import Any
 from urllib import error, request
 
@@ -45,6 +47,36 @@ class HttpClient:
         if payload is not None:
             data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             headers["Content-Type"] = "application/json; charset=utf-8"
+        return self._send(method, path, data, headers)
+
+    def upload_file(
+        self,
+        path: str,
+        *,
+        filename: str,
+        content: bytes,
+        content_type: str = "audio/wav",
+    ) -> Response:
+        boundary = f"----mra{uuid.uuid4().hex}"
+        head = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+            f"Content-Type: {content_type}\r\n\r\n"
+        ).encode("utf-8")
+        tail = f"\r\n--{boundary}--\r\n".encode("utf-8")
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        }
+        return self._send("POST", path, head + content + tail, headers)
+
+    def _send(
+        self,
+        method: str,
+        path: str,
+        data: bytes | None,
+        headers: dict[str, str],
+    ) -> Response:
         req = request.Request(self.base_url + path, data=data, method=method, headers=headers)
         try:
             with self.opener.open(req, timeout=self.timeout) as response:
@@ -140,6 +172,78 @@ def _wait_for_result(
     raise RuntimeError(f"generation did not produce a result in {timeout}s: {last.get('status')}")
 
 
+def _wait_session_result(
+    http: HttpClient,
+    session_id: str,
+    steps: list[dict[str, Any]],
+    *,
+    timeout: float = 90.0,
+) -> dict[str, Any]:
+    deadline = time.perf_counter() + timeout
+    last: dict[str, Any] = {}
+    while time.perf_counter() < deadline:
+        response = http.request("GET", f"/api/asr/sessions/{session_id}/result")
+        last = response.json() or {}
+        if response.status == 200 and last.get("segments"):
+            _step(steps, "audio_transcript", True, {"segments": len(last["segments"])})
+            return last
+        time.sleep(0.5)
+    _step(steps, "audio_transcript", False, {"status": response.status})
+    raise RuntimeError(f"ASR session result did not complete in {timeout}s")
+
+
+def _run_audio_path(
+    steps: list[dict[str, Any]],
+    ids: dict[str, Any],
+    http: HttpClient,
+    *,
+    encounter_id: int,
+    audio_file: str,
+) -> dict[str, Any]:
+    """Uploaded-audio path: session -> audio -> role confirmation -> converge."""
+    content = Path(audio_file).read_bytes()
+    session = _require(steps, "asr_session_create", http.request(
+        "POST", "/api/asr/sessions?recognition_mode=fast", {}
+    ), 200)
+    session_id = str(session["session_id"])
+    ids["asr_session_id"] = session_id
+
+    uploaded = _require(steps, "audio_upload", http.upload_file(
+        f"/api/asr/sessions/{session_id}/audio",
+        filename=Path(audio_file).name,
+        content=content,
+    ), 200)
+    ids["audio_id"] = uploaded.get("audio_id")
+
+    result = _wait_session_result(http, session_id, steps)
+    decisions = ((result.get("role_quality") or {}).get("decisions") or [])
+    roles = [
+        {
+            "speaker_id": decision["speaker_id"],
+            "role": decision["predicted_role"],
+            "reviewed_by_doctor": True,
+        }
+        for decision in decisions
+        if decision.get("speaker_id") and decision.get("predicted_role")
+    ]
+    if roles:
+        _require(steps, "role_confirmation", http.request(
+            "PATCH",
+            f"/api/asr/sessions/{session_id}/result",
+            {
+                "speaker_roles": roles,
+                "reviewer": "demo_flow",
+                "note": "演示流程确认系统预测的说话人角色",
+            },
+        ), 200)
+
+    return _require(steps, "generate_record_from_audio", http.request(
+        "POST",
+        f"/api/asr/sessions/{session_id}/converge-record?encounter_id={encounter_id}",
+        {},
+    ), 200)
+
+
 def run_flow(
     admin_http: HttpClient,
     doctor_http: HttpClient,
@@ -149,6 +253,7 @@ def run_flow(
     conversation: str = DEFAULT_CONVERSATION,
     download_exports: bool = True,
     seed_only: bool = False,
+    audio_file: str | None = None,
 ) -> dict[str, Any]:
     """Run the continuous demo path: login → register → generate → review → export → reopen."""
     steps: list[dict[str, Any]] = []
@@ -206,11 +311,20 @@ def run_flow(
     _require(steps, "check_in", doctor_http.request("POST", f"/api/encounters/{encounter_id}/check-in"), 200)
     _require(steps, "start_encounter", doctor_http.request("POST", f"/api/encounters/{encounter_id}/start"), 200)
 
-    generated = _require(steps, "generate_record", doctor_http.request(
-        "POST",
-        "/api/records/generate",
-        {"conversation_text": conversation, "encounter_id": encounter_id},
-    ), 200)
+    if audio_file:
+        generated = _run_audio_path(
+            steps,
+            ids,
+            doctor_http,
+            encounter_id=encounter_id,
+            audio_file=audio_file,
+        )
+    else:
+        generated = _require(steps, "generate_record", doctor_http.request(
+            "POST",
+            "/api/records/generate",
+            {"conversation_text": conversation, "encounter_id": encounter_id},
+        ), 200)
     task_id = int(generated["task_id"])
     ids["task_id"] = task_id
 
@@ -319,6 +433,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--doctor-user", default="demo_doctor")
     parser.add_argument("--doctor-password", default="demo-pass-123")
     parser.add_argument("--conversation-file", type=str, default=None)
+    parser.add_argument("--audio-file", type=str, default=None, help="Upload this audio instead of using text.")
     parser.add_argument("--no-download", action="store_true")
     parser.add_argument("--seed-only", action="store_true", help="Only ensure the demo doctor exists.")
     parser.add_argument("--json-out", type=str, default=None)
@@ -337,6 +452,7 @@ def main(argv: list[str] | None = None) -> int:
         conversation=conversation,
         download_exports=not args.no_download,
         seed_only=args.seed_only,
+        audio_file=args.audio_file,
     )
     _print_report(report)
     if args.json_out:

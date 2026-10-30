@@ -149,6 +149,22 @@ AUDIT_JS = r"""
 """
 
 
+def audit_frame(frame, name: str, steps: list[dict], *, check_axe: bool = True) -> None:
+    result = frame.evaluate(AUDIT_JS)
+    axe_result = {"error": "axe-skipped", "violations": []}
+    if check_axe and AXE_JS.is_file():
+        if not frame.evaluate("typeof axe !== 'undefined'"):
+            frame.add_script_tag(path=str(AXE_JS))
+        axe_result = frame.evaluate(AXE_RUN)
+    ok = (
+        result["textFailureCount"] == 0
+        and result["overlapCount"] == 0
+        and result["overflowX"] <= 1
+        and not axe_result["violations"]
+    )
+    steps.append({"step": f"audit_{name}", "ok": ok, "detail": {**result, "axe": axe_result}})
+
+
 def audit(page: Page, name: str, steps: list[dict], *, check_axe: bool = True) -> None:
     result = page.evaluate(AUDIT_JS)
     axe_result = {"error": "axe-skipped", "violations": []}
@@ -412,12 +428,16 @@ def run() -> dict:
             frame = page.frame_locator("#embeddedHelpFrame")
             frame.locator("h1").wait_for(timeout=20000)
             audit(page, "help_index", steps)
+            help_index_frame = next(f for f in page.frames if f.url.endswith("/static/help/index.html"))
+            audit_frame(help_index_frame, "help_index_frame", steps)
 
             frame.locator('a[href="manual.html"]').first.click()
             page.wait_for_timeout(1200)
             manual_heading = frame.locator("h1").inner_text()
             steps.append({"step": "help_manual", "ok": "手册" in manual_heading, "detail": manual_heading})
             audit(page, "help_manual", steps)
+            help_manual_frame = next(f for f in page.frames if f.url.endswith("/static/help/manual.html"))
+            audit_frame(help_manual_frame, "help_manual_frame", steps)
 
             page.click("#helpBackButton")
             page.wait_for_timeout(1200)

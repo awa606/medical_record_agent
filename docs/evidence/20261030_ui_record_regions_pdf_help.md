@@ -66,7 +66,9 @@ long_text_layout       长文本不裁剪、无横向溢出
 audit_long_text        contrast=0 overlap=0 overflowX=0
 keyboard_focus         20 次 Tab 均有可见焦点、未被遮挡
 keyboard_escape_help   Escape 关闭帮助并回到触发按钮
-help_manual_320 / help_*_320   全部帮助页 320px 无溢出\nhelp_back_button_320         320px 返回按钮可见\nreduced_motion               transition=1e-05s
+help_manual_320 / help_*_320   全部帮助页 320px 无溢出
+help_back_button_320           320px 返回按钮可见
+reduced_motion                 transition=1e-05s
 audit_help_index       contrast=0 overlap=0 overflowX=0
 help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0

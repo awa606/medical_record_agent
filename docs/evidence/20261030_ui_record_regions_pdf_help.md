@@ -72,7 +72,8 @@ reduced_motion                 transition=1e-05s
 skip_link                      Tab→Enter 落到 #mainContent
 record_edit_mode               编辑态无遮挡
 help_drawer_320                320px 帮助抽屉无溢出
-worklist_320_access / admin_320_access  320px 功能可达\nhelp_standalone_back_navigation  返回按钮实际回到帮助首页
+worklist_320_access / admin_320_access  320px 功能可达
+help_standalone_back_navigation  返回按钮实际回到帮助首页
 audit_help_index       contrast=0 overlap=0 overflowX=0
 help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0

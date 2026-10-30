@@ -54,7 +54,7 @@ PDF 样张：`data/outputs/_pdf_smoke.pdf`（4.1KB，单页，中文正常渲染
 
 自动化 UI 巡检脚本：`scripts/ui_review_check.py`（真实 Chromium、隔离临时库、Mock Provider）。
 
-结果（77 项，含 17 页 axe-core WCAG 2 A/AA 扫描、320/375/720/1024/1280/1440/1920 宽度、长文本与键盘焦点；`.artifacts/ui-review-20261030/ui_review.json`）：
+结果（78 项，含 17 页 axe-core WCAG 2 A/AA 扫描、320/375/720/1024/1280/1440/1920 宽度、长文本与键盘焦点；`.artifacts/ui-review-20261030/ui_review.json`）：
 
 ```text
 audit_login            contrast=0 overlap=0 overflowX=0
@@ -91,6 +91,7 @@ audit_help_index_frame / help_manual_frame  抽屉内 iframe 内容通过
 help_links_ok                 帮助首页全部内部链接 200
 console_clean                 无 pageerror、无 requestfailed
 assets_ok                     医生页全部 CSS/JS/图片 200
+service_endpoints_ok          /health /ready /version /metrics 均 200
 audit_help_index       contrast=0 overlap=0 overflowX=0
 help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0

@@ -91,7 +91,7 @@ audit_help_index_frame / help_manual_frame  抽屉内 iframe 内容通过
 help_links_ok                 帮助首页全部内部链接 200
 console_clean                 无 pageerror、无 requestfailed
 assets_ok                     医生页全部 CSS/JS/图片 200
-service_endpoints_ok          /health /ready /version /metrics 均 200
+service_endpoints_ok          /health /ready /version /metrics 均 200，载荷断言通过
 audit_help_index       contrast=0 overlap=0 overflowX=0
 help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import hmac
+import json
 import os
 import sqlite3
 import uuid
 from contextlib import closing
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +26,34 @@ from app.services.runtime_limits import directory_free_bytes
 
 
 router = APIRouter(tags=["runtime"])
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+STARTED_AT = datetime.now(UTC).isoformat()
+
+
+def _deployment_metadata() -> dict[str, Any]:
+    path = PROJECT_ROOT / "static" / "deployment.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+@router.get("/version")
+def version() -> dict[str, Any]:
+    """Version and provider identity for demo evidence and support tickets."""
+    metadata = _deployment_metadata()
+    status = get_llm_status(check_reachable=False)
+    return {
+        "service": "medical-record-agent",
+        "version": metadata.get("version") or "unregistered",
+        "deployment_mode": metadata.get("mode") or "development",
+        "label": metadata.get("label"),
+        "provider": status.get("provider"),
+        "record_provider_mode": status.get("mode"),
+        "started_at": STARTED_AT,
+    }
 
 
 def _output_dir() -> Path:

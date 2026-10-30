@@ -231,6 +231,18 @@ def run() -> dict:
                 page.wait_for_timeout(500)
                 focused_field = page.evaluate("document.activeElement?.getAttribute('data-field') || ''")
                 steps.append({"step": "section_jump", "ok": bool(focused_field), "detail": focused_field})
+
+            task_before_reload = page.evaluate("window.__MRA_APP_STATE__?.currentTaskId")
+            page.reload()
+            page.wait_for_selector("#recordFields .record-section", timeout=60000)
+            page.wait_for_timeout(1200)
+            task_after_reload = page.evaluate("window.__MRA_APP_STATE__?.currentTaskId")
+            steps.append({
+                "step": "session_recovery",
+                "ok": task_before_reload == task_after_reload and page.locator("#recordFields .record-section").count() >= 5,
+                "detail": {"before": task_before_reload, "after": task_after_reload},
+            })
+            audit(page, "session_recovery", steps)
             audit(page, "workspace", steps)
 
             page.click("#editRecordButton")

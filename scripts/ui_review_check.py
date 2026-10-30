@@ -240,6 +240,64 @@ def run() -> dict:
             page.wait_for_timeout(400)
             audit(page, "workspace_320_reflow", steps)
             page.set_viewport_size({"width": 1440, "height": 900})
+            page.wait_for_timeout(400)
+            page.evaluate("""() => {
+                const fields = appState.currentRecordFields;
+                window.__longOriginal = fields.chief_complaint.value;
+                fields.chief_complaint.value = '患者主诉：' + '反复发热咳嗽两周，'.repeat(80)
+                    + 'https://example.com/' + 'a'.repeat(220);
+                fields.chief_complaint.missing = false;
+                renderFields();
+            }""")
+            page.wait_for_timeout(400)
+            long_text = page.evaluate("""() => {
+                const card = document.querySelector('[data-field="chief_complaint"]');
+                const value = card?.querySelector('.field-value');
+                return {
+                    docOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+                    valueHeight: Math.round(value?.getBoundingClientRect().height || 0),
+                    clipped: Boolean(value && value.scrollHeight > value.clientHeight + 2),
+                };
+            }""")
+            steps.append({"step": "long_text_layout", "ok": long_text["docOverflow"] <= 1 and not long_text["clipped"] and long_text["valueHeight"] > 100, "detail": long_text})
+            audit(page, "long_text", steps)
+            page.evaluate("""() => {
+                appState.currentRecordFields.chief_complaint.value = window.__longOriginal;
+                renderFields();
+            }""")
+            page.wait_for_timeout(300)
+
+            focus_issues = []
+            for _ in range(20):
+                page.keyboard.press("Tab")
+                page.wait_for_timeout(40)
+                issue = page.evaluate("""() => {
+                    const el = document.activeElement;
+                    if (!el || el === document.body) return null;
+                    const rect = el.getBoundingClientRect();
+                    const style = getComputedStyle(el);
+                    const hit = document.elementFromPoint(
+                        Math.min(Math.max(rect.left + rect.width / 2, 0), window.innerWidth - 1),
+                        Math.min(Math.max(rect.top + rect.height / 2, 0), window.innerHeight - 1)
+                    );
+                    const hasRing = style.outlineWidth !== "0px" || style.boxShadow !== "none";
+                    const covered = !(hit && (hit === el || el.contains(hit)));
+                    return hasRing && !covered ? null : { id: el.id, tag: el.tagName, hasRing, covered };
+                }""")
+                if issue:
+                    focus_issues.append(issue)
+            steps.append({"step": "keyboard_focus", "ok": not focus_issues, "detail": focus_issues[:5]})
+
+            page.click("#openEmbeddedHelpButton")
+            page.wait_for_timeout(300)
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(300)
+            steps.append({
+                "step": "keyboard_escape_help",
+                "ok": not page.locator("#helpDialog").evaluate("d => d.open")
+                and page.evaluate("document.activeElement?.id") == "openEmbeddedHelpButton",
+                "detail": page.evaluate("document.activeElement?.id"),
+            })
 
             page.click("#openEmbeddedHelpButton")
             frame = page.frame_locator("#embeddedHelpFrame")
@@ -279,6 +337,19 @@ def run() -> dict:
                     "detail": "独立帮助页返回按钮",
                 })
 
+            page.goto(f"{server.base_url}/static/doctor.html")
+            page.wait_for_timeout(600)
+
+            page.set_viewport_size({"width": 320, "height": 640})
+            page.goto(f"{server.base_url}/static/help/manual.html")
+            page.wait_for_timeout(400)
+            audit(page, "help_manual_320", steps)
+            steps.append({
+                "step": "help_back_button_320",
+                "ok": page.locator(".help-nav-back").is_visible(),
+                "detail": "320px 独立帮助页返回按钮",
+            })
+            page.set_viewport_size({"width": 1440, "height": 900})
             page.goto(f"{server.base_url}/static/doctor.html")
             page.wait_for_timeout(600)
 

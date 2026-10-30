@@ -366,6 +366,7 @@ body.doctor-mode .alpha51-workspace .transcript-source-notice {
 .record-section .field-card .field-head { margin-bottom: 6px; }
 .record-section .field-title { font-size: 15px; line-height: 1.4; color: #172033; }
 .record-section .field-value, .record-section .field-evidence { font-size: 15px; line-height: 1.65; color: #1f2937; }
+body.doctor-mode .alpha51-workspace .record-section .field-card .field-value { min-height: 0; max-height: none; overflow: visible; }
 .record-meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; margin: 0; padding: 12px 14px 14px; }
 .record-meta-grid > div { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .record-meta-grid dt { flex: 0 0 auto; font-size: 13px; color: #475569; }

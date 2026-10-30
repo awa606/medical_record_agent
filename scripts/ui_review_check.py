@@ -232,6 +232,18 @@ def run() -> dict:
                 response = page.request.get(f"{server.base_url}{endpoint}")
                 if response.status != 200:
                     endpoint_failures.append({"endpoint": endpoint, "status": response.status})
+            health = page.request.get(f"{server.base_url}/health").json()
+            ready = page.request.get(f"{server.base_url}/ready").json()
+            version = page.request.get(f"{server.base_url}/version").json()
+            metrics_text = page.request.get(f"{server.base_url}/metrics").text()
+            if health.get("status") != "ok":
+                endpoint_failures.append({"endpoint": "/health", "payload": health})
+            if ready.get("status") != "ready":
+                endpoint_failures.append({"endpoint": "/ready", "payload": ready.get("status")})
+            if version.get("service") != "medical-record-agent":
+                endpoint_failures.append({"endpoint": "/version", "payload": version.get("service")})
+            if "mra_" not in metrics_text:
+                endpoint_failures.append({"endpoint": "/metrics", "payload": "missing mra_ metric"})
             steps.append({"step": "service_endpoints_ok", "ok": not endpoint_failures, "detail": endpoint_failures})
 
             if not page.locator("#localSyntheticPatient").is_visible():

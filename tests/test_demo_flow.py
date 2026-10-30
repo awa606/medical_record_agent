@@ -121,6 +121,15 @@ class DemoFlowTests(unittest.TestCase):
         self.assertIn("version", body)
         self.assertIn("started_at", body)
 
+    def test_seed_only_prepares_the_doctor_without_generating(self):
+        report = run_flow(*self._clients(), seed_only=True)
+        self.assertTrue(report["ok"])
+        self.assertTrue(report["seed_only"])
+        names = {step["step"] for step in report["steps"]}
+        self.assertIn("ensure_demo_doctor", names)
+        self.assertNotIn("generate_record", names)
+        self.assertNotIn("export", names)
+
 
 if __name__ == "__main__":
     unittest.main()

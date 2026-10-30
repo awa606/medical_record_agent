@@ -27,6 +27,30 @@ python scripts/demo_flow.py --base-url http://127.0.0.1:2626 --json-out .artifac
 
 退出码：`0` 全部步骤通过；`1` 任一步骤失败（报告里标 FAIL）。
 
+## 容器化演示（单命令）
+
+演示 profile 使用 Mock Provider、关闭 ASR 预热，只用于展示流程：
+
+```powershell
+docker compose -f docker-compose.yml -f config/docker-compose.demo.yml up -d --build
+docker compose -f docker-compose.yml -f config/docker-compose.demo.yml logs -f demo-runner
+# 报告写入宿主 ./data/demo_runtime/demo_flow.json
+docker compose -f docker-compose.yml -f config/docker-compose.demo.yml down
+```
+
+- 入口：`http://127.0.0.1:26300/static/doctor.html`
+- 演示管理员：`admin` / `demo-admin-123`（仅 demo profile）
+- `demo-runner` 在服务 healthy 后自动执行一次 `demo_flow.py` 并退出，不常驻
+- 该 profile **不是**医院候选：不改动 `docker-compose.yml` 默认端口 2626 与 ASR 配置
+
+## 浏览器截图证据
+
+```powershell
+python scripts/browser_demo.py --out-dir .artifacts/browser-demo-20261030
+```
+
+脚本自起临时服务（Mock Provider），用 Chromium 打开真实医生页，依次截取登录页、工作台、建档后与接诊工作区，并写入 `browser_demo.json`。截图属于过程证据，不提交仓库，也不代替真实按钮验收或视觉认可。
+
 ## 步骤与判定
 
 | 步骤 | 判定 |

@@ -50,6 +50,7 @@ data/asr_model_cache/*
 data/speaker_profiles/*
 !data/speaker_profiles/
 !data/speaker_profiles/.gitkeep
+data/demo_runtime/
 .env
 .env.local
 config/*.env

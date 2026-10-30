@@ -59,11 +59,27 @@ def _step(steps: list[dict[str, Any]], name: str, ok: bool, detail: Any = None) 
     steps.append({"step": name, "ok": bool(ok), "detail": detail})
 
 
+def _compact(body: Any) -> Any:
+    """Keep the report small: scalars plus a couple of small structured fields."""
+    if not isinstance(body, dict):
+        return body
+    out: dict[str, Any] = {}
+    for key, value in body.items():
+        if isinstance(value, bool) or value is None or isinstance(value, (int, float)):
+            out[key] = value
+        elif isinstance(value, str):
+            out[key] = value if len(value) <= 200 else value[:200] + "..."
+    for key in ("exports", "export_event", "errors", "user"):
+        if key in body:
+            out[key] = body[key]
+    return out
+
+
 def _require(steps: list[dict[str, Any]], name: str, response: Response, expected: int | tuple[int, ...]) -> Any:
     allowed = (expected,) if isinstance(expected, int) else expected
     body = response.json()
     ok = response.status in allowed
-    _step(steps, name, ok, {"status": response.status, "body": body if ok else body})
+    _step(steps, name, ok, {"status": response.status, "body": _compact(body) if ok else body})
     if not ok:
         raise RuntimeError(f"{name} returned {response.status}: {body}")
     return body
@@ -108,7 +124,13 @@ def _wait_for_result(
     while time.perf_counter() < deadline:
         response = http.request("GET", f"/api/tasks/{task_id}")
         last = response.json() or {}
-        if response.status == 200 and last.get("result_json"):
+        # The revision pointer is written after the result payload; both must
+        # exist before export-readiness can answer.
+        if (
+            response.status == 200
+            and last.get("result_json")
+            and last.get("current_record_revision_id")
+        ):
             _step(steps, "wait_generation", True, {"stage": last.get("current_stage")})
             return last
         if last.get("status") == "FAILED":
@@ -126,6 +148,7 @@ def run_flow(
     doctor: tuple[str, str] = ("demo_doctor", "demo-pass-123"),
     conversation: str = DEFAULT_CONVERSATION,
     download_exports: bool = True,
+    seed_only: bool = False,
 ) -> dict[str, Any]:
     """Run the continuous demo path: login → register → generate → review → export → reopen."""
     steps: list[dict[str, Any]] = []
@@ -156,6 +179,17 @@ def run_flow(
     )
     if created.status not in (201, 400):
         raise RuntimeError(f"ensure_demo_doctor returned {created.status}")
+
+    if seed_only:
+        elapsed = round(time.perf_counter() - started, 2)
+        return {
+            "ok": all(step["ok"] for step in steps),
+            "version": version,
+            "ids": ids,
+            "elapsed_seconds": elapsed,
+            "steps": steps,
+            "seed_only": True,
+        }
 
     doctor_login = _require(steps, "doctor_login", doctor_http.request(
         "POST", "/api/auth/login", {"username": doctor[0], "password": doctor[1]}
@@ -286,6 +320,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--doctor-password", default="demo-pass-123")
     parser.add_argument("--conversation-file", type=str, default=None)
     parser.add_argument("--no-download", action="store_true")
+    parser.add_argument("--seed-only", action="store_true", help="Only ensure the demo doctor exists.")
     parser.add_argument("--json-out", type=str, default=None)
     args = parser.parse_args(argv)
 
@@ -301,6 +336,7 @@ def main(argv: list[str] | None = None) -> int:
         doctor=(args.doctor_user, args.doctor_password),
         conversation=conversation,
         download_exports=not args.no_download,
+        seed_only=args.seed_only,
     )
     _print_report(report)
     if args.json_out:

@@ -1,6 +1,6 @@
 # 演示版连续流程（一条命令跑完）
 
-本文对应 2026-10-30 加固分支上的"完整连续展示流程"：登录 → 建档 → 报到 → 开始接诊 → 生成草稿 → 医生修改 → 分项审核 → 导出 DOCX/Markdown → 重新打开 → 完成就诊 → 审计链与指标核对。
+本文对应 2026-10-30 加固分支上的"完整连续展示流程"：登录 → 建档 → 报到 → 开始接诊 → 生成草稿 → 医生修改 → 分项审核 → 导出 PDF → 重新打开 → 完成就诊 → 审计链与指标核对。
 
 ## 前提
 
@@ -23,7 +23,7 @@ python scripts/demo_flow.py --base-url http://127.0.0.1:2626 --json-out .artifac
 | `--doctor-user/--doctor-password` | 演示医生账号，不存在时自动创建（重复运行复用） |
 | `--conversation-file` | 自定义合成对话文本 |
 | `--audio-file` | 改走上传音频路径：ASR 会话 → 上传 → 转写 → 角色确认 → 由音频生成 |
-| `--no-download` | 跳过 DOCX/Markdown 下载核对 |
+| `--no-download` | 跳过 PDF 下载核对 |
 | `--json-out` | 输出机器可读报告 |
 
 退出码：`0` 全部步骤通过；`1` 任一步骤失败（报告里标 FAIL）。
@@ -66,7 +66,7 @@ python scripts/browser_demo.py --out-dir .artifacts/browser-demo-20261030
 | doctor_edit_review | 医生修改主诉并保存新 Revision，200 且回到待审核 |
 | export_readiness / approve | 按当前 Revision 与 content_hash 分项批准 |
 | export | 导出成功并产生 export_event |
-| download_docx / download_markdown | 两种格式下载 200 且内容非空 |
+| download_pdf | PDF 下载 200、文件头 `%PDF`、内容非空 |
 | reopen_encounter / revision_history | 重新打开就诊，Revision ≥2，任务阶段为 `exported` |
 | complete_encounter | 就诊完成 200 |
 | audit_chain | 管理员校验哈希链 `ok=true` |

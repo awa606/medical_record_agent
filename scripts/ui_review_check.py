@@ -208,6 +208,19 @@ def run() -> dict:
             page.goto(f"{server.base_url}/static/doctor.html")
             page.wait_for_timeout(500)
             audit(page, "login", steps)
+            asset_failures = []
+            asset_urls = page.evaluate(
+                """() => [...new Set([
+                    ...[...document.querySelectorAll('link[href]')].map((el) => el.href),
+                    ...[...document.querySelectorAll('script[src]')].map((el) => el.src),
+                    ...[...document.querySelectorAll('img[src]')].map((el) => el.src),
+                ])].filter((url) => url.startsWith(location.origin))"""
+            )
+            for asset_url in asset_urls:
+                response = page.request.get(asset_url)
+                if response.status >= 400:
+                    asset_failures.append({"url": asset_url, "status": response.status})
+            steps.append({"step": "assets_ok", "ok": not asset_failures, "detail": asset_failures[:5]})
             page.set_viewport_size({"width": 320, "height": 640})
             page.wait_for_timeout(300)
             audit(page, "login_320", steps)

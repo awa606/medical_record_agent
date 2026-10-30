@@ -227,6 +227,13 @@ def run() -> dict:
             page.set_viewport_size({"width": 1440, "height": 900})
             _login(page, server.base_url)
 
+            endpoint_failures = []
+            for endpoint in ("/health", "/ready", "/version", "/metrics"):
+                response = page.request.get(f"{server.base_url}{endpoint}")
+                if response.status != 200:
+                    endpoint_failures.append({"endpoint": endpoint, "status": response.status})
+            steps.append({"step": "service_endpoints_ok", "ok": not endpoint_failures, "detail": endpoint_failures})
+
             if not page.locator("#localSyntheticPatient").is_visible():
                 page.locator("#localRegistrationDisclosure summary").click()
             page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")

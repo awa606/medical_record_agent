@@ -287,6 +287,7 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   body.doctor-mode .alpha51-workspace .encounter-action-bar { gap: 8px; }
 }
 @media (max-width: 899px) {
+  body.doctor-mode .product-nav-item { min-width: 0; width: 100%; }
   body.doctor-mode .alpha51-workspace .workbench { grid-template-columns: minmax(0, 1fr); grid-template-areas: "record"; }
   body.doctor-mode .alpha51-workspace .transcript-column,
   body.doctor-mode .alpha51-workspace .assist-column { display: none; }
@@ -298,9 +299,14 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   body.doctor-mode .alpha51-workspace .encounter-action-bar .button-group { flex-wrap: wrap; }
 }
 @media (max-width: 680px) {
-  body.doctor-mode .doctor-app { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  body.doctor-mode .doctor-app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "topbar" "main";
+  }
   body.doctor-mode .product-nav { display: none; }
-  body.doctor-mode .topbar { flex-wrap: wrap; }
+  body.doctor-mode .topbar { grid-area: topbar; flex-wrap: wrap; }
+  body.doctor-mode .product-main { grid-area: main; min-width: 0; }
   body.doctor-mode .alpha51-workspace { height: calc(100dvh - 88px); max-height: calc(100dvh - 88px); }
   body.doctor-mode .alpha51-workspace .encounter-review-cell { display: none; }
   body.doctor-mode .alpha51-workspace .workflow-step { font-size: 14px; gap: 4px; padding-inline: 2px; }

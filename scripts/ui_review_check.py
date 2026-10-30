@@ -230,6 +230,12 @@ def run() -> dict:
             page.set_viewport_size({"width": 1920, "height": 1080})
             page.wait_for_timeout(400)
             audit(page, "workspace_1920", steps)
+            page.set_viewport_size({"width": 720, "height": 450})
+            page.wait_for_timeout(400)
+            audit(page, "workspace_720_zoom", steps)
+            page.set_viewport_size({"width": 375, "height": 812})
+            page.wait_for_timeout(400)
+            audit(page, "workspace_375", steps)
             page.set_viewport_size({"width": 1440, "height": 900})
 
             page.click("#openEmbeddedHelpButton")
@@ -264,6 +270,11 @@ def run() -> dict:
                 page.goto(f"{server.base_url}/static/help/{help_page}.html")
                 page.wait_for_timeout(400)
                 audit(page, f"help_{help_page}", steps)
+                steps.append({
+                    "step": f"help_back_button_{help_page}",
+                    "ok": page.locator(".help-nav-back").is_visible(),
+                    "detail": "独立帮助页返回按钮",
+                })
 
             page.goto(f"{server.base_url}/static/doctor.html")
             page.wait_for_timeout(600)

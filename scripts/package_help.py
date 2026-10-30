@@ -6,7 +6,7 @@ import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 ALLOWLIST = ("manual.html", "manual.css", "manual-evidence.js", "guide.css",
-             "feedback.html", "feedback.js", "maintenance.html",
+             "feedback.html", "feedback.js", "help-nav.js", "maintenance.html",
              "dual-environment.html", "course-demo.html", "viewer-section.html",
              "images/usage-workbench-20260929.png",
              "images/showcase-source-review-20260929.png")

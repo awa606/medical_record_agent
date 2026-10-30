@@ -388,6 +388,18 @@ def run() -> dict:
                     "detail": "独立帮助页返回按钮",
                 })
 
+            page.goto(f"{server.base_url}/static/help/index.html")
+            page.wait_for_timeout(400)
+            page.locator('a[href="manual.html"]').first.click()
+            page.wait_for_timeout(600)
+            page.locator(".help-nav-back").click()
+            page.wait_for_timeout(600)
+            steps.append({
+                "step": "help_standalone_back_navigation",
+                "ok": page.url.rstrip("/").endswith("/static/help/index.html"),
+                "detail": page.url,
+            })
+
             page.goto(f"{server.base_url}/static/doctor.html")
             page.wait_for_timeout(600)
 

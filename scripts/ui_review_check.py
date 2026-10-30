@@ -174,7 +174,8 @@ def run() -> dict:
     try:
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
-            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            context = browser.new_context(viewport={"width": 1440, "height": 900}, accept_downloads=True)
+            page = context.new_page()
             page.goto(f"{server.base_url}/static/doctor.html")
             page.wait_for_timeout(500)
             audit(page, "login", steps)
@@ -305,6 +306,13 @@ def run() -> dict:
             page.wait_for_function("window.__MRA_APP_STATE__?.currentTask?.current_stage === 'approved'", timeout=20000)
             page.wait_for_timeout(400)
             audit(page, "approved_state", steps)
+
+            page.evaluate("exportRecord()")
+            page.wait_for_function("window.__MRA_APP_STATE__?.currentTask?.current_stage === 'exported'", timeout=20000)
+            page.wait_for_timeout(400)
+            audit(page, "exported_state", steps)
+            page.evaluate("closeDrawer()")
+            page.wait_for_timeout(300)
 
             page.emulate_media(reduced_motion="reduce")
             transition = page.evaluate("getComputedStyle(document.querySelector('.record-section-status')).transitionDuration")

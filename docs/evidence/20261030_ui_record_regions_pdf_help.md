@@ -54,13 +54,14 @@ PDF 样张：`data/outputs/_pdf_smoke.pdf`（4.1KB，单页，中文正常渲染
 
 自动化 UI 巡检脚本：`scripts/ui_review_check.py`（真实 Chromium、隔离临时库、Mock Provider）。
 
-结果（26 项，含 17 页 axe-core WCAG 2 A/AA 扫描；`.artifacts/ui-review-20261030/ui_review.json`）：
+结果（35 项，含 17 页 axe-core WCAG 2 A/AA 扫描、320/375/720/1280/1440/1920 宽度；`.artifacts/ui-review-20261030/ui_review.json`）：
 
 ```text
 audit_login            contrast=0 overlap=0 overflowX=0
 record_sections        5 个区域全部存在
 audit_workspace        contrast=0 overlap=0 overflowX=0
-audit_workspace_1280   contrast=0 overlap=0 overflowX=0
+audit_workspace_1280 / 1920 / 720_zoom / 375 / 320_reflow
+                       contrast=0 overlap=0 overflowX=0
 audit_help_index       contrast=0 overlap=0 overflowX=0
 help_manual            进入操作手册
 audit_help_manual      contrast=0 overlap=0 overflowX=0
@@ -92,7 +93,7 @@ itemized_approval_playwright +
 task_persistence                            19 passed
 test_doctor_product_shell_static +
 local_patient_browser                       15 passed
-全量（排除本地浏览器用例）                  1636 passed, 5 skipped
+全量（含浏览器用例）                        1640 passed, 5 skipped, 30 subtests
 ```
 
 录音转写产物：`.artifacts/interview-20261030/transcript.txt`（9,672 字）。
@@ -102,9 +103,12 @@ local_patient_browser                       15 passed
 ```text
 docker build -t medical-record-agent:ui-v2 .          成功
 docker run -p 26320:8000 (mock provider)               /ready 200
-demo_flow.py --base-url http://127.0.0.1:26320        31 步全 PASS
-download_pdf                                          200, 46,612 bytes, %PDF，文本可检索
-elapsed                                               2.28s
+demo_flow.py（mock 文本）                            31 步全 PASS
+demo_flow.py --audio-file fever_90s_16k.wav           36 步全 PASS（真实 FunASR）
+audio_transcript                                      30 段 / 2 说话人
+elapsed                                               44.67s（音频路径）
+download_pdf                                          200, 46,612 / 47,016 bytes, %PDF，文本可检索
+elapsed                                               2.28s（文本路径）
 audit_chain                                           12 条 ok
 ```
 

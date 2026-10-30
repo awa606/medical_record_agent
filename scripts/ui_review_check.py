@@ -14,7 +14,12 @@ from pathlib import Path
 
 from playwright.sync_api import Page, sync_playwright
 
-from tests.test_doctor_itemized_approval_playwright import RunningServer, _login, _select_all_review_items
+from tests.test_doctor_itemized_approval_playwright import (
+    RunningServer,
+    _login,
+    _prepare_review_fixture,
+    _select_all_review_items,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -475,6 +480,39 @@ def run() -> dict:
                 page.goto(f"{server.base_url}{path}")
                 page.wait_for_timeout(500)
                 audit(page, name, steps)
+
+            upload_context = browser.new_context(viewport={"width": 1440, "height": 900})
+            upload_page = upload_context.new_page()
+            _login(upload_page, server.base_url)
+            if not upload_page.locator("#localSyntheticPatient").is_visible():
+                upload_page.locator("#localRegistrationDisclosure summary").click()
+            upload_page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
+            upload_page.click("#createLocalEncounterButton")
+            upload_page.locator('#dashboardEncounterList [data-encounter-action="start"]').click()
+            upload_page.wait_for_timeout(600)
+            upload_page.evaluate("openAudioTranscribe()")
+            upload_page.wait_for_timeout(300)
+            upload_page.set_input_files("#audioFileInput", {"name": "bad.wav", "mimeType": "audio/wav", "buffer": b"not-a-wav"})
+            upload_page.click("#submitAudioButton")
+            upload_page.wait_for_timeout(2200)
+            upload_error = upload_page.evaluate("window.__MRA_APP_STATE__?.lastActionError || ''")
+            steps.append({"step": "upload_error_consistent", "ok": bool(upload_error), "detail": upload_error[:80]})
+            audit(upload_page, "upload_error_state", steps)
+            upload_context.close()
+
+            conflict_context = browser.new_context(viewport={"width": 1440, "height": 900})
+            conflict_page = conflict_context.new_page()
+            _login(conflict_page, server.base_url)
+            if not conflict_page.locator("#localSyntheticPatient").is_visible():
+                conflict_page.locator("#localRegistrationDisclosure summary").click()
+            conflict_page.select_option("#localSyntheticPatient", "SIM-DEMO-0929-FEVER")
+            conflict_page.click("#createLocalEncounterButton")
+            conflict_page.locator('#dashboardEncounterList [data-encounter-action="start"]').click()
+            conflict_page.wait_for_timeout(600)
+            _prepare_review_fixture(conflict_page)
+            conflict_page.wait_for_timeout(1200)
+            audit(conflict_page, "approval_conflict_state", steps)
+            conflict_context.close()
 
             browser.close()
     finally:

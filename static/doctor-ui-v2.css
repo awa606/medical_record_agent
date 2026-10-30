@@ -1145,7 +1145,8 @@ body.doctor-mode .processing-stage span {
 body.doctor-mode .processing-stage small {
   display: block;
   margin-top: 1px;
-  color: #8a99aa;
+  color: #52627a;
+  font-size: 11px;
 }
 
 .processing-stage.done,

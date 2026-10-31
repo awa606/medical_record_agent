@@ -256,8 +256,42 @@ def _pdf_meta_rows(
 ) -> list[tuple[str, str]]:
     rows: list[tuple[str, str]] = []
     patient_label = patient_display_name or patient_deidentified_id or "未关联患者"
+
+    def field_text(name: str) -> str:
+        field = getattr(fields, name)
+        return str(field.value).strip() if field.value and not field.missing else ""
+
+    def age_text() -> str:
+        raw = field_text("patient_birth_date")
+        if not raw:
+            return ""
+        digits = "".join(character for character in raw if character.isdigit())
+        if len(digits) < 8:
+            return ""
+        try:
+            birth = datetime.strptime(digits[:8], "%Y%m%d").date()
+        except ValueError:
+            return ""
+        today = generated_at.date()
+        age = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
+        return f"{age}岁" if 0 <= age <= 150 else ""
+
     rows.append(("姓名", patient_label))
-    rows.append(("性别/年龄", "________ / ________"))
+    sex = field_text("patient_sex")
+    age = age_text()
+    rows.append(("性别/年龄", f"{sex or '________'} / {age or '________'}"))
+    for label, key in (
+        ("出生日期", "patient_birth_date"),
+        ("民族", "patient_ethnicity"),
+        ("婚姻状况", "patient_marital_status"),
+        ("职业", "patient_occupation"),
+        ("工作单位", "patient_work_unit"),
+        ("住址", "patient_address"),
+        ("联系方式", "patient_contact"),
+    ):
+        value = field_text(key)
+        if value:
+            rows.append((label, value))
     allergy = fields.allergy_history
     allergy_text = str(allergy.value).strip() if allergy.value and not allergy.missing else "未提及/待补充"
     rows.append(("药物过敏史", allergy_text))
@@ -299,6 +333,11 @@ def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | Non
     past = value_of("past_history")
     previous = value_of("previous_treatment")
     exam = value_of("physical_exam")
+    personal = value_of("personal_history")
+    marital = value_of("marital_history")
+    family = value_of("family_history")
+    auxiliary = value_of("auxiliary_exam")
+    treatment = value_of("treatment_notes") or value_of("treatment_plan")
 
     present_text = present or "未提及/待补充"
     if accompanying:
@@ -306,6 +345,9 @@ def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | Non
     past_text = past or "未提及/待补充"
     if previous:
         past_text = f"{past_text}\n既往处理：{previous}"
+    for label, value in (("个人史", personal), ("婚育史", marital), ("家族史", family)):
+        if value:
+            past_text = f"{past_text}\n{label}：{value}"
 
     retained = [
         diagnosis
@@ -314,7 +356,9 @@ def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | Non
     ]
     if retained:
         diagnosis_text = "\n".join(
-            f"{index + 1}. {diagnosis.name}（"
+            f"{index + 1}. {diagnosis.name}"
+            + (f"（ICD-10：{diagnosis.icd10_code}）" if diagnosis.icd10_code else "")
+            + "（"
             + ("医生已确认候选" if diagnosis.doctor_review_status == "candidate_confirmed" else "候选/待医生确认")
             + "）"
             for index, diagnosis in enumerate(retained)
@@ -329,9 +373,13 @@ def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | Non
         ("现病史", present_text, None),
         ("既往史", past_text, None),
         ("体格及专科检查", exam or "待医生查体补充", None if exam else missing_note("physical_exam")),
-        ("辅助检查", "本次未提供；如有检验检查结果，请在病历系统中补录。", None),
+        ("辅助检查", auxiliary or "本次未提供；如有检验检查结果，请在病历系统中补录。", None),
         ("诊断", diagnosis_text, "AI 候选诊断必须由医生确认，不构成诊断结论。"),
-        ("治疗意见", "待医生补充。", "本系统不生成处方或治疗建议。"),
+        (
+            "治疗意见",
+            treatment or "待医生补充。",
+            "医生填写处理意见；本系统不自动生成处方或治疗建议。" if not treatment else "医生已填写处理意见，处方与用药需另行审核。",
+        ),
     ]
 
 

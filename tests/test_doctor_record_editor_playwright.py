@@ -64,7 +64,7 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             assert original_revision is not None
 
             page.click("#editRecordButton")
-            expect(page.locator("#recordFields [data-record-field-input]")).to_have_count(7)
+            expect(page.locator("#recordFields [data-record-field-input]")).to_have_count(20)
             original_past_history = page.locator('[data-record-field-input="past_history"]').input_value()
             page.locator('[data-record-field-input="past_history"]').fill("本次修改随后取消")
             page.click("#cancelRecordEditButton")

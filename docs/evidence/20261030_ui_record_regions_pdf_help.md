@@ -126,7 +126,7 @@ itemized_approval_playwright +
 task_persistence                            19 passed
 test_doctor_product_shell_static +
 local_patient_browser                       15 passed
-全量（含浏览器用例）                        1645 passed, 5 skipped, 30 subtests
+全量（含浏览器用例）                        1646 passed, 5 skipped, 30 subtests
 ```
 
 录音转写产物：`.artifacts/interview-20261030/transcript.txt`（9,672 字）。

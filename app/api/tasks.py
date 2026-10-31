@@ -242,6 +242,20 @@ FIELD_LABELS = {
     "past_history": "既往史",
     "allergy_history": "过敏史",
     "physical_exam": "查体",
+    "personal_history": "个人史",
+    "marital_history": "婚育史",
+    "family_history": "家族史",
+    "auxiliary_exam": "辅助检查",
+    "treatment_notes": "医生处理意见",
+    "treatment_plan": "处理建议",
+    "patient_sex": "性别",
+    "patient_birth_date": "出生日期",
+    "patient_ethnicity": "民族",
+    "patient_marital_status": "婚姻状况",
+    "patient_occupation": "职业",
+    "patient_work_unit": "工作单位",
+    "patient_address": "住址",
+    "patient_contact": "联系方式",
 }
 
 MANUAL_DOCTOR_EDIT_NOTE = "manual_doctor_edit_v1: 医生手工修改；原始转写证据仅供对照，不作为该修改的自动证据。"

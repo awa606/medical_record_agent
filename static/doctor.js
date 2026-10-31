@@ -210,7 +210,20 @@ const FIELD_DEFS = [
   ["past_history", "既往史"],
   ["allergy_history", "过敏史"],
   ["physical_exam", "查体"],
+  ["personal_history", "个人史"],
+  ["marital_history", "婚育史"],
+  ["family_history", "家族史"],
+  ["auxiliary_exam", "辅助检查"],
   ["treatment_plan", "处理建议"],
+  ["treatment_notes", "医生处理意见"],
+  ["patient_sex", "性别"],
+  ["patient_birth_date", "出生日期"],
+  ["patient_ethnicity", "民族"],
+  ["patient_marital_status", "婚姻状况"],
+  ["patient_occupation", "职业"],
+  ["patient_work_unit", "工作单位"],
+  ["patient_address", "住址"],
+  ["patient_contact", "联系方式"],
 ];
 
 const EDITABLE_FIELD_DEFS = FIELD_DEFS.filter(([key]) => key !== "treatment_plan");
@@ -221,17 +234,33 @@ const SUMMARY_FIELD_KEYS = [
   "past_history",
   "allergy_history",
   "physical_exam",
+  "auxiliary_exam",
+  "treatment_notes",
   "treatment_plan",
 ];
 
 const DRAFT_FIELD_DEFS = [
+  ["patient_sex", "性别"],
+  ["patient_birth_date", "出生日期"],
+  ["patient_ethnicity", "民族"],
+  ["patient_marital_status", "婚姻状况"],
+  ["patient_occupation", "职业"],
+  ["patient_work_unit", "工作单位"],
+  ["patient_address", "住址"],
+  ["patient_contact", "联系方式"],
   ["chief_complaint", "主诉"],
   ["present_illness", "现病史"],
+  ["accompanying_symptoms", "伴随症状"],
   ["past_history", "既往史"],
+  ["personal_history", "个人史"],
+  ["marital_history", "婚育史"],
+  ["family_history", "家族史"],
   ["allergy_history", "过敏史"],
   ["physical_exam", "查体"],
+  ["auxiliary_exam", "辅助检查"],
   ["preliminary_diagnosis", "候选诊断（待医生确认）"],
   ["treatment_plan", "处理建议"],
+  ["treatment_notes", "医生处理意见"],
 ];
 
 const WORKFLOW_STEPS = [
@@ -3974,6 +4003,9 @@ function renderApprovalChecklist(fields) {
         <div>
           <strong>${escapeHtml(diagnosis.name || `候选诊断${index + 1}`)}</strong>
           <span>AI候选诊断需医生明确保留或删除。</span>
+          <label class="diagnosis-code-input">ICD-10
+            <input type="text" data-diagnosis-code-index="${index}" value="${escapeHtml(diagnosis.icd10_code || "")}" placeholder="如 J06.9" aria-label="候选诊断 ${index + 1} 的 ICD-10 编码" />
+          </label>
         </div>
         ${approvalStatusPill(done)}
         <div class="approval-item-actions">
@@ -4247,10 +4279,11 @@ function renderFields() {
       </dl>
     </section>`;
   const clinicalSections = [
+    ["患者信息", ["patient_sex", "patient_birth_date", "patient_ethnicity", "patient_marital_status", "patient_occupation", "patient_work_unit", "patient_address", "patient_contact"], "真实病历首页所需的去标识患者信息"],
     ["主诉与现病史", ["chief_complaint", "present_illness", "accompanying_symptoms"], "本次就诊的主要症状与演变"],
-    ["既往史与过敏", ["past_history", "previous_treatment", "allergy_history"], "既往疾病、用药与过敏信息"],
-    ["体格检查", ["physical_exam"], "查体记录与缺失提示"],
-    ["诊断与处理", ["preliminary_diagnosis", "treatment_plan"], "候选诊断需医生确认，处理意见由医生填写"],
+    ["既往史与过敏", ["past_history", "previous_treatment", "allergy_history", "personal_history", "marital_history", "family_history"], "既往疾病、个人史、婚育史、家族史与过敏信息"],
+    ["体格检查", ["physical_exam", "auxiliary_exam"], "查体记录、检验检查结果与缺失提示"],
+    ["诊断与处理", ["preliminary_diagnosis", "treatment_plan", "treatment_notes"], "候选诊断需医生确认，处理意见由医生填写"],
   ];
   const usedKeys = new Set();
   const sections = clinicalSections.map(([title, keys, desc]) => {
@@ -9925,6 +9958,14 @@ function bindEvents() {
     const editor = event.target.closest("[data-record-field-input]");
     if (!editor) return;
     updateRecordFieldValue(editor.dataset.recordFieldInput, editor.value);
+  });
+  $("recordFields").addEventListener("input", (event) => {
+    const input = event.target.closest("[data-diagnosis-code-index]");
+    if (!input) return;
+    const diagnosis = appState.currentRecordFields?.candidate_diagnoses?.[Number(input.dataset.diagnosisCodeIndex)];
+    if (!diagnosis) return;
+    diagnosis.icd10_code = input.value.trim() || null;
+    appState.recordEditDirty = true;
   });
   $("transcriptList").addEventListener("change", (event) => {
     const autoFollow = event.target.closest("[data-transcript-auto-follow]");

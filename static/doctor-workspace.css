@@ -407,3 +407,20 @@ body.doctor-mode .alpha51-workspace .record-section .field-card .field-value { m
   html { scroll-padding-top: 88px; }
   input, select, textarea, button, [role="button"] { scroll-margin-top: 88px; }
 }
+.diagnosis-code-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: #475569;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.diagnosis-code-input input {
+  min-width: 0;
+  flex: 1 1 120px;
+  padding: 5px 7px;
+  border: 1px solid #c7d3e0;
+  border-radius: 6px;
+  font-size: 13px;
+}

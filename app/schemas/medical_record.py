@@ -94,6 +94,7 @@ class CandidateDiagnosis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
+    icd10_code: str | None = None
     status: Literal["候选/待医生确认"] = "候选/待医生确认"
     evidence: list[SourceSpan] = Field(default_factory=list)
     reason: str | None = None
@@ -126,6 +127,20 @@ class MedicalRecordFields(BaseModel):
     past_history: MedicalField = Field(default_factory=MedicalField.missing_field)
     allergy_history: MedicalField = Field(default_factory=MedicalField.missing_field)
     physical_exam: MedicalField = Field(default_factory=MedicalField.missing_field)
+    personal_history: MedicalField = Field(default_factory=MedicalField.missing_field)
+    marital_history: MedicalField = Field(default_factory=MedicalField.missing_field)
+    family_history: MedicalField = Field(default_factory=MedicalField.missing_field)
+    auxiliary_exam: MedicalField = Field(default_factory=MedicalField.missing_field)
+    treatment_notes: MedicalField = Field(default_factory=MedicalField.missing_field)
+    treatment_plan: MedicalField = Field(default_factory=MedicalField.missing_field)
+    patient_sex: MedicalField = Field(default_factory=MedicalField.missing_field)
+    patient_birth_date: MedicalField = Field(default_factory=MedicalField.missing_field)
+    patient_ethnicity: MedicalField = Field(default_factory=MedicalField.missing_field)
+    patient_marital_status: MedicalField = Field(default_factory=MedicalField.missing_field)
+    patient_occupation: MedicalField = Field(default_factory=MedicalField.missing_field)
+    patient_work_unit: MedicalField = Field(default_factory=MedicalField.missing_field)
+    patient_address: MedicalField = Field(default_factory=MedicalField.missing_field)
+    patient_contact: MedicalField = Field(default_factory=MedicalField.missing_field)
     candidate_diagnoses: list[CandidateDiagnosis] = Field(default_factory=list)
 
 

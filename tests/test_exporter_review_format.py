@@ -1,8 +1,9 @@
+from datetime import datetime
 from pathlib import Path
 
 import pymupdf
 
-from app.schemas import MedicalField, MedicalRecordFields, SafetyCheckResult
+from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, SafetyCheckResult
 from app.services.exporter import (
     WORD_NOTICE,
     _paragraphs_markdown,
@@ -93,6 +94,42 @@ def test_pdf_short_generated_record_with_full_meta_fits_one_page(tmp_path):
         text = "".join(document[0].get_text())
     assert "接诊医师" in text
     assert "李医生" in text
+    assert "医师签名" in text
+
+
+def test_pdf_includes_extended_patient_and_clinical_fields(tmp_path):
+    fields = MedicalRecordFields(
+        chief_complaint=MedicalField(value="发热三天"),
+        personal_history=MedicalField(value="吸烟十年"),
+        marital_history=MedicalField(value="已婚，育有一子"),
+        family_history=MedicalField(value="父亲高血压"),
+        auxiliary_exam=MedicalField(value="血常规：WBC 11.2×10^9/L"),
+        treatment_notes=MedicalField(value="对症退热，补液，随诊。"),
+        patient_sex=MedicalField(value="男"),
+        patient_birth_date=MedicalField(value="1986-10-11"),
+        patient_ethnicity=MedicalField(value="汉族"),
+        patient_marital_status=MedicalField(value="已婚"),
+        patient_occupation=MedicalField(value="工人"),
+        patient_work_unit=MedicalField(value="示例工厂"),
+        patient_address=MedicalField(value="示例市示例路 1 号"),
+        patient_contact=MedicalField(value="13800000000"),
+    )
+    target = tmp_path / "extended.pdf"
+    render_pdf(
+        target,
+        fields,
+        SafetyCheckResult(passed=True),
+        approved=True,
+        task_id=3,
+        encounter_id=4,
+        generated_at=datetime(2026, 10, 31, 12, 0),
+        doctor_name="李医生",
+    )
+    with pymupdf.open(target) as document:
+        text = "".join(page.get_text() for page in document)
+    for expected in ("男", "40岁", "汉族", "已婚", "工人", "示例工厂", "示例路", "13800000000",
+                     "吸烟十年", "育有一子", "父亲高血压", "WBC", "对症退热"):
+        assert expected in text, expected
     assert "医师签名" in text
 
 

@@ -4,6 +4,7 @@ import unittest
 
 from pathlib import Path
 
+import pymupdf
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
@@ -357,6 +358,31 @@ class TaskApiTests(unittest.TestCase):
             downloaded.headers.get("content-disposition", ""),
         )
         self.assertEqual(downloaded.content[:5], b"%PDF-")
+        with pymupdf.open(stream=downloaded.content, filetype="pdf") as document:
+            self.assertEqual(document.page_count, 1)
+            text = "".join(page.get_text() for page in document)
+        self.assertIn("接诊医师", text)
+        self.assertIn("Test Doctor", text)
+
+    def test_export_pdf_does_not_print_non_doctor_task_owner_as_attending(self):
+        client = TestClient(app)
+        admin = create_user(client, username="download-admin", display_name="Local Admin", role="admin")
+        result = MedicalRecordOrchestrator().run_from_text("patient has fever for three days")
+        task_id = result["task_id"]
+        set_task_owner(task_id, admin["id"])
+
+        login_as_user(client, username="download-admin")
+        approved = client.post(f"/api/tasks/{task_id}/approve", json=self.approval_payload_for_task(task_id))
+        self.assertEqual(approved.status_code, 200, approved.text)
+        exported = client.post(f"/api/tasks/{task_id}/export")
+        self.assertEqual(exported.status_code, 200, exported.text)
+
+        downloaded = client.get(f"/api/tasks/{task_id}/exports/pdf")
+        self.assertEqual(downloaded.status_code, 200, downloaded.text)
+        with pymupdf.open(stream=downloaded.content, filetype="pdf") as document:
+            text = "".join(page.get_text() for page in document)
+        self.assertIn("接诊医师", text)
+        self.assertNotIn("Local Admin", text)
 
     def test_export_download_route_enforces_task_owner(self):
         client = TestClient(app)

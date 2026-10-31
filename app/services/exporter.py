@@ -252,6 +252,7 @@ def _pdf_meta_rows(
     encounter_created_at: str | None = None,
     patient_deidentified_id: str | None = None,
     patient_display_name: str | None = None,
+    doctor_name: str | None = None,
 ) -> list[tuple[str, str]]:
     rows: list[tuple[str, str]] = []
     patient_label = patient_display_name or patient_deidentified_id or "未关联患者"
@@ -261,6 +262,7 @@ def _pdf_meta_rows(
     allergy_text = str(allergy.value).strip() if allergy.value and not allergy.missing else "未提及/待补充"
     rows.append(("药物过敏史", allergy_text))
     rows.append(("科别", department or "未关联科室"))
+    rows.append(("接诊医师", doctor_name or "____________________"))
     rows.append(("门诊病历号", f"E-{encounter_id}" if encounter_id is not None else "未关联就诊"))
     if encounter_created_at:
         rows.append(("就诊时间", str(encounter_created_at)[:16].replace("T", " ")))
@@ -346,6 +348,7 @@ def render_pdf(
     encounter_created_at: str | None = None,
     patient_deidentified_id: str | None = None,
     patient_display_name: str | None = None,
+    doctor_name: str | None = None,
 ) -> Path:
     """Hospital-style outpatient record: meta header, sections, signature block."""
     styles = _pdf_styles()
@@ -380,6 +383,7 @@ def render_pdf(
         encounter_created_at=encounter_created_at,
         patient_deidentified_id=patient_deidentified_id,
         patient_display_name=patient_display_name,
+        doctor_name=doctor_name,
     )
     meta_table = Table(
         [[Paragraph(f"<b>{_pdf_text(k)}</b>", styles["note"]), Paragraph(_pdf_text(v), styles["note"])] for k, v in meta_rows],
@@ -393,40 +397,32 @@ def render_pdf(
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 6),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING", (0, 0), (-1, -1), 4),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
             ]
         )
     )
-    story.extend([meta_table, Spacer(1, 5 * mm), HRFlowable(width="100%", color=colors.HexColor("#c9d4e3"))])
+    story.extend([meta_table, Spacer(1, 3 * mm), HRFlowable(width="100%", color=colors.HexColor("#c9d4e3"))])
 
     for heading, body, note in _pdf_sections(fields):
         # Long sections must flow across pages. Keeping the whole block
         # together leaves a nearly empty page when one field exceeds a page.
         # A conditional break keeps the heading from being stranded alone.
-        story.append(CondPageBreak(45 * mm))
+        story.append(CondPageBreak(25 * mm))
         story.append(Paragraph(_pdf_text(heading), styles["heading"]))
         story.append(Paragraph(_pdf_text(body), styles["body"]))
         if note:
             story.append(Paragraph(_pdf_text(note), styles["note"]))
-        story.append(Spacer(1, 3 * mm))
+        story.append(Spacer(1, 2 * mm))
 
     story.append(KeepTogether([
-        Spacer(1, 4 * mm),
+        Spacer(1, 2 * mm),
         HRFlowable(width="100%", color=colors.HexColor("#c9d4e3")),
         Spacer(1, 2 * mm),
-        Paragraph(
-            _pdf_text(
-                f"自动安全校验：{'通过' if safety_check.passed else '未通过'}；"
-                f"导出阻断：{'是' if safety_check.blocked else '否'}"
-            ),
-            styles["note"],
-        ),
-        Spacer(1, 8 * mm),
         Paragraph("医师签名：__________________　　日期：______年____月____日", styles["signature"]),
-        Spacer(1, 3 * mm),
-        Paragraph(WORD_NOTICE, styles["note"]),
     ]))
+    story.append(Spacer(1, 2 * mm))
+    story.append(Paragraph(WORD_NOTICE, styles["note"]))
 
     def _footer(canvas, doc_obj) -> None:
         canvas.saveState()
@@ -440,7 +436,7 @@ def render_pdf(
     return path
 
 
-def export_record(task_id: int, result: dict[str, Any]) -> dict[str, str]:
+def export_record(task_id: int, result: dict[str, Any], *, doctor_name: str | None = None) -> dict[str, str]:
     fields = MedicalRecordFields.model_validate(result["fields"])
     safety_check = SafetyCheckResult.model_validate(result["safety_check"])
     # The API verifies the live approval and Revision before entering here.
@@ -461,6 +457,7 @@ def export_record(task_id: int, result: dict[str, Any]) -> dict[str, str]:
         encounter_created_at=result.get("encounter_created_at"),
         patient_deidentified_id=result.get("patient_deidentified_id"),
         patient_display_name=result.get("patient_display_name"),
+        doctor_name=doctor_name or result.get("doctor_name"),
     )
     return {"pdf_path": str(pdf_path)}
 

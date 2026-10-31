@@ -24,6 +24,7 @@ from app.db import (
     get_task,
     get_task_encounter,
     get_task_steps,
+    get_user_by_id,
     json_dumps,
     list_approval_items_for_approval,
     record_content_hash,
@@ -831,6 +832,24 @@ def approve_task(
     return task
 
 
+def _export_doctor_name(task: dict[str, Any], encounter: dict[str, Any]) -> str | None:
+    """Return a real doctor's display name for the printed record.
+
+    A task owner or encounter creator may be an admin/front-desk account; only
+    accounts with the doctor role may be printed as 接诊医师.
+    """
+    for user_id in (task.get("owner_user_id"), encounter.get("doctor_user_id")):
+        if user_id is None:
+            continue
+        user = get_user_by_id(int(user_id))
+        if not user or user.get("role") != "doctor":
+            continue
+        name = str(user.get("display_name") or "").strip()
+        if name:
+            return name
+    return None
+
+
 @router.post("/{task_id}/export")
 def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
@@ -853,7 +872,8 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
         result["encounter_created_at"] = encounter.get("created_at")
         result["patient_deidentified_id"] = encounter_detail.get("patient_deidentified_id")
         result["patient_display_name"] = encounter_detail.get("patient_display_name")
-        exports = export_record(task_id, result)
+        doctor_name = _export_doctor_name(task, encounter)
+        exports = export_record(task_id, result, doctor_name=doctor_name)
     except Exception as exc:
         create_audit_log(
             task_id,

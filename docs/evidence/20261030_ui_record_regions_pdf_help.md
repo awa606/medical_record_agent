@@ -1,5 +1,8 @@
 # 2026-10-30 前端迭代：病历分区、PDF 导出、帮助返回
 
+> 2026-10-31 补充：真实病历字段比对、接诊医师、短病历单页与独立复核见
+> [`20261031_record_comparison.md`](20261031_record_comparison.md)。
+
 ## 版本隔离
 
 - 新工作树：`病历/08_UI_ITERATION/mra_ui_hospital_record`
@@ -123,7 +126,7 @@ itemized_approval_playwright +
 task_persistence                            19 passed
 test_doctor_product_shell_static +
 local_patient_browser                       15 passed
-全量（含浏览器用例）                        1642 passed, 5 skipped, 30 subtests
+全量（含浏览器用例）                        1645 passed, 5 skipped, 30 subtests
 ```
 
 录音转写产物：`.artifacts/interview-20261030/transcript.txt`（9,672 字）。
@@ -131,14 +134,13 @@ local_patient_browser                       15 passed
 容器验证（第三轮）：
 
 ```text
-docker build -t medical-record-agent:ui-v4 .          成功
-docker run -p 26320:8000 (real FunASR)                  /ready 200（预热 65s）
+docker build -t medical-record-agent:ui-v5 .          成功
+docker run -p 26320:8000 (real FunASR)                  /ready 200（预热 80s）
 demo_flow.py（mock 文本）                            31 步全 PASS
 demo_flow.py --audio-file fever_90s_16k.wav           36 步全 PASS（真实 FunASR）
 audio_transcript                                      30 段 / 2 说话人
-elapsed                                               53.11s（音频路径）
-download_pdf                                          200, 48,175 bytes, %PDF，2 页，文本可检索，字体已嵌入
-elapsed                                               2.28s（文本路径）
+elapsed                                               69.12s（音频路径）
+download_pdf                                          200, 46,110 bytes, %PDF，1 页，文本可检索，字体已嵌入
 audit_chain                                           12 条 ok
 ```
 

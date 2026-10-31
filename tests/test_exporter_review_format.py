@@ -8,6 +8,7 @@ from app.services.exporter import (
     _paragraphs_markdown,
     _record_paragraphs,
     export_record,
+    render_pdf,
 )
 
 
@@ -40,12 +41,59 @@ def test_pdf_export_keeps_hierarchy_notice_and_searchable_text(tmp_path, monkeyp
     assert "审核状态：已完成医生分项审核" in paragraphs
 
     with pymupdf.open(pdf_path) as document:
+        assert document.page_count == 1
         text = "".join(document[0].get_text().split())
         fonts = document[0].get_fonts()
     assert "初诊病历记录" in text
     assert "主诉" in text and "发热伴咳嗽2天" in text
     assert "医师签名" in text
     assert any("NotoSansSC" in str(font[3]) for font in fonts), fonts
+
+
+def test_pdf_includes_doctor_name_when_provided(tmp_path, monkeypatch):
+    fields = MedicalRecordFields(chief_complaint=MedicalField(value="发热"))
+    safety = SafetyCheckResult(passed=True)
+    target = tmp_path / "doctor_name.pdf"
+    render_pdf(
+        target,
+        fields,
+        safety,
+        approved=True,
+        task_id=1,
+        encounter_id=2,
+        doctor_name="李医生",
+    )
+    with pymupdf.open(target) as document:
+        text = "".join(document[0].get_text().split())
+    assert "接诊医师" in text
+    assert "李医生" in text
+
+
+def test_pdf_short_generated_record_with_full_meta_fits_one_page(tmp_path):
+    from app.agents import MedicalRecordOrchestrator
+
+    result = MedicalRecordOrchestrator().run_from_text("患者发热三天，伴咳嗽。")
+    fields = MedicalRecordFields.model_validate(result["fields"])
+    target = tmp_path / "short_full_meta.pdf"
+    render_pdf(
+        target,
+        fields,
+        SafetyCheckResult(passed=True),
+        approved=True,
+        task_id=5,
+        encounter_id=8,
+        department="全科门诊",
+        encounter_created_at="2026-10-31T09:00:00",
+        patient_display_name="张示例",
+        patient_deidentified_id="SIM-DEMO",
+        doctor_name="李医生",
+    )
+    with pymupdf.open(target) as document:
+        assert document.page_count == 1
+        text = "".join(document[0].get_text())
+    assert "接诊医师" in text
+    assert "李医生" in text
+    assert "医师签名" in text
 
 
 def test_pdf_renders_empty_record_and_hospital_name(tmp_path, monkeypatch):

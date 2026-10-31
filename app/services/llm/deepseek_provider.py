@@ -127,7 +127,7 @@ class BudgetLedger:
             yield data
             temporary = self.path.with_name(self.path.name + '.' + uuid.uuid4().hex + '.tmp')
             write_json(temporary, data)
-            for attempt in range(5):
+            for attempt in range(50):
                 try:
                     temporary.replace(self.path)
                     break

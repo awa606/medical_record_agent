@@ -36,7 +36,7 @@ class Response:
 class HttpClient:
     """Minimal cookie-aware JSON client so the demo runs without extra deps."""
 
-    def __init__(self, base_url: str, *, timeout: float = 60.0) -> None:
+    def __init__(self, base_url: str, *, timeout: float = 120.0) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.opener = request.build_opener(request.HTTPCookieProcessor(CookieJar()))

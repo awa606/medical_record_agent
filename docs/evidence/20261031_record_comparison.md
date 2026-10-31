@@ -68,10 +68,18 @@
 
 | 层级 | 期望 | 实际 | 结论 | 证据 / 下一动作 |
 |---|---|---|---|---|
-| PDF 内容 | 接诊医师为任务归属医生，非导出操作者 | 取 `task.owner_user_id` 的显示名；API 下载断言 Test Doctor | PASS | `test_export_download_route_returns_pdf_after_approval` |
-| PDF 分页 | 短病历 1 页，长病历标题/正文同页，签名末页 | 短 1 页；长 3 页，辅助检查与正文同页，签名末页 | PASS | `test_exporter_review_format.py` |
+| PDF 内容 | 接诊医师为任务归属/就诊医生，非导出操作者 | 只接受 doctor 角色；管理员 owner 的 PDF 不出现 Local Admin | PASS | API 下载断言 + 非医生 owner 用例 |
+| PDF 分页 | 短病历 1 页，长病历标题/正文同页，签名末页 | 全字段短病历 1 页；长 3 页，辅助检查与正文同页，签名末页 | PASS | `test_exporter_review_format.py` |
 | 医生审核/导出 | 审批后才能导出，权限不混淆 | 现有审批与导出测试 + 医师归属/非医生 owner 断言 | PASS | 全量 1645 passed, 5 skipped, 30 subtests |
 | 演示页面 | 78 项 UI 巡检、320/375 稳定版标签不溢出 | 78 项 PASS；标签改 `稳定版 · 1.0.0` 后 320 无溢出 | PASS | `.artifacts/ui-review-20261030/ui_review.json` |
 | 模型首次输出 | 不改模型、不重跑在线质量 | 本轮只改 PDF/导出元数据；ui-v6 真实 FunASR 证据可复用 | REUSED | ui-v6 36 步、1 页 PDF、46,110 bytes |
-| 交付/恢复 | 新镜像、独立恢复 | 已重建 ui-v6 并跑真实 FunASR 36 步；PDF 1 页、签名保留 | PASS | `.artifacts/ui-review-20261030/container_audio_v5.json` |
+| 交付/恢复 | 新镜像、独立恢复 | 已重建 ui-v6 并跑真实 FunASR 36 步；PDF 1 页、签名保留 | PASS | `.artifacts/ui-review-20261030/container_audio_v6.json` |
+
+## 推送与 CI
+
+- 分支：`codex/ui-hospital-record-v1`
+- PR：#115（`codex/alpha51-demo-visual-e2e`）
+- 稳定标签：`v1.0.0-ui-record-20261031`，指向 `f656156`
+- CI：`verify` **success**（run #240）
+- 前两次 CI 分别暴露：浏览器保存恢复用例偶发失败、320px 知识检索输入框滚到 sticky 顶栏下方；已通过账本重试加固和移动端 `scroll-margin-top` 修复。
 

@@ -1,5 +1,5 @@
 {
-  "mode": "development",
-  "label": "开发候选",
-  "version": "unregistered"
+  "mode": "showcase",
+  "label": "稳定版",
+  "version": "1.0.0"
 }

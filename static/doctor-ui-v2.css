@@ -14,7 +14,7 @@
   --line: #dfe6ee;
   --line-strong: #c9d4e2;
   --text: #172033;
-  --muted: #64748b;
+  --muted: #475569;
   --green: #158463;
   --green-soft: #ecf8f3;
   --yellow: #b7791f;
@@ -236,7 +236,7 @@ textarea:focus {
 .brand-block p,
 .brand-copy p {
   margin: 3px 0 0;
-  color: #748499;
+  color: #52627a;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -282,7 +282,7 @@ textarea:focus {
   padding: 5px 9px;
   border-color: transparent;
   background: transparent;
-  color: #64748b;
+  color: #475569;
 }
 
 .product-nav {
@@ -565,7 +565,7 @@ textarea:focus {
 
 .panel-header p {
   margin: 4px 0 0;
-  color: #718197;
+  color: #475569;
   font-size: 11px;
   line-height: 1.45;
 }
@@ -639,7 +639,7 @@ textarea:focus {
 .encounter-worklist-item small {
   min-width: 0;
   overflow: hidden;
-  color: #718197;
+  color: #475569;
   font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -659,7 +659,7 @@ textarea:focus {
 }
 
 .encounter-worklist-meta b {
-  color: #7b8da1;
+  color: #475569;
   font-size: 10px;
   font-weight: 700;
 }
@@ -841,7 +841,7 @@ body.doctor-mode .encounter-view {
 }
 
 .encounter-patient-banner .meta-label {
-  color: #718197;
+  color: #475569;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -918,7 +918,7 @@ body.doctor-mode .process-hint {
   padding: 0;
   background: transparent;
   box-shadow: none;
-  color: #718197;
+  color: #475569;
   font-size: 11px;
   font-weight: 500;
   line-height: 1.45;
@@ -1145,7 +1145,8 @@ body.doctor-mode .processing-stage span {
 body.doctor-mode .processing-stage small {
   display: block;
   margin-top: 1px;
-  color: #8a99aa;
+  color: #52627a;
+  font-size: 11px;
 }
 
 .processing-stage.done,
@@ -1876,7 +1877,7 @@ body.doctor-mode .encounter-action-bar strong {
 .operation-heading span {
   min-width: 0;
   overflow: hidden;
-  color: #718197;
+  color: #475569;
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2016,7 +2017,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
 .admin-list-row span {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: #718197;
+  color: #475569;
   font-size: 11px;
 }
 
@@ -2090,7 +2091,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   border-radius: 9px;
   padding: 18px;
   background: #fafcfe;
-  color: #748499;
+  color: #52627a;
   font-size: 12px;
   line-height: 1.5;
   text-align: center;
@@ -2265,7 +2266,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
 
 .login-card p {
   margin: 0;
-  color: #718197;
+  color: #475569;
   font-size: 12px;
   line-height: 1.55;
 }
@@ -2298,7 +2299,7 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
 }
 
 .login-card .login-help {
-  color: #8a98a8;
+  color: #52627a;
   text-align: center;
 }
 

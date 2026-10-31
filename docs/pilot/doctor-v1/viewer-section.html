@@ -1,3 +1,5 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>数据与知识查看器说明 · MediListen 帮助</title><link rel="stylesheet" href="guide.css"></head><body>
 <section id="viewer">
 <h2>09B 数据与知识查看器（只读快照）</h2>
 <p class="precondition"><strong>使用条件：</strong>由组织者在当前环境启动器点击“数据与知识查看器”，使用已授权的本机浏览器。锁形图标表示访问受限，不代表病历质量通过。</p>
@@ -8,3 +10,5 @@
 <p><strong>失败恢复：</strong>未授权时，从启动器重新打开，不分享登录链接；查不到记录时先核对环境、采样时间及筛选条件。快照中没有记录不表示原库已删除。刷新失败会保留原查看器。</p>
 <p><strong>术语：</strong>病历版本（Revision）是一次保存形成的记录；语音转写（ASR）将音频变成文字；病历生成服务（LLM Provider）按当前版本调用本地或在线模型整理草稿；语义向量索引（embedding）用于语义检索；内容校验值（SHA256）用于核对文件或文字是否改变。MediListen是产品名，FunASR是本地语音转写引擎；本地版本使用Qwen，在线审核候选使用DeepSeek。网络或鉴权失败会保留输入，不自动切换模型或模拟结果。</p>
 </section>
+
+<script src="help-nav.js"></script></body></html>

@@ -176,7 +176,7 @@ def test_export_uses_authenticated_download_endpoint_not_server_paths() -> None:
     assert "renderExportDownloadActions" in detail_body
     assert "Object.entries(exports)" not in detail_body
     assert "Object.values(result.exports" not in export_body
-    assert 'downloadTaskExport("docx")' in export_body
+    assert 'downloadTaskExport("pdf")' in export_body
 
 
 def test_admin_and_reference_copy_hide_debug_values() -> None:

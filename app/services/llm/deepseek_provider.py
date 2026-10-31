@@ -127,7 +127,18 @@ class BudgetLedger:
             yield data
             temporary = self.path.with_name(self.path.name + '.' + uuid.uuid4().hex + '.tmp')
             write_json(temporary, data)
-            temporary.replace(self.path)
+            for attempt in range(50):
+                try:
+                    temporary.replace(self.path)
+                    break
+                except PermissionError:
+                    # Windows can briefly deny the replace while the target is
+                    # open by a scanner or another handle. Retry briefly, then
+                    # surface the failure instead of reporting a settled call.
+                    if attempt == 4:
+                        temporary.unlink(missing_ok=True)
+                        raise
+                    time.sleep(0.02 * (attempt + 1))
         finally:
             lock.unlink(missing_ok=True)
 

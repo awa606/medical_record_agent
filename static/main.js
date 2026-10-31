@@ -552,6 +552,7 @@ function openDrawer(sectionId, title) {
   $("drawerBackdrop").classList.add("active");
   $("drawer").classList.add("active");
   $("drawer").setAttribute("aria-hidden", "false");
+  $("drawer").removeAttribute("inert");
   document.querySelectorAll(".drawer-section").forEach((section) => section.classList.remove("active"));
   $(sectionId).classList.add("active");
 }
@@ -560,6 +561,7 @@ function closeDrawer() {
   $("drawerBackdrop").classList.remove("active");
   $("drawer").classList.remove("active");
   $("drawer").setAttribute("aria-hidden", "true");
+  $("drawer").setAttribute("inert", "");
 }
 
 function openTextInput() {

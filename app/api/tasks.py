@@ -19,10 +19,12 @@ from app.db import (
     create_export_event_for_task,
     get_active_approval_for_task,
     get_audit_logs,
+    get_encounter,
     get_record_revision,
     get_task,
     get_task_encounter,
     get_task_steps,
+    get_user_by_id,
     json_dumps,
     list_approval_items_for_approval,
     record_content_hash,
@@ -37,15 +39,10 @@ from app.services.exporter import DEFAULT_OUTPUT_DIR
 router = APIRouter(prefix="/tasks", tags=["tasks"], dependencies=[Depends(require_current_user)])
 TERMINAL_EVENTS = {"WAITING_DOCTOR_REVIEW", "FAILED"}
 EXPORT_DOWNLOADS = {
-    "markdown": {
-        "path_key": "markdown_path",
-        "extension": "md",
-        "media_type": "text/markdown; charset=utf-8",
-    },
-    "docx": {
-        "path_key": "word_path",
-        "extension": "docx",
-        "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "pdf": {
+        "path_key": "pdf_path",
+        "extension": "pdf",
+        "media_type": "application/pdf",
     },
 }
 
@@ -245,6 +242,20 @@ FIELD_LABELS = {
     "past_history": "既往史",
     "allergy_history": "过敏史",
     "physical_exam": "查体",
+    "personal_history": "个人史",
+    "marital_history": "婚育史",
+    "family_history": "家族史",
+    "auxiliary_exam": "辅助检查",
+    "treatment_notes": "医生处理意见",
+    "treatment_plan": "处理建议",
+    "patient_sex": "性别",
+    "patient_birth_date": "出生日期",
+    "patient_ethnicity": "民族",
+    "patient_marital_status": "婚姻状况",
+    "patient_occupation": "职业",
+    "patient_work_unit": "工作单位",
+    "patient_address": "住址",
+    "patient_contact": "联系方式",
 }
 
 MANUAL_DOCTOR_EDIT_NOTE = "manual_doctor_edit_v1: 医生手工修改；原始转写证据仅供对照，不作为该修改的自动证据。"
@@ -835,6 +846,24 @@ def approve_task(
     return task
 
 
+def _export_doctor_name(task: dict[str, Any], encounter: dict[str, Any]) -> str | None:
+    """Return a real doctor's display name for the printed record.
+
+    A task owner or encounter creator may be an admin/front-desk account; only
+    accounts with the doctor role may be printed as 接诊医师.
+    """
+    for user_id in (task.get("owner_user_id"), encounter.get("doctor_user_id")):
+        if user_id is None:
+            continue
+        user = get_user_by_id(int(user_id))
+        if not user or user.get("role") != "doctor":
+            continue
+        name = str(user.get("display_name") or "").strip()
+        if name:
+            return name
+    return None
+
+
 @router.post("/{task_id}/export")
 def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
@@ -850,7 +879,15 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=readiness)
 
     try:
-        exports = export_record(task_id, result)
+        encounter = get_task_encounter(task_id) or {}
+        encounter_detail = get_encounter(encounter["id"]) if encounter.get("id") else {}
+        result["encounter_id"] = task.get("encounter_id") or encounter.get("id")
+        result["encounter_department"] = encounter.get("department_id")
+        result["encounter_created_at"] = encounter.get("created_at")
+        result["patient_deidentified_id"] = encounter_detail.get("patient_deidentified_id")
+        result["patient_display_name"] = encounter_detail.get("patient_display_name")
+        doctor_name = _export_doctor_name(task, encounter)
+        exports = export_record(task_id, result, doctor_name=doctor_name)
     except Exception as exc:
         create_audit_log(
             task_id,
@@ -914,7 +951,14 @@ def _export_output_root() -> Path:
 def _resolve_export_download_path(exports: dict[str, str], export_format: str) -> tuple[Path, str, str]:
     config = EXPORT_DOWNLOADS.get(export_format)
     if config is None:
-        raise HTTPException(status_code=404, detail="Export format not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "unsupported_export_format",
+                "message": "仅支持 PDF 导出，请使用 /api/tasks/{task_id}/exports/pdf",
+                "format": export_format,
+            },
+        )
 
     raw_path = exports.get(config["path_key"])
     if not raw_path:

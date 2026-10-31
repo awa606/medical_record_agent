@@ -86,6 +86,6 @@
 - 分支：`codex/ui-hospital-record-v1`
 - PR：#115（`codex/alpha51-demo-visual-e2e`）
 - 稳定标签：`v1.1.0-ui-record-20261031`
-- CI：`verify` **success**（run #240）
+- CI：1.1.0 代码提交 run #242 success，文档 run #243 success：<https://github.com/awa606/medical_record_agent/actions/runs/41217434224>
 - 前两次 CI 分别暴露：浏览器保存恢复用例偶发失败、320px 知识检索输入框滚到 sticky 顶栏下方；已通过账本重试加固和移动端 `scroll-margin-top` 修复。
 

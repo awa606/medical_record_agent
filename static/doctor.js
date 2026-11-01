@@ -3056,6 +3056,15 @@ function llmDisplayState() {
   };
 }
 
+function centerWorkflowStep() {
+  const steps = $("workflowSteps");
+  const active = steps?.querySelector(".workflow-step.active");
+  if (!steps || !active || steps.scrollWidth <= steps.clientWidth + 1) return;
+  const listRect = steps.getBoundingClientRect();
+  const activeRect = active.getBoundingClientRect();
+  steps.scrollLeft += (activeRect.left + activeRect.width / 2) - (listRect.left + listRect.width / 2);
+}
+
 function renderWorkflow() {
   const activeKey = workflowStepKey();
   const activeIndex = WORKFLOW_STEPS.findIndex((step) => step.key === activeKey);
@@ -3069,7 +3078,11 @@ function renderWorkflow() {
       </li>
     `;
   }).join("");
+  // On narrow screens keep the current stage visible instead of clipping it.
+  requestAnimationFrame(centerWorkflowStep);
 }
+
+window.addEventListener("resize", () => requestAnimationFrame(centerWorkflowStep), { passive: true });
 
 function fieldStatus(field, key) {
   if (key === "treatment_plan") {

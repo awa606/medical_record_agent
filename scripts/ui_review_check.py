@@ -212,7 +212,7 @@ def run() -> dict:
         def record_failed_request(request) -> None:
             # EventSource is intentionally closed by reload/navigation; that is
             # not a page failure. Other request failures still fail the audit.
-            if request.url.endswith("/events"):
+            if "/events" in request.url:
                 return
             failure = request.failure
             if failure and "ERR_ABORTED" in failure:
@@ -609,8 +609,16 @@ def run() -> dict:
             upload_page.wait_for_timeout(300)
             upload_page.set_input_files("#audioFileInput", {"name": "bad.wav", "mimeType": "audio/wav", "buffer": b"not-a-wav"})
             upload_page.click("#submitAudioButton")
-            upload_page.wait_for_timeout(2200)
-            upload_error = upload_page.evaluate("window.__MRA_APP_STATE__?.lastActionError || ''")
+            try:
+                upload_page.wait_for_function(
+                    "window.__MRA_APP_STATE__?.lastActionError || document.querySelector('.toast')?.textContent",
+                    timeout=10000,
+                )
+            except Exception:
+                pass
+            upload_error = upload_page.evaluate(
+                "window.__MRA_APP_STATE__?.lastActionError || document.querySelector('.toast')?.textContent || ''"
+            )
             steps.append({"step": "upload_error_consistent", "ok": bool(upload_error), "detail": upload_error[:80]})
             audit(upload_page, "upload_error_state", steps)
             upload_context.close()

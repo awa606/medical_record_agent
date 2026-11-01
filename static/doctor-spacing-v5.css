@@ -46,7 +46,7 @@ body.doctor-mode .alpha51-workspace .column > .panel-header p {
   line-height: 1.55;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1200px) and (min-height: 800px) {
   body.doctor-mode .alpha51-workspace .column > .panel-header {
     min-height: 100px;
   }

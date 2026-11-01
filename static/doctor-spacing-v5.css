@@ -175,6 +175,22 @@ body.doctor-mode .alpha51-workspace .approval-disclosure > summary {
   line-height: 1.55;
 }
 
+body.doctor-mode .alpha51-workspace .approval-checklist-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: start;
+}
+
+body.doctor-mode .alpha51-workspace .approval-checklist-head > div {
+  grid-column: 1;
+}
+
+body.doctor-mode .alpha51-workspace .approval-checklist-head > .approval-entry-label {
+  grid-column: 2;
+  align-self: start;
+}
+
 body.doctor-mode .alpha51-workspace .review-boundary-notice {
   margin: var(--space-3) var(--space-5) 0;
   border-radius: 10px;

@@ -141,6 +141,15 @@ function renderWorkflowStatus(status = "CREATED") {
     const className = `step ${failed && step.key === activeKey ? "failed" : step.key === activeKey ? "active" : ""}`;
     return `<li class="${className}">${step.label}</li>`;
   }).join("");
+  const list = $("workflowSteps");
+  const active = list?.querySelector(".step.active");
+  if (list && active && list.scrollWidth > list.clientWidth + 1) {
+    requestAnimationFrame(() => {
+      const listRect = list.getBoundingClientRect();
+      const activeRect = active.getBoundingClientRect();
+      list.scrollLeft += (activeRect.left + activeRect.width / 2) - (listRect.left + listRect.width / 2);
+    });
+  }
 }
 
 function fieldStatus(field, key) {

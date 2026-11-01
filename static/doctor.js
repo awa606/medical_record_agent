@@ -2860,7 +2860,12 @@ function openDetailDrawer(title, html) {
 function renderPatientBar() {
   const llm = llmDisplayState();
   const displayState = doctorDisplayState();
-  $("patientName").textContent = appState.currentEncounter ? encounterPatientLabel(appState.currentEncounter) : "未选择患者";
+  const patientLabel = appState.currentEncounter ? encounterPatientLabel(appState.currentEncounter) : "未选择患者";
+  $("patientName").textContent = patientLabel;
+  const avatar = $("patientAvatar");
+  if (avatar) {
+    avatar.textContent = patientLabel.replace(/[（(].*$/, "").trim().charAt(0) || "患";
+  }
   if ($("patientDemoBadge")) {
     $("patientDemoBadge").hidden = !(syntheticDemoLabel(appState.currentEncounter) || testPatientLabel(appState.currentEncounter));
     $("patientDemoBadge").textContent = testPatientLabel(appState.currentEncounter) ? "匿名测试" : "演示";

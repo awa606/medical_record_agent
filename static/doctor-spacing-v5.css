@@ -82,9 +82,21 @@ body.doctor-mode .alpha51-workspace .record-section + .record-section {
 }
 
 body.doctor-mode .alpha51-workspace .record-section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: start;
   padding: var(--space-3) var(--space-4);
   gap: var(--space-3);
-  align-items: center;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head > div {
+  grid-column: 1;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head > .record-section-status {
+  grid-column: 2;
+  align-self: start;
 }
 
 body.doctor-mode .alpha51-workspace .record-section-head h3 {

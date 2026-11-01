@@ -133,6 +133,19 @@ def test_pdf_includes_extended_patient_and_clinical_fields(tmp_path):
     assert "医师签名" in text
 
 
+def test_pdf_uses_follow_up_visit_title(tmp_path):
+    fields = MedicalRecordFields(
+        chief_complaint=MedicalField(value="发热复诊"),
+        visit_type=MedicalField(value="复诊"),
+    )
+    target = tmp_path / "follow_up.pdf"
+    render_pdf(target, fields, SafetyCheckResult(passed=True), approved=True, task_id=7)
+    with pymupdf.open(target) as document:
+        text = "".join(document[0].get_text().split())
+    assert "复诊病历记录" in text
+    assert "就诊类型" in text
+
+
 def test_pdf_renders_empty_record_and_hospital_name(tmp_path, monkeypatch):
     monkeypatch.setenv("MRA_HOSPITAL_NAME", "测试医院")
     fields = MedicalRecordFields()

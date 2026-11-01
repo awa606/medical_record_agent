@@ -296,6 +296,9 @@ def _pdf_meta_rows(
     allergy_text = str(allergy.value).strip() if allergy.value and not allergy.missing else "未提及/待补充"
     rows.append(("药物过敏史", allergy_text))
     rows.append(("科别", department or "未关联科室"))
+    visit_type = field_text("visit_type")
+    if visit_type:
+        rows.append(("就诊类型", visit_type))
     rows.append(("接诊医师", doctor_name or "____________________"))
     rows.append(("门诊病历号", f"E-{encounter_id}" if encounter_id is not None else "未关联就诊"))
     if encounter_created_at:
@@ -411,12 +414,19 @@ def render_pdf(
         title=f"门诊病历 E-{encounter_id}" if encounter_id is not None else "门诊病历",
         author="MediListen",
     )
+    visit_value = str(fields.visit_type.value or "").strip() if fields.visit_type.value and not fields.visit_type.missing else ""
+    if "留观" in visit_value:
+        record_title = "留 观 病 历 记 录"
+    elif "复诊" in visit_value:
+        record_title = "复 诊 病 历 记 录"
+    else:
+        record_title = "初 诊 病 历 记 录"
     story: list[Any] = [
         Paragraph(
             f"医疗机构名称：{os.environ.get('MRA_HOSPITAL_NAME', '').strip() or '____________________'}",
             styles["subtitle"],
         ),
-        Paragraph("初 诊 病 历 记 录", styles["title"]),
+        Paragraph(record_title, styles["title"]),
         Paragraph("AI 辅助生成 · 医生审核确认后方可作为病历使用", styles["subtitle"]),
         Spacer(1, 4 * mm),
     ]

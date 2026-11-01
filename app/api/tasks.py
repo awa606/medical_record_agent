@@ -33,7 +33,9 @@ from app.db import (
 from app.schemas import MedicalRecordFields, SafetyCheckResult
 from app.services import LLMProviderUnavailableError, create_llm_record_generator, export_record
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
+from app.services.clinical_codes import icd10_errors
 from app.services.exporter import DEFAULT_OUTPUT_DIR
+from app.services.record_rules import allergy_treatment_errors
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"], dependencies=[Depends(require_current_user)])
@@ -248,6 +250,7 @@ FIELD_LABELS = {
     "auxiliary_exam": "辅助检查",
     "treatment_notes": "医生处理意见",
     "treatment_plan": "处理建议",
+    "visit_type": "就诊类型",
     "patient_sex": "性别",
     "patient_birth_date": "出生日期",
     "patient_ethnicity": "民族",
@@ -1027,6 +1030,8 @@ def _validate_export_ready(result: dict[str, Any]) -> list[str]:
         errors.append("安全校验未通过，禁止导出。")
 
     errors.extend(_approval_completion_errors(fields))
+    errors.extend(icd10_errors(fields))
+    errors.extend(allergy_treatment_errors(fields))
 
     return errors
 

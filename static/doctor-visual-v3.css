@@ -264,6 +264,11 @@ body.doctor-mode .page-eyebrow {
   color: #2b5f92;
 }
 
+body.doctor-mode .product-dashboard .dashboard-panel {
+  align-self: start;
+  height: auto;
+}
+
 /* ---------- columns and panels ---------- */
 
 body.doctor-mode .workbench > .column {

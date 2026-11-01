@@ -216,6 +216,7 @@ const FIELD_DEFS = [
   ["auxiliary_exam", "辅助检查"],
   ["treatment_plan", "处理建议"],
   ["treatment_notes", "医生处理意见"],
+  ["visit_type", "就诊类型"],
   ["patient_sex", "性别"],
   ["patient_birth_date", "出生日期"],
   ["patient_ethnicity", "民族"],
@@ -240,6 +241,7 @@ const SUMMARY_FIELD_KEYS = [
 ];
 
 const DRAFT_FIELD_DEFS = [
+  ["visit_type", "就诊类型"],
   ["patient_sex", "性别"],
   ["patient_birth_date", "出生日期"],
   ["patient_ethnicity", "民族"],
@@ -4279,7 +4281,7 @@ function renderFields() {
       </dl>
     </section>`;
   const clinicalSections = [
-    ["患者信息", ["patient_sex", "patient_birth_date", "patient_ethnicity", "patient_marital_status", "patient_occupation", "patient_work_unit", "patient_address", "patient_contact"], "真实病历首页所需的去标识患者信息"],
+    ["患者信息", ["visit_type", "patient_sex", "patient_birth_date", "patient_ethnicity", "patient_marital_status", "patient_occupation", "patient_work_unit", "patient_address", "patient_contact"], "就诊类型与真实病历首页所需的去标识患者信息"],
     ["主诉与现病史", ["chief_complaint", "present_illness", "accompanying_symptoms"], "本次就诊的主要症状与演变"],
     ["既往史与过敏", ["past_history", "previous_treatment", "allergy_history", "personal_history", "marital_history", "family_history"], "既往疾病、个人史、婚育史、家族史与过敏信息"],
     ["体格检查", ["physical_exam", "auxiliary_exam"], "查体记录、检验检查结果与缺失提示"],

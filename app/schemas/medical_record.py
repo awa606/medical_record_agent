@@ -133,6 +133,7 @@ class MedicalRecordFields(BaseModel):
     auxiliary_exam: MedicalField = Field(default_factory=MedicalField.missing_field)
     treatment_notes: MedicalField = Field(default_factory=MedicalField.missing_field)
     treatment_plan: MedicalField = Field(default_factory=MedicalField.missing_field)
+    visit_type: MedicalField = Field(default_factory=MedicalField.missing_field)
     patient_sex: MedicalField = Field(default_factory=MedicalField.missing_field)
     patient_birth_date: MedicalField = Field(default_factory=MedicalField.missing_field)
     patient_ethnicity: MedicalField = Field(default_factory=MedicalField.missing_field)

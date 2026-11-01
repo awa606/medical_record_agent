@@ -397,7 +397,7 @@ body.doctor-mode .alpha51-workspace .encounter-patient-banner .patient-identity-
 /* At tablet landscape width the three-column baseline becomes too tight.
    Keep transcript + record, and expose the reference column through the
    existing auxiliary drawer trigger. */
-@media (min-width: 1024px) and (max-width: 1080px) {
+@media (min-width: 1024px) and (max-width: 1080px), (min-width: 1100px) and (max-width: 1199px) {
   body.doctor-mode .alpha51-workspace .workbench {
     grid-template-columns: minmax(0, 28fr) minmax(0, 72fr);
     grid-template-areas: "transcript record";

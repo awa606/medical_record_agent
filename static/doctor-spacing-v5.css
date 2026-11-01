@@ -26,11 +26,24 @@ body.doctor-mode .alpha51-workspace .workbench > .column {
 }
 
 body.doctor-mode .alpha51-workspace .column > .panel-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: start;
   padding: var(--space-4) var(--space-5);
   gap: var(--space-3);
   min-height: 0;
   height: auto;
   overflow: visible;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header > div {
+  grid-column: 1;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header > .status-badge {
+  grid-column: 2;
+  align-self: start;
 }
 
 body.doctor-mode .alpha51-workspace .column > .panel-header h2 {
@@ -156,7 +169,7 @@ body.doctor-mode .alpha51-workspace .review-boundary-notice {
 }
 
 body.doctor-mode .alpha51-workspace .column > .panel-header {
-  align-items: center;
+  align-items: start;
 }
 
 body.doctor-mode .alpha51-workspace .column > .panel-header > button,

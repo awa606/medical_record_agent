@@ -196,7 +196,18 @@ def run() -> dict:
 
     def watch(page) -> None:
         page.on("pageerror", lambda error: console_errors.append(f"pageerror: {error}"))
-        page.on("requestfailed", lambda request: console_errors.append(f"requestfailed: {request.url}"))
+
+        def record_failed_request(request) -> None:
+            # EventSource is intentionally closed by reload/navigation; that is
+            # not a page failure. Other request failures still fail the audit.
+            if request.url.endswith("/events"):
+                return
+            failure = request.failure
+            if failure and "ERR_ABORTED" in failure:
+                return
+            console_errors.append(f"requestfailed: {request.url}")
+
+        page.on("requestfailed", record_failed_request)
 
     server = RunningServer()
     try:

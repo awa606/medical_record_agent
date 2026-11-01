@@ -191,6 +191,22 @@ body.doctor-mode .alpha51-workspace .approval-checklist-head > .approval-entry-l
   align-self: start;
 }
 
+body.doctor-mode .alpha51-workspace .approval-item-actions {
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+}
+
+body.doctor-mode .alpha51-workspace .approval-item-actions button {
+  padding-inline: 10px;
+  font-size: 13px;
+}
+
+@media (max-width: 680px) {
+  body.doctor-mode .alpha51-workspace .approval-item-actions {
+    flex-wrap: wrap;
+  }
+}
+
 body.doctor-mode .alpha51-workspace .review-boundary-notice {
   margin: var(--space-3) var(--space-5) 0;
   border-radius: 10px;

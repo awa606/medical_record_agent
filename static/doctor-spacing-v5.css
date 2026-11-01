@@ -1,0 +1,191 @@
+/*
+ * MediListen spacing and alignment pass v5
+ * Rules applied:
+ * - 4/8/12/16/20/24/32 spacing scale instead of ad-hoc 10/13/14/15px.
+ * - Proximity: heading closer to its content, sections farther from each other.
+ * - Consistent 16px workbench gutter and 20px panel padding.
+ * - 14px clinical body with 1.7 line-height; 16px section titles.
+ */
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+}
+
+body.doctor-mode .alpha51-workspace .workbench {
+  gap: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .workbench > .column {
+  padding: 0;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header {
+  padding: var(--space-4) var(--space-5);
+  gap: var(--space-3);
+  min-height: 64px;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header h2 {
+  margin: 0 0 var(--space-1);
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+body.doctor-mode .alpha51-workspace .field-list {
+  padding: var(--space-3) var(--space-5) 100px;
+}
+
+body.doctor-mode .alpha51-workspace .record-section {
+  margin: 0 0 var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .record-section + .record-section {
+  margin-top: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head {
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head h3 {
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head p {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-body {
+  padding: var(--space-4);
+  gap: var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card + .field-card {
+  margin-top: var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card-head,
+body.doctor-mode .alpha51-workspace #recordFields .field-head {
+  gap: var(--space-2);
+  padding-bottom: var(--space-1);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card-head strong,
+body.doctor-mode .alpha51-workspace #recordFields .field-head strong {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-value {
+  margin-top: var(--space-2);
+  color: #2e4740;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-meta {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  gap: var(--space-2);
+}
+
+body.doctor-mode .alpha51-workspace .record-section-status {
+  padding: 4px 12px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+body.doctor-mode .alpha51-workspace .encounter-action-bar {
+  padding: var(--space-3) var(--space-5);
+  gap: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .encounter-action-bar > * {
+  margin: 0;
+}
+
+body.doctor-mode .alpha51-workspace .approval-disclosure {
+  margin-bottom: var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace .approval-disclosure > summary {
+  padding: var(--space-3) var(--space-4);
+  line-height: 1.55;
+}
+
+body.doctor-mode .alpha51-workspace .field-list .preview-notice,
+body.doctor-mode .alpha51-workspace .field-list .historical-record-notice {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  line-height: 1.65;
+}
+
+/* Worklist: align toolbar and rows on one 8px rhythm. */
+body.doctor-mode .worklist-toolbar {
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+}
+
+body.doctor-mode .encounter-worklist {
+  padding: 0 var(--space-5) var(--space-4);
+}
+
+body.doctor-mode .dashboard-panel > .panel-header {
+  padding-bottom: var(--space-3);
+}
+
+/* Keep the patient bar compact but align its internal cells. */
+body.doctor-mode .alpha51-workspace .encounter-patient-banner {
+  padding-inline: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .encounter-patient-banner .patient-identity-cell {
+  padding-left: 58px;
+}
+
+/* Avoid cramped mobile cards without changing the grid. */
+@media (max-width: 680px) {
+  body.doctor-mode .alpha51-workspace .field-list {
+    padding: var(--space-2) var(--space-4) 100px;
+  }
+
+  body.doctor-mode .record-section-head,
+  body.doctor-mode .alpha51-workspace .record-section-body {
+    padding: var(--space-3) var(--space-3);
+  }
+
+  body.doctor-mode .alpha51-workspace .record-section-head h3 {
+    font-size: 15px;
+  }
+
+  body.doctor-mode .alpha51-workspace #recordFields .field-card {
+    padding: var(--space-3);
+  }
+
+  body.doctor-mode .worklist-toolbar,
+  body.doctor-mode .encounter-worklist {
+    padding-inline: var(--space-4);
+  }
+}

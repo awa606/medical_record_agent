@@ -365,6 +365,45 @@ body.doctor-mode .page-eyebrow {
   color: #2c6759;
 }
 
+/* login */
+
+.login-panel {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(32, 148, 119, 0.20), transparent 30%),
+    radial-gradient(circle at 88% 90%, rgba(224, 183, 104, 0.10), transparent 30%),
+    linear-gradient(135deg, #0a2421 0%, #103b35 54%, #f2eee5 54%, #f7f4ed 100%);
+}
+
+.login-shell {
+  border-color: rgba(255, 253, 247, 0.24);
+  background: #fffdf9;
+  box-shadow: 0 34px 90px rgba(6, 28, 24, 0.30);
+}
+
+.login-brand-pane {
+  background:
+    linear-gradient(rgba(8, 38, 34, 0.90), rgba(13, 58, 51, 0.97)),
+    linear-gradient(145deg, #17695d, #092923);
+}
+
+.login-product-copy .page-eyebrow {
+  color: #e0b768;
+}
+
+.login-card {
+  background: #fffdf9;
+}
+
+.login-card-heading h2,
+.login-card h2 {
+  color: #1f3a34;
+}
+
+.login-submit {
+  background: linear-gradient(135deg, #0d5a53 0%, #168375 100%) !important;
+  border-color: transparent !important;
+}
+
 /* dashboard */
 
 body.doctor-mode .product-dashboard .dashboard-hero h2,

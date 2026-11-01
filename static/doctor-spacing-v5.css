@@ -307,4 +307,65 @@ body.doctor-mode .alpha51-workspace .encounter-patient-banner .patient-identity-
   body.doctor-mode .encounter-worklist {
     padding-inline: var(--space-4);
   }
+
+  /* Admin header actions wrap as a second row instead of squeezing the title. */
+  body.doctor-mode .admin-knowledge-panel > .panel-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    padding: var(--space-4);
+  }
+
+  body.doctor-mode .admin-knowledge-panel > .panel-header > div {
+    grid-column: 1 / -1;
+  }
+
+  body.doctor-mode .admin-knowledge-panel > .panel-header > .status-badge {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  body.doctor-mode .admin-knowledge-panel > .panel-header > button {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  body.doctor-mode .knowledge-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-1);
+  }
+
+  body.doctor-mode .knowledge-tabs button {
+    min-width: 0;
+    padding: 8px 4px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  body.doctor-mode .admin-list-row {
+    display: grid;
+    gap: 4px;
+  }
+
+  body.doctor-mode .admin-home .dashboard-hero {
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  body.doctor-mode #refreshAdminHomeButton {
+    flex: none;
+    min-height: 38px;
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+}
+
+/* A fixed login overlay must not leave a scrollable app strip below it. */
+body:has(#loginPanel:not([hidden])) {
+  overflow: hidden;
+}
+
+body:has(#loginPanel:not([hidden])) .login-panel {
+  background-color: #f7f4ed;
 }

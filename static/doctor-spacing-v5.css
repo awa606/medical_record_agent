@@ -318,6 +318,23 @@ body.doctor-mode .workbench-boundary .environment-dot {
   margin-top: 5px;
 }
 
+@media (min-width: 900px) {
+  body.doctor-mode #workbenchHome > .dashboard-panel:not(.local-registration-panel) {
+    min-height: calc(100dvh - 440px);
+  }
+}
+
+body.doctor-mode .encounter-worklist:has(.empty-state) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+
+body.doctor-mode .encounter-worklist .empty-state {
+  width: 100%;
+}
+
 body.doctor-mode .dashboard-panel > .panel-header {
   padding-bottom: var(--space-3);
 }

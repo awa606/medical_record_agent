@@ -1,0 +1,145 @@
+/* Developer console visual alignment with the clinical palette. */
+body.debug-mode {
+  background:
+    radial-gradient(900px 480px at 92% -8%, rgba(19, 115, 86, 0.08), transparent 60%),
+    #f2efe8;
+  color: #1d2d2c;
+  font-family: "Aptos", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+body.debug-mode .app-shell {
+  color: #1d2d2c;
+}
+
+body.debug-mode .topbar {
+  border-bottom: 1px solid #e3dbce;
+  background: #fffdf9;
+  box-shadow: 0 6px 22px rgba(45, 52, 48, 0.05);
+}
+
+body.debug-mode .topbar h1,
+body.debug-mode .brand h1 {
+  color: #173a35;
+  letter-spacing: -0.015em;
+}
+
+body.debug-mode .topbar p,
+body.debug-mode .brand p {
+  color: #55665f;
+}
+
+body.debug-mode .top-meta span {
+  border: 1px solid #e3dbce;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #f8f4ec;
+  color: #455a53;
+}
+
+body.debug-mode .toolbar {
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e3dbce;
+  border-radius: 12px;
+  background: #fffdf9;
+}
+
+body.debug-mode .toolbar button,
+body.debug-mode .tool-strip button,
+body.debug-mode .action-grid button,
+body.debug-mode .button {
+  min-height: 40px;
+  border: 1px solid #0f625c;
+  border-radius: 9px;
+  padding: 0 14px;
+  background: #0f625c;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+body.debug-mode .toolbar button:hover,
+body.debug-mode .tool-strip button:hover,
+body.debug-mode .action-grid button:hover,
+body.debug-mode .button:hover {
+  background: #0a4a46;
+}
+
+body.debug-mode .step.active {
+  border-color: #8fc4b5;
+  background: #e8f4ef;
+  color: #0d5a53;
+}
+
+body.debug-mode .step {
+  border-color: #e3dbce;
+  background: #fffdf9;
+  color: #55665f;
+}
+
+body.debug-mode .app-shell > section[style] {
+  border-color: #cfe3da !important;
+  background: #eef7f3 !important;
+  color: #14544c !important;
+}
+
+body.debug-mode .tabs {
+  gap: 8px;
+  border-bottom: 1px solid #e3dbce;
+  padding-bottom: 10px;
+}
+
+body.debug-mode .tabs button {
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #fffdf9;
+  color: #55665f;
+}
+
+body.debug-mode .tabs button[aria-selected="true"],
+body.debug-mode .tabs button.active {
+  border-color: #cfe3da;
+  background: #e8f4ef;
+  color: #0d5a53;
+  font-weight: 700;
+}
+
+body.debug-mode .panel,
+body.debug-mode .card,
+body.debug-mode .panel-card {
+  border: 1px solid #e3dbce;
+  border-radius: 12px;
+  background: #fffdf9;
+  box-shadow: 0 1px 2px rgba(45, 52, 48, 0.03);
+}
+
+body.debug-mode .panel h2,
+body.debug-mode .panel h3,
+body.debug-mode .card h2,
+body.debug-mode .card h3 {
+  color: #173a35;
+  letter-spacing: -0.01em;
+}
+
+body.debug-mode .empty,
+body.debug-mode .empty-state,
+body.debug-mode .muted {
+  color: #66756e;
+}
+
+body.debug-mode .ghost-button {
+  border-color: #d9cfbf;
+  background: #fffdf9;
+  color: #27433d;
+}
+
+body.debug-mode .danger-button {
+  border-color: #b94a48;
+  background: #b94a48;
+  color: #fff;
+}
+
+body.debug-mode .drawer {
+  background: #fffdf9;
+  border-left: 1px solid #e3dbce;
+}

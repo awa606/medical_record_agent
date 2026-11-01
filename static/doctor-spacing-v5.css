@@ -28,7 +28,9 @@ body.doctor-mode .alpha51-workspace .workbench > .column {
 body.doctor-mode .alpha51-workspace .column > .panel-header {
   padding: var(--space-4) var(--space-5);
   gap: var(--space-3);
-  min-height: 64px;
+  min-height: 0;
+  height: auto;
+  overflow: visible;
 }
 
 body.doctor-mode .alpha51-workspace .column > .panel-header h2 {
@@ -39,12 +41,23 @@ body.doctor-mode .alpha51-workspace .column > .panel-header h2 {
 
 body.doctor-mode .alpha51-workspace .column > .panel-header p {
   margin: 0;
+  color: #55665f;
   font-size: 12px;
   line-height: 1.55;
 }
 
+@media (min-width: 1200px) {
+  body.doctor-mode .alpha51-workspace .column > .panel-header {
+    min-height: 100px;
+  }
+
+  body.doctor-mode .alpha51-workspace .column > .panel-header p {
+    display: block;
+  }
+}
+
 body.doctor-mode .alpha51-workspace .field-list {
-  padding: var(--space-3) var(--space-5) 100px;
+  padding: var(--space-3) var(--space-5) 160px;
 }
 
 body.doctor-mode .alpha51-workspace .record-section {
@@ -58,6 +71,7 @@ body.doctor-mode .alpha51-workspace .record-section + .record-section {
 body.doctor-mode .alpha51-workspace .record-section-head {
   padding: var(--space-3) var(--space-4);
   gap: var(--space-3);
+  align-items: center;
 }
 
 body.doctor-mode .alpha51-workspace .record-section-head h3 {
@@ -133,6 +147,111 @@ body.doctor-mode .alpha51-workspace .approval-disclosure {
 body.doctor-mode .alpha51-workspace .approval-disclosure > summary {
   padding: var(--space-3) var(--space-4);
   line-height: 1.55;
+}
+
+body.doctor-mode .alpha51-workspace .review-boundary-notice {
+  margin: var(--space-3) var(--space-5) 0;
+  border-radius: 10px;
+  line-height: 1.6;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header {
+  align-items: center;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header > button,
+body.doctor-mode .alpha51-workspace .column > .panel-header > .panel-header-action {
+  align-self: center;
+  flex: none;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-status,
+body.doctor-mode .alpha51-workspace .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card {
+  overflow: hidden;
+  padding: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card + .field-card {
+  margin-top: var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card .field-head {
+  margin: 0;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card .field-meta {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+/* Controls in the worklist should share one height and baseline. */
+body.doctor-mode .worklist-toolbar input,
+body.doctor-mode .worklist-toolbar select,
+body.doctor-mode .worklist-toolbar button {
+  height: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+body.doctor-mode .dashboard-status-filters button {
+  height: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-block: 0;
+}
+
+body.doctor-mode .dashboard-status-filters button[aria-pressed="true"] {
+  background: #e8f4ef;
+  border-color: #9ac9ba;
+  color: #0d5a53;
+}
+
+body.doctor-mode .dashboard-status-filters button[aria-pressed="true"] strong {
+  color: #0d5a53;
+}
+
+body.doctor-mode .dashboard-hero h2 {
+  margin: 0 0 var(--space-1);
+}
+
+body.doctor-mode .product-dashboard .dashboard-hero {
+  align-items: center;
+}
+
+/* Admin tabs: replace the underline that sat on the panel divider. */
+body.doctor-mode .knowledge-tabs {
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 var(--space-2);
+}
+
+body.doctor-mode .knowledge-tabs button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 14px;
+  min-height: 38px;
+  color: #52627a;
+}
+
+body.doctor-mode .knowledge-tabs button[aria-selected="true"] {
+  border-color: #cfe3da;
+  border-bottom-color: #cfe3da;
+  background: #e8f4ef;
+  color: #0d5a53;
+  font-weight: 700;
+}
+
+body.doctor-mode .knowledge-tabs button:hover:not([aria-selected="true"]) {
+  background: #f5f1e8;
+  color: #27433d;
 }
 
 body.doctor-mode .alpha51-workspace .field-list .preview-notice,

@@ -3227,8 +3227,16 @@ function beginRecordEdit(fieldKey) {
   const key = EDITABLE_FIELD_DEFS.find(([key]) => key === fieldKey)?.[0];
   const input = key ? document.querySelector(`[data-record-field-input="${key}"]`)
     : document.querySelector("[data-record-field-input]");
-  input?.scrollIntoView({ block: "nearest" });
-  input?.focus();
+  if (!key) {
+    // Entering whole-record edit must show the first card header, not a
+    // label-less textarea scrolled under the review notice.
+    const list = document.querySelector("#recordFields");
+    if (list) list.scrollTop = 0;
+    input?.focus({ preventScroll: true });
+  } else {
+    input?.scrollIntoView({ block: "center" });
+    input?.focus();
+  }
 }
 
 function cancelRecordEdit() {

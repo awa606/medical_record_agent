@@ -6,14 +6,14 @@
     <title>AI生成式电子病历辅助系统</title>
     <style>
       :root {
-        --primary: #3b82f6;
-        --primary-dark: #2563eb;
-        --primary-soft: #eff6ff;
-        --bg: #f3f4f6;
-        --surface: #ffffff;
-        --text: #111827;
-        --muted: #475569;
-        --line: #e5e7eb;
+        --primary: #0f625c;
+        --primary-dark: #0a4a46;
+        --primary-soft: #e8f4f0;
+        --bg: #f2efe8;
+        --surface: #fffdf9;
+        --text: #1d2d2c;
+        --muted: #55665f;
+        --line: #e3dbce;
       }
 
       * {
@@ -25,25 +25,27 @@
         min-height: 100vh;
         display: grid;
         place-items: center;
-        background: var(--bg);
+        background:
+          radial-gradient(900px 480px at 90% -10%, rgba(19, 115, 86, 0.10), transparent 60%),
+          linear-gradient(180deg, #f6f3ed 0%, #efebe2 100%);
         color: var(--text);
-        font-family: Arial, "Microsoft YaHei", "PingFang SC", sans-serif;
+        font-family: "Aptos", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       }
 
       main {
         width: min(920px, calc(100vw - 32px));
         border: 1px solid var(--line);
         border-radius: 18px;
-        padding: 36px;
+        padding: 40px;
         background: var(--surface);
-        box-shadow: 0 14px 36px rgba(17, 24, 39, 0.08);
+        box-shadow: 0 24px 58px rgba(45, 52, 48, 0.12);
       }
 
       .eyebrow {
         display: inline-flex;
         align-items: center;
         min-height: 28px;
-        border: 1px solid #bfdbfe;
+        border: 1px solid #c4dfd6;
         border-radius: 999px;
         padding: 4px 10px;
         background: var(--primary-soft);
@@ -53,15 +55,15 @@
       }
 
       h1 {
-        margin: 14px 0 0;
+        margin: 16px 0 0;
         font-size: 30px;
-        letter-spacing: 0;
+        letter-spacing: -0.02em;
       }
 
       p {
-        margin: 10px 0 18px;
+        margin: 10px 0 20px;
         color: var(--muted);
-        line-height: 1.7;
+        line-height: 1.75;
       }
 
       .project-summary {
@@ -76,10 +78,11 @@
       }
 
       .evidence-row span {
+        border: 1px solid #e7dfd2;
         border-radius: 999px;
         padding: 5px 10px;
-        background: #f9fafb;
-        color: #374151;
+        background: #f7f2e8;
+        color: #455a53;
         font-size: 13px;
         font-weight: 700;
       }
@@ -87,7 +90,7 @@
       .entry-actions {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
+        gap: 16px;
       }
 
       a {
@@ -95,12 +98,13 @@
         gap: 8px;
         min-height: 148px;
         align-content: center;
-        border: 1px solid #bfdbfe;
+        border: 1px solid #d9e7df;
         border-radius: 14px;
-        padding: 22px;
-        background: var(--primary-soft);
+        padding: 24px;
+        background: #f8f5ee;
         color: var(--text);
         text-decoration: none;
+        transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
       }
 
       a strong {
@@ -110,16 +114,17 @@
 
       a span {
         color: var(--muted);
-        line-height: 1.55;
+        line-height: 1.6;
       }
 
       a:hover {
-        border-color: var(--primary);
-        box-shadow: 0 10px 22px rgba(59, 130, 246, 0.14);
+        border-color: #83b9a9;
+        box-shadow: 0 12px 26px rgba(15, 98, 92, 0.12);
+        transform: translateY(-1px);
       }
 
       .card-meta {
-        color: #1d4ed8;
+        color: #2c6759;
         font-size: 13px;
         font-weight: 800;
       }

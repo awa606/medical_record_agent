@@ -133,6 +133,9 @@ AUDIT_JS = r"""
     for (let j = i + 1; j < rects.length; j += 1) {
       const a = rects[i], b = rects[j];
       if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+      // The fixed action bar intentionally overlays the scrolling record; a
+      // field beneath it is scroll-reachable and is not an alignment defect.
+      if (a.el.closest('.encounter-action-bar') || b.el.closest('.encounter-action-bar')) continue;
       if (!topmost(a.el, a.r) || !topmost(b.el, b.r)) continue;
       const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
       const h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);

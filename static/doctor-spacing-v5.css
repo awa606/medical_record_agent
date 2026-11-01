@@ -191,6 +191,14 @@ body.doctor-mode .alpha51-workspace .approval-checklist-head > .approval-entry-l
   align-self: start;
 }
 
+body.doctor-mode .alpha51-workspace .approval-readonly-record > div {
+  padding: var(--space-2) var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace .approval-readonly-record > div:nth-child(even) {
+  background: #faf7f1;
+}
+
 body.doctor-mode .alpha51-workspace .approval-item-actions {
   flex-wrap: nowrap;
   gap: var(--space-1);

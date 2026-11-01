@@ -320,7 +320,7 @@ body.doctor-mode .workbench-boundary .environment-dot {
 
 @media (min-width: 900px) {
   body.doctor-mode #workbenchHome > .dashboard-panel:not(.local-registration-panel) {
-    min-height: calc(100dvh - 440px);
+    min-height: calc(100dvh - 340px);
   }
 }
 

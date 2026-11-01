@@ -284,6 +284,32 @@ body.doctor-mode .alpha51-workspace .encounter-patient-banner .patient-identity-
   padding-left: 58px;
 }
 
+/* At tablet landscape width the three-column baseline becomes too tight.
+   Keep transcript + record, and expose the reference column through the
+   existing auxiliary drawer trigger. */
+@media (min-width: 901px) and (max-width: 1080px) {
+  body.doctor-mode .alpha51-workspace .workbench {
+    grid-template-columns: minmax(0, 28fr) minmax(0, 72fr);
+    grid-template-areas: "transcript record";
+  }
+
+  body.doctor-mode .alpha51-workspace .assist-column {
+    display: none;
+  }
+
+  body.doctor-mode .alpha51-workspace .workspace-panel-switches {
+    display: flex;
+  }
+
+  body.doctor-mode .alpha51-workspace #showTranscriptButton {
+    display: none;
+  }
+
+  body.doctor-mode .alpha51-workspace .record-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Avoid cramped mobile cards without changing the grid. */
 @media (max-width: 680px) {
   body.doctor-mode .alpha51-workspace .field-list {

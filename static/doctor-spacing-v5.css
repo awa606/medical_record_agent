@@ -101,8 +101,8 @@ body.doctor-mode .alpha51-workspace #recordFields .field-head strong {
 body.doctor-mode .alpha51-workspace #recordFields .field-value {
   margin-top: var(--space-2);
   color: #2e4740;
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 17px;
+  line-height: 1.65;
 }
 
 body.doctor-mode .alpha51-workspace #recordFields .field-meta {

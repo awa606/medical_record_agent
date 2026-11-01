@@ -114,12 +114,21 @@ AUDIT_JS = r"""
       });
     }
   }
+  const clipped = (el, r) => {
+    for (let parent = el.parentElement; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent);
+      if (!['auto', 'scroll', 'hidden'].includes(style.overflowY)) continue;
+      const clip = parent.getBoundingClientRect();
+      if (r.bottom <= clip.top + 1 || r.top >= clip.bottom - 1) return true;
+    }
+    return false;
+  };
   const rects = [...scope.querySelectorAll('button, a[href], input, select, textarea, [role="button"]')]
     .filter((el) => {
       const r = el.getBoundingClientRect();
       const s = getComputedStyle(el);
       return r.width > 2 && r.height > 2 && s.visibility !== 'hidden' && s.display !== 'none'
-        && !el.closest('[hidden]') && !el.closest('details:not([open])');
+        && !el.closest('[hidden]') && !el.closest('details:not([open])') && !clipped(el, r);
     })
     .map((el) => ({ el, r: el.getBoundingClientRect() }));
   const topmost = (el, r) => {
@@ -334,6 +343,7 @@ def run() -> dict:
 
             page.set_viewport_size({"width": 1280, "height": 800})
             page.wait_for_timeout(400)
+            page.evaluate("document.querySelector('#recordFields').scrollTop = 0")
             audit(page, "workspace_1280", steps)
             page.set_viewport_size({"width": 1024, "height": 768})
             page.wait_for_timeout(400)

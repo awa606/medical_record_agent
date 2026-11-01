@@ -297,6 +297,27 @@ body.doctor-mode .encounter-worklist {
   padding: 0 var(--space-5) var(--space-4);
 }
 
+body.doctor-mode .workbench-boundary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 var(--space-5);
+  padding: var(--space-3) 0 var(--space-4);
+  border-top: 1px solid #eee5d8;
+  color: #55665f;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+body.doctor-mode .workbench-boundary p {
+  margin: 0;
+}
+
+body.doctor-mode .workbench-boundary .environment-dot {
+  flex: none;
+  margin-top: 5px;
+}
+
 body.doctor-mode .dashboard-panel > .panel-header {
   padding-bottom: var(--space-3);
 }

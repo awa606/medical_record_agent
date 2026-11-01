@@ -3082,7 +3082,9 @@ function renderWorkflow() {
   requestAnimationFrame(centerWorkflowStep);
 }
 
-window.addEventListener("resize", () => requestAnimationFrame(centerWorkflowStep), { passive: true });
+if (typeof window.addEventListener === "function") {
+  window.addEventListener("resize", () => requestAnimationFrame(centerWorkflowStep), { passive: true });
+}
 
 function fieldStatus(field, key) {
   if (key === "treatment_plan") {

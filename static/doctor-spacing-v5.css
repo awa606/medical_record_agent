@@ -534,6 +534,8 @@ body.doctor-mode .alpha51-workspace .encounter-patient-banner .patient-identity-
     padding: 0 var(--space-3) var(--space-1);
     scrollbar-width: thin;
     scroll-behavior: smooth;
+    mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
   }
 
   body.doctor-mode .workflow-step {

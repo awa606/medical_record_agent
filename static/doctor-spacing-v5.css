@@ -318,9 +318,15 @@ body.doctor-mode .workbench-boundary .environment-dot {
   margin-top: 5px;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px) and (min-height: 720px) {
   body.doctor-mode #workbenchHome > .dashboard-panel:not(.local-registration-panel) {
     min-height: calc(100dvh - 340px);
+  }
+}
+
+@media (max-height: 680px) {
+  body.doctor-mode .product-main {
+    overflow-y: auto;
   }
 }
 

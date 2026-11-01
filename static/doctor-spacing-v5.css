@@ -151,7 +151,8 @@ body.doctor-mode .alpha51-workspace #recordFields .field-meta {
 }
 
 body.doctor-mode .alpha51-workspace .record-section-status {
-  padding: 4px 12px;
+  min-height: 26px;
+  padding: 2px 10px;
   font-size: 11px;
   line-height: 1.4;
 }

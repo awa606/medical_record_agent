@@ -143,3 +143,33 @@ body.debug-mode .drawer {
   background: #fffdf9;
   border-left: 1px solid #e3dbce;
 }
+
+@media (max-width: 680px) {
+  body.debug-mode .app-shell {
+    padding: 12px;
+  }
+
+  body.debug-mode .tool-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px;
+  }
+
+  body.debug-mode .tool-strip button {
+    min-height: 38px;
+    padding: 0 6px;
+    font-size: 13px;
+  }
+
+  body.debug-mode .steps {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  body.debug-mode .step {
+    flex: 0 0 106px;
+  }
+}

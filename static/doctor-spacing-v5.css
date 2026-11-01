@@ -275,26 +275,6 @@ body.doctor-mode .dashboard-panel > .panel-header {
   padding-bottom: var(--space-3);
 }
 
-body.doctor-mode .product-dashboard .dashboard-panel > .panel-header {
-  min-height: 0;
-  padding: var(--space-4) var(--space-5);
-  align-items: center;
-}
-
-body.doctor-mode .product-dashboard .dashboard-panel > .panel-header p {
-  display: block;
-  margin: var(--space-1) 0 0;
-  color: #55665f;
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-@media (max-width: 680px) {
-  body.doctor-mode .product-dashboard .dashboard-panel > .panel-header p {
-    display: none;
-  }
-}
-
 /* Keep the patient bar compact but align its internal cells. */
 body.doctor-mode .alpha51-workspace .encounter-patient-banner {
   padding-inline: var(--space-4);

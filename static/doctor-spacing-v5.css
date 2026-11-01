@@ -73,6 +73,23 @@ body.doctor-mode .alpha51-workspace .field-list {
   padding: var(--space-3) var(--space-5) 160px;
 }
 
+body.doctor-mode .alpha51-workspace .record-empty-state {
+  width: 100%;
+}
+
+body.doctor-mode .alpha51-workspace .field-list:has(.record-empty-state) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: var(--space-4);
+}
+
+@media (min-width: 900px) {
+  body.doctor-mode .alpha51-workspace .field-list:has(.record-empty-state) {
+    min-height: calc(100dvh - 380px);
+  }
+}
+
 body.doctor-mode .alpha51-workspace .record-section {
   margin: 0 0 var(--space-4);
 }

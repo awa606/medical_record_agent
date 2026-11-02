@@ -84,7 +84,7 @@ def test_readable_uncovered_medication_requires_saved_correction_to_sign(tmp_pat
             expect(card.locator(".field-value")).to_contain_text(medication)
             panel = page.locator(".approval-disclosure")
             if panel.get_attribute("open") is None:
-                panel.locator("summary").click()
+                panel.locator(":scope > .approval-checklist-head").click()
             panel.locator("[data-approval-confirm-regular]").click()
             for selector in ('[data-approval-action="accept_missing"]', '[data-approval-action="confirm_candidate"]',
                              "[data-approval-risk-key]"):

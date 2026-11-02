@@ -56,7 +56,7 @@ def test_independent_cookie_new_patients_repeat_visit_and_source_reopen():
             page.locator(f'#dashboardEncounterList [data-restore-encounter="{latest["id"]}"]').click()
             expect(page.locator("#transcriptHeading")).to_have_text("输入原文")
             expect(page.locator("#transcriptList")).to_contain_text("38.2")
-            expect(page.locator(".approval-disclosure summary")).to_contain_text("医生分项审核")
+            expect(page.locator(".approval-disclosure > .approval-checklist-head")).to_contain_text("医生分项审核")
             page.click("#logoutButton")
             assert context.request.get(demo.base_url + "/api/auth/me").status == 200
             assert context.request.get(test.base_url + "/api/auth/me").status == 401

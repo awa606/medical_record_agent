@@ -8070,7 +8070,7 @@ async function confirmFields() {
       appState.approvalDisclosureOpen = true;
       renderFields();
       renderFooter();
-      const summary = document.querySelector('.approval-disclosure summary');
+      const summary = document.querySelector('.approval-disclosure > .approval-checklist-head');
       const list = $("recordFields");
       if (list) list.scrollTop = 0;
       summary?.focus({ preventScroll: true });

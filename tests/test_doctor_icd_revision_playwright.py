@@ -53,7 +53,7 @@ def test_code_edit_requires_saved_revision_before_approval_and_pdf():
             expect(page.locator('[data-field="preliminary_diagnosis"]')).to_contain_text("R50.9")
             disclosure = page.locator(".approval-disclosure")
             if disclosure.get_attribute("open") is None:
-                disclosure.locator("summary").click()
+                disclosure.locator(":scope > .approval-checklist-head").click()
             page.locator("[data-approval-confirm-regular]").click()
             for attr, value in [("data-approval-action","accept_missing"), ("data-approval-action","confirm_candidate")]:
                 buttons = disclosure.locator(f'button[{attr}="{value}"]:visible')

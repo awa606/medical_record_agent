@@ -1325,6 +1325,10 @@ function renderJson(element, value) {
 
 function setBusy(nextBusy, message = "") {
   appState.busy = nextBusy;
+  if (appState.recordEditMode) {
+    document.querySelectorAll("#recordFields [data-record-field-input], #recordFields [data-diagnosis-code-index]")
+      .forEach(editor => { editor.readOnly = nextBusy; });
+  }
   document.querySelectorAll("button").forEach((button) => {
     if (button.id !== "closeDrawerButton" && button.dataset.busyAllowed !== "true") {
       button.disabled = nextBusy;
@@ -3246,6 +3250,7 @@ function beginRecordEdit(fieldKey) {
   }
   if (!appState.recordEditMode) {
     appState.recordEditBaseline = cloneRecordFields(appState.currentRecordFields);
+    appState.currentRecordFields = cloneRecordFields(appState.currentRecordFields);
     appState.recordEditMode = true;
     appState.recordEditDirty = false;
     appState.recordEditConflict = null;
@@ -4324,7 +4329,7 @@ function renderFields() {
     `
       : "";
     const valueMarkup = isEditing
-      ? `<label class="record-field-editor"><span class="sr-only">编辑${escapeHtml(title)}</span><textarea data-record-field-input="${escapeHtml(key)}" rows="4" placeholder="本次未采集可留空">${escapeHtml(value)}</textarea></label>`
+      ? `<label class="record-field-editor"><span class="sr-only">编辑${escapeHtml(title)}</span><textarea data-record-field-input="${escapeHtml(key)}" rows="4" ${appState.busy ? "readonly" : ""} placeholder="本次未采集可留空">${escapeHtml(value)}</textarea></label>`
       : `<div class="field-value">${value ? escapeHtml(value) : `<span class="draft-placeholder" aria-hidden="true">&nbsp;</span>`}</div>`;
     cardHtmlByKey.set(key, `
       <article class="field-card ${status.key} ${fieldWeightClass(key)} ${highlightClass} ${appState.viewMode === "doctor" ? "doctor-summary-card" : ""} ${isApprovedDisplay && !isEditing ? "readonly-field" : ""} ${isEditing ? "editing" : ""} ${value ? "has-value" : "is-empty"}" data-field="${key}" aria-labelledby="record-field-heading-${escapeHtml(key)}" tabindex="-1">
@@ -4431,7 +4436,7 @@ function renderFields() {
     }).join("");
     const codeEditors = id === "management" && isEditing ? (fields.candidate_diagnoses || []).map((diagnosis, index) =>
       `<label class="diagnosis-code-input">${escapeHtml(diagnosis.name)} · ICD-10
-        <input type="text" data-diagnosis-code-index="${index}" value="${escapeHtml(diagnosis.icd10_code || "")}" placeholder="如 J06.9">
+        <input type="text" data-diagnosis-code-index="${index}" value="${escapeHtml(diagnosis.icd10_code || "")}" ${appState.busy ? "readonly" : ""} placeholder="如 J06.9">
       </label>`).join("") : "";
     const extra = id === "management" ? diagnoses + codeEditors : "";
     if (!inner && !extra) return "";
@@ -6793,12 +6798,15 @@ function resetTaskState({ keepAsr = false, keepEncounter = false } = {}) {
   }
 }
 
-async function refreshTask(taskId, taskFromEvent = null, { refreshEncounter = true } = {}) {
+async function refreshTask(taskId, taskFromEvent = null, { refreshEncounter = true, editorRead = false } = {}) {
+  // A background task/stream response must never replace a doctor's open draft.
+  const draftOwnsFields = () => !editorRead && appState.recordEditMode && String(taskId) === String(appState.currentTaskId);
+  if (draftOwnsFields()) return;
   const previousApprovalRevisionKey = appState.approvalRevisionId;
   const context = captureReadContext();
   const sequence = ++appState.taskReadSequence;
   const task = taskFromEvent || await readApi(`/api/tasks/${taskId}`);
-  if (!isCurrentRead(context) || sequence !== appState.taskReadSequence) return;
+  if (draftOwnsFields() || !isCurrentRead(context) || sequence !== appState.taskReadSequence) return;
   appState.currentTask = task;
   appState.currentTaskId = task.id || task.task_id || taskId;
   resetRecordPreview();
@@ -6807,7 +6815,7 @@ async function refreshTask(taskId, taskFromEvent = null, { refreshEncounter = tr
   appState.taskStatus = task.current_stage || task.status || appState.taskStatus;
   const result = task.result_json || {};
   if (!appState.roleReviewDirty && (result.conversation_text || result.asr_source || task.input_text)) restoreTaskSource(task);
-  appState.currentRecordFields = result.fields || appState.currentRecordFields;
+  if (result.fields) appState.currentRecordFields = appState.recordEditMode ? cloneRecordFields(result.fields) : result.fields;
   appState.currentDraft = result.draft || appState.currentDraft;
   appState.currentSafetyCheck = result.safety_check || appState.currentSafetyCheck;
   appState.currentQualityReport = result.quality_report || appState.currentQualityReport;
@@ -6829,7 +6837,7 @@ async function refreshTask(taskId, taskFromEvent = null, { refreshEncounter = tr
     if (!isCurrentRead(loadedContext) || sequence !== appState.taskReadSequence) return;
     if (selectedEncounterId() === encounterId) appState.currentEncounter = encounter;
   }
-  renderAll();
+  if (!appState.recordEditMode) renderAll();
   // Evidence and execution traces are independent, read-only enhancements.
   void Promise.allSettled([
     refreshKnowledgeEvidence(taskId),
@@ -6838,7 +6846,7 @@ async function refreshTask(taskId, taskFromEvent = null, { refreshEncounter = tr
       if (isCurrentRead(loadedContext) && sequence === appState.taskReadSequence) appState.currentSteps = steps;
     }),
   ]).then(() => {
-    if (isCurrentRead(loadedContext) && sequence === appState.taskReadSequence) renderAll();
+    if (isCurrentRead(loadedContext) && sequence === appState.taskReadSequence) renderDebug();
   });
 }
 
@@ -7939,11 +7947,12 @@ async function saveDraftReview() {
     if (!revision?.revision_id || !revision?.content_hash) {
       throw new Error("Unable to verify the current record revision; refresh and retry.");
     }
+    const submittedFields = cloneRecordFields(appState.currentRecordFields);
     appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        fields: appState.currentRecordFields,
+        fields: submittedFields,
         expected_revision_id: revision.revision_id,
         expected_content_hash: revision.content_hash,
         manual_takeover_fields: Object.entries(appState.recordFieldResolutionModes).filter(([, mode]) => mode === "doctor_entry").map(([key]) => key),
@@ -7951,7 +7960,10 @@ async function saveDraftReview() {
       }),
     });
     committed = true;
-    await refreshTask(appState.currentTaskId, appState.currentTask);
+    // Only changes after the acknowledged POST belong in the recovery buffer.
+    appState.recordEditBaseline = cloneRecordFields(appState.currentTask.result_json?.fields || submittedFields);
+    appState.recordEditDirty = false;
+    await refreshTask(appState.currentTaskId, appState.currentTask, {editorRead: true});
     if (!await refreshExportReadiness()) throw new Error("保存已完成，但版本状态读取失败");
     resetRecordEditState();
     appState.recordEditRecovery = null;
@@ -7992,7 +8004,7 @@ async function reloadLatestRecordRevision() {
   const local = Object.fromEntries(keys.map((key) => [key, structuredClone(appState[key])]));
   setBusy(true, "正在加载最新病历版本...");
   try {
-    await refreshTask(taskId);
+    await refreshTask(taskId, null, {editorRead: true});
     if (!await refreshExportReadiness()) throw new Error("最新版本状态读取失败");
     if (appState.currentTaskId !== taskId) return;
     appState.recordEditRecovery = local.recordEditDirty ? {

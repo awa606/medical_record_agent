@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-02T11:06:23.454Z`
-- Source hash: `3ba8c8b7f460cc0d88f5efa2215ae1217d7c2661907d639ebbfb6da3339f5f3c`
+- Updated at: `2026-11-02T12:14:01.383Z`
+- Source hash: `b79cc1c8278beb1d40d9399ea31866ea038cc0553276d02f4338d5914b61ca60`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@9ec08e537eb445bb5b5480cb8d9cfe8d85f463cc`
+- Repo: `codex/ui-hospital-record-v1@c03a56cf062099ab94477e22bafe4d994a4478fe`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
-- Forecast Alpha Exit: **26324为固定合成原文的已保存DeepSeek响应回放，E-2接口审核导出及新目录恢复通过，E-1原始字段与未审核状态保留。26320原展示基线保留；实际浏览器按钮、缩放及完整三路径未齐，5.1仍VERIFY。**
+- Forecast Alpha Exit: **26326为独立1.9.2-r3提示精简预览，普通横幅按需、待办先核对且零批准请求，最终仍明确签署；38项定向及25项重叠相关检查分列。health/ready与三静态资源SHA通过，后端及固定首响应回放机制不变。原26324演示入口和桌面保留，实际界面、最终三路径等门禁未齐，5.1继续VERIFY。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 用药漏记审核保护与26324固定响应演示候选** — `VERIFY`
+**5.1 · 医生审核提示与操作精简** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 补26324最终同版本真实按钮和截图验收；5.1门禁齐全后才进入5.3。
+- Single next task: 补26326受影响审核按钮、折叠、焦点和实际截图验收，通过后再决定替换26324；5.1门禁齐全后才进入5.3。
 - Parallel waiting task: 硬件1.1–1.4继续延期；本地模型漏提、字段混放及自我纠正质量独立保留，不由界面结果替代。
 
 ## Manual Actions
 
-- 本地浏览器工具当前被工作设置禁用，连接原因未确认；网页实景验收待恢复，不能用HTTP流程替代。
+- 本地浏览器工具此前被工作设置禁用，当前实际按钮、截图与缩放仍未验证；不以Node、HTTP或替代浏览器绕过。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

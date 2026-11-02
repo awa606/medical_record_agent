@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-02T12:14:01.383Z`
-- Source hash: `b79cc1c8278beb1d40d9399ea31866ea038cc0553276d02f4338d5914b61ca60`
+- Updated at: `2026-11-02T12:55:41.647Z`
+- Source hash: `5fb543980e541c9958adb1c5de601313451725ec840b1fa33c30be1619de078d`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@c03a56cf062099ab94477e22bafe4d994a4478fe`
+- Repo: `codex/ui-hospital-record-v1@372c99706e4d51629a4867108332985ba8013593`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
-- Forecast Alpha Exit: **26326为独立1.9.2-r3提示精简预览，普通横幅按需、待办先核对且零批准请求，最终仍明确签署；38项定向及25项重叠相关检查分列。health/ready与三静态资源SHA通过，后端及固定首响应回放机制不变。原26324演示入口和桌面保留，实际界面、最终三路径等门禁未齐，5.1继续VERIFY。**
+- Forecast Alpha Exit: **阶段A修复审核清单标题歧义，3项隔离Mock及10项提示保护检查通过，原CI1754通过/3失败/4跳过与后续未执行保留。自然稿40发言行/1107汉字及七字段核对表已锁定；26320为Mock、26324/26326为固定回放，26327真实在线准备中，最终完整CI、音频与恢复尚待执行。16项99h、5.1VERIFY与原Gate不变，不预称稳定试用版。**
 
 ## Progress
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 补26326受影响审核按钮、折叠、焦点和实际截图验收，通过后再决定替换26324；5.1门禁齐全后才进入5.3。
+- Single next task: 完成26327真实FunASR＋DeepSeek候选的新自然对话、授权音频与核对保存审核导出验收，首次输出、规则处理和医生修订分列；固定回放不替代任意新输入，5.1齐全后才进入5.3。
 - Parallel waiting task: 硬件1.1–1.4继续延期；本地模型漏提、字段混放及自我纠正质量独立保留，不由界面结果替代。
 
 ## Manual Actions
 
-- 本地浏览器工具此前被工作设置禁用，当前实际按钮、截图与缩放仍未验证；不以Node、HTTP或替代浏览器绕过。
+- 当前新Edge验收页已可读取，旧标签曾超时；物理麦克风由用户后续用同稿录音，新候选实际显示及流程未验项继续明确记录，不要求重复旧病例。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

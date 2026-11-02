@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-02T14:28:37.308Z`
-- Source hash: `1a0c6d2b48675264893f8180cf506f8be94c5a175df6b56d28ca7234e09faa73`
+- Updated at: `2026-11-02T16:42:26.763Z`
+- Source hash: `7c5cf623b9f81edce879e279fcdeab300b3c50bb32d629d66a4d4914f331702f`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@44115d881cc3c3e1c087fe7cf5a6f86242e26269`
+- Repo: `codex/ui-hospital-record-v1@f04e5aa38a1f37b4f315b3e0b1e2191b157cecaf`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
-- Forecast Alpha Exit: **阶段B真实在线E-1仅生成1次：R1主诉时间和既往史有误，现病史冲突隔离；人工R2/R3后批准R3并导出PDF，历史对照和文件核对待补。知识可选包缺失500窄范围FTS5修复5测试通过，文本表单Grid修复2测试通过，均待新镜像按钮复验。CI41451807794的1757/4跳过/30子测试通过不代表整体成功，axe320px一节点失败未定位且后续步骤跳过。正式16项99h、5.1VERIFY与原Gate不变，不预写稳定试用版。**
+- Forecast Alpha Exit: **运行源码44115d88：E1文本人工R3与E2音频人工R2的真实按钮闭环、PDF读取、历史和播放恢复完成；本轮2次生成0.025166元。CI41463222347全部通过1761/4跳过/30子测试，查看器11与原型76另列。知识14项API管理检查通过，成人适用性/排序FAIL；角色统计、首稿时间/字段/用药遗漏及PDFP2保留。26328同SHA新目录API恢复、外连阻断ready503及原26327健康就绪恢复通过，11表及账本未变；不是断网生成、完整离线发行或恢复UI三路径。正式16项99h、5.1VERIFY与原Gate不变，5.3未开始。**
 
 ## Progress
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 以新实质SHA更新26327薄层镜像并保留其独立病例，补知识FTS5与文本面板实际按钮、历史版本对照和PDF内容读取；继续定位CI320px对比度节点，随后完成授权音频、查看器和同版本恢复。不因人工R3批准导出计为首次提取正确，5.1齐全后才进入5.3。
+- Single next task: 5.1优先处理本轮已复现的口语用药遗漏：以保留的E2首次响应建立规则正反例，区分模型正文漏写与规则漏检，禁止从引文自动补造正文；不重复已通过CI和两条人工修订按钮流程，修复后仅补受影响验收。知识成人排序、人工角色统计、PDF分页及剩余发布门禁分别保留。
 - Parallel waiting task: 硬件1.1–1.4继续延期；本地模型漏提、字段混放及自我纠正质量独立保留，不由界面结果替代。
 
 ## Manual Actions
 
-- 用户后续可用已交付同稿测试物理麦克风；当前文本流程由工程执行，授权音频、实际显示、恢复未验项继续保留，不要求用户重复旧病例。
+- 用户可用已交付约5分钟自然对话稿自行测试新物理录音；本轮未计新麦克风及实际三档缩放，不要求重做已有授权音频。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

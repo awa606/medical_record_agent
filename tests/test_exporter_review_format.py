@@ -1,4 +1,5 @@
 from datetime import datetime
+import hashlib
 from pathlib import Path
 
 import pymupdf
@@ -21,8 +22,9 @@ def _export(tmp_path, monkeypatch, fields, *, approved=True):
         "safety_check": safety.model_dump(),
         "approved": approved,
     })
-    assert set(paths) == {"pdf_path"}, paths
+    assert set(paths) == {"pdf_path", "pdf_sha256"}, paths
     pdf_path = Path(paths["pdf_path"])
+    assert paths["pdf_sha256"] == hashlib.sha256(pdf_path.read_bytes()).hexdigest()
     assert pdf_path.read_bytes()[:5] == b"%PDF-"
     assert pdf_path.stat().st_size > 800
     paragraphs = _record_paragraphs(fields, safety, approved=approved)
@@ -68,6 +70,19 @@ def test_pdf_includes_doctor_name_when_provided(tmp_path, monkeypatch):
         text = "".join(document[0].get_text().split())
     assert "接诊医师" in text
     assert "李医生" in text
+
+
+def test_unadopted_reference_does_not_become_a_signed_treatment_opinion(tmp_path, monkeypatch):
+    fields = MedicalRecordFields(
+        treatment_plan=MedicalField(value="示例参考文字"),
+        treatment_notes=MedicalField(missing=True, confirmed_by_doctor=True, doctor_review_status="missing_accepted"),
+    )
+    _, _, path = _export(tmp_path, monkeypatch, fields)
+    with pymupdf.open(path) as doc:
+        text = "".join(page.get_text() for page in doc)
+    opinion = text.split("治疗意见", 1)[1]
+    assert "示例参考文字" not in text
+    assert "医生已接受本次缺失" in opinion
 
 
 def test_pdf_short_generated_record_with_full_meta_fits_one_page(tmp_path):

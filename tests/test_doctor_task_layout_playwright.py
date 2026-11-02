@@ -58,6 +58,10 @@ def test_historical_empty_display_and_strict_text_roles_do_not_mutate_history():
                 for (const [key] of EDITABLE_FIELD_DEFS) s.currentRecordFields[key] = {value:null,hint:'null',missing:true,status:'missing',source_spans:[]};
                 s.currentRecordFields.candidate_diagnoses=[];
                 s.currentTask.result_json.fields=s.currentRecordFields;
+                // A restored historical task carries both its revision and the matching readiness.
+                const revision = currentRevisionInfo();
+                s.currentTask.result_json.record_revision = {id:revision.revisionId,
+                    revision_no:revision.revisionNumber, content_hash:revision.contentHash};
                 s.taskStatus='done'; s.currentTask.current_stage='doctor_review';
                 s.currentExportReadiness=null; s.approvalRegularFieldsConfirmed=false;
                 const raw=JSON.stringify(s.currentRecordFields); renderAll(); return raw;
@@ -70,7 +74,9 @@ def test_historical_empty_display_and_strict_text_roles_do_not_mutate_history():
             page.evaluate("""() => {
                 const s=window.__MRA_APP_STATE__;
                 s.taskStatus='exported';s.currentTask.current_stage='exported';
-                s.currentExportReadiness={approved:true,can_export:true,revision_id:1,content_hash:'fixture'};
+                const revision = currentRevisionInfo(null);
+                s.currentExportReadiness={task_id:s.currentTaskId, ready:true,
+                    revision_id:revision.revisionId, content_hash:revision.contentHash};
                 renderAll();
             }""")
             expect(page.locator('#reviewStatus')).to_have_text('已导出')
@@ -179,13 +185,13 @@ def test_visual_review_fixture_clears_previous_task_for_empty_and_recording_scen
             page.locator('#workspaceReviewTools summary').click()
             page.select_option('#workspaceReviewScene', 'draft')
             expect(page.locator('[data-field="chief_complaint"] .field-value')).to_have_text('发热伴咳嗽、咽痛2天')
-            expect(page.locator('[data-field="preliminary_diagnosis"] .field-status-text')).to_have_text('待确认')
+            expect(page.locator('[data-field="preliminary_diagnosis"] .field-status-text')).to_have_text('候选待确认')
             page.locator('#workspaceReviewTools summary').click()
             page.select_option('#workspaceReviewScene', 'approved')
             expect(page.locator('[data-field="preliminary_diagnosis"] .field-title')).to_have_text('候选诊断（医生已审核）')
             expect(page.locator('[data-field="preliminary_diagnosis"] .field-status-text')).to_have_text('已处理')
             page.evaluate("appState.currentRecordFields.candidate_diagnoses[0].doctor_review_status='pending';renderAll()")
-            expect(page.locator('[data-field="preliminary_diagnosis"] .field-status-text')).to_have_text('待确认')
+            expect(page.locator('[data-field="preliminary_diagnosis"] .field-status-text')).to_have_text('未记录独立确认')
             page.evaluate("""() => {
                 appState.currentRecordFields.candidate_diagnoses[0].doctor_review_status='candidate_confirmed';
                 appState.currentExportReadiness={approved:false,can_export:false};
@@ -193,7 +199,8 @@ def test_visual_review_fixture_clears_previous_task_for_empty_and_recording_scen
                 appState.currentEncounter.status='draft';renderAll();
             }""")
             expect(page.locator('[data-field="preliminary_diagnosis"] .field-title')).to_have_text('候选诊断（待医生确认）')
-            expect(page.locator('[data-field="preliminary_diagnosis"] .field-status-text')).to_have_text('待确认')
+            expect(page.locator('[data-field="preliminary_diagnosis"] .field-status-text')).to_have_text('候选已处理')
+            expect(page.locator('[data-field="preliminary_diagnosis"] .field-title')).not_to_contain_text('医生已审核')
             browser.close()
     finally:
         server.close()

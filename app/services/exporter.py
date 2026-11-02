@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import os
+import tempfile
 from datetime import datetime
 from html import escape
 from pathlib import Path
@@ -340,7 +342,8 @@ def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | Non
     marital = value_of("marital_history")
     family = value_of("family_history")
     auxiliary = value_of("auxiliary_exam")
-    treatment = value_of("treatment_notes") or value_of("treatment_plan")
+    # A reference suggestion is not a doctor's recorded treatment decision.
+    treatment = value_of("treatment_notes")
 
     present_text = present or "未提及/待补充"
     if accompanying:
@@ -380,7 +383,7 @@ def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | Non
         ("诊断", diagnosis_text, "AI 候选诊断必须由医生确认，不构成诊断结论。"),
         (
             "治疗意见",
-            treatment or "待医生补充。",
+            treatment or missing_note("treatment_notes") or "待医生补充。",
             "医生填写处理意见；本系统不自动生成处方或治疗建议。" if not treatment else "医生已填写处理意见，处方与用药需另行审核。",
         ),
     ]
@@ -494,7 +497,14 @@ def render_pdf(
     return path
 
 
-def export_record(task_id: int, result: dict[str, Any], *, doctor_name: str | None = None) -> dict[str, str]:
+def export_record(
+    task_id: int,
+    result: dict[str, Any],
+    *,
+    doctor_name: str | None = None,
+    revision_id: int | None = None,
+    approval_id: int | None = None,
+) -> dict[str, str]:
     fields = MedicalRecordFields.model_validate(result["fields"])
     safety_check = SafetyCheckResult.model_validate(result["safety_check"])
     # The API verifies the live approval and Revision before entering here.
@@ -503,19 +513,30 @@ def export_record(task_id: int, result: dict[str, Any], *, doctor_name: str | No
     encounter_id = result.get("encounter_id")
     output_dir = Path(os.environ.get("MEDICAL_RECORD_AGENT_OUTPUT_DIR", DEFAULT_OUTPUT_DIR))
     output_dir.mkdir(parents=True, exist_ok=True)
-    pdf_path = output_dir / f"task_{task_id}_medical_record.pdf"
-    render_pdf(
-        pdf_path,
-        fields,
-        safety_check,
-        approved=approved,
-        task_id=task_id,
-        encounter_id=int(encounter_id) if encounter_id is not None else None,
-        department=result.get("encounter_department"),
-        encounter_created_at=result.get("encounter_created_at"),
-        patient_deidentified_id=result.get("patient_deidentified_id"),
-        patient_display_name=result.get("patient_display_name"),
-        doctor_name=doctor_name or result.get("doctor_name"),
-    )
-    return {"pdf_path": str(pdf_path)}
+    if (revision_id is None) != (approval_id is None):
+        raise ValueError("A signed export requires both a revision and an approval")
+    binding = f"r{revision_id}_a{approval_id}" if revision_id is not None else "preview"
+    # Exclusive reservation also protects concurrent exports of the same approval.
+    fd, path = tempfile.mkstemp(dir=output_dir, prefix=f"task_{task_id}_{binding}_", suffix="_medical_record.pdf")
+    os.close(fd)
+    pdf_path = Path(path)
+    try:
+        render_pdf(
+            pdf_path,
+            fields,
+            safety_check,
+            approved=approved,
+            task_id=task_id,
+            encounter_id=int(encounter_id) if encounter_id is not None else None,
+            department=result.get("encounter_department"),
+            encounter_created_at=result.get("encounter_created_at"),
+            patient_deidentified_id=result.get("patient_deidentified_id"),
+            patient_display_name=result.get("patient_display_name"),
+            doctor_name=doctor_name or result.get("doctor_name"),
+        )
+        digest = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
+    except Exception:
+        pdf_path.unlink(missing_ok=True)
+        raise
+    return {"pdf_path": str(pdf_path), "pdf_sha256": digest}
 

@@ -47,7 +47,11 @@
     }
     if (kind === 'approved') {
       s.taskStatus = 'exported'; s.currentTask.current_stage = 'exported'; s.currentEncounter.status = 'exported';
-      s.currentExportReadiness = {revision_id: 1, revision_number: 2, content_hash:'visual-only', approved:true, can_export:true};
+      const revision = currentRevisionInfo();
+      s.currentTask.result_json.record_revision = {id:revision.revisionId,
+        revision_no:revision.revisionNumber, content_hash:revision.contentHash};
+      s.currentExportReadiness = {task_id:s.currentTaskId, revision_id:revision.revisionId,
+        revision_number:revision.revisionNumber, content_hash:revision.contentHash, ready:true};
       for (const [key] of EDITABLE_FIELD_DEFS) { const f=s.currentRecordFields[key]; if(f) {f.doctor_review_status=f.value?'content_confirmed':'missing_accepted';f.confirmed_by_doctor=Boolean(f.value);} }
       for (const diagnosis of s.currentRecordFields.candidate_diagnoses || []) {
         diagnosis.doctor_review_status = 'candidate_confirmed';

@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from pathlib import Path
 
@@ -354,7 +355,7 @@ class TaskApiTests(unittest.TestCase):
         self.assertEqual(downloaded.status_code, 200, downloaded.text)
         self.assertEqual(downloaded.headers["content-type"], "application/pdf")
         self.assertIn(
-            f"task_{task_id}_medical_record.pdf",
+            f"task_{task_id}_R1_export_1_medical_record.pdf",
             downloaded.headers.get("content-disposition", ""),
         )
         self.assertEqual(downloaded.content[:5], b"%PDF-")
@@ -412,6 +413,61 @@ class TaskApiTests(unittest.TestCase):
 
         self.assertIn(response.status_code, {400, 422})
         self.assertIsNone(get_active_approval_for_task(task_id))
+
+    def test_extended_clinical_conflict_cannot_be_signed_or_exported(self):
+        from app.db import list_export_events_for_task
+        fields = self._custom_fields(include_candidate=False)
+        fields.family_history = MedicalField(value="父亲有高血压", missing=False, status="conflicting")
+        task_id = self._create_reviewed_task(fields)
+        client = TestClient(app)
+        doctor = create_user(client, username="extended-review")
+        set_task_owner(task_id, doctor["id"])
+        login_as_user(client, username="extended-review")
+        payload = self._minimal_payload(task_id)
+        refused = client.post(f"/api/tasks/{task_id}/approve", json=payload)
+        self.assertEqual(refused.status_code, 409, refused.text)
+        self.assertIn("家族史存在证据冲突", refused.text)
+        self.assertFalse(client.get(f"/api/tasks/{task_id}/export-readiness").json()["ready"])
+        self.assertEqual(client.post(f"/api/tasks/{task_id}/export").status_code, 400)
+        self.assertIsNone(get_active_approval_for_task(task_id))
+        self.assertEqual(list_export_events_for_task(task_id), [])
+        # Extended history is outside the seven-field grounding contract. A
+        # client must not resolve it by merely changing its claimed citation.
+        current = client.get(f"/api/tasks/{task_id}").json()["result_json"]["fields"]
+        current["family_history"]["value"] = "已修正"
+        current["family_history"]["source_spans"] = [{"text":"不存在的引用"}]
+        attempt = client.post(f"/api/tasks/{task_id}/review", json={
+            "fields": current, "source_corrected_fields": ["family_history"],
+            "expected_revision_id": payload["revision_id"], "expected_content_hash": payload["content_hash"],
+        })
+        self.assertEqual(attempt.status_code, 422)
+        self.assertEqual(read_task(task_id)["current_record_revision_id"], payload["revision_id"])
+        # An explicit doctor entry can be signed only after a new revision.
+        current["family_history"]["value"] = "医生补录：家族史待进一步核对"
+        saved = client.post(f"/api/tasks/{task_id}/review", json={
+            "fields": current, "manual_takeover_fields": ["family_history"],
+            "expected_revision_id": payload["revision_id"], "expected_content_hash": payload["content_hash"],
+        })
+        self.assertEqual(saved.status_code, 200, saved.text)
+        repaired = saved.json()["result_json"]["fields"]["family_history"]
+        self.assertTrue(repaired["doctor_review_note"].startswith("manual_doctor_edit_v1:"))
+        self.assertFalse(repaired["confirmed_by_doctor"])
+        self.assertNotEqual(saved.json()["current_record_revision_id"], payload["revision_id"])
+        self.assertEqual(client.post(f"/api/tasks/{task_id}/approve", json=payload).status_code, 409)
+
+    def test_extended_decisions_reset_and_optional_blanks_do_not_block(self):
+        from tests.approval_helpers import approval_payload_for_fields
+        fields = self._custom_fields(include_candidate=False)
+        fields.family_history = MedicalField(value="父亲有高血压", missing=False, status="complete",
+                                             confirmed_by_doctor=True, doctor_review_status="content_confirmed")
+        task_id = self._create_reviewed_task(fields)
+        family = read_task(task_id)["result_json"]["fields"]["family_history"]
+        self.assertFalse(family["confirmed_by_doctor"])
+        self.assertEqual(family["doctor_review_status"], "pending")
+        core = approval_payload_for_fields(fields, task_id=task_id)
+        approved = approve_task(task_id, TaskApprovalRequest.model_validate(core))
+        self.assertTrue(approved["result_json"]["fields"]["family_history"]["confirmed_by_doctor"])
+        self.assertFalse(approved["result_json"]["fields"]["patient_address"]["confirmed_by_doctor"])
 
     def test_explicit_regular_field_confirmation_persists_approval_items(self):
         task_id = self._create_reviewed_task()
@@ -555,6 +611,94 @@ class TaskApiTests(unittest.TestCase):
             int(old_approval["revision_id"]),
         )
         self.assertIsNone(get_active_approval_for_task(task_id))
+
+    def test_save_after_signing_receipt_cannot_restore_older_task_state(self):
+        from app.db import create_approval_for_task, list_approvals_for_task
+
+        client = TestClient(app)
+        doctor = create_user(client, username="approval-interleaving")
+        login_as_user(client, username="approval-interleaving")
+        task_id = self._create_reviewed_task()
+        set_task_owner(task_id, doctor["id"])
+        payload = self._minimal_payload(task_id)
+        updated = self._custom_fields()
+        updated.chief_complaint.value = "发热4天"
+        edit = self._review_request(task_id, updated).model_dump()
+        path = f"/api/tasks/{task_id}"
+
+        def sign_then_save(*args, **kwargs):
+            receipt = create_approval_for_task(*args, **kwargs)
+            saved = client.post(path + "/review", json=edit)
+            self.assertEqual(saved.status_code, 200, saved.text)
+            return receipt
+
+        # Exact ordering of two genuine authenticated requests; no sleeps or locks in the test.
+        with patch("app.api.tasks.create_approval_for_task", side_effect=sign_then_save):
+            approved = client.post(path + "/approve", json=payload)
+        self.assertEqual(approved.status_code, 200, approved.text)
+        latest = client.get(path).json()
+        self.assertNotEqual(latest["current_record_revision_id"], payload["revision_id"])
+        self.assertEqual(latest["current_stage"], "waiting_doctor_review")
+        self.assertFalse(latest["result_json"]["approved"])
+        self.assertNotIn("approval", latest["result_json"])
+        self.assertEqual(latest["result_json"]["record_revision"]["id"], latest["current_record_revision_id"])
+        self.assertEqual(latest["result_json"]["fields"]["chief_complaint"]["value"], "发热4天")
+        self.assertIsNone(get_active_approval_for_task(task_id))
+        self.assertEqual(list_approvals_for_task(task_id)[0]["revision_id"], payload["revision_id"])
+        self.assertEqual(client.post(path + "/export").status_code, 400)
+
+    def test_equal_hash_new_revision_cannot_inherit_inflight_signature(self):
+        from app.db import create_approval_for_task, create_record_revision_for_task, get_record_revision, list_approvals_for_task
+        import json
+
+        client = TestClient(app)
+        doctor = create_user(client, username="approval-id-race")
+        login_as_user(client, username="approval-id-race")
+        task_id = self._create_reviewed_task()
+        set_task_owner(task_id, doctor["id"])
+        payload = self._minimal_payload(task_id)
+        revision_result = json.loads(get_record_revision(payload["revision_id"])["result_json"])
+
+        def save_identical_then_sign(*args, **kwargs):
+            # Re-record the exact immutable revision contents so only the ID changes.
+            new = create_record_revision_for_task(task_id, revision_result, actor_user_id=doctor["id"],
+                source="doctor_review", workflow_status="waiting_review")
+            self.assertNotEqual(new["id"], payload["revision_id"])
+            self.assertEqual(new["content_hash"], payload["content_hash"])
+            return create_approval_for_task(*args, **kwargs)
+
+        with patch("app.api.tasks.create_approval_for_task", side_effect=save_identical_then_sign):
+            refusal = client.post(f"/api/tasks/{task_id}/approve", json=payload)
+        self.assertEqual(refusal.status_code, 409, refusal.text)
+        self.assertEqual(list_approvals_for_task(task_id), [])
+        self.assertEqual(client.post(f"/api/tasks/{task_id}/export").status_code, 400)
+
+    def test_signature_and_fields_rollback_if_final_audit_write_fails(self):
+        from contextlib import closing
+        from app.db import list_approvals_for_task
+        from app.db.sqlite import get_connection
+        client = TestClient(app, raise_server_exceptions=False)
+        doctor = create_user(client, username="approval-atomic-audit")
+        login_as_user(client, username="approval-atomic-audit")
+        task_id = self._create_reviewed_task()
+        set_task_owner(task_id, doctor["id"])
+        path = f"/api/tasks/{task_id}"
+        before = client.get(path).json()
+        with closing(get_connection()) as db:
+            old_encounter_state = db.execute("SELECT status FROM encounter WHERE id=?", (before["encounter_id"],)).fetchone()[0]
+            db.execute("""CREATE TRIGGER refuse_signing_audit BEFORE INSERT ON audit_log
+                          WHEN NEW.event_type='doctor_approved'
+                          BEGIN SELECT RAISE(ABORT, 'audit unavailable'); END""")
+            db.commit()
+        failed = client.post(path + "/approve", json=self._minimal_payload(task_id))
+        self.assertEqual(failed.status_code, 500)
+        self.assertEqual(list_approvals_for_task(task_id), [])
+        self.assertEqual(client.get(path).json(), before)
+        self.assertEqual(client.post(path + "/export").status_code, 400)
+        with closing(get_connection()) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM approval_item WHERE task_id=?", (task_id,)).fetchone()[0], 0)
+            self.assertEqual(db.execute("SELECT status FROM encounter WHERE id=?", (before["encounter_id"],)).fetchone()[0],
+                             old_encounter_state)
 
     def test_old_approval_cannot_export_new_revision(self):
         task_id = self._create_reviewed_task()

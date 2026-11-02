@@ -181,7 +181,7 @@ def _build_record_patch(text: str, evidence_ids: list[str]) -> dict[str, Any]:
         if fact.type == "allergy"
     ]
     if allergy_facts:
-        allergy_text = "；".join(dict.fromkeys(fact.evidence for fact in allergy_facts if fact.evidence))
+        allergy_text = "；".join(dict.fromkeys(fact.field_excerpt or fact.evidence for fact in allergy_facts))
         patch["allergy_history"] = _field(allergy_text, evidence_ids)
     if _contains_any(text, ["既往", "高血压", "糖尿病"]):
         patch["past_history"] = _field(_extract_sentence(text, "既往") or "提及既往史，需医生确认", evidence_ids)

@@ -1124,6 +1124,11 @@ def apply_review_revision_transaction(
                 revision_id=revision_id,
                 workflow_status=workflow_status,
             )
+            saved_revision = connection.execute(
+                "SELECT id, revision_no, source, content_hash FROM record_revision WHERE id = ?",
+                (revision_id,),
+            ).fetchone()
+            result["record_revision"] = dict(saved_revision)
             _update_task_result_revision_row(
                 connection,
                 task_id=task_id,
@@ -1472,9 +1477,20 @@ def create_approval_for_task(
     actor_user_id: int | None = None,
     content_hash: str | None = None,
     approval_items: list[dict[str, Any]] | None = None,
+    expected_revision_id: int | None = None,
+    result: dict[str, Any] | None = None,
+    actor_detail: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Commit the signature, resolved fields, workflow and audit as one unit.
+
+    When supplied, result is the API's private snapshot; its receipt is populated
+    only after commit. Legacy callers without a snapshot sign the current row.
+    """
+    if result is not None and (expected_revision_id is None or content_hash is None):
+        raise ValueError("签署已加载的病历必须指定版本和内容校验值。")
     init_db()
-    with closing(get_connection()) as connection:
+    with closing(get_connection()) as connection, connection:
+        connection.execute("BEGIN IMMEDIATE")
         task = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
         if task is None:
             raise ValueError(f"Task not found: {task_id}")
@@ -1483,16 +1499,20 @@ def create_approval_for_task(
         if encounter_id is None or revision_id is None:
             raise ValueError("Task has no current record revision")
         revision = connection.execute(
-            "SELECT * FROM record_revision WHERE id = ?",
-            (revision_id,),
+            "SELECT * FROM record_revision WHERE id = ? AND task_id = ?",
+            (revision_id, task_id),
         ).fetchone()
         if revision is None:
             raise ValueError("Current record revision not found")
         revision_hash = revision["content_hash"] or record_content_hash(
             json.loads(revision["result_json"] or "{}")
         )
-        if content_hash is not None and content_hash != revision_hash:
-            raise ValueError("Approval content hash does not match current revision")
+        if ((expected_revision_id is not None and expected_revision_id != revision_id)
+                or (content_hash is not None and content_hash != revision_hash)):
+            raise StaleRecordRevisionError(
+                expected_revision_id=expected_revision_id, expected_content_hash=content_hash,
+                current_revision_id=revision_id, current_content_hash=revision_hash,
+            )
         active = connection.execute(
             """
             SELECT *
@@ -1547,10 +1567,30 @@ def create_approval_for_task(
             "UPDATE encounter SET status = 'approved', updated_at = ? WHERE id = ?",
             (now, encounter_id),
         )
-        connection.commit()
-        return dict(
-            connection.execute("SELECT * FROM approval WHERE id = ?", (approval_id,)).fetchone()
+        approval = dict(connection.execute("SELECT * FROM approval WHERE id = ?", (approval_id,)).fetchone())
+        signed_result = dict(result) if result is not None else json.loads(task["result_json"] or "{}")
+        signed_result.update({
+            "approved": True,
+            "record_revision": {"id": revision_id, "revision_no": revision["revision_no"],
+                                "source": revision["source"], "content_hash": revision_hash},
+            "approval": {key: approval[key] for key in (
+                "id", "revision_id", "content_hash", "approved_by_user_id", "created_at",
+            )},
+            "approval_summary": {"item_count": len(approval_items or []), "items": approval_items or []},
+        })
+        connection.execute(
+            "UPDATE agent_task SET current_stage = 'approved', result_json = ?, updated_at = ? WHERE id = ?",
+            (json_dumps(signed_result), now, task_id),
         )
+        _insert_audit_log_row(
+            connection, task_id=task_id, event_type="doctor_approved", actor_user_id=actor_user_id,
+            event_detail={"task_id": task_id, "revision_id": revision_id, "approval_id": approval_id,
+                          **(actor_detail or {})},
+        )
+        connection.commit()
+    if result is not None:
+        result.update(signed_result)
+    return approval
 
 
 def get_active_approval_for_task(task_id: int) -> dict[str, Any] | None:
@@ -1606,15 +1646,21 @@ def create_export_event_for_task(
     approval_id: int,
     actor_user_id: int | None,
     exports: dict[str, Any],
+    revision_id: int | None = None,
+    result: dict[str, Any] | None = None,
+    actor_detail: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     init_db()
     with closing(get_connection()) as connection:
+        connection.execute("BEGIN IMMEDIATE")
         approval = connection.execute(
-            "SELECT * FROM approval WHERE id = ? AND status = 'active' AND invalidated_at IS NULL",
-            (approval_id,),
+            """SELECT a.*, t.result_json AS task_result FROM approval a JOIN agent_task t
+               ON t.id = a.task_id AND t.current_record_revision_id = a.revision_id
+               WHERE a.id = ? AND t.id = ? AND a.status = 'active' AND a.invalidated_at IS NULL""",
+            (approval_id, task_id),
         ).fetchone()
-        if approval is None:
-            raise ValueError("Active approval not found")
+        if approval is None or (revision_id is not None and revision_id != approval["revision_id"]):
+            raise ValueError("病历版本或批准记录已变化，请重新核对后导出。")
         now = utc_now()
         cursor = connection.execute(
             """
@@ -1635,12 +1681,27 @@ def create_export_event_for_task(
             ),
         )
         export_event_id = int(cursor.lastrowid)
+        event = dict(connection.execute("SELECT * FROM export_event WHERE id = ?", (export_event_id,)).fetchone())
+        task_result = dict(result) if result is not None else json.loads(approval["task_result"] or "{}")
+        task_result["exports"] = exports
+        task_result["export_event"] = {key: event[key] for key in (
+            "id", "revision_id", "approval_id", "exported_by_user_id", "created_at",
+        )}
+        connection.execute(
+            "UPDATE agent_task SET current_stage = 'exported', result_json = ?, updated_at = ? WHERE id = ?",
+            (json_dumps(task_result), now, task_id),
+        )
         connection.execute(
             "UPDATE encounter SET status = 'exported', updated_at = ? WHERE id = ?",
             (now, approval["encounter_id"]),
         )
+        _insert_audit_log_row(
+            connection, task_id=task_id, event_type="export_completed", actor_user_id=actor_user_id,
+            event_detail={"task_id": task_id, "revision_id": approval["revision_id"],
+                          "approval_id": approval_id, **exports, **(actor_detail or {})},
+        )
         connection.commit()
-        return dict(connection.execute("SELECT * FROM export_event WHERE id = ?", (export_event_id,)).fetchone())
+        return event
 
 
 def list_export_events_for_task(task_id: int) -> list[dict[str, Any]]:
@@ -1656,6 +1717,19 @@ def list_export_events_for_task(task_id: int) -> list[dict[str, Any]]:
             (task_id,),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def latest_export_for_approval(task_id: int, approval_id: int, pdf_sha256: str | None = None) -> dict[str, Any] | None:
+    init_db()
+    digest_clause = "" if pdf_sha256 is None else " AND json_extract(exports_json, '$.pdf_sha256') = ?"
+    args = (task_id, approval_id) if pdf_sha256 is None else (task_id, approval_id, pdf_sha256)
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            "SELECT * FROM export_event WHERE task_id = ? AND approval_id = ?"
+            + digest_clause + " ORDER BY id DESC LIMIT 1",
+            args,
+        ).fetchone()
+    return row_to_dict(row)
 
 
 def update_task(

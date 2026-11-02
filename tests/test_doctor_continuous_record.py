@@ -105,3 +105,25 @@ console.log(JSON.stringify({html:nodes.get('recordFields').innerHTML,badge:nodes
 ''')
     assert '原版本：内容已确认' in result['html']
     assert result['badge'] == '编辑中 · 未保存'
+
+
+def test_stored_not_asked_and_optional_fields_follow_one_approval_contract():
+    result = run_browser_logic(r'''
+appState.currentTaskId=1;
+appState.currentTask={current_record_revision_id:2,result_json:{record_revision:{id:2,content_hash:'a'}}};
+appState.currentRecordFields={
+  chief_complaint:{value:'发热',missing:false,status:'complete',doctor_review_status:'content_confirmed',confirmed_by_doctor:true},
+  past_history:{missing:true,status:'missing',doctor_review_status:'not_asked_confirmed',confirmed_by_doctor:true},
+  patient_address:{missing:true,status:'missing'}, family_history:{missing:true,status:'missing'},
+  treatment_plan:{value:'仅供参考',missing:false,status:'complete'}};
+refreshExportReadiness=async()=>({task_id:1,revision_id:2,content_hash:'a'});
+const summary=recordReviewSummary(appState.currentRecordFields,false);
+const payload=await buildTaskApprovalPayload();
+appState.recordEditMode=true; let blocked='';
+try { await buildTaskApprovalPayload(); } catch(e){ blocked=e.message; }
+console.log(JSON.stringify({summary,fields:payload.fields,blocked}));
+''')
+    assert result['summary']['items'] == []
+    assert not result['summary']['regularPending']
+    assert result['fields'] == [{'key':'past_history','action':'confirm_not_asked'}]
+    assert '请先保存' in result['blocked']

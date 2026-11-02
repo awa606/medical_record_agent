@@ -1310,7 +1310,7 @@ function renderExportDownloadActions(exports = appState.currentExports) {
   return `
     <div class="detail-action-row">
       ${descriptors.map((item) => `
-        <button type="button" class="secondary-action" data-export-download-format="${escapeHtml(item.format)}">
+        <button type="button" class="secondary-action" data-export-download-format="${escapeHtml(item.format)}" data-export-sha256="${escapeHtml(exports.pdf_sha256 || "")}">
           ${escapeHtml(item.label)}
         </button>
       `).join("")}
@@ -3163,7 +3163,7 @@ function draftFieldValue(fields, key) {
   if (key === "preliminary_diagnosis") {
     return draftDiagnoses(fields)
       .map((diagnosis) => diagnosis.name
-        ? `${diagnosis.name}${diagnosis.deleted_by_doctor || diagnosis.doctor_review_status === "ai_candidate_deleted" ? "（已移除AI候选）" : ""}`
+        ? `${diagnosis.name}${diagnosis.icd10_code ? `（ICD-10：${diagnosis.icd10_code}）` : ""}${diagnosis.deleted_by_doctor || diagnosis.doctor_review_status === "ai_candidate_deleted" ? "（已移除AI候选）" : ""}`
         : "")
       .filter(Boolean)
       .join("；");
@@ -3211,16 +3211,24 @@ function cloneRecordFields(fields) {
   return fields ? JSON.parse(JSON.stringify(fields)) : null;
 }
 
+function changedDiagnosisCodes(local, baseline) {
+  return (local?.candidate_diagnoses || []).flatMap((item, index) => {
+    const old = baseline?.candidate_diagnoses?.[index];
+    return old && old.name === item.name && (old.icd10_code || "") !== (item.icd10_code || "")
+      ? [{name: old.name, evidence: old.evidence, from: old.icd10_code || "", to: item.icd10_code || ""}] : [];
+  });
+}
+
 function recordEditableSnapshot(fields = appState.currentRecordFields) {
   if (!fields) return "";
-  return JSON.stringify(Object.fromEntries(EDITABLE_FIELD_DEFS.map(([key]) => [
+  return JSON.stringify({fields: Object.fromEntries(EDITABLE_FIELD_DEFS.map(([key]) => [
     key,
     {
       value: fields[key]?.value || "",
       missing: Boolean(fields[key]?.missing),
       source_spans: fields[key]?.source_spans || [],
     },
-  ])));
+  ])), diagnosisCodes: (fields.candidate_diagnoses || []).map(item => item.icd10_code || "")});
 }
 
 function resetRecordEditState() {
@@ -3245,6 +3253,11 @@ function beginRecordEdit(fieldKey) {
     clearApprovalReviewSelections();
   }
   renderAll();
+  if (typeof fieldKey === "string" && fieldKey.startsWith("diagnosis-code:")) {
+    const index = Number(fieldKey.slice("diagnosis-code:".length));
+    document.querySelector(`[data-diagnosis-code-index="${index}"]`)?.focus();
+    return;
+  }
   const key = EDITABLE_FIELD_DEFS.find(([key]) => key === fieldKey)?.[0];
   const input = key ? document.querySelector(`[data-record-field-input="${key}"]`)
     : document.querySelector("[data-record-field-input]");
@@ -3344,7 +3357,7 @@ function fieldResolutionMarkup(key, field, isEditing) {
       ${sourceCorrectionOptions().map((span, i) => `<option value="${i}" ${JSON.stringify(span) === JSON.stringify(field?.source_spans?.[0]) ? "selected" : ""}>${escapeHtml(span.text)}</option>`).join("")}</select>
     </label>` : "";
   return `<div class="field-resolution-controls">
-    <button type="button" data-field-resolution="source_correction" data-resolution-key="${escapeHtml(key)}" aria-pressed="${mode === "source_correction"}">根据原文修正</button>
+    ${REQUIRED_FIELD_DECISIONS.has(key) ? `<button type="button" data-field-resolution="source_correction" data-resolution-key="${escapeHtml(key)}" aria-pressed="${mode === "source_correction"}">根据原文修正</button>` : ""}
     <button type="button" data-field-resolution="doctor_entry" data-resolution-key="${escapeHtml(key)}" aria-pressed="${mode === "doctor_entry"}">医生补录</button>
     ${isEditing && mode ? `<p>${mode === "doctor_entry" ? "请修改内容；本次以医生录入保存，原模型错误留在旧版本，保存后需重新审核。" : "请修改内容并选择正确原文；引用、主体、否定及数值仍须通过校验。"}</p>` : ""}
     ${sourceSelect}</div>`;
@@ -3924,11 +3937,22 @@ function syncApprovalReviewStateWithRevision(readiness = appState.currentExportR
   }
 }
 
-function approvalFieldItems(fields) {
+const REQUIRED_FIELD_DECISIONS = new Set(["chief_complaint", "present_illness", "previous_treatment",
+  "accompanying_symptoms", "past_history", "allergy_history", "physical_exam"]);
+
+function approvalFieldItems(fields, includeHistorical = false) {
   if (!fields) return [];
   return FIELD_DEFS
     .map(([key, title]) => ({ key, title, field: fields[key] || null }))
-    .filter((item) => item.field);
+    .filter(({key, field}) => field && ((includeHistorical && fieldReviewComplete(field))
+      || (key !== "treatment_plan" && (REQUIRED_FIELD_DECISIONS.has(key)
+      || fieldHasReviewableContent(field) || field.status === "conflicting"))));
+}
+
+function missingReviewAction(value) {
+  if (value === "confirm_not_asked" || value === "not_asked_confirmed") return "confirm_not_asked";
+  if (value === "accept_missing" || value === "missing_accepted") return "accept_missing";
+  return "";
 }
 
 function fieldHasReviewableContent(field) {
@@ -4081,7 +4105,7 @@ function renderApprovalChecklist(fields) {
   if (!fields || isRecordPreviewActive() || !appState.currentTaskId) return "";
   syncApprovalReviewStateWithRevision();
   const revision = currentRevisionInfo();
-  const fieldItems = approvalFieldItems(fields);
+  const fieldItems = approvalFieldItems(fields, currentRevisionIsSigned());
   const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
   const missingFields = fieldItems.filter(({ field }) => field.status !== "conflicting" && !fieldHasReviewableContent(field));
   const diagnoses = fields.candidate_diagnoses || [];
@@ -4098,7 +4122,7 @@ function renderApprovalChecklist(fields) {
     return done ? "" : html;
   };
   const missingRows = missingFields.map(({ key, title, field }) => {
-    const selected = appState.approvalMissingDecisions[key] || field.doctor_review_status || "";
+    const selected = missingReviewAction(appState.approvalMissingDecisions[key] || field.doctor_review_status);
     const done = fieldReviewPresentation(fields, key).key === "confirmed" || Boolean(appState.approvalMissingDecisions[key]);
     return outstanding(`
       <div class="approval-item" data-approval-item="field:${escapeHtml(key)}">
@@ -4123,9 +4147,7 @@ function renderApprovalChecklist(fields) {
         <div>
           <strong>${escapeHtml(diagnosis.name || `候选诊断${index + 1}`)}</strong>
           <span>AI候选诊断需医生明确保留或删除。</span>
-          <label class="diagnosis-code-input">ICD-10
-            <input type="text" data-diagnosis-code-index="${index}" value="${escapeHtml(diagnosis.icd10_code || "")}" placeholder="如 J06.9" aria-label="候选诊断 ${index + 1} 的 ICD-10 编码" />
-          </label>
+          <button type="button" data-edit-diagnosis-code="${index}">修改 ICD-10 编码（${escapeHtml(diagnosis.icd10_code || "未填写")}）</button>
         </div>
         ${approvalStatusPill(done)}
         <div class="approval-item-actions">
@@ -4182,6 +4204,7 @@ function renderApprovalChecklist(fields) {
 
 async function buildTaskApprovalPayload() {
   if (!appState.currentTaskId) throw new Error("暂无可确认的任务");
+  if (appState.recordEditMode || appState.recordEditDirty) throw new Error("请先保存或取消当前修改，再审核已保存的病历版本。");
   const fields = activeRecordFields();
   if (!fields) throw new Error("暂无可审核的病历字段");
   if (historicalRecordQuality(fields).incomplete) throw new Error("历史病历内容不完整，请核对原文并补录后重新审核。");
@@ -4207,13 +4230,13 @@ async function buildTaskApprovalPayload() {
   fieldItems
     .filter(({ field }) => !fieldHasReviewableContent(field))
     .forEach(({ key, title, field }) => {
-      const action = appState.approvalMissingDecisions[key] || field.doctor_review_status;
-      if (!["confirm_not_asked", "missing_accepted", "accept_missing"].includes(action)) {
+      const action = missingReviewAction(appState.approvalMissingDecisions[key] || field.doctor_review_status);
+      if (!action) {
         throw new Error(`请处理缺失项：${title}`);
       }
       payload.fields.push({
         key,
-        action: action === "missing_accepted" ? "accept_missing" : action,
+        action,
       });
     });
   (fields.candidate_diagnoses || []).forEach((diagnosis, index) => {
@@ -4379,8 +4402,8 @@ function renderFields() {
   const versionNotice = fields && !isPreview && appState.currentTaskId
     ? `<div class="record-version"><span role="status">当前版本 ${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"}${isEditing ? " · 编辑中，尚未保存" : ""}</span>${detailButton("history:record", "历史版本")}${appState.recordSaveNotice ? `<span>${escapeHtml(appState.recordSaveNotice)}</span>` : ""}</div>` : "";
   const recovery = appState.recordEditRecovery;
-  const recoveryNotice = recovery && recovery.taskId === appState.currentTaskId && !isEditing
-    ? `<details class="record-recovery"><summary>本次冲突前的本地修改 · 尚未保存</summary><p>当前显示服务器最新版本。下面仅保留您修改过的字段，请与最新内容核对。</p>${EDITABLE_FIELD_DEFS.filter(([key]) => String(recovery.fields[key]?.value || "") !== String(recovery.baseline?.[key]?.value || "")).map(([key, title]) => `<p><strong>${escapeHtml(title)}</strong>：${escapeHtml(recovery.fields[key]?.value || "（留空）")}</p>`).join("")}<button type="button" data-record-reapply>将这些修改带入当前版本继续编辑</button></details>` : "";
+  const recoveryNotice = recovery && recovery.taskId === appState.currentTaskId
+    ? `<details class="record-recovery" ${isEditing ? "open" : ""}><summary>本次冲突前的本地修改 · 尚未保存</summary><p>${isEditing ? "诊断或编码已发生变化，请对照以下本地内容手动核对。" : "当前显示服务器最新版本。请先核对原有修改。"}</p>${EDITABLE_FIELD_DEFS.filter(([key]) => String(recovery.fields[key]?.value || "") !== String(recovery.baseline?.[key]?.value || "")).map(([key, title]) => `<p><strong>${escapeHtml(title)}</strong>：${escapeHtml(recovery.fields[key]?.value || "（留空）")}</p>`).join("")}${changedDiagnosisCodes(recovery.fields, recovery.baseline).map(item => `<p>${escapeHtml(item.name)} ICD-10：${escapeHtml(item.from || "未填写")} → ${escapeHtml(item.to || "未填写")}</p>`).join("")}${isEditing ? "" : '<button type="button" data-record-reapply>将这些修改带入当前版本继续编辑</button>'}</details>` : "";
   const review = recordReviewSummary(fields, isApprovedDisplay);
   const clinicalSections = [
     ["history", "病史", ["chief_complaint", "present_illness", "accompanying_symptoms"]],
@@ -4403,7 +4426,11 @@ function renderFields() {
       usedKeys.add(key);
       return cardHtmlByKey.get(key);
     }).join("");
-    const extra = id === "management" ? diagnoses : "";
+    const codeEditors = id === "management" && isEditing ? (fields.candidate_diagnoses || []).map((diagnosis, index) =>
+      `<label class="diagnosis-code-input">${escapeHtml(diagnosis.name)} · ICD-10
+        <input type="text" data-diagnosis-code-index="${index}" value="${escapeHtml(diagnosis.icd10_code || "")}" placeholder="如 J06.9">
+      </label>`).join("") : "";
+    const extra = id === "management" ? diagnoses + codeEditors : "";
     if (!inner && !extra) return "";
     const statusMarkup = issues.length ? `<button type="button" class="record-section-status ${statusTone}" data-record-section-focus="${escapeHtml(issues[0].fieldKey)}">${statusText}</button>` : `<span class="record-section-status ${statusTone}">${statusText}</span>`;
     if (id === "demographics") {
@@ -7993,8 +8020,18 @@ function reapplyLocalRecordChanges() {
     if (String(value) !== String(recovery.baseline?.[key]?.value || "")) updateRecordFieldValue(key, value);
     if (recovery.resolutions?.[key] === "source_correction") appState.currentRecordFields[key].source_spans = structuredClone(recovery.fields[key].source_spans || []);
   });
+  let requiresManualReview = false;
+  for (const change of changedDiagnosisCodes(recovery.fields, recovery.baseline)) {
+    const matches = (appState.currentRecordFields.candidate_diagnoses || []).filter(item =>
+      item.name === change.name && JSON.stringify(item.evidence || []) === JSON.stringify(change.evidence || []));
+    if (matches.length !== 1 || ![change.from, change.to].includes(matches[0].icd10_code || "")) {
+      requiresManualReview = true;
+    } else {
+      matches[0].icd10_code = change.to || null;
+    }
+  }
   appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
-  appState.recordEditRecovery = null;
+  if (!requiresManualReview) appState.recordEditRecovery = null;
   renderAll();
 }
 
@@ -8034,9 +8071,10 @@ function filenameFromContentDisposition(disposition, fallback) {
   return asciiMatch ? asciiMatch[1] : fallback;
 }
 
-async function downloadTaskExport(format = "pdf") {
-  if (!appState.currentTaskId) throw new Error("暂无可下载的导出文件");
-  const response = await fetch(`/api/tasks/${encodeURIComponent(appState.currentTaskId)}/exports/${encodeURIComponent(format)}`);
+async function downloadTaskExport(format = "pdf", sha256 = null, taskId = appState.currentTaskId) {
+  if (!taskId) throw new Error("暂无可下载的导出文件");
+  const query = sha256 ? `?sha256=${encodeURIComponent(sha256)}` : "";
+  const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/exports/${encodeURIComponent(format)}${query}`);
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     const detail = data.detail;
@@ -8049,7 +8087,7 @@ async function downloadTaskExport(format = "pdf") {
   const extension = "pdf";
   const filename = filenameFromContentDisposition(
     response.headers.get("content-disposition"),
-    `task_${appState.currentTaskId}_medical_record.${extension}`,
+    `task_${taskId}_medical_record.${extension}`,
   );
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -8074,7 +8112,9 @@ async function exportRecord() {
       return;
     }
     setBusy(true, "正在导出...");
-    const result = await api(`/api/tasks/${appState.currentTaskId}/export`, { method: "POST" });
+    const taskId = appState.currentTaskId;
+    const result = await api(`/api/tasks/${taskId}/export`, { method: "POST" });
+    if (appState.currentTaskId !== taskId) { setBusy(false); return; }
     appState.currentExports = result.exports || {};
     appState.currentExportReadiness = result.export_readiness || {
       task_id: appState.currentTaskId,
@@ -8097,7 +8137,7 @@ async function exportRecord() {
     setBusy(false);
     openDetailDrawer("导出完成", renderExportReadinessDetail(appState.currentExportReadiness));
     try {
-      const filename = await downloadTaskExport("pdf");
+      const filename = await downloadTaskExport("pdf", result.exports?.pdf_sha256, taskId);
       showToast(`导出完成，${filename} 下载已开始`);
     } catch (downloadError) {
       showToast(`导出已生成，请在详情中手动下载：${downloadError.message}`);
@@ -9990,6 +10030,8 @@ function bindEvents() {
     if (resolve) { beginFieldResolution(resolve.dataset.resolutionKey, resolve.dataset.fieldResolution); return; }
     const editField = event.target.closest("[data-record-edit-field]");
     if (editField) { beginRecordEdit(editField.dataset.recordEditField); return; }
+    const editCode = event.target.closest("[data-edit-diagnosis-code]");
+    if (editCode) { beginRecordEdit(`diagnosis-code:${editCode.dataset.editDiagnosisCode}`); return; }
     const focusField = event.target.closest("[data-review-focus]");
     if (focusField) {
       const key = EDITABLE_FIELD_DEFS.find(([key]) => key === focusField.dataset.reviewFocus)?.[0];
@@ -10051,11 +10093,14 @@ function bindEvents() {
   });
   $("recordFields").addEventListener("input", (event) => {
     const input = event.target.closest("[data-diagnosis-code-index]");
-    if (!input) return;
+    if (!input || !appState.recordEditMode) return;
     const diagnosis = appState.currentRecordFields?.candidate_diagnoses?.[Number(input.dataset.diagnosisCodeIndex)];
     if (!diagnosis) return;
     diagnosis.icd10_code = input.value.trim() || null;
-    appState.recordEditDirty = true;
+    appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
+    const notice = document.querySelector("[data-record-edit-status]");
+    if (notice) notice.textContent = appState.recordEditDirty ? "有未保存修改" : "编辑模式";
+    renderFooter();
   });
   $("transcriptList").addEventListener("change", (event) => {
     const autoFollow = event.target.closest("[data-transcript-auto-follow]");
@@ -10193,7 +10238,7 @@ function bindEvents() {
     const exportDownloadButton = event.target.closest("[data-export-download-format]");
     if (exportDownloadButton) {
       try {
-        const filename = await downloadTaskExport(exportDownloadButton.dataset.exportDownloadFormat);
+        const filename = await downloadTaskExport(exportDownloadButton.dataset.exportDownloadFormat, exportDownloadButton.dataset.exportSha256);
         showToast(`${filename} 下载已开始`);
       } catch (error) {
         reportActionError(error);

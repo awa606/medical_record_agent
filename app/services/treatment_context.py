@@ -7,7 +7,11 @@ from dataclasses import dataclass
 
 _BREAK = re.compile(r"[，,；;。！？!?\n]|但是|不过|然而|而是|但|随后|然后")
 _ROLE = re.compile(r"^\s*(?:[\[【](?:患者|病人|医生|医师|家属|家长)[\]】]\s*[:：]?|(?:患者|病人|医生|医师|家属|家长)\s*[:：])\s*")
-_ACTION = re.compile(r"服用|服药|口服|用药|吃药|注射|吃了|用了|(?:吃|用)(?:过)?(?=布洛芬|退热药|退烧药|对乙酰氨基酚|阿司匹林|头孢|青霉素|阿莫西林)")
+_ACTION = re.compile(
+    r"服用|服药|口服|用药|吃药|注射|吃了|用了|"
+    r"(?:吃|用)(?:过)?(?=(?:[一二两三四五六七八九十\d]+次)?"
+    r"(?:布洛芬|退热药|退烧药|对乙酰氨基酚|阿司匹林|头孢|青霉素|阿莫西林))"
+)
 _UNCERTAIN = re.compile(r"不确定|不知道|不清楚|说不清|可能|疑似|有没有|是否")
 _PROPOSED = re.compile(r"建议|计划|准备|打算|拟|考虑|可以|应该|需要|不必|无需|假如|假设|倘若|(?<!主)要是|若|如果|明天|将要")
 _NEGATED = re.compile(r"否认|没有|未曾|未|没|不再|不曾|不能|不要|不$")
@@ -17,6 +21,8 @@ _CAUSAL = re.compile(r"因为|由于|为了|以免|防止")
 _CONTRAST = re.compile("而")
 _COMPLETED_ACTION = re.compile(r"服用了|口服了|吃了|用了|注射了")
 _INTENT_SUFFIX = re.compile(r"的(?:打算|计划|想法|意图|准备)")
+_ADVICE_INTRO = re.compile(r"如果|假如|倘若|若|建议|计划|准备|打算|医嘱")
+_INDEPENDENT_INTAKE = re.compile(r"^(?:我|患者|孩子)?(?:后来|昨天|昨日|昨晚|前天|今天|今早|已经|实际上|实际).*(?:服用了|吃过|吃了|用过|用了|已服用)")
 
 
 @dataclass(frozen=True)
@@ -60,6 +66,7 @@ def treatment_contexts(text: str) -> list[TreatmentContext]:
     """
     rows = []
     start = 0
+    carried_advice = False
     for boundary in [*_action_boundaries(text), None]:
         end = boundary.start() if boundary else len(text)
         raw = text[start:end]
@@ -69,13 +76,17 @@ def treatment_contexts(text: str) -> list[TreatmentContext]:
         leading = len(body) - len(body.lstrip())
         body = body.strip()
         offset += leading
+        if _INDEPENDENT_INTAKE.match(body):
+            carried_advice = False
+        actions = []
         for match in _ACTION.finditer(body):
             prefix = body[:match.start()]
             # Explicitly completed adherence is not merely a recommendation.
             # Do not drop any separate condition or plan preceding that phrase.
             followed = _FOLLOWED_ADVICE.search(prefix)
             modality_prefix = prefix[:followed.start()] if followed else prefix
-            proposed = bool(_PROPOSED.search(modality_prefix))
+            proposed = carried_advice or bool(_PROPOSED.search(modality_prefix))
+            actions.append(proposed)
             # "没有吃早饭就服用..." negates eating, not taking medication.
             # Conditions remain checked against the complete prefix above.
             negation_prefix = _SEQUENTIAL_ACTION.split(prefix)[-1]
@@ -88,6 +99,10 @@ def treatment_contexts(text: str) -> list[TreatmentContext]:
             else:
                 assertion = "present"
             rows.append(TreatmentContext(body, offset, offset + match.start(), assertion, proposed))
+        # A comma can divide a condition from its instruction. Only carry
+        # it across commas; a contrast or new sentence starts a new scope.
+        carried_advice = bool(boundary and boundary.group() in {",", "，"} and
+                              (any(actions) if actions else carried_advice or _ADVICE_INTRO.search(body)))
         start = boundary.end() if boundary else len(text)
     return rows
 

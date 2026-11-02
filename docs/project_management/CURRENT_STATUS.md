@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-02T04:58:15.805Z`
-- Source hash: `b6c8de1c9d8757689a4f802129049cac6760d510456d984608f2eadd50023605`
+- Updated at: `2026-11-02T07:35:17.011Z`
+- Source hash: `19aeeeac5297375867fb6a2d704b695e3cbbd1b0f19af538238e23dc877dc291`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@2353c331965bece5eba17f37918b87607ad3470a`
+- Repo: `codex/ui-hospital-record-v1@3c7fe5a79e76a73c02af0e9624f9c193e319fda3`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
-- Forecast Alpha Exit: **本轮只完成撰写页组织、状态显示和静态发布。26320为Mock且知识表为空，不沿用旧8798成绩。用户三档实际缩放正常；同病例默认滚动减少50.27%。独立副本R2保存、历史对照与756字长文通过；音频时间为合成UI夹具，真实模型调用0。5.1仍VERIFY、5.3未开始，正式16项99h与Gate不变。**
+- Forecast Alpha Exit: **26323为隔离的审核候选，26320仍为Mock、无知识文档。真实在线一次请求存在漏提和混放；正式发布门禁未关闭。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 深蓝白连续病历已更新26320；后端与最终发布门禁独立保留** — `VERIFY`
+**5.1 · 审核与导出隔离候选；保留26320原基线** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 当前26320前端1.9.2与静态回退已核验；下一步确认正式展示的真实Provider和知识数据来源，再补对应版本缺失的5.1证据，满足后才执行5.3。
+- Single next task: 基于已保存响应核对现病史漏提的检测能力；5.1最终同版本验收后才进入5.3。
 - Parallel waiting task: 硬件1.1–1.4继续延期；本地模型漏提、字段混放及自我纠正质量独立保留，不由界面结果替代。
 
 ## Manual Actions

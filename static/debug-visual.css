@@ -1,47 +1,47 @@
 /* Developer console visual alignment with the clinical palette. */
 body.debug-mode {
   background:
-    radial-gradient(900px 480px at 92% -8%, rgba(19, 115, 86, 0.08), transparent 60%),
-    #f2efe8;
-  color: #1d2d2c;
+    radial-gradient(900px 480px at 92% -8%, rgba(27, 107, 158, 0.08), transparent 60%),
+    #eef4fa;
+  color: #14283c;
   font-family: "Aptos", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 body.debug-mode .app-shell {
-  color: #1d2d2c;
+  color: #14283c;
 }
 
 body.debug-mode .topbar {
-  border-bottom: 1px solid #e3dbce;
-  background: #fffdf9;
+  border-bottom: 1px solid #d7e2ee;
+  background: #ffffff;
   box-shadow: 0 6px 22px rgba(45, 52, 48, 0.05);
 }
 
 body.debug-mode .topbar h1,
 body.debug-mode .brand h1 {
-  color: #173a35;
+  color: #102a43;
   letter-spacing: -0.015em;
 }
 
 body.debug-mode .topbar p,
 body.debug-mode .brand p {
-  color: #55665f;
+  color: #5b7085;
 }
 
 body.debug-mode .top-meta span {
-  border: 1px solid #e3dbce;
+  border: 1px solid #d7e2ee;
   border-radius: 999px;
   padding: 4px 10px;
-  background: #f8f4ec;
+  background: #f4f8fc;
   color: #455a53;
 }
 
 body.debug-mode .toolbar {
   gap: 8px;
   padding: 12px;
-  border: 1px solid #e3dbce;
+  border: 1px solid #d7e2ee;
   border-radius: 12px;
-  background: #fffdf9;
+  background: #ffffff;
 }
 
 body.debug-mode .toolbar button,
@@ -49,10 +49,10 @@ body.debug-mode .tool-strip button,
 body.debug-mode .action-grid button,
 body.debug-mode .button {
   min-height: 40px;
-  border: 1px solid #0f625c;
+  border: 1px solid #14557f;
   border-radius: 9px;
   padding: 0 14px;
-  background: #0f625c;
+  background: #14557f;
   color: #ffffff;
   font-weight: 700;
 }
@@ -61,30 +61,30 @@ body.debug-mode .toolbar button:hover,
 body.debug-mode .tool-strip button:hover,
 body.debug-mode .action-grid button:hover,
 body.debug-mode .button:hover {
-  background: #0a4a46;
+  background: #103d63;
 }
 
 body.debug-mode .step.active {
   border-color: #8fc4b5;
-  background: #e8f4ef;
-  color: #0d5a53;
+  background: #e8f2fa;
+  color: #14557f;
 }
 
 body.debug-mode .step {
-  border-color: #e3dbce;
-  background: #fffdf9;
-  color: #55665f;
+  border-color: #d7e2ee;
+  background: #ffffff;
+  color: #5b7085;
 }
 
 body.debug-mode .app-shell > section[style] {
-  border-color: #cfe3da !important;
-  background: #eef7f3 !important;
-  color: #14544c !important;
+  border-color: #c8dced !important;
+  background: #eef7fc !important;
+  color: #14557f !important;
 }
 
 body.debug-mode .tabs {
   gap: 8px;
-  border-bottom: 1px solid #e3dbce;
+  border-bottom: 1px solid #d7e2ee;
   padding-bottom: 10px;
 }
 
@@ -92,24 +92,24 @@ body.debug-mode .tabs button {
   min-height: 38px;
   border: 1px solid transparent;
   border-radius: 8px;
-  background: #fffdf9;
-  color: #55665f;
+  background: #ffffff;
+  color: #5b7085;
 }
 
 body.debug-mode .tabs button[aria-selected="true"],
 body.debug-mode .tabs button.active {
-  border-color: #cfe3da;
-  background: #e8f4ef;
-  color: #0d5a53;
+  border-color: #c8dced;
+  background: #e8f2fa;
+  color: #14557f;
   font-weight: 700;
 }
 
 body.debug-mode .panel,
 body.debug-mode .card,
 body.debug-mode .panel-card {
-  border: 1px solid #e3dbce;
+  border: 1px solid #d7e2ee;
   border-radius: 12px;
-  background: #fffdf9;
+  background: #ffffff;
   box-shadow: 0 1px 2px rgba(45, 52, 48, 0.03);
 }
 
@@ -117,7 +117,7 @@ body.debug-mode .panel h2,
 body.debug-mode .panel h3,
 body.debug-mode .card h2,
 body.debug-mode .card h3 {
-  color: #173a35;
+  color: #102a43;
   letter-spacing: -0.01em;
 }
 
@@ -129,8 +129,8 @@ body.debug-mode .muted {
 
 body.debug-mode .ghost-button {
   border-color: #d9cfbf;
-  background: #fffdf9;
-  color: #27433d;
+  background: #ffffff;
+  color: #24445f;
 }
 
 body.debug-mode .danger-button {
@@ -140,8 +140,8 @@ body.debug-mode .danger-button {
 }
 
 body.debug-mode .drawer {
-  background: #fffdf9;
-  border-left: 1px solid #e3dbce;
+  background: #ffffff;
+  border-left: 1px solid #d7e2ee;
 }
 
 @media (max-width: 680px) {

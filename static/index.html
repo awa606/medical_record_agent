@@ -6,14 +6,14 @@
     <title>AI生成式电子病历辅助系统</title>
     <style>
       :root {
-        --primary: #0f625c;
-        --primary-dark: #0a4a46;
-        --primary-soft: #e8f4f0;
-        --bg: #f2efe8;
-        --surface: #fffdf9;
+        --primary: #14557f;
+        --primary-dark: #0b2a4a;
+        --primary-soft: #e8f2fa;
+        --bg: #eef4fa;
+        --surface: #ffffff;
         --text: #1d2d2c;
-        --muted: #55665f;
-        --line: #e3dbce;
+        --muted: #5b7085;
+        --line: #d7e2ee;
       }
 
       * {
@@ -26,8 +26,8 @@
         display: grid;
         place-items: center;
         background:
-          radial-gradient(900px 480px at 90% -10%, rgba(19, 115, 86, 0.10), transparent 60%),
-          linear-gradient(180deg, #f6f3ed 0%, #efebe2 100%);
+          radial-gradient(900px 480px at 90% -10%, rgba(27, 107, 158, 0.10), transparent 60%),
+          linear-gradient(180deg, #f7fafd 0%, #eef4fa 100%);
         color: var(--text);
         font-family: "Aptos", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       }
@@ -45,7 +45,7 @@
         display: inline-flex;
         align-items: center;
         min-height: 28px;
-        border: 1px solid #c4dfd6;
+        border: 1px solid #c8dced;
         border-radius: 999px;
         padding: 4px 10px;
         background: var(--primary-soft);
@@ -78,11 +78,11 @@
       }
 
       .evidence-row span {
-        border: 1px solid #e7dfd2;
+        border: 1px solid #d7e2ee;
         border-radius: 999px;
         padding: 5px 10px;
-        background: #f7f2e8;
-        color: #455a53;
+        background: #eef4fa;
+        color: #315a78;
         font-size: 13px;
         font-weight: 700;
       }
@@ -98,10 +98,10 @@
         gap: 8px;
         min-height: 148px;
         align-content: center;
-        border: 1px solid #d9e7df;
+        border: 1px solid #c8dced;
         border-radius: 14px;
         padding: 24px;
-        background: #f8f5ee;
+        background: #f8fbfe;
         color: var(--text);
         text-decoration: none;
         transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
@@ -118,13 +118,13 @@
       }
 
       a:hover {
-        border-color: #83b9a9;
-        box-shadow: 0 12px 26px rgba(15, 98, 92, 0.12);
+        border-color: #5c9cc4;
+        box-shadow: 0 12px 26px rgba(20, 85, 127, 0.12);
         transform: translateY(-1px);
       }
 
       .card-meta {
-        color: #2c6759;
+        color: #14557f;
         font-size: 13px;
         font-weight: 800;
       }

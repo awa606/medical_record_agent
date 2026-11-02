@@ -1,0 +1,718 @@
+/*
+ * Clinical blue theme v6
+ * Restores the deep-blue/white hospital palette and tightens the record
+ * workspace to a denser EMR rhythm.
+ */
+
+body.doctor-mode {
+  --mra-blue-950: #081f36;
+  --mra-blue-900: #0b2a4a;
+  --mra-blue-800: #103d63;
+  --mra-blue-700: #14557f;
+  --mra-blue-600: #1b6b9e;
+  --mra-blue-100: #e8f2fa;
+  --mra-blue-50: #f4f8fc;
+  --mra-ink: #14283c;
+  --mra-muted: #5b7085;
+  --mra-line: #d7e2ee;
+  --mra-soft-line: #e5edf5;
+  background: #eef4fa;
+  color: var(--mra-ink);
+}
+
+body.doctor-mode .doctor-app {
+  background: #eef4fa;
+}
+
+/* Top bar */
+body.doctor-mode .topbar {
+  background: #ffffff;
+  border-bottom: 1px solid var(--mra-line);
+  box-shadow: 0 1px 3px rgba(15, 45, 74, 0.06);
+}
+
+body.doctor-mode .brand-copy h1 {
+  color: var(--mra-blue-900);
+}
+
+body.doctor-mode .brand-copy p {
+  color: var(--mra-muted);
+}
+
+body.doctor-mode .deployment-badge {
+  border: 1px solid #c8dced;
+  background: var(--mra-blue-100);
+  color: #14557f;
+}
+
+body.doctor-mode .top-actions > button,
+body.doctor-mode .top-actions .input-method-menu > button,
+body.doctor-mode .display-settings-menu > summary {
+  border-color: var(--mra-line);
+  background: #ffffff;
+  color: #24445f;
+}
+
+body.doctor-mode .top-actions > button:hover,
+body.doctor-mode .top-actions .input-method-menu > button:hover,
+body.doctor-mode .display-settings-menu > summary:hover {
+  border-color: #9fc0d9;
+  background: var(--mra-blue-50);
+}
+
+body.doctor-mode .top-actions .primary-action {
+  border-color: var(--mra-blue-700);
+  background: var(--mra-blue-700);
+  color: #ffffff;
+}
+
+body.doctor-mode .top-actions .primary-action:hover {
+  border-color: var(--mra-blue-800);
+  background: var(--mra-blue-800);
+}
+
+/* Sidebar */
+body.doctor-mode .product-nav {
+  background: linear-gradient(180deg, var(--mra-blue-950) 0%, #0c3454 100%);
+  border-right: 1px solid #0a2945;
+}
+
+body.doctor-mode .product-nav-heading {
+  color: #9fb8ce;
+}
+
+body.doctor-mode .product-nav-item {
+  color: #d4e3f0;
+  border-color: transparent;
+  background: transparent;
+}
+
+body.doctor-mode .product-nav-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+body.doctor-mode .product-nav-item.active {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: var(--mra-blue-900);
+  box-shadow: inset 3px 0 0 #2b7db3;
+}
+
+body.doctor-mode .product-nav-item small {
+  color: #9fb8ce;
+  font-size: 10px;
+  line-height: 1.45;
+  white-space: nowrap;
+  letter-spacing: -0.15px;
+}
+
+body.doctor-mode .product-nav-item.active small {
+  color: #526f88;
+}
+
+body.doctor-mode .product-nav-foot {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+body.doctor-mode .product-nav-foot strong {
+  color: #e5f0f8;
+}
+
+body.doctor-mode .product-nav-foot small {
+  color: #a8bfd3;
+  font-size: 10px;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+/* Patient banner and avatar */
+body.doctor-mode .encounter-patient-banner,
+body.doctor-mode .patient-bar {
+  border: 1px solid #0b3555;
+  background: linear-gradient(100deg, #0b2a4a 0%, #0f4268 58%, #16577d 100%);
+  color: #ffffff;
+}
+
+body.doctor-mode .patient-avatar {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: #ffffff;
+  color: var(--mra-blue-900);
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+}
+
+body.doctor-mode .patient-identity-cell strong,
+body.doctor-mode .patient-name {
+  color: #ffffff;
+}
+
+body.doctor-mode .patient-identity-cell small,
+body.doctor-mode .patient-meta,
+body.doctor-mode .patient-bar small {
+  color: #c6dcec;
+}
+
+body.doctor-mode .patient-demo-badge {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #eaf5fd;
+}
+
+body.doctor-mode .encounter-status-indicator {
+  color: #d7eaf7;
+}
+
+/* Workflow strip: give the active stage breathing room */
+body.doctor-mode .workflow-panel {
+  padding: 6px 8px;
+  border: 1px solid var(--mra-line);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+body.doctor-mode .workflow-steps {
+  gap: 6px;
+}
+
+body.doctor-mode .workflow-step {
+  border-color: var(--mra-line);
+  background: #f8fbfe;
+  color: #526b80;
+}
+
+body.doctor-mode .workflow-step.done {
+  border-color: #b8d4e6;
+  background: #eef7fc;
+  color: #17618c;
+}
+
+body.doctor-mode .workflow-step.active {
+  border-color: var(--mra-blue-700);
+  background: var(--mra-blue-700);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+body.doctor-mode .workflow-step.active .workflow-index {
+  background: #ffffff;
+  color: var(--mra-blue-800);
+}
+
+body.doctor-mode .workflow-index {
+  border: 1px solid #c8d9e7;
+  background: #ffffff;
+  color: #315a78;
+}
+
+/* Panels */
+body.doctor-mode .column {
+  border: 1px solid var(--mra-line);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 45, 74, 0.05);
+}
+
+body.doctor-mode .column > .panel-header {
+  border-bottom: 1px solid var(--mra-line);
+  background: #f7fafd;
+}
+
+body.doctor-mode .column > .panel-header h2 {
+  color: #102a43;
+}
+
+body.doctor-mode .column > .panel-header p {
+  color: var(--mra-muted);
+}
+
+body.doctor-mode .status-badge.neutral {
+  border-color: #c8dced;
+  background: var(--mra-blue-100);
+  color: #315a78;
+}
+
+body.doctor-mode .status-badge.ready {
+  border-color: #b7ddcb;
+  background: #eef9f3;
+  color: #1b6b4f;
+}
+
+/* Buttons and fields */
+body.doctor-mode .primary-action,
+body.doctor-mode .login-submit {
+  border-color: var(--mra-blue-700);
+  background: var(--mra-blue-700);
+  color: #ffffff;
+}
+
+body.doctor-mode .primary-action:hover,
+body.doctor-mode .login-submit:hover {
+  border-color: var(--mra-blue-800);
+  background: var(--mra-blue-800);
+}
+
+body.doctor-mode button:not(.primary-action):not(.danger-action) {
+  border-color: #c8d8e6;
+}
+
+body.doctor-mode input,
+body.doctor-mode select,
+body.doctor-mode textarea {
+  border-color: #c8d8e6;
+  background: #ffffff;
+  color: var(--mra-ink);
+}
+
+body.doctor-mode input:focus,
+body.doctor-mode select:focus,
+body.doctor-mode textarea:focus {
+  border-color: #5c9cc4;
+  outline-color: #2b7db3;
+}
+
+/* Transcript: compact cards, stronger role separation */
+body.doctor-mode .alpha51-workspace .transcript-table {
+  gap: 6px;
+}
+
+body.doctor-mode .alpha51-workspace .transcript-table-row {
+  min-height: 0;
+  padding: 8px 10px;
+  gap: 4px;
+  border: 1px solid #dbe6f1;
+  border-radius: 8px;
+  background: #f8fbfe;
+}
+
+body.doctor-mode .alpha51-workspace .transcript-table-row[data-role="doctor"][data-role-state="confirmed"] {
+  border-color: #c4d9ec;
+  background: #eef6fc;
+}
+
+body.doctor-mode .alpha51-workspace .transcript-table-row[data-role="patient"][data-role-state="confirmed"] {
+  border-color: #c6e2dc;
+  background: #f0faf7;
+}
+
+body.doctor-mode .alpha51-workspace .transcript-role-cell {
+  align-content: start;
+}
+
+body.doctor-mode .alpha51-workspace .transcript-role-tag {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+body.doctor-mode .alpha51-workspace .transcript-row-text {
+  font-size: 16px;
+  line-height: 1.5;
+  color: #1e3448;
+}
+
+body.doctor-mode .alpha51-workspace .transcript-row-link {
+  padding: 2px 0;
+  font-size: 12px;
+  color: #315a78;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .transcript-table-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: 4px 8px;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .transcript-role-cell {
+  grid-area: 1 / 1;
+  justify-self: start;
+  justify-items: start;
+  max-width: none;
+  text-align: left;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .transcript-row-text {
+  grid-area: 2 / 1 / 3 / -1;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .transcript-row-link {
+  grid-area: 1 / 2;
+  justify-self: end;
+  align-self: start;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .transcript-row-time {
+  grid-area: 1 / 1;
+  align-self: center;
+  justify-self: start;
+  margin-right: 4px;
+  color: #5b7085;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .transcript-table-row:has(.transcript-row-time) {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .transcript-table-row:has(.transcript-row-time) .transcript-role-cell {
+  grid-area: 1 / 2;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .transcript-table-row:has(.transcript-row-time) .transcript-row-link {
+  grid-area: 1 / 4;
+}
+
+/* Records: denser EMR rhythm and sticky section headers */
+body.doctor-mode .alpha51-workspace .field-list {
+  padding: 8px 16px 120px;
+}
+
+body.doctor-mode .alpha51-workspace .record-section {
+  margin: 0 0 10px;
+  border: 1px solid var(--mra-line);
+  border-radius: 9px;
+  background: #ffffff;
+}
+
+body.doctor-mode .alpha51-workspace .record-section + .record-section {
+  margin-top: 10px;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--mra-line);
+  background: #f4f8fc;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head h3 {
+  font-size: 15px;
+  line-height: 1.4;
+  color: #102a43;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head p {
+  margin-top: 1px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--mra-muted);
+}
+
+body.doctor-mode .alpha51-workspace .record-section-status {
+  min-height: 24px;
+  padding: 1px 8px;
+  border: 1px solid #c8dced;
+  border-radius: 999px;
+  background: #eef7fc;
+  color: #17618c;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-body {
+  padding: 10px 12px;
+  gap: 8px;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e1e9f2;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card + .field-card {
+  margin-top: 8px;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-head {
+  margin: -10px -12px 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e6eef6;
+  border-radius: 8px 8px 0 0;
+  background: #f8fbfe;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-title,
+body.doctor-mode .alpha51-workspace #recordFields .field-head strong {
+  font-size: 15px;
+  color: #102a43;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-value {
+  font-size: 17px;
+  line-height: 1.55;
+  color: #1e3448;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-meta {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top-color: #e6eef6;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-meta a,
+body.doctor-mode .alpha51-workspace #recordFields .field-meta button {
+  font-size: 12px;
+}
+
+body.doctor-mode .alpha51-workspace .record-meta-grid {
+  padding: 8px 12px;
+  gap: 4px 20px;
+}
+
+body.doctor-mode .alpha51-workspace .record-meta-grid dt {
+  color: var(--mra-muted);
+  font-size: 12px;
+}
+
+body.doctor-mode .alpha51-workspace .record-meta-grid dd {
+  color: #1e3448;
+  font-size: 13px;
+}
+
+/* Approval cards */
+body.doctor-mode .alpha51-workspace .approval-disclosure {
+  border: 1px solid var(--mra-line);
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+body.doctor-mode .alpha51-workspace .approval-disclosure > summary {
+  padding: 10px 12px;
+}
+
+body.doctor-mode .alpha51-workspace .approval-checklist-head strong {
+  color: #102a43;
+  font-size: 15px;
+}
+
+body.doctor-mode .alpha51-workspace .approval-checklist-head p {
+  font-size: 12px;
+  color: var(--mra-muted);
+}
+
+body.doctor-mode .alpha51-workspace .approval-item {
+  border-color: #e1e9f2;
+  background: #ffffff;
+}
+
+body.doctor-mode .alpha51-workspace .approval-item-actions button {
+  border-color: #c8d8e6;
+  background: #ffffff;
+  color: #245a80;
+}
+
+body.doctor-mode .alpha51-workspace .approval-item-actions button.active {
+  border-color: var(--mra-blue-700);
+  background: var(--mra-blue-700);
+  color: #ffffff;
+}
+
+/* Bottom action bar */
+body.doctor-mode .encounter-action-bar {
+  border-top: 1px solid var(--mra-line);
+  background: #ffffff;
+  box-shadow: 0 -4px 16px rgba(15, 45, 74, 0.08);
+}
+
+body.doctor-mode .encounter-action-bar .button-group .primary-action {
+  background: var(--mra-blue-700);
+  border-color: var(--mra-blue-700);
+}
+
+body.doctor-mode .encounter-action-bar .button-group .danger-action {
+  border-color: #b94a48;
+  background: #ffffff;
+  color: #a33b39;
+}
+
+/* Workbench controls */
+body.doctor-mode .dashboard-status-filters button {
+  border-color: var(--mra-line);
+  background: #ffffff;
+  color: #315a78;
+}
+
+body.doctor-mode .dashboard-status-filters button[aria-pressed="true"] {
+  border-color: #9fc0d9;
+  background: var(--mra-blue-100);
+  color: #14557f;
+}
+
+/* Toast */
+body.doctor-mode .toast {
+  background: var(--mra-blue-900);
+  color: #ffffff;
+}
+
+/* Login */
+body.doctor-mode .login-panel,
+body:not(.doctor-mode) .login-panel {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(56, 142, 196, 0.22), transparent 30%),
+    linear-gradient(135deg, #081f36 0%, #0d3455 56%, #eef4fa 56%, #f8fbfe 100%);
+}
+
+body.doctor-mode .login-brand-pane {
+  background: linear-gradient(160deg, #0b2a4a 0%, #11486d 100%);
+  color: #ffffff;
+}
+
+body.doctor-mode .login-brand-pane h1,
+body.doctor-mode .login-brand-pane strong {
+  color: #ffffff;
+}
+
+body.doctor-mode .login-brand-pane p,
+body.doctor-mode .login-brand-pane small,
+body.doctor-mode .login-capability-list span {
+  color: #c6dcec;
+}
+
+body.doctor-mode .login-shell {
+  background: #ffffff !important;
+}
+
+body.doctor-mode .login-card {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+body.doctor-mode .login-brand-pane .page-eyebrow {
+  color: #bcd9ec !important;
+}
+
+body.doctor-mode .login-card h2 {
+  color: #102a43;
+}
+
+body.doctor-mode .login-card .page-eyebrow {
+  color: #17618c;
+}
+
+body.doctor-mode .login-help {
+  color: var(--mra-muted);
+}
+
+body.doctor-mode .login-card input {
+  border-color: #c8d8e6;
+  background: #f8fbfe;
+}
+
+/* Keep narrow header descriptions single-line where space is tight */
+body.doctor-mode .alpha51-workspace .column > .panel-header p {
+  color: var(--mra-muted);
+}
+
+@media (max-width: 680px) {
+  body.doctor-mode .product-nav-item small,
+  body.doctor-mode .product-nav-foot small {
+    white-space: normal;
+  }
+}
+
+/* Final surface lock: these components are also styled by legacy layers. */
+body.doctor-mode.standard-mode .alpha51-workspace .encounter-patient-banner,
+body.doctor-mode.standard-mode .alpha51-workspace .patient-bar {
+  border-color: #0b3555 !important;
+  background: linear-gradient(100deg, #0b2a4a 0%, #0f4268 58%, #16577d 100%) !important;
+  color: #ffffff !important;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .patient-avatar {
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #0b2a4a !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18) !important;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .demo-patient-badge {
+  border-color: rgba(255, 255, 255, 0.38) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #eef7fd !important;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .encounter-patient-banner #patientProfile {
+  background: #0c3557 !important;
+  color: #e7f3fb !important;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .encounter-patient-banner .meta-label {
+  color: #b9d3e6 !important;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .encounter-patient-banner .model-status {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #e7f3fb !important;
+}
+
+body.doctor-mode.standard-mode .product-nav-foot small {
+  white-space: nowrap !important;
+  font-size: 9.5px;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .workflow-step.active {
+  border-color: #14557f !important;
+  background: #14557f !important;
+  color: #ffffff !important;
+}
+
+body.doctor-mode.standard-mode .alpha51-workspace .workflow-step.active .workflow-index {
+  background: #ffffff !important;
+  color: #103d63 !important;
+}
+
+body.doctor-mode.standard-mode .primary-action,
+body.doctor-mode.standard-mode .encounter-action-bar .primary-action,
+body.doctor-mode.standard-mode .top-actions .primary-action {
+  border-color: #14557f !important;
+  background: #14557f !important;
+  color: #ffffff !important;
+}
+
+body.doctor-mode.standard-mode .primary-action:hover,
+body.doctor-mode.standard-mode .encounter-action-bar .primary-action:hover,
+body.doctor-mode.standard-mode .top-actions .primary-action:hover {
+  border-color: #103d63 !important;
+  background: #103d63 !important;
+}
+
+body.doctor-mode.standard-mode .product-nav-item.active {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: #0b2a4a !important;
+}
+
+body.doctor-mode.standard-mode .product-nav-item:not(.active) {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: #d4e3f0 !important;
+}
+
+body.doctor-mode.standard-mode .record-section-head h3::before {
+  background: linear-gradient(180deg, #4b9fd0, #14557f) !important;
+  box-shadow: none !important;
+}
+
+body.doctor-mode.standard-mode .partial-draft-summary {
+  color: #315a78 !important;
+}
+
+body.doctor-mode.standard-mode .encounter-action-bar #exportButton:disabled,
+body.doctor-mode.standard-mode .encounter-action-bar.flow-failed .button-group button:disabled {
+  border-color: #c8d8e6 !important;
+  background: #eef3f8 !important;
+  color: #5b7085 !important;
+}

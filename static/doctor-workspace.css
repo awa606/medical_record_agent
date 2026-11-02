@@ -145,7 +145,7 @@ body.doctor-mode .alpha51-workspace .field-status-text, body.doctor-mode .alpha5
 body.doctor-mode .alpha51-workspace .record-version { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border: 0; color: var(--ws-muted); font-size: 14px; line-height: 1.6; }
 body.doctor-mode .alpha51-workspace .record-version span { display: block; color: var(--text); }
 body.doctor-mode .alpha51-workspace .approval-checklist { flex: 1; min-width: 0; margin: 0; padding: 0; background: white; border: 0; border-radius: 6px; }
-body.doctor-mode .alpha51-workspace .approval-checklist-head { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; }
+body.doctor-mode .alpha51-workspace .approval-checklist-head { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; min-height: 36px; padding: 8px 0; }
 body.doctor-mode .alpha51-workspace .approval-checklist-head strong { font-size: 16px; color: #173d61; }
 body.doctor-mode .alpha51-workspace .approval-checklist-head p { font-size: 14px; line-height: 1.5; margin: 4px 0 0; color: #526477; }
 .record-empty-state { padding: 24px 0; color: #526477; font-size: 16px; line-height: 1.7; }
@@ -161,6 +161,11 @@ body.doctor-mode .alpha51-workspace .approval-primary-action { font-size: 16px; 
 .approval-readonly-record { padding: 0 12px 12px; }
 .approval-readonly-record > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid #dce3e9; font-size: 14px; }
 .approval-readonly-record > div span { color: #526477; }
+.review-instructions { font-size: 14px; color: #526477; line-height: 1.6; }
+.approval-disclosure > .review-instructions { margin: 0 12px 8px; }
+.review-instructions > summary { cursor: pointer; min-height: 28px; padding: 4px 0; }
+.review-instructions > p { margin: 4px 0 8px; }
+.review-instructions > summary:focus-visible, .approval-checklist-head:focus-visible { outline: 2px solid #145d9c; outline-offset: 2px; }
 body.doctor-mode .alpha51-workspace .record-recovery { padding: 12px 0; border-bottom: 1px solid var(--ws-border); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 body.doctor-mode .alpha51-workspace .record-recovery summary,
 body.doctor-mode .alpha51-workspace .review-completed summary { cursor: pointer; padding: 8px 0; font-size: 14px; color: var(--ws-muted); }

@@ -2625,26 +2625,14 @@ function renderReviewBoundaryNotice() {
     return;
   }
   const displayState = doctorDisplayState();
-  notice.hidden = false;
+  // Routine guidance is available in the review disclosure. Keep only an
+  // actionable historical-content warning here; editing has its own notice.
+  notice.hidden = displayState.key !== "incomplete" || appState.recordEditMode;
+  notice.textContent = "";
   notice.className = `review-boundary-notice ${displayState.key}`.trim();
-  if (appState.recordEditMode) {
-    notice.className = "review-boundary-notice editing";
-    notice.textContent = "正在编辑；保存将创建新版本，原批准不会自动用于修改后的内容。";
-    return;
-  }
-  if (currentRevisionIsSigned()) {
-    notice.textContent = "医生审核已完成；导出文件绑定当前就诊和最新病历版本。";
-    return;
-  }
-  if (displayState.key === "incomplete") {
+  if (!notice.hidden) {
     notice.textContent = "历史病历内容不完整；请核对保存的原文并补录，不能把空结果作为已生成草稿。";
-    return;
   }
-  if (displayState.key === "pending_review") {
-    notice.textContent = "AI 生成草稿，仅供医生审核；原审核已失效或尚未完成，审核通过后方可导出。";
-    return;
-  }
-  notice.textContent = "AI 生成草稿，仅供医生审核；保存修改并完成审核后方可导出。";
 }
 
 function focusRecordWorkspace() {
@@ -4133,6 +4121,8 @@ function renderApprovalChecklist(fields) {
   const reviewSummary = recordReviewSummary(fields);
   const pending = reviewSummary.items.length;
   const approved = reviewSummary.signed;
+  const reviewLabel = approved ? "已签署 · 查看记录" : pending ? `${pending}项异常 · 展开处理`
+    : reviewSummary.regularPending ? "内容待核对 · 展开" : "核对完成 · 查看";
   const regularDone = regularFields.length === 0
     || regularFields.every(({ key }) => fieldReviewPresentation(fields, key).key === "confirmed")
     || appState.approvalRegularFieldsConfirmed;
@@ -4195,13 +4185,11 @@ function renderApprovalChecklist(fields) {
   return `
     <section class="approval-checklist" aria-label="分项审核">
       <details class="approval-disclosure" ${appState.approvalDisclosureOpen ? "open" : ""}>
-      <summary class="approval-checklist-head">
-        <div>
-          <strong>医生分项审核 · 版本 ${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"}</strong>
-          <p>${approved ? "当前版本已签署；各字段的实际决定可展开查看。" : [reviewSummary.regularPending ? "普通内容待核对" : "", pending ? `${pending}项异常待处理` : ""].filter(Boolean).join(" · ") || "核对项已处理，仍需提交审核。"}</p>
-        </div>
-        <span class="approval-entry-label">${approved ? "查看审核记录" : "开始核对"}</span>
+      <summary class="approval-checklist-head" aria-label="医生分项审核 · 版本 ${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"} · ${escapeHtml(reviewLabel)}">
+        <strong>医生分项审核</strong>
+        <span class="approval-entry-label">${escapeHtml(reviewLabel)}</span>
       </summary>
+      <details class="review-instructions"><summary>审核说明</summary><p>AI 生成草稿，仅供医生审核；原审核已失效或尚未完成时，审核通过后方可导出。普通内容可集中确认，缺失、候选诊断和风险须分别处理；勾选不能消除证据冲突。已签署版本的决定在审核记录中查看。</p></details>
       ${approved ? `<div class="approval-readonly-record">${fieldItems.map(({title,field}) => `<div><strong>${escapeHtml(title)}</strong><span>${escapeHtml({content_confirmed:"内容已确认",not_asked_confirmed:"确认本次未询问",missing_accepted:"接受本次缺失"}[field?.doctor_review_status] || "未记录分项确认")}</span></div>`).join("")}${diagnoses.map(d => `<div><strong>${escapeHtml(d.name)}</strong><span>${escapeHtml({candidate_confirmed:"候选已确认",ai_candidate_deleted:"已移除AI候选"}[d.doctor_review_status] || "未确认")}</span></div>`).join("")}</div>` : `
       ${outstanding(`<div class="approval-section">
         <div class="approval-section-title">
@@ -4421,7 +4409,7 @@ function renderFields() {
     <div class="record-edit-notice ${appState.recordEditConflict ? "conflict" : ""}">
       <div>
         <strong data-record-edit-status>${appState.recordEditDirty ? "有未保存修改" : "编辑模式"}</strong>
-        <span>只修改病历字段；原始证据和知识来源保持只读。保存会创建新病历版本，并使旧批准失效。</span>
+        <details class="review-instructions"><summary>保存说明</summary><p>只修改病历字段；原始证据和知识来源保持只读。保存会创建新病历版本，并使旧批准失效。</p></details>
       </div>
       ${appState.recordEditConflict ? `<button type="button" data-record-reload-latest>加载最新版本</button>` : ""}
     </div>` : "";
@@ -4461,7 +4449,7 @@ function renderFields() {
       </label>`).join("") : "";
     const extra = id === "management" ? diagnoses + codeEditors : "";
     if (!inner && !extra) return "";
-    const statusMarkup = issues.length ? `<button type="button" class="record-section-status ${statusTone}" data-record-section-focus="${escapeHtml(issues[0].fieldKey)}">${statusText}</button>` : `<span class="record-section-status ${statusTone}">${statusText}</span>`;
+    const statusMarkup = issues.length ? `<button type="button" class="record-section-status ${statusTone}" data-record-section-focus="${escapeHtml(issues[0].fieldKey)}">${statusText}</button>` : "";
     if (id === "demographics") {
       const brief = ["patient_sex", "patient_birth_date", "visit_type"].map(key => {
         const label = FIELD_DEFS.find(([item]) => item === key)?.[1] || key;
@@ -5405,7 +5393,7 @@ function renderTranscript() {
   if ($("transcriptHeading")) $("transcriptHeading").textContent = !hasAudioSource && rows.length ? "输入原文" : "问诊转写";
   if ($("transcriptSourceNotice")) {
     $("transcriptSourceNotice").hidden = hasAudioSource || !rows.length;
-    $("transcriptSourceNotice").textContent = "文本输入 · 未关联录音\n本病例没有音频时间";
+    $("transcriptSourceNotice").textContent = "文本输入 · 无录音时间";
   }
 
   if (!rows.length && !asr && !appState.currentAsrSessionId) {
@@ -6536,6 +6524,9 @@ function renderFooter() {
   const cancelEditButton = $("cancelRecordEditButton");
   const saveButton = $("saveDraftButton");
   const confirmButton = $("confirmFieldsButton");
+  const reviewPending = pendingApprovalCount(activeRecordFields()) > 0;
+  confirmButton.textContent = reviewPending ? "核对病历" : "完成病历审核";
+  confirmButton.title = reviewPending ? "打开待处理清单；此操作不会提交审核" : "签署当前已保存版本";
   const exportButton = $("exportButton");
   const footerHints = {
     draft_generated: "病历草稿已生成，可先保存修改；保存后进入医生审核。",
@@ -8074,10 +8065,16 @@ function reapplyLocalRecordChanges() {
 async function confirmFields() {
   try {
     if (!appState.currentTaskId) throw new Error("暂无可确认的任务");
+    if (appState.recordEditMode || appState.recordEditDirty) throw new Error("请先保存或取消当前修改，再审核已保存的病历版本。");
     if (pendingApprovalCount(activeRecordFields())) {
       appState.approvalDisclosureOpen = true;
       renderFields();
-      document.querySelector('.approval-disclosure summary')?.focus();
+      renderFooter();
+      const summary = document.querySelector('.approval-disclosure summary');
+      const list = $("recordFields");
+      if (list) list.scrollTop = 0;
+      summary?.focus({ preventScroll: true });
+      return;
     }
     setBusy(true, "正在完成审核...");
     const payload = await buildTaskApprovalPayload();
@@ -10091,24 +10088,28 @@ function bindEvents() {
     if (confirmRegular) {
       appState.approvalRegularFieldsConfirmed = true;
       renderFields();
+      renderFooter();
       return;
     }
     const missingAction = event.target.closest("[data-approval-missing-key]");
     if (missingAction) {
       appState.approvalMissingDecisions[missingAction.dataset.approvalMissingKey] = missingAction.dataset.approvalAction;
       renderFields();
+      renderFooter();
       return;
     }
     const diagnosisAction = event.target.closest("[data-approval-diagnosis-index]");
     if (diagnosisAction) {
       appState.approvalDiagnosisDecisions[diagnosisAction.dataset.approvalDiagnosisIndex] = diagnosisAction.dataset.approvalAction;
       renderFields();
+      renderFooter();
       return;
     }
     const riskAction = event.target.closest("[data-approval-risk-key]");
     if (riskAction) {
       appState.approvalHighRiskConfirmations[riskAction.dataset.approvalRiskKey] = true;
       renderFields();
+      renderFooter();
       return;
     }
     const detail = event.target.closest("[data-open-detail]");

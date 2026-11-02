@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-11-02T12:55:41.647Z",
-  "source_hash": "5fb543980e541c9958adb1c5de601313451725ec840b1fa33c30be1619de078d",
+  "updated_at": "2026-11-02T14:28:37.308Z",
+  "source_hash": "1a0c6d2b48675264893f8180cf506f8be94c5a175df6b56d28ca7234e09faa73",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "372c99706e4d51629a4867108332985ba8013593",
+  "repo_sha": "44115d881cc3c3e1c087fe7cf5a6f86242e26269",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/ui-hospital-record-v1",
   "active_pr": {
@@ -87,12 +87,12 @@
     }
   },
   "purchase_decision": "DEFERRED",
-  "next_task": "完成26327真实FunASR＋DeepSeek候选的新自然对话、授权音频与核对保存审核导出验收，首次输出、规则处理和医生修订分列；固定回放不替代任意新输入，5.1齐全后才进入5.3。",
+  "next_task": "以新实质SHA更新26327薄层镜像并保留其独立病例，补知识FTS5与文本面板实际按钮、历史版本对照和PDF内容读取；继续定位CI320px对比度节点，随后完成授权音频、查看器和同版本恢复。不因人工R3批准导出计为首次提取正确，5.1齐全后才进入5.3。",
   "parallel_waiting_task": "硬件1.1–1.4继续延期；本地模型漏提、字段混放及自我纠正质量独立保留，不由界面结果替代。",
   "manual_actions": [
-    "当前新Edge验收页已可读取，旧标签曾超时；物理麦克风由用户后续用同稿录音，新候选实际显示及流程未验项继续明确记录，不要求重复旧病例。"
+    "用户后续可用已交付同稿测试物理麦克风；当前文本流程由工程执行，授权音频、实际显示、恢复未验项继续保留，不要求用户重复旧病例。"
   ],
-  "forecast_alpha_exit": "阶段A修复审核清单标题歧义，3项隔离Mock及10项提示保护检查通过，原CI1754通过/3失败/4跳过与后续未执行保留。自然稿40发言行/1107汉字及七字段核对表已锁定；26320为Mock、26324/26326为固定回放，26327真实在线准备中，最终完整CI、音频与恢复尚待执行。16项99h、5.1VERIFY与原Gate不变，不预称稳定试用版。",
+  "forecast_alpha_exit": "阶段B真实在线E-1仅生成1次：R1主诉时间和既往史有误，现病史冲突隔离；人工R2/R3后批准R3并导出PDF，历史对照和文件核对待补。知识可选包缺失500窄范围FTS5修复5测试通过，文本表单Grid修复2测试通过，均待新镜像按钮复验。CI41451807794的1757/4跳过/30子测试通过不代表整体成功，axe320px一节点失败未定位且后续步骤跳过。正式16项99h、5.1VERIFY与原Gate不变，不预写稳定试用版。",
   "source_files": {
     ".obsidian/plugins/project-planner-engineering/main.js": "e4006974bdcc45cb5ab80aebc5b9fd721a24c451ea883fd7d7e5239676017cca",
     ".obsidian/plugins/project-planner-engineering/manifest.json": "23672403c65ab17af6d28d84bbd822fab00ceeac1961612eb5cf9d514befa979",
@@ -218,7 +218,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "714a099f613117e7df843af381ee8d213b01d9338cf75871245c0ac2d82044de",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "80fd081cc1563b257b8c4edfb61b0abd343e8cef8e9acd5077694a687b21717d",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -231,7 +231,7 @@
     "Projects/Medical_Record_Agent/Risks/R08 本地环境与演示环境不一致.md": "9d9e6d6b283f8280fcd11202155b74718181eb799d75a9c9dc35c8983be22ae2",
     "Projects/Medical_Record_Agent/Risks/R09 单人关键任务集中造成阻塞.md": "7a63e214205397276a84f70e10c905257ad6b2ab7a638ce83aa80d7e7e83182b",
     "Projects/Medical_Record_Agent/Risks/R10 最终真实音频验收失败.md": "a8be1990be641494c191c3b1c257e610c1034b34f49b401a881d33344744fb1d",
-    "Projects/Medical_Record_Agent/Risks/R11 87小时估计不足或D15修复回归超时.md": "f9257703fddae65237379feabebc77422678a26babfc6846ddb989c83ba97242",
+    "Projects/Medical_Record_Agent/Risks/R11 87小时估计不足或D15修复回归超时.md": "26cf1a40c4a7d8e4f974e143ea12488040dae7bd5ce01f2e928b3cc19f34fad1",
     "Projects/Medical_Record_Agent/Risks/R12 接口外壳或散热不兼容导致无法装配.md": "8dfbe6cd178ff467934dbe850b16acbd993472fcaf57c35454fff3a925ce6450",
     "Projects/Medical_Record_Agent/Roadmap.md": "77042df0811c8899ecfc21bd931c0e0fb17ce184696af16d2b7535250d2dbce5",
     "Projects/Medical_Record_Agent/Tasks/1.1 目标硬件与BOM基线.md": "e2a97826a25b65428c0d6d6f3421ab4ddfa625ad2fd36586e6188087f39ac9ef",
@@ -246,7 +246,7 @@
     "Projects/Medical_Record_Agent/Tasks/3.3 医生修改、审核与导出.md": "bd42143579a9fd023ea145c17b7d0b34fb342d7b538249931f125af4957e8959",
     "Projects/Medical_Record_Agent/Tasks/4.1 Encounter _ Transcript _ Draft基础持久化.md": "ac396168165bbc5b8ce20ec77fdbb8b0c52d9d57fb0aa21783b39a431c143939",
     "Projects/Medical_Record_Agent/Tasks/4.2 病历证据与Revision版本关联.md": "caa937a1f5f28c8ae4a817d7ca692217560256101c390e4d585152c392949054",
-    "Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke.md": "9587287a50ba0fc2eca32f5762f140c2325ce1a6ecd8f7e25609917561cfb579",
+    "Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke.md": "8f0d13107976c727f65dfe553a53e0b6fb3c6c9d7383bb7e51a98faae05ffd2e",
     "Projects/Medical_Record_Agent/Tasks/5.2 断网本地运行验证.md": "9cbfed70e6f73c9199e7031611a2a2760b4b30eed8268f4385f35426c45aecda",
     "Projects/Medical_Record_Agent/Tasks/5.3 连续5次真实音频E2E.md": "128e7dd1c17ce42c2ff5ff9ceda13283eaa860b981673c621e81d05dff7dd5c3",
     "Projects/Medical_Record_Agent/Tasks/5.4 Alpha缺陷回归和证据归档.md": "f904dcf687858ef01903e7fb53eca97c004f7b56656186dc8fae38fa240b1157",
@@ -296,7 +296,7 @@
     ".artifacts/review-fix-20261102/hardware-status-preserved.json": "80bc286c3f03a9cdc361ffa84e89f64bba265e7f3f0c0c067c2cf2c3d0142d26",
     "docs/evidence/20261102_compact_doctor_review.md": "30b73d117e83bdaa4e4db9ea70287b49b0a2460d3559400acf28de3a4fc7f9d6",
     "docs/evidence/20261102_continuous_record_ui.md": "fd3468d362b0b2d1c8c8d0e6d39234db2a7c58bc1a8eb3eea478b78e00ddc057",
-    "docs/evidence/20261102_full_acceptance_and_natural_dialogue.md": "2dfb4b3d431a6968e19e2106ede27ed0889055f596eec5d19135cd6bf7b7a8d3",
+    "docs/evidence/20261102_full_acceptance_and_natural_dialogue.md": "297301fb44c05da87880af63aef85be85abcb702c6c575c922398a884210a582",
     "docs/evidence/20261102_record_approval_receipts.md": "c2b094e4476c5952a38b463b264dc4cf6d1dd1757f54898de019d39ae8673719",
     "docs/evidence/20261103_medication_coverage_freeze.md": "df10e79409203c0c8edabdb5722bec90630d941cc03463891cdc50981bd6e80a"
   },

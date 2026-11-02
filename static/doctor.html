@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
     <link rel="stylesheet" href="./doctor.css?v=20261102-continuous-record-r2" />
     <link rel="stylesheet" href="./doctor-ui-v2.css?v=20261102-continuous-record-r2" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=20261102-continuous-record-r2" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=20261102-review-navigation-r1" />
   </head>
   <body class="doctor-mode standard-mode">
 <a class="skip-link" href="#mainContent">跳到主要内容</a>
@@ -298,6 +298,7 @@
             <span id="fieldCountBadge" class="status-badge neutral">-</span>
           </div>
           <div id="reviewBoundaryNotice" class="review-boundary-notice" hidden></div>
+          <nav id="recordNavigation" class="record-navigation" aria-label="病历章节定位" hidden></nav>
           <div id="recordFields" class="field-list"></div>
         </aside>
 
@@ -651,6 +652,6 @@
       <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=20261102-approval-evidence-r1"></script>
+    <script src="./doctor.js?v=20261102-review-navigation-r1"></script>
   </body>
 </html>

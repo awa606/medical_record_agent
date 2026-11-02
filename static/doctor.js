@@ -4077,10 +4077,10 @@ function nextRecordIssueKey(items, list) {
   const keys = new Set(items.map(item => item.fieldKey));
   const targets = [...list.querySelectorAll(".field-card[data-field]")]
     .filter(card => keys.has(card.dataset.field));
-  const navBottom = list.querySelector(".record-navigation")?.getBoundingClientRect().bottom || list.getBoundingClientRect().top;
+  const listTop = list.getBoundingClientRect().top;
   const next = targets.find(card => {
     const disclosure = card.closest("details:not([open])");
-    return (disclosure || card).getBoundingClientRect().top > navBottom + 24;
+    return (disclosure || card).getBoundingClientRect().top > listTop + 24;
   }) || targets[0];
   return next?.dataset.field || null;
 }
@@ -4095,8 +4095,7 @@ function focusRecordTarget(key, section = false) {
     const label = disclosure.querySelector(".demographics-toggle");
     if (label) label.textContent = "收起资料";
   }
-  const navHeight = list.querySelector(".record-navigation")?.getBoundingClientRect().height || 0;
-  const top = target.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop - navHeight - 12;
+  const top = target.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop - 12;
   list.scrollTo({ top: Math.max(0, top), behavior: "auto" });
   target.focus({ preventScroll: true });
 }
@@ -4272,6 +4271,8 @@ function renderFields() {
   const isApprovedDisplay = currentRevisionIsSigned();
   const highlightClass = appState.recordHighlightUntil > Date.now() ? "record-field-updated" : "";
   if (!fields) {
+    $("recordNavigation").hidden = true;
+    $("recordNavigation").innerHTML = "";
     $("fieldCountBadge").textContent = "待生成";
     $("fieldCountBadge").className = "status-badge neutral";
     $("recordFields").innerHTML = `<section class="record-empty-state"><h3>病历将在这里整理</h3><p>在左侧开始录音、上传音频或输入文本。完成后，在这里核对原文、修改并审核病历。</p></section>`;
@@ -4412,7 +4413,9 @@ function renderFields() {
     ["management", "诊断处理", ["preliminary_diagnosis", "treatment_plan", "treatment_notes"]],
     ["demographics", "基本资料", DEMOGRAPHIC_FIELD_KEYS],
   ];
-  const navigation = `<nav class="record-navigation" aria-label="病历章节定位">${clinicalSections.map(([id, title]) => `<button type="button" data-record-anchor="${id}">${title}</button>`).join("")}${review.items.length ? `<button type="button" class="record-next-issue" data-record-next-issue>下一待核对项 (${review.items.length})</button>` : ""}</nav>`;
+  $("recordNavigation").innerHTML = clinicalSections.map(([id, title]) => `<button type="button" data-record-anchor="${id}">${title}</button>`).join("")
+    + (review.items.length ? `<button type="button" class="record-next-issue" data-record-next-issue>下一待核对项 (${review.items.length})</button>` : "");
+  $("recordNavigation").hidden = false;
   const usedKeys = new Set();
   const sections = clinicalSections.map(([id, title, keys]) => {
     const issues = review.items.filter(item => keys.includes(item.fieldKey));
@@ -4443,7 +4446,7 @@ function renderFields() {
     return `<section class="record-section" data-record-section="${id}" tabindex="-1" aria-label="${title}"><header class="record-section-head"><h3>${title}</h3>${statusMarkup}</header><div class="record-section-body">${inner}${extra}</div></section>`;
   }).join("");
   const leftover = [...cardHtmlByKey.entries()].filter(([key]) => !usedKeys.has(key)).map(([, html]) => html).join("");
-  $("recordFields").innerHTML = navigation + previewNotice + historicalNotice
+  $("recordFields").innerHTML = previewNotice + historicalNotice
     + `<div class="record-review-toolbar">${versionNotice}${isEditing ? "" : renderApprovalChecklist(fields)}</div>`
     + editNotice + recoveryNotice + sections + leftover + summaryFooter + draftLegend;
 
@@ -10014,7 +10017,7 @@ function bindEvents() {
       if (label) label.textContent = event.target.open ? "收起资料" : "展开资料";
     }
   }, true);
-  $("recordFields").addEventListener("click", (event) => {
+  $("recordNavigation").addEventListener("click", (event) => {
     const anchor = event.target.closest("[data-record-anchor]");
     if (anchor) { focusRecordTarget(anchor.dataset.recordAnchor, true); return; }
     const nextIssue = event.target.closest("[data-record-next-issue]");
@@ -10024,6 +10027,8 @@ function bindEvents() {
       if (next) focusRecordTarget(next);
       return;
     }
+  });
+  $("recordFields").addEventListener("click", (event) => {
     const sectionFocus = event.target.closest("[data-record-section-focus]");
     if (sectionFocus) { focusRecordTarget(sectionFocus.dataset.recordSectionFocus); return; }
     const resolve = event.target.closest("[data-field-resolution]");

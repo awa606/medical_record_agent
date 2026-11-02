@@ -68,7 +68,9 @@ body.doctor-mode .alpha51-workspace .panel-header h2, .workspace-aux-dialog .pan
 body.doctor-mode .alpha51-workspace .panel-header p, .workspace-aux-dialog .panel-header p { display: none; }
 body.doctor-mode .alpha51-workspace .transcript-header-actions { display: none; }
 body.doctor-mode .alpha51-workspace .transcript-column, body.doctor-mode .workspace-aux-dialog .transcript-column { display: flex; flex-direction: column; }
-body.doctor-mode .alpha51-workspace .field-column { grid-template-rows: auto auto minmax(0, 1fr); }
+body.doctor-mode .alpha51-workspace .field-column { grid-template-rows: auto auto auto minmax(0, 1fr); }
+body.doctor-mode .alpha51-workspace #recordNavigation { grid-row: 3; }
+body.doctor-mode .alpha51-workspace #recordFields { grid-row: 4; }
 body.doctor-mode .alpha51-workspace .assist-column { grid-template-rows: auto minmax(0, 1fr); }
 .transcript-input-toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .transcript-input-toolbar button { padding: 6px 8px; min-height: 36px; font-size: 16px; background: white; }
@@ -321,6 +323,7 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   body.doctor-mode .product-nav-item span { font-size: 16px; }
   body.doctor-mode .product-nav-foot { display: none; }
   body.doctor-mode .topbar { grid-area: topbar; flex-wrap: wrap; }
+  body.doctor-mode .topbar .brand-block { max-width: 100%; flex-wrap: wrap; }
   body.doctor-mode .product-main { grid-area: main; min-width: 0; }
   body.doctor-mode .alpha51-workspace { height: calc(100dvh - 150px); max-height: calc(100dvh - 150px); }
   body.doctor-mode .alpha51-workspace .encounter-review-cell { display: none; }
@@ -371,7 +374,8 @@ body.doctor-mode .alpha51-workspace .transcript-source-notice {
 }
 
 /* Continuous clinical note: one scroll surface, one section level. */
-.record-navigation { position: sticky; top: 0; z-index: 5; flex: none; display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 0; background: white; border-bottom: 1px solid var(--line); }
+.record-navigation { display: flex; flex-wrap: wrap; gap: 4px; margin-inline: 16px; padding: 8px 0; background: white; border-bottom: 1px solid var(--line); }
+.record-navigation[hidden] { display: none; }
 .record-navigation button { min-height: 36px; padding: 6px 8px; border: 0; border-radius: 6px; background: #edf4fc; color: #164e7d; font-size: 14px; line-height: 1.5; white-space: nowrap; }
 .record-navigation button:hover { background: #dcebf9; }
 .record-navigation .record-next-issue { background: #fff5e4; color: #7f4b04; }

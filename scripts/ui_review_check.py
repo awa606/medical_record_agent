@@ -114,23 +114,30 @@ AUDIT_JS = r"""
       });
     }
   }
-  const clipped = (el, r) => {
+  // Compare only the part of each control visible inside its scroll container.
+  const visibleBounds = (el, r) => {
+    let {left, right, top, bottom} = r;
     for (let parent = el.parentElement; parent; parent = parent.parentElement) {
       const style = getComputedStyle(parent);
-      if (!['auto', 'scroll', 'hidden'].includes(style.overflowY)) continue;
       const clip = parent.getBoundingClientRect();
-      if (r.bottom <= clip.top + 1 || r.top >= clip.bottom - 1) return true;
+      if (['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowY)) {
+        top = Math.max(top, clip.top); bottom = Math.min(bottom, clip.bottom);
+      }
+      if (['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowX)) {
+        left = Math.max(left, clip.left); right = Math.min(right, clip.right);
+      }
     }
-    return false;
+    return {left, right, top, bottom, width: right - left, height: bottom - top};
   };
   const rects = [...scope.querySelectorAll('button, a[href], input, select, textarea, [role="button"]')]
     .filter((el) => {
       const r = el.getBoundingClientRect();
       const s = getComputedStyle(el);
       return r.width > 2 && r.height > 2 && s.visibility !== 'hidden' && s.display !== 'none'
-        && !el.closest('[hidden]') && !el.closest('details:not([open])') && !clipped(el, r);
+        && !el.closest('[hidden]') && !el.closest('details:not([open])');
     })
-    .map((el) => ({ el, r: el.getBoundingClientRect() }));
+    .map((el) => ({ el, r: visibleBounds(el, el.getBoundingClientRect()) }))
+    .filter(({r}) => r.width > 2 && r.height > 2);
   const topmost = (el, r) => {
     const x = Math.min(Math.max(r.left + r.width / 2, 0), window.innerWidth - 1);
     const y = Math.min(Math.max(r.top + r.height / 2, 0), window.innerHeight - 1);
@@ -288,20 +295,20 @@ def run() -> dict:
             page.evaluate("closeDrawer()")
             page.wait_for_timeout(200)
 
-            headings = page.locator("#recordFields .record-section-head h3").all_inner_texts()
-            steps.append({"step": "record_sections", "ok": len(headings) >= 5, "detail": headings})
+            headings = page.locator("#recordFields .record-section-head h3, #recordFields .record-demographics > summary strong").all_inner_texts()
+            steps.append({"step": "record_sections", "ok": len(headings) == 5, "detail": headings})
             steps.append({
                 "step": "expected_sections",
-                "ok": all(name in headings for name in ("就诊信息", "主诉与现病史", "既往史与过敏", "体格检查", "诊断与处理")),
+                "ok": headings == ["病史", "既往与过敏", "查体检查", "诊断处理", "基本资料"],
                 "detail": headings,
             })
             section_cards = page.evaluate("""() => [...document.querySelectorAll('#recordFields .record-section')].map(section => ({
-                title: section.querySelector('.record-section-head h3')?.textContent.trim() || '',
+                title: section.querySelector('.record-section-head h3, summary strong')?.textContent.trim() || '',
                 cards: section.querySelectorAll('.field-card').length,
             }))""")
             steps.append({
                 "step": "section_contents",
-                "ok": all(item["cards"] >= 1 for item in section_cards if item["title"] != "就诊信息"),
+                "ok": all(item["cards"] >= 1 for item in section_cards),
                 "detail": section_cards,
             })
             section_status = page.evaluate("""() => [...document.querySelectorAll('#recordFields .record-section-status')].map(button => ({
@@ -337,6 +344,13 @@ def run() -> dict:
             page.wait_for_timeout(400)
             page.locator('textarea[data-record-field-input="present_illness"]').evaluate("el => { el.focus(); el.scrollIntoView({ block: 'center' }); }")
             page.wait_for_timeout(300)
+            nav_bottom = page.locator("#recordNavigation").bounding_box()
+            body_top = page.locator("#recordFields").bounding_box()
+            steps.append({
+                "step": "chapter_navigation_clear_of_editor",
+                "ok": nav_bottom["y"] + nav_bottom["height"] <= body_top["y"] + 1,
+                "detail": [nav_bottom, body_top],
+            })
             audit(page, "record_edit_mode", steps)
             page.click("#cancelRecordEditButton")
             page.wait_for_timeout(300)

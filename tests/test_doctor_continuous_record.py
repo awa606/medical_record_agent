@@ -62,7 +62,7 @@ appState.currentDraft='草稿';
 renderFields(); const html=nodes.get('recordFields').innerHTML;
 console.log(JSON.stringify({historyBeforeDemographics:html.indexOf('data-record-section="history"')<html.indexOf('data-record-section="demographics"'),
  fields: [...html.matchAll(/data-field="([^"]+)"/g)].map(m=>m[1]),
- anchors:[...html.matchAll(/data-record-anchor="([^"]+)"/g)].map(m=>m[1])}));
+ anchors:[...nodes.get('recordNavigation').innerHTML.matchAll(/data-record-anchor="([^"]+)"/g)].map(m=>m[1])}));
 ''')
     assert result['historyBeforeDemographics']
     assert len(result['fields']) == len(set(result['fields']))
@@ -84,7 +84,7 @@ def test_next_issue_uses_rendered_order_and_collapsed_group_location():
     result = run_browser_logic(r'''
 const card=(key,top,closed=null)=>({dataset:{field:key},getBoundingClientRect:()=>({top}),closest:()=>closed});
 const nodes=[card('chief_complaint',20),card('present_illness',100),card('accompanying_symptoms',180),card('previous_treatment',300),card('patient_address',0,{getBoundingClientRect:()=>({top:600})})];
-const list={querySelectorAll:()=>nodes,querySelector:()=>({getBoundingClientRect:()=>({bottom:120})})};
+const list={querySelectorAll:()=>nodes,getBoundingClientRect:()=>({top:120})};
 const items=['previous_treatment','accompanying_symptoms','patient_address'].map(fieldKey=>({fieldKey}));
 const nearest=nextRecordIssueKey(items,list);
 const collapsed=nextRecordIssueKey([{fieldKey:'patient_address'}],list);

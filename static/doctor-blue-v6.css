@@ -459,6 +459,11 @@ body.doctor-mode .alpha51-workspace #recordFields .field-meta {
   border-top-color: #e6eef6;
 }
 
+body.doctor-mode.standard-mode .alpha51-workspace #recordFields .field-meta {
+  margin-top: 6px !important;
+  padding-top: 6px !important;
+}
+
 body.doctor-mode .alpha51-workspace #recordFields .field-meta a,
 body.doctor-mode .alpha51-workspace #recordFields .field-meta button {
   font-size: 12px;

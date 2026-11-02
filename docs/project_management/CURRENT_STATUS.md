@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-29T14:39:48.466Z`
-- Source hash: `34d34f56b0143dceef647929590b9176a9d2a09af5a61d03bf49b06e95c45eb3`
+- Updated at: `2026-11-02T04:58:15.805Z`
+- Source hash: `384dc1d2e29ad65bc373c0fe66567988bbc38340f405735b23d280259767377b`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@b5451f5f3f4203970830fa852f8d15d89df05d34`
-- Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
-- Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **8798本轮仅两份显示资源更新：前端b5451f5f、后端1cafa2ae不变，镜像84507f2b；健康/就绪200、业务和账本前后相同，旧容器保留。时间左上、角色右上、详情下方已在实际8798文本/音频历史记录截图核对；680px响应式初次失败与修复保留，不算实际缩放。教师入口版本匹配；新增ASR/模型调用0。上轮E27文本修正审核闭环复用，首次两字段混放仍失败；授权音频、物理录音、实际缩放和完整恢复缺项保留。5.1VERIFY95、5.3BACKLOG，正式16项99h/日期/Gate/硬件不变。**
+- Repo: `codex/ui-hospital-record-v1@2353c331965bece5eba17f37918b87607ad3470a`
+- Base main: `2353c331965bece5eba17f37918b87607ad3470a`
+- Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
+- Last merged PR: None
+- Forecast Alpha Exit: **本轮只完成撰写页组织、状态显示和静态发布。26320为Mock且知识表为空，不沿用旧8798成绩。用户三档实际缩放正常；同病例默认滚动减少50.27%。独立副本R2保存、历史对照与756字长文通过；音频时间为合成UI夹具，真实模型调用0。5.1仍VERIFY、5.3未开始，正式16项99h与Gate不变。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 转写条头排版已上线8798；授权音频闭环与同镜像恢复缺项待补** — `VERIFY`
+**5.1 · 深蓝白连续病历已更新26320；后端与最终发布门禁独立保留** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: 补当前b5451f5f/1cafa2ae版本的授权音频真实按钮闭环，核对角色门禁和一次生成；通过后衔接同镜像受限业务恢复。转写条头小布局已完成，不重复已通过文本及无关检查；5.1原标准满足后再进入5.3。
-- Parallel waiting task: 硬件1.1–1.4仍延期，5.2依赖5.1/1.2、5.4依赖5.2/5.3。本地模型漏提独立保留。采访v2三稿与两审查留本机，自动估计时间需复听，先限第七块255—300秒局部核对，不自动重跑37分钟。
+- Single next task: 当前26320前端1.9.2与静态回退已核验；下一步确认正式展示的真实Provider和知识数据来源，再补对应版本缺失的5.1证据，满足后才执行5.3。
+- Parallel waiting task: 硬件1.1–1.4继续延期；本地模型漏提、字段混放及自我纠正质量独立保留，不由界面结果替代。
 
 ## Manual Actions
 

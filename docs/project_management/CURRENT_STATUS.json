@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-11-02T07:35:17.011Z",
-  "source_hash": "19aeeeac5297375867fb6a2d704b695e3cbbd1b0f19af538238e23dc877dc291",
+  "updated_at": "2026-11-02T08:24:23.578Z",
+  "source_hash": "210a0b2e1486f50a4631bfbdcd4065c5e2e7c97b090c5b3f5890c877cb93c6ea",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "3c7fe5a79e76a73c02af0e9624f9c193e319fda3",
+  "repo_sha": "594b9f714c2b09daba2c0dc01de6d244e1522af9",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/ui-hospital-record-v1",
   "active_pr": {
@@ -216,7 +216,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "e1cca86ddc8640d389d689776a7a1cff1cb327d6b1d1857254539d5cf232a55e",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "0d4b2e1e8e88938e01a2075965dc37f477190d5732309d8de02173bc5bca10a5",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -293,7 +293,7 @@
   "extra_source_files": {
     ".artifacts/review-fix-20261102/hardware-status-preserved.json": "80bc286c3f03a9cdc361ffa84e89f64bba265e7f3f0c0c067c2cf2c3d0142d26",
     "docs/evidence/20261102_continuous_record_ui.md": "fd3468d362b0b2d1c8c8d0e6d39234db2a7c58bc1a8eb3eea478b78e00ddc057",
-    "docs/evidence/20261102_record_approval_receipts.md": "04653c5b9ead96b79ada2944419eb751a9c36c6d2b2cf4efbf2bf73a7219c664"
+    "docs/evidence/20261102_record_approval_receipts.md": "0c54fba0fceb139295dc9292ec3d7a234278df688ec13f230a6e5c1eb7058321"
   },
   "snapshot_verification": {
     "result": "PASS",

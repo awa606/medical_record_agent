@@ -37,7 +37,12 @@ async () => {
     error: null,
     violations: result.violations
       .filter((item) => ["serious", "critical"].includes(item.impact))
-      .map((item) => ({ id: item.id, impact: item.impact, nodes: item.nodes.length, help: item.help })),
+      .map((item) => ({
+        id: item.id, impact: item.impact, nodes: item.nodes.length, help: item.help,
+        affected: item.nodes.map((node) => ({
+          target: node.target, html: node.html, failureSummary: node.failureSummary,
+        })),
+      })),
   };
 }
 """

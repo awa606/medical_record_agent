@@ -166,6 +166,8 @@ body.doctor-mode .alpha51-workspace .approval-primary-action { font-size: 16px; 
 .review-instructions > summary { cursor: pointer; min-height: 28px; padding: 4px 0; }
 .review-instructions > p { margin: 4px 0 8px; }
 .review-instructions > summary:focus-visible, .approval-checklist-head:focus-visible { outline: 2px solid #145d9c; outline-offset: 2px; }
+/* The drawer fills the window; its form rows must not stretch with it. */
+#textImportPanel.active { align-content: start; }
 body.doctor-mode .alpha51-workspace .record-recovery { padding: 12px 0; border-bottom: 1px solid var(--ws-border); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 body.doctor-mode .alpha51-workspace .record-recovery summary,
 body.doctor-mode .alpha51-workspace .review-completed summary { cursor: pointer; padding: 8px 0; font-size: 14px; color: var(--ws-muted); }

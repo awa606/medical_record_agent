@@ -9,10 +9,10 @@
 > **DO NOT EDIT MANUALLY**
 
 - Updated at: `2026-11-02T04:58:15.805Z`
-- Source hash: `384dc1d2e29ad65bc373c0fe66567988bbc38340f405735b23d280259767377b`
+- Source hash: `b6c8de1c9d8757689a4f802129049cac6760d510456d984608f2eadd50023605`
 - Phase: **Alpha**
 - Repo: `codex/ui-hospital-record-v1@2353c331965bece5eba17f37918b87607ad3470a`
-- Base main: `2353c331965bece5eba17f37918b87607ad3470a`
+- Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
 - Forecast Alpha Exit: **本轮只完成撰写页组织、状态显示和静态发布。26320为Mock且知识表为空，不沿用旧8798成绩。用户三档实际缩放正常；同病例默认滚动减少50.27%。独立副本R2保存、历史对照与756字长文通过；音频时间为合成UI夹具，真实模型调用0。5.1仍VERIFY、5.3未开始，正式16项99h与Gate不变。**

@@ -2,9 +2,10 @@
    Presentation only: workflow, approval and provider gates remain in doctor.js. */
 body.doctor-mode {
   --ws-s1: 4px; --ws-s2: 8px; --ws-s3: 12px; --ws-s4: 16px; --ws-s6: 24px;
-  --ws-border: #dce3e9; --ws-muted: #526477; --ws-bg: #f2f4f7;
+  --ws-border: #dce3e9; --ws-muted: #526477; --ws-bg: #f2f5f9;
+  --primary: #165d9c; --primary-strong: #104b80; --primary-soft: #edf4fc; --text: #183148; --muted: #526477; --line: #dce3e9;
 }
-body.doctor-mode .doctor-app { grid-template-columns: 144px minmax(0, 1fr); grid-template-rows: 48px minmax(0, 1fr); gap: 0; padding: 0; }
+body.doctor-mode .doctor-app { grid-template-columns: 184px minmax(0, 1fr); grid-template-rows: 48px minmax(0, 1fr); gap: 0; padding: 0; }
 body.doctor-mode .topbar { min-height: 48px; padding: 6px 16px; margin: 0; box-shadow: none; }
 body.doctor-mode .brand-mark { width: 30px; height: 30px; font-size: 14px; border-radius: 6px; }
 body.doctor-mode .brand-copy h1 { font-size: 20px; line-height: 1.3; }
@@ -13,13 +14,13 @@ body.doctor-mode .deployment-badge { font-size: 14px; line-height: 1.4; color: v
 body.doctor-mode .top-actions { gap: 8px; }
 body.doctor-mode .top-actions button { min-height: 36px; font-size: 16px; padding: 5px 10px; }
 body.doctor-mode .top-actions .input-method-menu { display: none; }
-body.doctor-mode .product-nav { height: calc(100dvh - 48px); min-height: 0; padding: 20px 8px; }
+body.doctor-mode .product-nav { flex-direction: column; align-items: stretch; height: calc(100dvh - 48px); min-height: 0; padding: 20px 8px; }
 body.doctor-mode .product-nav-heading { padding: 0 10px 18px; }
 body.doctor-mode .product-nav-heading span { font-size: 14px; letter-spacing: 0; }
 body.doctor-mode .product-nav-heading strong { display: none; }
 body.doctor-mode .product-nav-item { min-height: 64px; padding: 12px 10px; gap: 4px; border-radius: 5px; }
-body.doctor-mode .product-nav-item span { font-size: 16px; font-weight: 600; line-height: 1.5; }
-body.doctor-mode .product-nav-item small { font-size: 14px; line-height: 1.5; }
+body.doctor-mode .product-nav-item span { font-size: 16px; font-weight: 600; line-height: 1.5; white-space: nowrap; }
+body.doctor-mode .product-nav-item small { font-size: 14px; line-height: 1.5; white-space: nowrap; }
 .product-nav-short { display: none; }
 body.doctor-mode .product-nav-foot { padding-inline: 8px; }
 body.doctor-mode .product-nav-foot strong, body.doctor-mode .product-nav-foot small, body.doctor-mode .auth-status { font-size: 14px; line-height: 1.5; }
@@ -33,8 +34,8 @@ body.doctor-mode .alpha51-workspace .encounter-patient-banner {
   flex: none; display: flex; justify-content: space-between; align-items: center;
   min-height: 56px; border: 1px solid var(--ws-border); border-radius: 6px; background: white;
 }
-body.doctor-mode .alpha51-workspace .encounter-patient-banner > div { min-height: 54px; padding: 8px 16px; border: 0; background: transparent; }
-body.doctor-mode .alpha51-workspace .patient-identity-cell { display: flex; align-items: center; justify-content: flex-start; gap: 16px; text-align: left; }
+body.doctor-mode .alpha51-workspace .encounter-patient-banner > div { min-height: 48px; padding: 8px 12px; border: 0; background: transparent; }
+body.doctor-mode .alpha51-workspace .patient-identity-cell { flex: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 4px 12px; text-align: left; }
 body.doctor-mode .alpha51-workspace .patient-identity-cell .meta-label { display: none; }
 body.doctor-mode .alpha51-workspace .patient-identity-cell strong { flex: none; font-size: 19px; font-weight: 700; }
 body.doctor-mode .alpha51-workspace .patient-identity-cell small { font-size: 14px; color: var(--ws-muted); line-height: 1.5; }
@@ -45,9 +46,9 @@ body.doctor-mode .alpha51-workspace .encounter-session-cell,
 body.doctor-mode .alpha51-workspace .encounter-input-cell,
 body.doctor-mode .alpha51-workspace .patient-data-cell { display: none; }
 body.doctor-mode .alpha51-workspace .encounter-command-center { flex: none; display: flex; align-items: center; gap: 12px; min-height: 36px; padding: 0; border: 0; background: transparent; box-shadow: none; }
-body.doctor-mode .alpha51-workspace .workflow-panel { flex: 1; min-height: 36px; padding: 0; }
-body.doctor-mode .alpha51-workspace .workflow-steps { gap: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); }
-body.doctor-mode .alpha51-workspace .workflow-step { min-height: 36px; border: 0; border-radius: 4px; padding: 4px 8px; gap: 8px; background: transparent; color: #526477; font-size: 14px; font-weight: 500; box-shadow: none; }
+body.doctor-mode .alpha51-workspace .workflow-panel { flex: 1; min-height: 40px; padding: 8px; background: white; border: 1px solid var(--ws-border); border-radius: 6px; }
+body.doctor-mode .alpha51-workspace .workflow-steps { gap: 0; min-width: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+body.doctor-mode .alpha51-workspace .workflow-step { justify-content: center; align-items: center; min-height: 36px; border: 0; border-radius: 4px; padding: 4px 8px; gap: 8px; background: transparent; color: #526477; font-size: 14px; font-weight: 500; box-shadow: none; }
 body.doctor-mode .alpha51-workspace .workflow-step.active { background: #e2edf8; color: #144f87; font-weight: 700; }
 body.doctor-mode .alpha51-workspace .workflow-step.done { color: #366655; }
 body.doctor-mode .alpha51-workspace .workflow-index { width: 20px; height: 20px; font-size: 14px; background: #fff; color: inherit; }
@@ -75,7 +76,7 @@ body.doctor-mode .alpha51-workspace .transcript-list, body.doctor-mode .workspac
 body.doctor-mode .alpha51-workspace .transcript-row-text, body.doctor-mode .workspace-aux-dialog .transcript-row-text { font-size: 16px; line-height: 1.6; color: #172a3a; overflow-wrap: anywhere; }
 body.doctor-mode .alpha51-workspace .transcript-table, body.doctor-mode .workspace-aux-dialog .transcript-table { gap: 8px; }
 body.doctor-mode .alpha51-workspace .transcript-table-row, body.doctor-mode .workspace-aux-dialog .transcript-table-row {
-  grid-template-columns: minmax(64px, 1fr) minmax(0, 2fr); grid-template-areas: none; gap: 8px; padding: 12px;
+  grid-template-columns: minmax(64px, 1fr) minmax(0, 2fr); grid-template-areas: none; gap: 4px 8px; padding: 12px;
   border: 1px solid #dce4eb; border-radius: 6px; background: #f8fafc;
 }
 /* Only resolved roles receive clinical-role colors; unknown/inferred remain neutral. */
@@ -104,7 +105,7 @@ body.doctor-mode .workspace-aux-dialog .transcript-role-cell { grid-area: 1 / 2;
 body.doctor-mode .alpha51-workspace .transcript-role-tag,
 body.doctor-mode .workspace-aux-dialog .transcript-role-tag { grid-area: auto; }
 body.doctor-mode .alpha51-workspace .transcript-row-link,
-body.doctor-mode .workspace-aux-dialog .transcript-row-link { grid-area: 3 / 1 / 4 / -1; justify-self: end; font-size: 14px; color: #526477; }
+body.doctor-mode .workspace-aux-dialog .transcript-row-link { grid-area: 3 / 1 / 4 / -1; justify-self: end; font-size: 14px; color: #526477; min-height: 24px; padding: 0 0 0 8px; }
 body.doctor-mode .alpha51-workspace .transcript-row-text, body.doctor-mode .workspace-aux-dialog .transcript-row-text { grid-area: 2 / 1 / 3 / -1; }
 body.doctor-mode .alpha51-workspace .transcript-row-time, body.doctor-mode .workspace-aux-dialog .transcript-row-time { font-size: 14px; color: var(--ws-muted); }
 body.doctor-mode .alpha51-workspace .transcript-role-tag, body.doctor-mode .workspace-aux-dialog .transcript-role-tag { font-size: 14px; }
@@ -125,7 +126,7 @@ body.doctor-mode .alpha51-workspace #audioPlaybackRate { grid-area: rate; width:
 body.doctor-mode .alpha51-workspace .audio-seek-range,
 body.doctor-mode .alpha51-workspace .audio-volume-range { width: 100%; min-width: 0; height: 18px; min-height: 0; margin: 0; padding: 0; }
 body.doctor-mode .alpha51-workspace .transcript-audio-player .form-help { margin: 0; font-size: 14px; line-height: 1.5; }
-body.doctor-mode .alpha51-workspace .field-list { display: flex; flex-direction: column; gap: 0; padding: 0 16px 100px; background: white; scroll-padding-bottom: 120px; }
+body.doctor-mode .alpha51-workspace .field-list { display: flex; flex-direction: column; gap: 0; padding: 0 16px 24px; background: white; scroll-padding-top: 60px; scroll-padding-bottom: 24px; }
 body.doctor-mode .alpha51-workspace .field-card.doctor-summary-card {
   flex: none; min-height: 0; max-height: none; padding: 0 0 24px; gap: 8px;
   border: 0; border-radius: 0; background: white; box-shadow: none;
@@ -138,10 +139,10 @@ body.doctor-mode .alpha51-workspace .field-card.conflicting { border-left: 3px s
 body.doctor-mode .alpha51-workspace .field-card.record-field-updated { animation: record-field-flash 1.4s ease-out 1; }
 body.doctor-mode .alpha51-workspace .field-meta { margin-top: 4px; }
 body.doctor-mode .alpha51-workspace .field-status-text, body.doctor-mode .alpha51-workspace .doctor-edit-origin { font-size: 14px; line-height: 1.5; }
-body.doctor-mode .alpha51-workspace .record-version { padding: 10px 0; border-bottom: 1px solid var(--ws-border); color: var(--ws-muted); font-size: 14px; line-height: 1.6; }
+body.doctor-mode .alpha51-workspace .record-version { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border: 0; color: var(--ws-muted); font-size: 14px; line-height: 1.6; }
 body.doctor-mode .alpha51-workspace .record-version span { display: block; color: var(--text); }
-body.doctor-mode .alpha51-workspace .approval-checklist { flex: none; margin: 12px 0; padding: 0; background: #f7fafc; border: 1px solid #bdcddb; border-radius: 6px; }
-body.doctor-mode .alpha51-workspace .approval-checklist-head { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; }
+body.doctor-mode .alpha51-workspace .approval-checklist { flex: 1; min-width: 0; margin: 0; padding: 0; background: white; border: 0; border-radius: 6px; }
+body.doctor-mode .alpha51-workspace .approval-checklist-head { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; }
 body.doctor-mode .alpha51-workspace .approval-checklist-head strong { font-size: 16px; color: #173d61; }
 body.doctor-mode .alpha51-workspace .approval-checklist-head p { font-size: 14px; line-height: 1.5; margin: 4px 0 0; color: #526477; }
 .record-empty-state { padding: 24px 0; color: #526477; font-size: 16px; line-height: 1.7; }
@@ -277,7 +278,7 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   body.doctor-mode .alpha51-workspace { padding: 8px; }
   body.doctor-mode .alpha51-workspace .workbench { gap: 8px; }
   body.doctor-mode .alpha51-workspace .column > .panel-header { padding: 8px 12px; }
-  body.doctor-mode .alpha51-workspace .field-list { padding-inline: 16px; padding-bottom: 100px; }
+  body.doctor-mode .alpha51-workspace .field-list { padding-inline: 16px; padding-bottom: 24px; }
   body.doctor-mode .alpha51-workspace .assist-list { padding: 12px; }
   body.doctor-mode .alpha51-workspace .workflow-step { gap: 4px; padding-inline: 4px; }
   body.doctor-mode .alpha51-workspace .patient-identity-cell { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 8px; }
@@ -317,7 +318,7 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   }
   body.doctor-mode .product-nav { display: flex; flex-direction: row; gap: 4px; padding: 4px 8px; grid-area: nav; height: auto; min-height: 0; position: static; top: auto; }
   body.doctor-mode .product-nav-item { flex: 1 1 0; min-height: 44px; padding: 6px 2px; }
-  body.doctor-mode .product-nav-item span { font-size: 12px; }
+  body.doctor-mode .product-nav-item span { font-size: 16px; }
   body.doctor-mode .product-nav-foot { display: none; }
   body.doctor-mode .topbar { grid-area: topbar; flex-wrap: wrap; }
   body.doctor-mode .product-main { grid-area: main; min-width: 0; }
@@ -369,32 +370,43 @@ body.doctor-mode .alpha51-workspace .transcript-source-notice {
   body.doctor-mode .workspace-aux-dialog .transcript-table-row:focus-visible { outline-color: Highlight; }
 }
 
-/* 2026-10-30 record region layout + readability */
-.record-section { flex: none; margin: 0 0 14px; border: 1px solid #d7e0ec; border-radius: 10px; background: #ffffff; overflow: hidden; }
-.record-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #f3f6fb; border-bottom: 1px solid #d7e0ec; }
-.record-section-head h3 { margin: 0; font-size: 16px; line-height: 1.4; color: #172033; letter-spacing: 0.01em; }
-.record-section-head p { margin: 2px 0 0; font-size: 13px; line-height: 1.5; color: #475569; }
-.record-section-body { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; }
-.record-section .field-card { margin: 0; padding: 0 0 10px; border: 0; border-bottom: 1px solid #edf1f6; border-radius: 0; background: transparent; box-shadow: none; }
-.record-section .field-card:last-child { border-bottom: 0; padding-bottom: 0; }
-.record-section .field-card .field-head { margin-bottom: 6px; }
-.record-section .field-title { font-size: 15px; line-height: 1.4; color: #172033; }
-.record-section .field-value, .record-section .field-evidence { font-size: 15px; line-height: 1.65; color: #1f2937; }
-body.doctor-mode .alpha51-workspace .record-section .field-card .field-value { min-height: 0; max-height: none; overflow: visible; }
-.record-meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; margin: 0; padding: 12px 14px 14px; }
-.record-meta-grid > div { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.record-meta-grid dt { flex: 0 0 auto; font-size: 13px; color: #475569; }
-.record-meta-grid dd { margin: 0; min-width: 0; font-size: 14px; font-weight: 600; color: #172033; overflow-wrap: anywhere; }
-@media (max-width: 1280px) { .record-meta-grid { grid-template-columns: 1fr; } }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
-}
+/* Continuous clinical note: one scroll surface, one section level. */
+.record-navigation { position: sticky; top: 0; z-index: 5; flex: none; display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 0; background: white; border-bottom: 1px solid var(--line); }
+.record-navigation button { min-height: 36px; padding: 6px 8px; border: 0; border-radius: 6px; background: #edf4fc; color: #164e7d; font-size: 14px; line-height: 1.5; white-space: nowrap; }
+.record-navigation button:hover { background: #dcebf9; }
+.record-navigation .record-next-issue { background: #fff5e4; color: #7f4b04; }
+.record-review-toolbar { display: flex; flex-wrap: wrap; align-items: start; gap: 0 16px; border-bottom: 1px solid var(--line); margin-bottom: 16px; flex: none; }
+.record-review-toolbar:has(details[open]) { display: block; }
+.record-section { flex: none; margin: 0 0 24px; border: 0; border-radius: 0; background: #fff; overflow: visible; }
+.record-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 0; border-radius: 6px; background: #f0f5fa; }
+.record-section-head h3 { margin: 0; font-size: 16px; line-height: 1.5; font-weight: 600; color: #234f76; }
+.record-section-body { display: flex; flex-direction: column; gap: 0; padding: 0; }
+body.doctor-mode .alpha51-workspace .record-section .field-card { margin: 0; padding: 16px 0; border: 0; border-bottom: 1px solid #e5ebf1; border-radius: 0; background: transparent; box-shadow: none; }
+body.doctor-mode .alpha51-workspace .record-section .field-card:last-child { border-bottom: 0; }
+body.doctor-mode .alpha51-workspace .record-section .field-card.conflicting { padding-left: 12px; border-left: 3px solid #b42338; background: #fff6f6; }
+body.doctor-mode .alpha51-workspace .record-section .field-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; padding: 0; margin: 0 0 4px; background: transparent; border: 0; }
+body.doctor-mode .alpha51-workspace .record-section .field-title { font-size: 20px; line-height: 1.5; font-weight: 700; color: #173d61; }
+body.doctor-mode .alpha51-workspace .record-section .field-value { min-height: 0; max-height: none; overflow: visible; font-size: 17px; line-height: 1.6; font-weight: 400; color: #183148; }
+body.doctor-mode .alpha51-workspace .record-section .field-meta { margin: 4px 0 0; padding: 0; border: 0; }
+body.doctor-mode .alpha51-workspace .record-section .field-meta button { min-height: 36px; padding: 4px 8px; font-size: 14px; }
+body.doctor-mode .alpha51-workspace .record-section .field-status-inline { margin-left: auto; font-size: 14px; }
+.record-section:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+.record-demographics { border: 1px solid var(--line); border-radius: 6px; padding: 0 12px; }
+.record-demographics > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; cursor: pointer; min-height: 52px; padding: 12px 0; font-size: 14px; color: var(--muted); }
+.record-demographics > summary strong { font-size: 16px; color: var(--text); }
+.demographics-toggle { color: var(--primary); margin-left: auto; }
+.demographic-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+body.doctor-mode .alpha51-workspace .demographic-fields .field-title { font-size: 16px; }
+body.doctor-mode .alpha51-workspace .demographic-fields .field-value { font-size: 16px; }
+.record-meta-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px 16px; }
+@media (max-width: 1100px) { .demographic-fields { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
 /* 2026-10-30 help drawer navigation */
 .help-drawer-actions { display: flex; align-items: center; gap: 8px; }
 .help-drawer-actions button { min-height: 34px; }
 .help-drawer-actions button[disabled] { opacity: 0.45; cursor: not-allowed; }
 /* 2026-10-30 per-region status and jump target */
-.record-section-status { flex: none; min-height: 30px; padding: 4px 10px; border-radius: 999px; border: 1px solid transparent; font-size: 13px; line-height: 1.4; font-weight: 600; cursor: pointer; }
+.record-section-status { flex: none; min-height: 30px; padding: 4px 10px; border-radius: 999px; border: 1px solid transparent; font-size: 14px; line-height: 1.4; font-weight: 500; }
 .record-section-status.done { color: #0b6b3a; background: #e7f6ee; border-color: #b7e4c9; }
 .record-section-status.pending { color: #8a5a00; background: #fff4dc; border-color: #f0d49a; }
 .record-section-status.conflict { color: #a11b1b; background: #fdecec; border-color: #f3c0c0; }
@@ -424,3 +436,29 @@ body.doctor-mode .alpha51-workspace .record-section .field-card .field-value { m
   border-radius: 6px;
   font-size: 13px;
 }
+/* Shared blue/white shell; legacy visual-v3 through blue-v6 are not loaded. */
+body.doctor-mode { background: #f2f5f9; font-family: "Microsoft YaHei", "Segoe UI", sans-serif; }
+body.doctor-mode .product-nav { background: #102f4a; color: #e4edf5; }
+body.doctor-mode .product-nav-item { color: #e4edf5; background: transparent; border: 0; box-shadow: none; }
+body.doctor-mode .product-nav-item:hover { color: white; background: #1b4263; }
+body.doctor-mode .product-nav-item.active, body.doctor-mode .product-nav-item.active:hover { background: #edf4fc; color: #153f63; box-shadow: inset 3px 0 #4c9ade; }
+body.doctor-mode .product-nav-item small { color: #b5cadd; }
+body.doctor-mode .product-nav-item.active small { color: #43617b; }
+body.doctor-mode .product-nav-foot { display: flex; gap: 8px; align-items: flex-start; }
+body.doctor-mode .product-nav-foot small { display: block; font-size: 14px; white-space: nowrap; color: #b5cadd; }
+body.doctor-mode .product-nav-foot .environment-dot { flex: none; margin-top: 6px; }
+body.doctor-mode .primary-action { background: #165d9c; border-color: #165d9c; color: white; box-shadow: none; }
+body.doctor-mode .primary-action:hover { background: #104b80; }
+body.doctor-mode .alpha51-workspace .patient-avatar { position: static; transform: none; flex: none; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin-left: 12px; border-radius: 50%; background: #edf4fc; color: #164e7d; font-size: 18px; font-weight: 600; }
+body.doctor-mode .alpha51-workspace .patient-identity-cell { padding-left: 12px; }
+body.doctor-mode .alpha51-workspace .review-boundary-notice { font-weight: 400; }
+body.doctor-mode .alpha51-workspace .approval-checklist-head p { margin: 2px 0 0; }
+body.doctor-mode .alpha51-workspace .record-version span { display: inline; }
+body.doctor-mode .alpha51-workspace .record-version button { min-height: 36px; font-size: 14px; }
+body.doctor-mode .alpha51-workspace .transcript-role-tag { font-size: 14px; line-height: 1.5; }
+body.doctor-mode .alpha51-workspace .transcript-row-text { text-align: left; word-break: normal; }
+body.doctor-mode .alpha51-workspace .transcript-table-row { margin: 0; min-height: 0; }
+body.doctor-mode .alpha51-workspace .assist-panel { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: 0 0 24px; }
+body.doctor-mode .alpha51-workspace .assist-panel h3 { font-size: 18px; }
+body.doctor-mode :focus-visible { outline: 2px solid #165d9c; outline-offset: 2px; }
+@media (max-width:1279px) { body.doctor-mode .product-nav-foot { display:none; } }

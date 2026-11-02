@@ -254,6 +254,7 @@ const DRAFT_FIELD_DEFS = [
   ["present_illness", "现病史"],
   ["accompanying_symptoms", "伴随症状"],
   ["past_history", "既往史"],
+  ["previous_treatment", "既往处理"],
   ["personal_history", "个人史"],
   ["marital_history", "婚育史"],
   ["family_history", "家族史"],
@@ -2622,7 +2623,12 @@ function renderReviewBoundaryNotice() {
   const displayState = doctorDisplayState();
   notice.hidden = false;
   notice.className = `review-boundary-notice ${displayState.key}`.trim();
-  if (["approved", "exported"].includes(displayState.key)) {
+  if (appState.recordEditMode) {
+    notice.className = "review-boundary-notice editing";
+    notice.textContent = "正在编辑；保存将创建新版本，原批准不会自动用于修改后的内容。";
+    return;
+  }
+  if (currentRevisionIsSigned()) {
     notice.textContent = "医生审核已完成；导出文件绑定当前就诊和最新病历版本。";
     return;
   }
@@ -3249,8 +3255,8 @@ function beginRecordEdit(fieldKey) {
     if (list) list.scrollTop = 0;
     input?.focus({ preventScroll: true });
   } else {
-    input?.scrollIntoView({ block: "center" });
-    input?.focus();
+    focusRecordTarget(key);
+    input?.focus({ preventScroll: true });
   }
 }
 
@@ -3988,6 +3994,89 @@ function approvalStatusPill(done) {
   return `<span class="approval-item-status ${done ? "done" : "pending"}">${done ? "已处理" : "待处理"}</span>`;
 }
 
+// Display-only review model. It never writes decisions or changes approval gates.
+const DEMOGRAPHIC_FIELD_KEYS = ["visit_type", "patient_sex", "patient_birth_date", "patient_ethnicity", "patient_marital_status", "patient_occupation", "patient_work_unit", "patient_address", "patient_contact"];
+
+function currentRevisionIsSigned() {
+  const ready = appState.currentExportReadiness;
+  const revision = currentRevisionInfo(null);
+  return Boolean(!appState.recordEditMode && ready?.ready
+    && String(ready.task_id) === String(appState.currentTaskId)
+    && revision.revisionId && String(ready.revision_id) === String(revision.revisionId)
+    && revision.contentHash && ready.content_hash === revision.contentHash);
+}
+
+function fieldReviewPresentation(fields, key, signed = currentRevisionIsSigned()) {
+  const field = fields?.[key];
+  if (field?.status === "conflicting") return { key: "conflicting", label: "证据冲突 · 需修正" };
+  if (key === "preliminary_diagnosis") {
+    const items = draftDiagnoses(fields);
+    if (items.length && items.every(diagnosisReviewComplete)) return { key: "confirmed", label: "候选已处理" };
+    return signed ? { key: "neutral", label: "未记录独立确认" }
+      : { key: items.length ? "candidate" : "missing", label: items.length ? "候选待确认" : "暂无候选诊断" };
+  }
+  if (field?.doctor_review_status === "content_confirmed" && field.confirmed_by_doctor && fieldHasReviewableContent(field)) {
+    return { key: "confirmed", label: "内容已确认" };
+  }
+  if (field?.missing && ["not_asked_confirmed", "missing_accepted"].includes(field.doctor_review_status)) {
+    return { key: "confirmed", label: field.doctor_review_status === "not_asked_confirmed" ? "本次未询问 · 已确认" : "本次缺失 · 已接受" };
+  }
+  if (key === "treatment_plan") return { key: "neutral", label: "参考建议 · 未记录独立确认" };
+  if (signed) return { key: "neutral", label: "未记录分项决定" };
+  const status = draftFieldStatus(fields, key);
+  // A bare legacy boolean is not a documented field decision.
+  return status.key === "confirmed" ? { key: "neutral", label: "待医生核对" } : status;
+}
+
+function recordReviewSummary(fields, signed = currentRevisionIsSigned()) {
+  const items = [];
+  const fieldItems = approvalFieldItems(fields);
+  for (const { key, title, field } of fieldItems) {
+    if (field.status === "conflicting") items.push({ id: `field:${key}`, fieldKey: key, label: `${title}证据冲突`, kind: "conflict" });
+    else if (!signed && !fieldHasReviewableContent(field) && fieldReviewPresentation(fields, key, signed).key !== "confirmed" && !appState.approvalMissingDecisions[key]) {
+      items.push({ id: `field:${key}`, fieldKey: key, label: `${title}缺失待处理`, kind: "missing" });
+    }
+  }
+  (fields?.candidate_diagnoses || []).forEach((diagnosis, index) => {
+    if (!signed && !diagnosisReviewComplete(diagnosis) && !appState.approvalDiagnosisDecisions[index]) {
+      items.push({ id: `diagnosis:${index}`, fieldKey: "preliminary_diagnosis", label: `${diagnosis.name || "候选诊断"}待处理`, kind: "candidate" });
+    }
+    if ((diagnosis.risk_warnings || []).length && !diagnosis.high_risk_confirmed_by_doctor && !appState.approvalHighRiskConfirmations[`diagnosis:${index}`]) {
+      items.push({ id: `risk:diagnosis:${index}`, fieldKey: "preliminary_diagnosis", label: `${diagnosis.name || "候选诊断"}风险待核对`, kind: "risk" });
+    }
+  });
+  const regularPending = !signed && !appState.approvalRegularFieldsConfirmed && fieldItems.some(({ key, field }) => fieldHasReviewableContent(field) && field.status !== "conflicting" && fieldReviewPresentation(fields, key, signed).key !== "confirmed");
+  return { signed, items, regularPending };
+}
+
+function nextRecordIssueKey(items, list) {
+  const keys = new Set(items.map(item => item.fieldKey));
+  const targets = [...list.querySelectorAll(".field-card[data-field]")]
+    .filter(card => keys.has(card.dataset.field));
+  const navBottom = list.querySelector(".record-navigation")?.getBoundingClientRect().bottom || list.getBoundingClientRect().top;
+  const next = targets.find(card => {
+    const disclosure = card.closest("details:not([open])");
+    return (disclosure || card).getBoundingClientRect().top > navBottom + 24;
+  }) || targets[0];
+  return next?.dataset.field || null;
+}
+
+function focusRecordTarget(key, section = false) {
+  const list = $("recordFields");
+  const target = list?.querySelector(section ? `[data-record-section="${CSS.escape(key)}"]` : `[data-field="${CSS.escape(key)}"]`);
+  if (!target) return;
+  const disclosure = target.closest("details.record-demographics");
+  if (disclosure) {
+    disclosure.open = true;
+    const label = disclosure.querySelector(".demographics-toggle");
+    if (label) label.textContent = "收起资料";
+  }
+  const navHeight = list.querySelector(".record-navigation")?.getBoundingClientRect().height || 0;
+  const top = target.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop - navHeight - 12;
+  list.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+  target.focus({ preventScroll: true });
+}
+
 function renderApprovalChecklist(fields) {
   if (!fields || isRecordPreviewActive() || !appState.currentTaskId) return "";
   syncApprovalReviewStateWithRevision();
@@ -3997,10 +4086,11 @@ function renderApprovalChecklist(fields) {
   const missingFields = fieldItems.filter(({ field }) => field.status !== "conflicting" && !fieldHasReviewableContent(field));
   const diagnoses = fields.candidate_diagnoses || [];
   const risks = highRiskReviewItems(fields);
-  const pending = pendingApprovalCount(fields);
-  const approved = isApprovedForExport();
+  const reviewSummary = recordReviewSummary(fields);
+  const pending = reviewSummary.items.length;
+  const approved = reviewSummary.signed;
   const regularDone = regularFields.length === 0
-    || regularFields.every(({ field }) => fieldReviewComplete(field))
+    || regularFields.every(({ key }) => fieldReviewPresentation(fields, key).key === "confirmed")
     || appState.approvalRegularFieldsConfirmed;
   const completedRows = [];
   const outstanding = (html, done) => {
@@ -4009,7 +4099,7 @@ function renderApprovalChecklist(fields) {
   };
   const missingRows = missingFields.map(({ key, title, field }) => {
     const selected = appState.approvalMissingDecisions[key] || field.doctor_review_status || "";
-    const done = fieldReviewComplete(field) || Boolean(appState.approvalMissingDecisions[key]);
+    const done = fieldReviewPresentation(fields, key).key === "confirmed" || Boolean(appState.approvalMissingDecisions[key]);
     return outstanding(`
       <div class="approval-item" data-approval-item="field:${escapeHtml(key)}">
         <div>
@@ -4066,7 +4156,7 @@ function renderApprovalChecklist(fields) {
       <summary class="approval-checklist-head">
         <div>
           <strong>医生分项审核 · 版本 ${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"}</strong>
-          <p>${approved ? "已完成审核；内容确认、未询问和接受缺失分别留痕。" : pending ? `还有 ${pending} 项待处理；证据冲突必须修正。` : "核对项已处理，仍需点击“审核病历”提交。"}</p>
+          <p>${approved ? "当前版本已签署；各字段的实际决定可展开查看。" : [reviewSummary.regularPending ? "普通内容待核对" : "", pending ? `${pending}项异常待处理` : ""].filter(Boolean).join(" · ") || "核对项已处理，仍需提交审核。"}</p>
         </div>
         <span class="approval-entry-label">${approved ? "查看审核记录" : "开始核对"}</span>
       </summary>
@@ -4156,7 +4246,7 @@ function renderFields() {
   const isPreview = isRecordPreviewActive();
   const isEditing = Boolean(appState.recordEditMode && appState.currentRecordFields && !isPreview);
   const displayState = doctorDisplayState();
-  const isApprovedDisplay = ["approved", "exported"].includes(displayState.key);
+  const isApprovedDisplay = currentRevisionIsSigned();
   const highlightClass = appState.recordHighlightUntil > Date.now() ? "record-field-updated" : "";
   if (!fields) {
     $("fieldCountBadge").textContent = "待生成";
@@ -4172,20 +4262,13 @@ function renderFields() {
   const cardHtmlByKey = new Map();
   const fieldStatusByKey = new Map();
   displayFieldDefs.forEach(([key, title]) => {
-    let status = appState.viewMode === "doctor"
-      ? draftFieldStatus(fields, key)
-      : fieldStatus(fields?.[key] || null, key);
+    let status = fieldReviewPresentation(fields, key, isApprovedDisplay);
     const diagnosesReviewed = isApprovedDisplay && key === "preliminary_diagnosis"
       && draftDiagnoses(fields).length > 0
       && draftDiagnoses(fields).every(item => ["candidate_confirmed", "ai_candidate_deleted"].includes(item.doctor_review_status));
     const displayTitle = diagnosesReviewed ? "候选诊断（医生已审核）" : title;
     if (diagnosesReviewed) status = { key: "confirmed", label: "已处理" };
-    if (isApprovedDisplay && ["missing", "partial", "low"].includes(status.key)) {
-      status = {
-        key: "confirmed",
-        label: status.key === "missing" ? ({not_asked_confirmed:"医生确认本次未询问",missing_accepted:"医生接受本次缺失"}[fields?.[key]?.doctor_review_status] || "历史审核已完成，字段无内容") : "医生已确认部分采集",
-      };
-    }
+    if (isEditing && status.key === "confirmed") status = { ...status, label: `原版本：${status.label}` };
     if (status.key === "missing") missingCount += 1;
     fieldStatusByKey.set(key, status);
     const value = isEditing
@@ -4204,7 +4287,7 @@ function renderFields() {
           ${String(fields?.[key]?.doctor_review_note || "").startsWith("manual_doctor_edit_v1:") ? `<span class="doctor-edit-origin">${String(fields?.[key]?.doctor_review_note || "").includes("医生补录") ? "医生补录" : "医生已修改"}</span>` : String(fields?.[key]?.doctor_review_note || "").startsWith("doctor_source_correction_v1:") ? '<span class="doctor-edit-origin">医生根据原文修正</span>' : ""}
           ${detailButton(`field:${key}`, "查看原文证据")}
           ${!isPreview && !isEditing && EDITABLE_FIELD_DEFS.some(([item]) => item === key) ? `<button type="button" data-record-edit-field="${escapeHtml(key)}">修改</button>` : ""}
-          ${key !== "preliminary_diagnosis" && key !== "treatment_plan" ? `<button type="button" data-knowledge-field="${escapeHtml(key)}">查依据</button>` : ""}
+          ${key !== "preliminary_diagnosis" && key !== "treatment_plan" && !DEMOGRAPHIC_FIELD_KEYS.includes(key) ? `<button type="button" data-knowledge-field="${escapeHtml(key)}">查依据</button>` : ""}
         </div>
         `
         : `
@@ -4265,13 +4348,14 @@ function renderFields() {
   ` : "";
 
   if (fields) {
-    const allMissingCount = missingItems().length;
+    const review = recordReviewSummary(fields);
+    const issueCount = review.items.length;
     $("fieldCountBadge").textContent = isPreview
       ? "实时预览"
-      : isApprovedDisplay
+      : isEditing ? "编辑中 · 未保存" : isApprovedDisplay
         ? "已审核"
-        : historicalRecordQuality(fields).incomplete ? "内容不完整" : allMissingCount ? `${allMissingCount}项待补充` : "待医生确认";
-    $("fieldCountBadge").className = `status-badge ${isApprovedDisplay ? "confirmed" : isPreview ? "info" : allMissingCount ? "missing" : "confirmed"}`;
+        : historicalRecordQuality(fields).incomplete ? "内容不完整" : issueCount ? `${issueCount}项待核对` : "待医生确认";
+    $("fieldCountBadge").className = `status-badge ${isApprovedDisplay ? "confirmed" : isPreview || isEditing ? "info" : issueCount ? "missing" : "info"}`;
   }
   const supportedCount = EDITABLE_FIELD_DEFS.filter(([key]) => fields?.[key]?.value && !fields[key].missing && fields[key].status !== "conflicting").length;
   const conflictCount = EDITABLE_FIELD_DEFS.filter(([key]) => fields?.[key]?.status === "conflicting").length;
@@ -4297,70 +4381,45 @@ function renderFields() {
   const recovery = appState.recordEditRecovery;
   const recoveryNotice = recovery && recovery.taskId === appState.currentTaskId && !isEditing
     ? `<details class="record-recovery"><summary>本次冲突前的本地修改 · 尚未保存</summary><p>当前显示服务器最新版本。下面仅保留您修改过的字段，请与最新内容核对。</p>${EDITABLE_FIELD_DEFS.filter(([key]) => String(recovery.fields[key]?.value || "") !== String(recovery.baseline?.[key]?.value || "")).map(([key, title]) => `<p><strong>${escapeHtml(title)}</strong>：${escapeHtml(recovery.fields[key]?.value || "（留空）")}</p>`).join("")}<button type="button" data-record-reapply>将这些修改带入当前版本继续编辑</button></details>` : "";
-  const encounter = appState.currentEncounter || {};
-  const metaSection = `
-    <section class="record-section record-meta" aria-labelledby="record-meta-heading">
-      <header class="record-section-head"><div><h3 id="record-meta-heading">就诊信息</h3><p>患者标识与本次就诊</p></div></header>
-      <dl class="record-meta-grid">
-        <div><dt>患者标识</dt><dd>${escapeHtml(encounter.patient_deidentified_id || "未关联")}</dd></div>
-        <div><dt>就诊编号</dt><dd>${encounter.id ? `E-${escapeHtml(encounter.id)}` : "未关联"}</dd></div>
-        <div><dt>当前版本</dt><dd>${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"}</dd></div>
-        <div><dt>审核状态</dt><dd>${isApprovedDisplay ? "医生已审核" : "待医生审核"}</dd></div>
-      </dl>
-    </section>`;
+  const review = recordReviewSummary(fields, isApprovedDisplay);
   const clinicalSections = [
-    ["患者信息", ["visit_type", "patient_sex", "patient_birth_date", "patient_ethnicity", "patient_marital_status", "patient_occupation", "patient_work_unit", "patient_address", "patient_contact"], "就诊类型与真实病历首页所需的去标识患者信息"],
-    ["主诉与现病史", ["chief_complaint", "present_illness", "accompanying_symptoms"], "本次就诊的主要症状与演变"],
-    ["既往史与过敏", ["past_history", "previous_treatment", "allergy_history", "personal_history", "marital_history", "family_history"], "既往疾病、个人史、婚育史、家族史与过敏信息"],
-    ["体格检查", ["physical_exam", "auxiliary_exam"], "查体记录、检验检查结果与缺失提示"],
-    ["诊断与处理", ["preliminary_diagnosis", "treatment_plan", "treatment_notes"], "候选诊断需医生确认，处理意见由医生填写"],
+    ["history", "病史", ["chief_complaint", "present_illness", "accompanying_symptoms"]],
+    ["background", "既往与过敏", ["past_history", "allergy_history", "previous_treatment", "personal_history", "marital_history", "family_history"]],
+    ["exam", "查体检查", ["physical_exam", "auxiliary_exam"]],
+    ["management", "诊断处理", ["preliminary_diagnosis", "treatment_plan", "treatment_notes"]],
+    ["demographics", "基本资料", DEMOGRAPHIC_FIELD_KEYS],
   ];
+  const navigation = `<nav class="record-navigation" aria-label="病历章节定位">${clinicalSections.map(([id, title]) => `<button type="button" data-record-anchor="${id}">${title}</button>`).join("")}${review.items.length ? `<button type="button" class="record-next-issue" data-record-next-issue>下一待核对项 (${review.items.length})</button>` : ""}</nav>`;
   const usedKeys = new Set();
-  const sections = clinicalSections.map(([title, keys, desc]) => {
-    const statuses = keys.map((key) => fieldStatusByKey.get(key)).filter(Boolean);
-    const conflictCount = statuses.filter((status) => status.key === "conflicting").length;
-    const candidateCount = statuses.filter((status) => status.key === "candidate").length;
-    const pendingCount = statuses.filter((status) => ["missing", "partial", "low", "pending"].includes(status.key)).length;
-    const focusKey = keys.find((key) => fieldStatusByKey.has(key) && fieldStatusByKey.get(key).key !== "confirmed")
-      || keys.find((key) => fieldStatusByKey.has(key));
-    let statusTone = "done";
-    let statusText = "已完成";
-    if (conflictCount) {
-      statusTone = "conflict";
-      statusText = `${conflictCount} 项需修正`;
-    } else if (pendingCount || candidateCount) {
-      statusTone = "pending";
-      statusText = [
-        pendingCount ? `${pendingCount} 项待补充` : "",
-        candidateCount ? `${candidateCount} 项待确认` : "",
-      ].filter(Boolean).join(" · ");
-    } else if (!statuses.length) {
-      statusTone = "neutral";
-      statusText = "无字段";
-    }
-    const inner = keys.map((key) => {
+  const sections = clinicalSections.map(([id, title, keys]) => {
+    const issues = review.items.filter(item => keys.includes(item.fieldKey));
+    const statuses = keys.map(key => fieldStatusByKey.get(key)).filter(Boolean);
+    const unknown = statuses.some(status => status.key === "neutral");
+    const allReviewed = statuses.length && statuses.every(status => status.key === "confirmed");
+    const statusText = issues.length ? `${issues.length}项待核对` : allReviewed ? (isEditing ? "原版本分项记录" : "已有分项记录") : unknown && isApprovedDisplay ? "部分字段未记录独立确认" : isApprovedDisplay ? "当前版已签署" : "随病历核对";
+    const statusTone = issues.some(item => item.kind === "conflict") ? "conflict" : issues.length ? "pending" : allReviewed ? "done" : "neutral";
+    const inner = keys.map(key => {
       if (!cardHtmlByKey.has(key)) return "";
       usedKeys.add(key);
       return cardHtmlByKey.get(key);
     }).join("");
-    const extra = title === "诊断与处理" ? diagnoses : "";
+    const extra = id === "management" ? diagnoses : "";
     if (!inner && !extra) return "";
-    return `
-      <section class="record-section" aria-label="${escapeHtml(title)}">
-        <header class="record-section-head"><div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(desc)}</p></div><button type="button" class="record-section-status ${statusTone}" data-record-section-focus="${escapeHtml(focusKey || "")}" title="定位到本区待处理字段">${escapeHtml(statusText)}</button></header>
-        <div class="record-section-body">${inner}${extra}</div>
-      </section>`;
+    const statusMarkup = issues.length ? `<button type="button" class="record-section-status ${statusTone}" data-record-section-focus="${escapeHtml(issues[0].fieldKey)}">${statusText}</button>` : `<span class="record-section-status ${statusTone}">${statusText}</span>`;
+    if (id === "demographics") {
+      const brief = ["patient_sex", "patient_birth_date", "visit_type"].map(key => {
+        const label = FIELD_DEFS.find(([item]) => item === key)?.[1] || key;
+        return `${label}：${readableStoredText(fields[key]?.value) || "未记录"}`;
+      }).join(" · ");
+      return `<details class="record-section record-demographics" data-record-section="demographics" tabindex="-1" ${isEditing ? "open" : ""}><summary><strong>基本资料</strong><span>${escapeHtml(brief)}</span><span class="record-section-status ${statusTone}">${statusText}</span><span class="demographics-toggle">展开资料</span></summary><div class="record-section-body demographic-fields">${inner}</div></details>`;
+    }
+    return `<section class="record-section" data-record-section="${id}" tabindex="-1" aria-label="${title}"><header class="record-section-head"><h3>${title}</h3>${statusMarkup}</header><div class="record-section-body">${inner}${extra}</div></section>`;
   }).join("");
-  const leftover = [...cardHtmlByKey.entries()]
-    .filter(([key]) => !usedKeys.has(key))
-    .map(([, html]) => html)
-    .join("");
-  const leftoverSection = leftover
-    ? `<section class="record-section" aria-label="其他字段"><header class="record-section-head"><div><h3>其他字段</h3></div></header><div class="record-section-body">${leftover}</div></section>`
-    : "";
+  const leftover = [...cardHtmlByKey.entries()].filter(([key]) => !usedKeys.has(key)).map(([, html]) => html).join("");
+  $("recordFields").innerHTML = navigation + previewNotice + historicalNotice
+    + `<div class="record-review-toolbar">${versionNotice}${isEditing ? "" : renderApprovalChecklist(fields)}</div>`
+    + editNotice + recoveryNotice + sections + leftover + summaryFooter + draftLegend;
 
-  $("recordFields").innerHTML = previewNotice + historicalNotice + versionNotice + editNotice + recoveryNotice
-    + (isEditing ? "" : renderApprovalChecklist(fields)) + metaSection + sections + leftoverSection + summaryFooter + draftLegend;
 }
 
 function classifySpeaker(line, segment = {}) {
@@ -9910,20 +9969,23 @@ function bindEvents() {
   });
   $("recordFields").addEventListener("toggle", (event) => {
     if (event.target.matches('.approval-disclosure') && event.target.isConnected) appState.approvalDisclosureOpen = event.target.open;
+    if (event.target.matches('.record-demographics') && event.target.isConnected) {
+      const label = event.target.querySelector(".demographics-toggle");
+      if (label) label.textContent = event.target.open ? "收起资料" : "展开资料";
+    }
   }, true);
   $("recordFields").addEventListener("click", (event) => {
-    const sectionFocus = event.target.closest("[data-record-section-focus]");
-    if (sectionFocus) {
-      const key = sectionFocus.dataset.recordSectionFocus;
-      const card = key ? $("recordFields").querySelector(`[data-field="${CSS.escape(key)}"]`) : null;
-      if (card) {
-        card.scrollIntoView({ block: "center", behavior: "smooth" });
-        card.classList.add("record-field-updated");
-        window.setTimeout(() => card.classList.remove("record-field-updated"), 1600);
-        card.focus({ preventScroll: true });
-      }
+    const anchor = event.target.closest("[data-record-anchor]");
+    if (anchor) { focusRecordTarget(anchor.dataset.recordAnchor, true); return; }
+    const nextIssue = event.target.closest("[data-record-next-issue]");
+    if (nextIssue) {
+      const items = recordReviewSummary(activeRecordFields()).items;
+      const next = nextRecordIssueKey(items, $("recordFields"));
+      if (next) focusRecordTarget(next);
       return;
     }
+    const sectionFocus = event.target.closest("[data-record-section-focus]");
+    if (sectionFocus) { focusRecordTarget(sectionFocus.dataset.recordSectionFocus); return; }
     const resolve = event.target.closest("[data-field-resolution]");
     if (resolve) { beginFieldResolution(resolve.dataset.resolutionKey, resolve.dataset.fieldResolution); return; }
     const editField = event.target.closest("[data-record-edit-field]");
@@ -9931,9 +9993,7 @@ function bindEvents() {
     const focusField = event.target.closest("[data-review-focus]");
     if (focusField) {
       const key = EDITABLE_FIELD_DEFS.find(([key]) => key === focusField.dataset.reviewFocus)?.[0];
-      const card = key ? document.querySelector(`[data-field="${key}"]`) : null;
-      card?.scrollIntoView({ block: "nearest" });
-      card?.focus();
+      if (key) focusRecordTarget(key);
       return;
     }
     if (event.target.closest("[data-record-reapply]")) { reapplyLocalRecordChanges(); return; }

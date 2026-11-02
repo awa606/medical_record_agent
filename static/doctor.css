@@ -1,6 +1,6 @@
 :root {
-  --primary: #3b82f6;
-  --primary-strong: #2563eb;
+  --primary: #165d9c;
+  --primary-strong: #104b80;
   --primary-soft: #eff6ff;
   --bg: #f3f4f6;
   --surface: #ffffff;
@@ -5976,15 +5976,6 @@ body.doctor-mode .field-card.has-value.weight-medium {
 
 body.doctor-mode .field-card.has-value.weight-low {
   min-height: 58px;
-}
-
-body.doctor-mode .field-card.has-value .field-value {
-  min-height: 20px;
-  max-height: 58px;
-}
-
-body.doctor-mode .field-card.has-value.weight-high .field-value {
-  max-height: 72px;
 }
 
 /* v1.3.0 usability fixes: keep the topbar unchanged, but make the workflow,

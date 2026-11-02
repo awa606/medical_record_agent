@@ -5,6 +5,7 @@ import re
 
 from app.schemas import MedicalField, MedicalRecordFields
 from app.services.clinical_facts import _RESPIRATORY_SYMPTOMS, clinical_segment_contexts, extract_clinical_facts
+from app.services.episode_medication_coverage import has_episode_medication_gap, refresh_episode_medication
 from app.services.field_grounding import (
     FIELD_KEYS, _doctor_negative_equivalent_clause, _explicitly_retracted_chief, compact,
 )
@@ -230,11 +231,14 @@ def refresh_existing_coverage_hints(
             field.hint = None
             if not field.missing_elements:
                 field.status = "complete"
+    if source:
+        refresh_episode_medication(refreshed.present_illness, source)
     return refreshed
 
 
 def validate_field_alignment(
     fields: MedicalRecordFields,
+    *, source: str | None = None,
 ) -> tuple[MedicalRecordFields, dict[str, dict[str, object]]]:
     """Check newly extracted fields after authoritative grounding.
 
@@ -264,4 +268,10 @@ def validate_field_alignment(
             field.missing_elements = list(dict.fromkeys([*field.missing_elements, *missing]))
             field.hint = COVERAGE_HINT
             diagnostics[key] = {"kind": "cited_same_field_coverage_gap", "items": missing}
+    if source:
+        gaps = refresh_episode_medication(checked.present_illness, source)
+        if gaps:
+            diagnostics.setdefault("present_illness", {"kind": "uncited_episode_medication", "items": []})[
+                "episode_medication_gaps"
+            ] = gaps
     return checked, diagnostics

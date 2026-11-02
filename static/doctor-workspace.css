@@ -140,6 +140,7 @@ body.doctor-mode .alpha51-workspace .field-value { font-size: 17px; font-weight:
 body.doctor-mode .alpha51-workspace .field-card.conflicting { border-left: 3px solid var(--red); padding-left: 12px; background: #fff8f8; }
 body.doctor-mode .alpha51-workspace .field-card.record-field-updated { animation: record-field-flash 1.4s ease-out 1; }
 body.doctor-mode .alpha51-workspace .field-meta { margin-top: 4px; }
+.field-coverage-notice { margin: 8px 0; padding: 8px 12px; border-left: 3px solid #a86812; background: #fff7e8; color: #593d16; font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
 body.doctor-mode .alpha51-workspace .field-status-text, body.doctor-mode .alpha51-workspace .doctor-edit-origin { font-size: 14px; line-height: 1.5; }
 body.doctor-mode .alpha51-workspace .record-version { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border: 0; color: var(--ws-muted); font-size: 14px; line-height: 1.6; }
 body.doctor-mode .alpha51-workspace .record-version span { display: block; color: var(--text); }

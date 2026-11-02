@@ -35,6 +35,7 @@ from app.services import LLMProviderUnavailableError, create_llm_record_generato
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
 from app.services.clinical_codes import icd10_errors
 from app.services.exporter import DEFAULT_OUTPUT_DIR
+from app.services.episode_medication_coverage import has_episode_medication_gap, refresh_episode_medication
 from app.services.record_rules import allergy_treatment_errors
 
 
@@ -535,6 +536,8 @@ def _approval_completion_errors(fields: MedicalRecordFields) -> list[str]:
                 unresolved_missing.append(label)
         if field.status == "conflicting":
             errors.append(f"{label}存在证据冲突，必须先修正内容和证据。")
+        if key == "present_illness" and has_episode_medication_gap(field):
+            errors.append("现病史漏记了本次病程中的用药，请核对原文并保存修改后再审核。")
     if unconfirmed_fields:
         errors.append(f"存在未显式确认的普通字段：{'、'.join(unconfirmed_fields)}。")
     if unresolved_missing:
@@ -661,11 +664,12 @@ def review_task(
         manual_takeover_fields=review_payload.manual_takeover_fields,
         source_corrected_fields=review_payload.source_corrected_fields,
     )
-    coverage_source = None
-    if os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}:
+    from app.services.field_alignment import refresh_existing_coverage_hints
+    from app.services.privacy import anonymize_text
+    coverage_source = anonymize_text(task.get("input_text") or result.get("conversation_text") or "")
+    live_review = os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}
+    if live_review:
         from app.services.field_grounding import ground_fields
-        from app.services.privacy import anonymize_text
-        coverage_source = anonymize_text(task.get("input_text") or result.get("conversation_text") or "")
         fields = ground_fields(fields, coverage_source,
                                (result.get("asr_source") or {}).get("segments"),
                                source_corrected_fields=trusted_source_corrections)
@@ -677,8 +681,11 @@ def review_task(
                 field.hint = "原模型冲突尚未处置，请选择根据原文修正或医生补录后保存。"
     for key in review_payload.source_corrected_fields:
         getattr(fields, key).doctor_review_note = "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。"
-    from app.services.field_alignment import refresh_existing_coverage_hints
-    fields = refresh_existing_coverage_hints(fields, source=coverage_source)
+    fields = refresh_existing_coverage_hints(fields, source=coverage_source if live_review else None)
+    if not live_review:
+        # A doctor can remove a previously covered medication on a later edit.
+        # Recompute this narrow finding from the saved input, even in a demo replay.
+        refresh_episode_medication(fields.present_illness, coverage_source)
     generator = _record_generator_or_503()
     draft = generator.generate_draft(fields)
     safety_check = generator.safety_check(draft, fields)
@@ -761,11 +768,17 @@ def approve_task(
     revision = _current_revision_or_error(task)
     content_hash = _assert_approval_matches_revision(payload, revision)
     fields = MedicalRecordFields.model_validate(result["fields"])
+    # Older unsigned revisions predate this marker. Recheck the saved source
+    # in memory before signing; a rejection must not rewrite that revision.
+    from app.services.privacy import anonymize_text
+    refresh_episode_medication(fields.present_illness,
+        anonymize_text(task.get("input_text") or result.get("conversation_text") or ""))
 
     approval_items: list[dict[str, Any]] = []
     if payload.confirm_all_regular_fields:
         for key, _label, field in _signoff_fields(fields):
-            if _has_confirmable_content(field) and field.status != "conflicting":
+            if (_has_confirmable_content(field) and field.status != "conflicting"
+                    and not (key == "present_illness" and has_episode_medication_gap(field))):
                 field.confirmed_by_doctor = True
                 field.doctor_review_status = "content_confirmed"
                 approval_items.append(

@@ -3641,6 +3641,8 @@ function renderFieldDetailContent(key) {
       <div class="detail-text">${escapeHtml(qualityItem.reason || qualityItem.suggested_action || "暂无进一步说明。")}</div>
     `) : ""}
     ${detailSection("原始转写证据（只读）", renderFieldEvidenceDetails(field))}
+    ${episodeMedicationGaps(key, field).length ? detailSection("需要补核的用药原话", episodeMedicationGaps(key, field)
+      .map(item => `<p class="detail-text">${escapeHtml(item)}</p>`).join("")) : ""}
     ${field?.status === "conflicting" ? detailSection("未采纳的模型内容", `<p class="detail-text">${escapeHtml(field.value || "（无可用内容）")}</p><p>${escapeHtml(field.hint || "证据校验未通过")}</p>`) : ""}
     ${(appState.currentTask?.result_json?.llm_trace?.field_resolution_history || []).filter(item => item.field === key).map(item => detailSection("医生处置前的模型记录（只读对照）", `<p>原版本 ${escapeHtml(String(item.previous_revision_id))} · ${item.method === "doctor_entry" ? "医生补录" : "根据原文修正"}</p><p class="detail-text">${escapeHtml(item.previous_value || "（空）")}</p><p class="detail-text">${escapeHtml((item.previous_source_spans || []).map(s => s.text).join("\n") || "（无模型引用）")}</p>`)).join("")}
     ${field?.doctor_review_note ? detailSection("医生修改记录", `<div class="detail-text">${escapeHtml(field.doctor_review_note)}</div>`) : ""}
@@ -3964,6 +3966,15 @@ function fieldHasReviewableContent(field) {
   return Boolean(field && !field.missing && readableStoredText(field.value));
 }
 
+function episodeMedicationGaps(key, field) {
+  return key === "present_illness" ? (field?.missing_elements || [])
+    .filter(item => typeof item === "string" && item.startsWith("本次病程用药待核对（原文第")) : [];
+}
+
+function isRegularReviewableField({key, field}) {
+  return fieldHasReviewableContent(field) && field.status !== "conflicting" && !episodeMedicationGaps(key, field).length;
+}
+
 function fieldReviewComplete(field) {
   return ["content_confirmed", "not_asked_confirmed", "missing_accepted"].includes(field?.doctor_review_status);
 }
@@ -4001,12 +4012,13 @@ function pendingApprovalCount(fields) {
   if (!fields) return 0;
   let pending = 0;
   const fieldItems = approvalFieldItems(fields);
-  const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
+  const regularFields = fieldItems.filter(isRegularReviewableField);
+  if (fields.present_illness?.status !== "conflicting" && episodeMedicationGaps("present_illness", fields.present_illness).length) pending += 1;
   if (regularFields.some(({ field }) => !fieldReviewComplete(field)) && !appState.approvalRegularFieldsConfirmed) {
     pending += 1;
   }
   fieldItems
-    .filter(({ field }) => !fieldHasReviewableContent(field))
+    .filter(({ key, field }) => !fieldHasReviewableContent(field) && !episodeMedicationGaps(key, field).length)
     .forEach(({ key, field }) => {
       if (!fieldReviewComplete(field) && !appState.approvalMissingDecisions[key]) pending += 1;
     });
@@ -4038,6 +4050,7 @@ function currentRevisionIsSigned() {
 function fieldReviewPresentation(fields, key, signed = currentRevisionIsSigned()) {
   const field = fields?.[key];
   if (field?.status === "conflicting") return { key: "conflicting", label: "证据冲突 · 需修正" };
+  if (!signed && episodeMedicationGaps(key, field).length) return { key: "partial", label: "用药漏记 · 待核对" };
   if (key === "preliminary_diagnosis") {
     const items = draftDiagnoses(fields);
     if (items.length && items.every(diagnosisReviewComplete)) return { key: "confirmed", label: "候选已处理" };
@@ -4062,6 +4075,9 @@ function recordReviewSummary(fields, signed = currentRevisionIsSigned()) {
   const fieldItems = approvalFieldItems(fields);
   for (const { key, title, field } of fieldItems) {
     if (field.status === "conflicting") items.push({ id: `field:${key}`, fieldKey: key, label: `${title}证据冲突`, kind: "conflict" });
+    else if (!signed && episodeMedicationGaps(key, field).length) {
+      items.push({id: `field:${key}`, fieldKey: key, label: "现病史用药漏记", kind: "coverage"});
+    }
     else if (!signed && !fieldHasReviewableContent(field) && fieldReviewPresentation(fields, key, signed).key !== "confirmed" && !appState.approvalMissingDecisions[key]) {
       items.push({ id: `field:${key}`, fieldKey: key, label: `${title}缺失待处理`, kind: "missing" });
     }
@@ -4074,7 +4090,7 @@ function recordReviewSummary(fields, signed = currentRevisionIsSigned()) {
       items.push({ id: `risk:diagnosis:${index}`, fieldKey: "preliminary_diagnosis", label: `${diagnosis.name || "候选诊断"}风险待核对`, kind: "risk" });
     }
   });
-  const regularPending = !signed && !appState.approvalRegularFieldsConfirmed && fieldItems.some(({ key, field }) => fieldHasReviewableContent(field) && field.status !== "conflicting" && fieldReviewPresentation(fields, key, signed).key !== "confirmed");
+  const regularPending = !signed && !appState.approvalRegularFieldsConfirmed && fieldItems.some(item => isRegularReviewableField(item) && fieldReviewPresentation(fields, item.key, signed).key !== "confirmed");
   return { signed, items, regularPending };
 }
 
@@ -4110,8 +4126,8 @@ function renderApprovalChecklist(fields) {
   syncApprovalReviewStateWithRevision();
   const revision = currentRevisionInfo();
   const fieldItems = approvalFieldItems(fields, currentRevisionIsSigned());
-  const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
-  const missingFields = fieldItems.filter(({ field }) => field.status !== "conflicting" && !fieldHasReviewableContent(field));
+  const regularFields = fieldItems.filter(isRegularReviewableField);
+  const missingFields = fieldItems.filter(({ key, field }) => field.status !== "conflicting" && !fieldHasReviewableContent(field) && !episodeMedicationGaps(key, field).length);
   const diagnoses = fields.candidate_diagnoses || [];
   const risks = highRiskReviewItems(fields);
   const reviewSummary = recordReviewSummary(fields);
@@ -4197,6 +4213,7 @@ function renderApprovalChecklist(fields) {
         </button>
         <p class="approval-confirm-scope">我已核对：${regularFields.map(({title}) => escapeHtml(title)).join("、")}。此操作不处理缺失、候选诊断或证据冲突。</p>
       </div>`, regularDone)}
+      ${reviewSummary.items.filter(item => item.kind === "coverage").map(item => `<div class="approval-item" data-approval-item="${escapeHtml(item.id)}"><div><strong>${escapeHtml(item.label)}</strong><span>核对患者的用药原话后，修改现病史并保存。</span></div><button type="button" data-review-focus="${escapeHtml(item.fieldKey)}">定位原文提示</button></div>`).join("")}
       ${missingRows ? `<div class="approval-section"><div class="approval-section-title"><strong>缺失项处理</strong></div>${missingRows}</div>` : ""}
       ${diagnosisRows ? `<div class="approval-section"><div class="approval-section-title"><strong>候选诊断处理</strong></div>${diagnosisRows}</div>` : ""}
       ${riskRows ? `<div class="approval-section"><div class="approval-section-title"><strong>高风险与冲突确认</strong></div>${riskRows}</div>` : ""}
@@ -4211,6 +4228,9 @@ async function buildTaskApprovalPayload() {
   if (appState.recordEditMode || appState.recordEditDirty) throw new Error("请先保存或取消当前修改，再审核已保存的病历版本。");
   const fields = activeRecordFields();
   if (!fields) throw new Error("暂无可审核的病历字段");
+  if (episodeMedicationGaps("present_illness", fields.present_illness).length) {
+    throw new Error("现病史有用药漏记，请核对该字段的原文提示并保存修改。");
+  }
   if (historicalRecordQuality(fields).incomplete) throw new Error("历史病历内容不完整，请核对原文并补录后重新审核。");
   const readiness = await refreshExportReadiness();
   const revision = currentRevisionInfo(readiness);
@@ -4227,7 +4247,7 @@ async function buildTaskApprovalPayload() {
     high_risk_conflicts: [],
   };
   const fieldItems = approvalFieldItems(fields);
-  const regularFields = fieldItems.filter(({ field }) => fieldHasReviewableContent(field) && field.status !== "conflicting");
+  const regularFields = fieldItems.filter(isRegularReviewableField);
   if (regularFields.some(({ field }) => !fieldReviewComplete(field)) && !appState.approvalRegularFieldsConfirmed) {
     throw new Error("请先显式确认当前全部普通字段。");
   }
@@ -4340,6 +4360,7 @@ function renderFields() {
             : `<span class="status-badge ${status.key}">${escapeHtml(status.label)}</span>${qualityLabel ? `<span class="status-badge ${fieldQualityBadgeClass(qualityLabel)}">${escapeHtml(qualityLabel)}</span>` : ""}`}
         </div>
         ${valueMarkup}
+        ${!isApprovedDisplay ? episodeMedicationGaps(key, fields?.[key]).map(item => `<p class="field-coverage-notice">${escapeHtml(item)}</p>`).join("") : ""}
         ${!isPreview ? fieldResolutionMarkup(key, fields?.[key], isEditing) : ""}
         ${meta}
       </article>

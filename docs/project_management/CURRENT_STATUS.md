@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-02T16:42:26.763Z`
-- Source hash: `7c5cf623b9f81edce879e279fcdeab300b3c50bb32d629d66a4d4914f331702f`
+- Updated at: `2026-11-05T15:58:42.418Z`
+- Source hash: `565cc7a0bd44a310c19f4b12d974c8f3b4faacda5a21aa433592ae10d58c860d`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@f04e5aa38a1f37b4f315b3e0b1e2191b157cecaf`
+- Repo: `codex/ui-hospital-record-v1@d094b28b8fdeaf3c88d43b18e1a63e5e805a63ad`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
-- Forecast Alpha Exit: **运行源码44115d88：E1文本人工R3与E2音频人工R2的真实按钮闭环、PDF读取、历史和播放恢复完成；本轮2次生成0.025166元。CI41463222347全部通过1761/4跳过/30子测试，查看器11与原型76另列。知识14项API管理检查通过，成人适用性/排序FAIL；角色统计、首稿时间/字段/用药遗漏及PDFP2保留。26328同SHA新目录API恢复、外连阻断ready503及原26327健康就绪恢复通过，11表及账本未变；不是断网生成、完整离线发行或恢复UI三路径。正式16项99h、5.1VERIFY与原Gate不变，5.3未开始。**
+- Forecast Alpha Exit: **本轮交付仅为独立合成前端原型，30项状态测试及两例四字段浏览器流程完成；Research NEEDS MORE EVIDENCE，生产Design未进入。真实缩放、直接刷新确认继续分支、同条件效率对照、用户与医生验收未齐；本轮未复验真实ASR、模型、麦克风、生产PDF或历史运行包。正式16项99h和所有task metadata保持，5.1继续VERIFY，原失败与发布限制保留，不给出新阶段退出日期。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 医生审核提示与操作精简** — `VERIFY`
+**5.1 · 三条主路径E2E Smoke** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 5.1优先处理本轮已复现的口语用药遗漏：以保留的E2首次响应建立规则正反例，区分模型正文漏写与规则漏检，禁止从引文自动补造正文；不重复已通过CI和两条人工修订按钮流程，修复后仅补受影响验收。知识成人排序、人工角色统计、PDF分页及剩余发布门禁分别保留。
-- Parallel waiting task: 硬件1.1–1.4继续延期；本地模型漏提、字段混放及自我纠正质量独立保留，不由界面结果替代。
+- Single next task: 先对独立接诊原型完成用户视觉确认、真实缩放与同条件任务对照，再冻结行为规范并进入工程设计；生产患者草稿持久化与接口恢复仍未放行。原有口语用药遗漏、知识排序、人工角色统计及PDF分页问题独立保留。
+- Parallel waiting task: 硬件1.1至1.4继续延期；模型首次漏提、字段混放及自我纠正质量独立保留，不由原型演示替代。
 
 ## Manual Actions
 
-- 用户可用已交付约5分钟自然对话稿自行测试新物理录音；本轮未计新麦克风及实际三档缩放，不要求重做已有授权音频。
+- 打开独立原型确认病历为主、原文可固定的视觉方向；目标医生独立试用与同条件对照另行记录。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

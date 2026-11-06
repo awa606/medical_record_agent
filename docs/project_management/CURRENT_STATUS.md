@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-10-29T14:39:48.466Z`
-- Source hash: `34d34f56b0143dceef647929590b9176a9d2a09af5a61d03bf49b06e95c45eb3`
+- Updated at: `2026-11-06T03:47:19.628Z`
+- Source hash: `ab6e3846304a225549df36c4e4ff5c04a09f521c47c5d1d5524e287281d0de3b`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@b5451f5f3f4203970830fa852f8d15d89df05d34`
+- Repo: `codex/alpha51-demo-visual-e2e@3ac127632ac416bd4f28d5ca95cc5b0413c2afaf`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **8798本轮仅两份显示资源更新：前端b5451f5f、后端1cafa2ae不变，镜像84507f2b；健康/就绪200、业务和账本前后相同，旧容器保留。时间左上、角色右上、详情下方已在实际8798文本/音频历史记录截图核对；680px响应式初次失败与修复保留，不算实际缩放。教师入口版本匹配；新增ASR/模型调用0。上轮E27文本修正审核闭环复用，首次两字段混放仍失败；授权音频、物理录音、实际缩放和完整恢复缺项保留。5.1VERIFY95、5.3BACKLOG，正式16项99h/日期/Gate/硬件不变。**
+- Forecast Alpha Exit: **11月6日完成本地数据图解、可复算统计和评测准备：离线页面8项功能检查PASS、1项暗色截图采集，独立核对728种数量组合；原始样本和私人材料仅本地。无新增ASR/病历推理、训练、真实医生试用或部署；当前已查环境未就绪、docker运行容器0。既有首次模型失败及原验收缺项保留。Obsidian仅追加5.1正文与审计日志，任务元数据、日期、Gate与范围不变；5.1VERIFY、5.3BACKLOG。本次repo_sha是研究文档提交，不是新的运行版本。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 转写条头排版已上线8798；授权音频闭环与同镜像恢复缺项待补** — `VERIFY`
+**5.1 · 数据图解与评测准备已交付；授权音频闭环仍待验收** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,11 +54,12 @@
 
 ## Next
 
-- Single next task: 补当前b5451f5f/1cafa2ae版本的授权音频真实按钮闭环，核对角色门禁和一次生成；通过后衔接同镜像受限业务恢复。转写条头小布局已完成，不重复已通过文本及无关检查；5.1原标准满足后再进入5.3。
-- Parallel waiting task: 硬件1.1–1.4仍延期，5.2依赖5.1/1.2、5.4依赖5.2/5.3。本地模型漏提独立保留。采访v2三稿与两审查留本机，自动估计时间需复听，先限第七块255—300秒局部核对，不自动重跑37分钟。
+- Single next task: 围绕5.1取得5–10场有明确评测许可的中文目标场景样本，核对本地环境后完成授权音频真实按钮闭环；随后核验同版受限业务恢复。数据图解不替代5.1验收，未满足原条件前不进入5.3。
+- Parallel waiting task: 真实数据研究仍NEEDS MORE EVIDENCE；本轮中文真实录音0场、英文模拟1场，四源尚未回复或交付。150场只是研究数量示意，不改Beta正式60–100例范围。硬件支线与既有任务依赖保持原记录。
 
 ## Manual Actions
 
-- 无
+- 落实有门诊经验的医学评审人员，核定参考事实与病历。
+- 等待PDCH协议及资格、IMCS具体许可、商业样本与含税报价；未核实预算内合格现货前保留3000元首批预算。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

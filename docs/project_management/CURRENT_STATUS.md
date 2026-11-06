@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-06T08:50:00.468Z`
-- Source hash: `71d66148cb7b4a5f88085fec32737d0a3595e1b2c32e2b6fd22479ecb5f26916`
+- Updated at: `2026-11-06T09:42:20.293Z`
+- Source hash: `588a5caa2eddf12ff8fecdeb2084f039186680f81be4f909569e74e5e09e77a7`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@54ea394243d17aeb8ef27484fd355a7601a8127f`
+- Repo: `codex/ui-hospital-record-v1@d1326199749b74213dff7f5c5eae6ffca725cc6f`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
-- Forecast Alpha Exit: **26327原44115d88-perf2已恢复且就绪200；本轮六份后端文件3998194通过CI，真实E-4仅一次调用并识别遗漏/混放，未完成修订审核导出，未推广。默认诊断只存元数据。知识24查询8/15、Nemotron60秒计算135.708秒均不晋级。正式16项99h、5.1 VERIFY不变。**
+- Forecast Alpha Exit: **26327原44115d88-perf2已恢复且就绪200；本轮六份后端文件3998194通过CI，真实E-4仅一次调用并识别遗漏/混放，未完成修订审核导出，未推广。默认诊断只存元数据。知识24查询8/15、Nemotron60秒计算135.708秒均不晋级。正式16项99h、5.1 VERIFY不变。 前端0.4.0仅实现候选，未改生产链，GUI与平台验收未完成。**
 
 ## Progress
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: CI4d6c8a8已通过1858项；隔离3998194合成E-4一次生成暴露HPI用药覆盖缺口及过敏/伴随混放，新规则已隔离。先零调用定位对应字段正文与问答关联，再补修订审核；原26327保持44115d88，候选HOLD。
-- Parallel waiting task: 在线说话人CPU实时目标未过；BGE旧向量一致性未过；本地漏提独立研究。保留同期布局样机、三面板接诊原型、数据准备和用户视觉选择任务；原型未接生产API，硬件仍延期。
+- Single next task: 0.4.0文档接诊原型已实现，44项模型测试通过。内置浏览器超时，等待用户允许独立Playwright后执行全流程、同条件截图、800x600与原生100/125/150%缩放；不得将当前候选称为GUI或审美通过。
+- Parallel waiting task: CI4d6c8a8已通过1858项；隔离3998194合成E-4一次生成暴露HPI用药覆盖缺口及过敏/伴随混放，新规则已隔离。先零调用定位对应字段正文与问答关联，再补修订审核；原26327保持44115d88，候选HOLD。 在线说话人CPU实时目标未过；BGE旧向量一致性未过；本地漏提独立研究。保留同期布局样机、三面板接诊原型、数据准备和用户视觉选择任务；原型未接生产API，硬件仍延期。
 
 ## Manual Actions
 
-- 打开本地23712工作台及comparison.html，按相同病例试用A/B/C；记录视觉偏好、原文查找与往返，目标医生独立使用另行记录。
+- 回复独立测试浏览器授权与私有在线预览偏好；代码候选已本地可服务，用户视觉和目标医生验收另行记录。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

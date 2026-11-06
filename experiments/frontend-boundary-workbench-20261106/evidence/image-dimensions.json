@@ -1,0 +1,79 @@
+[
+  {
+    "file": "01-new-capture-before-density-fix.jpg",
+    "pixels": [
+      1366,
+      768
+    ]
+  },
+  {
+    "file": "02-old-capture-1366.jpg",
+    "pixels": [
+      1366,
+      768
+    ]
+  },
+  {
+    "file": "03-new-capture-1366.jpg",
+    "pixels": [
+      1366,
+      768
+    ]
+  },
+  {
+    "file": "04-processing-keeps-draft.jpg",
+    "pixels": [
+      1366,
+      768
+    ]
+  },
+  {
+    "file": "05-failed-keeps-draft.jpg",
+    "pixels": [
+      1366,
+      768
+    ]
+  },
+  {
+    "file": "06-refresh-waits-for-choice.jpg",
+    "pixels": [
+      1366,
+      768
+    ]
+  },
+  {
+    "file": "07-new-review-800.jpg",
+    "pixels": [
+      800,
+      600
+    ]
+  },
+  {
+    "file": "08-export-receipt-800.jpg",
+    "pixels": [
+      800,
+      600
+    ]
+  },
+  {
+    "file": "09-export-receipt-fixed-800.jpg",
+    "pixels": [
+      800,
+      600
+    ]
+  },
+  {
+    "file": "10-long-content-1440.jpg",
+    "pixels": [
+      1440,
+      900
+    ]
+  },
+  {
+    "file": "11-reconnecting-retains-content.jpg",
+    "pixels": [
+      1440,
+      900
+    ]
+  }
+]

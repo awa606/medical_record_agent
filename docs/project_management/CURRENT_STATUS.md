@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-06T07:58:56.003Z`
-- Source hash: `f1fb176a57f13d4abcb64e1248b280180830938f030bd281641a3130b230c321`
+- Updated at: `2026-11-06T08:08:40.140Z`
+- Source hash: `d73dfddf63d48a321d0de471dabb0e6d1ac08ad919fa51fd5fed7731afba54e3`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@cbf2761461fe9737c6f0c2a87e47be529ba57f7a`
+- Repo: `codex/ui-hospital-record-v1@955015c75d4fa85712463aecc583670a6f338148`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 隔离3998194候选已完成实际历史恢复与共享目录锁检查；先恢复精确提交的远端CI，再补受影响生成/恢复验收，原26327保持44115d88。
+- Single next task: 隔离3998194候选已完成实际历史恢复与共享目录锁检查；基础分支状态镜像冲突已合并；核对精确提交的远端CI，再补受影响生成/恢复验收，原26327保持44115d88。
 - Parallel waiting task: 在线说话人CPU实时目标未过；BGE旧向量一致性未过；本地字段漏提仍独立研究。保留同期三种布局样机、数据准备和用户视觉选择任务；硬件仍延期。
 
 ## Manual Actions

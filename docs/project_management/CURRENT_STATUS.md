@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-06T08:08:40.140Z`
-- Source hash: `d73dfddf63d48a321d0de471dabb0e6d1ac08ad919fa51fd5fed7731afba54e3`
+- Updated at: `2026-11-06T08:50:00.468Z`
+- Source hash: `71d66148cb7b4a5f88085fec32737d0a3595e1b2c32e2b6fd22479ecb5f26916`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@955015c75d4fa85712463aecc583670a6f338148`
+- Repo: `codex/ui-hospital-record-v1@54ea394243d17aeb8ef27484fd355a7601a8127f`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
-- Forecast Alpha Exit: **26327原44115d88-perf2已恢复；规则、实时事实和默认关闭的中断恢复代码已交付。知识24查询8/15、人群过滤30到0但无答案仍失败；Nemotron60秒计算135.708秒不晋级。正式16项99h和5.1 VERIFY不变，不预报新退出日期。**
+- Forecast Alpha Exit: **26327原44115d88-perf2已恢复且就绪200；本轮六份后端文件3998194通过CI，真实E-4仅一次调用并识别遗漏/混放，未完成修订审核导出，未推广。默认诊断只存元数据。知识24查询8/15、Nemotron60秒计算135.708秒均不晋级。正式16项99h、5.1 VERIFY不变。**
 
 ## Progress
 
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: 隔离3998194候选已完成实际历史恢复与共享目录锁检查；基础分支状态镜像冲突已合并；核对精确提交的远端CI，再补受影响生成/恢复验收，原26327保持44115d88。
-- Parallel waiting task: 在线说话人CPU实时目标未过；BGE旧向量一致性未过；本地字段漏提仍独立研究。保留同期三种布局样机、数据准备和用户视觉选择任务；硬件仍延期。
+- Single next task: CI4d6c8a8已通过1858项；隔离3998194合成E-4一次生成暴露HPI用药覆盖缺口及过敏/伴随混放，新规则已隔离。先零调用定位对应字段正文与问答关联，再补修订审核；原26327保持44115d88，候选HOLD。
+- Parallel waiting task: 在线说话人CPU实时目标未过；BGE旧向量一致性未过；本地漏提独立研究。保留同期布局样机、三面板接诊原型、数据准备和用户视觉选择任务；原型未接生产API，硬件仍延期。
 
 ## Manual Actions
 

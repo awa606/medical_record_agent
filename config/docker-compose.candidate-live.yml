@@ -1,0 +1,24 @@
+# Candidate + real DeepSeek provider. Stack with:
+#   docker compose -f docker-compose.yml -f config/docker-compose.candidate.yml \
+#     -f config/docker-compose.candidate-live.yml up -d --build
+#
+# The API key is read from the existing read-only secret mount; it never enters
+# this repository. The budget ledger is local to the candidate runtime.
+services:
+  medical-record-agent:
+    environment:
+      LLM_PROVIDER: online
+      RECORD_PROVIDER_MODE: live
+      ONLINE_LLM_PROFILE: deepseek_demo
+      ONLINE_LLM_API_BASE: https://api.deepseek.com
+      ONLINE_LLM_MODEL: deepseek-flash
+      ONLINE_LLM_API_KEY_FILE: /run/secrets/deepseek.env
+      ONLINE_LLM_BUDGET_LEDGER: /app/runtime/cost-ledger.json
+      ONLINE_LLM_DIAGNOSTICS_DIR: /app/runtime/business-diagnostics
+      ONLINE_LLM_PROXY_URL: ""
+      ONLINE_LLM_FIELD_CONTRACT: legacy
+      LLM_MAX_RETRIES: "0"
+      LLM_TIMEOUT_SECONDS: "120"
+      MRA_ANONYMIZE: "1"
+    volumes:
+      - "C:/Users/AWA007/Desktop/Data/开题报告/05_软件工程与运行档案/病历/medical_record_agent_alpha51_visual/.artifacts/online-demo-20261019/private.env:/run/secrets/deepseek.env:ro"

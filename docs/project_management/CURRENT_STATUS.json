@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-11-06T11:09:11.005358+08:00",
-  "source_hash": "3f18d54a03e71946399b6c7562e33cbef1f9fe5f120fedab889f4bdbb965ad04",
+  "updated_at": "2026-11-06T15:37:17.222380+08:00",
+  "source_hash": "80599b927667a35916789e6e39f45497120b7bf4b4133d45b09476afdd326f19",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "f279c30bc3af5484df19c6ffb791cd1dcfe742df",
+  "repo_sha": "2263df9c86c7607e005e2575208bf46b97ec7605",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/ui-hospital-record-v1",
   "active_pr": {
@@ -87,12 +87,12 @@
     }
   },
   "purchase_decision": "DEFERRED",
-  "next_task": "用户直接试用新版逐句采集交互原型，记录布局与操作意见；随后补实际缩放和同条件任务对照，再决定是否冻结生产设计。",
-  "parallel_waiting_task": "硬件1.1至1.4继续延期；模型首次漏提、字段混放及自我纠正质量独立保留，不由原型演示替代。",
+  "next_task": "用户在同一合成病例下直接切换A文书优先、B持续对照、C问题引导，确认布局方向；随后补下载文件、同条件效率对照与真实缩放验证。",
+  "parallel_waiting_task": "硬件1.1至1.4继续延期；模型首次质量、生产输入归属与保稿修复及并行后端工作分别保留，原型不替代其验收。",
   "manual_actions": [
-    "在本地23711原型点击下一句，体验同步病历、辅助参考和核对流程；用户视觉确认与目标医生独立试用分别记录。"
+    "打开本地23712工作台及comparison.html，按相同病例试用A/B/C；记录视觉偏好、原文查找与往返，目标医生独立使用另行记录。"
   ],
-  "forecast_alpha_exit": "本轮为独立合成前端样机，44项状态测试通过，实际采集手改、保存R2、签署、TXT下载内容和返回主线走通；三视口及指定键盘检查完成。Research NEEDS MORE EVIDENCE，生产Design未进入。原生刷新继续分支、临时采集真实刷新恢复、实际缩放和用户/医生验收仍缺；不改16项99h、5.1 VERIFY或硬件延期，不给新阶段退出日期。",
+  "forecast_alpha_exit": "本轮实质交付为隔离三布局原型，44项复用状态测试通过；采集切布局保稿、保存R2刷新、四项核对签署、患者切换及三CSS视口已观察。800窄屏原文面板首次失败修复后定向复验；下载事件15秒超时，实际TXT及内容未验，另保留5项P3。真实100%/125%/150%缩放、完整键盘、同条件效率、用户与医生验收、音频模型和生产导出未齐。生产Research NEEDS MORE EVIDENCE，Design未进入；16项99h、5.1 VERIFY和硬件延期不改，不给新阶段退出日期。",
   "source_files": {
     "Projects/Medical_Record_Agent/0 Alpha工程版交付包.md": "4bbfbde20927f571d673cf59c31b172af0fa742c4825695eb13682f4dff2231d",
     "Projects/Medical_Record_Agent/00_Project_Home.md": "8ec8c964b0158f0c1eda5cd2727257408cd671d5da2e4cebae16b6fc21af1829",
@@ -216,7 +216,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "e34589620214ee8c782280e4722813bbd0b256c63e5623b482f3f764a26b61a0",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "915bbcdd923044d89abe10cbfae9c4c8a040ed13db6b0a9b3d95242bd652c95f",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -244,7 +244,7 @@
     "Projects/Medical_Record_Agent/Tasks/3.3 医生修改、审核与导出.md": "bd42143579a9fd023ea145c17b7d0b34fb342d7b538249931f125af4957e8959",
     "Projects/Medical_Record_Agent/Tasks/4.1 Encounter _ Transcript _ Draft基础持久化.md": "ac396168165bbc5b8ce20ec77fdbb8b0c52d9d57fb0aa21783b39a431c143939",
     "Projects/Medical_Record_Agent/Tasks/4.2 病历证据与Revision版本关联.md": "caa937a1f5f28c8ae4a817d7ca692217560256101c390e4d585152c392949054",
-    "Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke.md": "d19b209a055691d1b43259ce75bbb10fcf470112b2cca32587af3f73f3799f19",
+    "Projects/Medical_Record_Agent/Tasks/5.1 三条主路径E2E Smoke.md": "dfa98c2772c814078b2445874aebc0e77dea7012c0db04ab4861dbb387fccc42",
     "Projects/Medical_Record_Agent/Tasks/5.2 断网本地运行验证.md": "9cbfed70e6f73c9199e7031611a2a2760b4b30eed8268f4385f35426c45aecda",
     "Projects/Medical_Record_Agent/Tasks/5.3 连续5次真实音频E2E.md": "128e7dd1c17ce42c2ff5ff9ceda13283eaa860b981673c621e81d05dff7dd5c3",
     "Projects/Medical_Record_Agent/Tasks/5.4 Alpha缺陷回归和证据归档.md": "f904dcf687858ef01903e7fb53eca97c004f7b56656186dc8fae38fa240b1157",
@@ -292,11 +292,12 @@
   },
   "extra_source_files": {
     ".artifacts/review-fix-20261102/hardware-status-preserved.json": "80bc286c3f03a9cdc361ffa84e89f64bba265e7f3f0c0c067c2cf2c3d0142d26",
-    "experiments/frontend-design-20261106/README.md": "77a8868bcac333beb93824af1328a249c7de737acf74395b6650c86fb2b977c4",
-    "experiments/frontend-design-20261106/RESEARCH.md": "f5c98f3559fa63c1c57ecb3205ab43ccce6a56fefc8b2950f14db9f997c8bf49",
-    "experiments/frontend-design-20261106/REVIEW.md": "b2a63a528f7a0fa0850b42720f08cbb62080533ff7c70534fa0783b5493ea2a7",
-    "experiments/frontend-design-20261106/VISUAL_REVIEW.md": "bd404f90c2b04bd1f58247eefd88db9cbb58b078cabb98d2ea1957e8d809d79f",
-    "experiments/frontend-design-20261106/design-qa.md": "c6d3a32f2c0e1322d5c47807c1e24c9fc3024651fd867974226b9ad080ab60e1"
+    "experiments/frontend-layout-comparison-20261106/README.md": "96b7fdfce8ea333c1a336afecb38ec0f27fa36ec79b245122e8245a91a26d9ce",
+    "experiments/frontend-layout-comparison-20261106/REFERENCES.md": "a98131fcf61996f06f5f9075df5cf468aebc7e48019a3da975d22df6f01ba99b",
+    "experiments/frontend-layout-comparison-20261106/RESEARCH.md": "70fdc04078476753e6b30c2500f3e815e697ad05fd6b0c84fa7f86474077b997",
+    "experiments/frontend-layout-comparison-20261106/REVIEW.md": "cdb3f5db6e5c59a46dd4224158c200b45a52aa659138c018c0891b2def403c36",
+    "experiments/frontend-layout-comparison-20261106/VISUAL_REVIEW.md": "2c4da56426a067c4de21b276022a805b464aafc8e4ef6f035d01fedbdfd162c3",
+    "experiments/frontend-layout-comparison-20261106/design-qa.md": "991413ca189eb15623b86b1daf1eb5159b20bdf4b393db4f49c31b811c78514d"
   },
   "snapshot_verification": {
     "result": "PASS",

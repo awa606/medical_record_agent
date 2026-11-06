@@ -1,0 +1,830 @@
+{
+  "source_db_sha256": "dfb6ec2393e79c4cc3c20ff9a55b2dbc65f5d60b7a56cf94b935340a1224d306",
+  "contents_included": false,
+  "vectors_included": false,
+  "sources": [
+    {
+      "source_id": "nhc-influenza-2020",
+      "title": "流行性感冒诊疗方案（2020年版）",
+      "publisher": "国家卫生健康委办公厅、国家中医药局办公室",
+      "source_url": "https://www.nhc.gov.cn/ylyjs/zcwj/202011/472e0ad873014c168dbe22e19d605e20/files/1733999727528_18271.pdf",
+      "published_at": "2020-10-27",
+      "usage_scope": "临床表现、重症高危因素、鉴别与就医风险的医生参考。历史初始索引为10个片段，不代表2025年版。",
+      "document_type": "clinical-reference",
+      "disease_scope": "流行性感冒；2020年版",
+      "documents": [
+        {
+          "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+          "version": "2020年版",
+          "content_sha256": "693984e29ed67bdc0366f66c303f33b98847d0bcfcd6f1e87aa5cbbdcd8bfaac",
+          "page_count": 10,
+          "extraction_method": "rapidocr",
+          "is_current": 1,
+          "is_active": 1,
+          "content_format": "pdf"
+        }
+      ]
+    },
+    {
+      "source_id": "nhc-covid19-trial-v10",
+      "title": "新型冠状病毒感染诊疗方案（试行第十版）",
+      "publisher": "国家卫生健康委员会、国家中医药管理局",
+      "source_url": "https://www.nhc.gov.cn/cms-search/downFiles/460b0e7b19bd42f3bba00c1efb9b6811.pdf",
+      "published_at": "2023-01-06",
+      "usage_scope": "临床表现、诊断、分型和重症风险的医生参考。完整章节索引v2覆盖1–30页；历史初始版本仅10个片段。",
+      "document_type": "clinical-reference",
+      "disease_scope": "新型冠状病毒感染",
+      "documents": [
+        {
+          "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+          "version": "试行第十版 · 完整章节索引v2",
+          "content_sha256": "0d062b0213b17914449f08b74d82e47416515758b0b10ac647cc331745eb1835",
+          "page_count": 30,
+          "extraction_method": "pypdf",
+          "is_current": 1,
+          "is_active": 1,
+          "content_format": "pdf"
+        }
+      ]
+    },
+    {
+      "source_id": "nhc-child-mpp-2025",
+      "title": "儿童肺炎支原体肺炎诊疗指南（2025年版）",
+      "publisher": "国家卫生健康委办公厅、国家中医药局综合司",
+      "source_url": "https://www.nhc.gov.cn/yzygj/c100068/202509/19e7145436b049a68d4ba8c2060dfa56/files/%E5%84%BF%E7%AB%A5%E8%82%BA%E7%82%8E%E6%94%AF%E5%8E%9F%E4%BD%93%E8%82%BA%E7%82%8E%E8%AF%8A%E7%96%97%E6%8C%87%E5%8D%97%EF%BC%882025%E5%B9%B4%E7%89%88%EF%BC%89.pdf",
+      "published_at": "2025-09-09",
+      "usage_scope": "仅适用于儿童MPP，供医生参考。完整章节索引v2覆盖正文1–29页；历史初始版本仅10个片段。第30页流程图及31–32页名单未转文本；不得自动给药。",
+      "document_type": "clinical-reference",
+      "disease_scope": "仅儿童肺炎支原体肺炎",
+      "documents": [
+        {
+          "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+          "version": "2025年版 · 完整章节索引v2",
+          "content_sha256": "3c2f529ae70e8ebfa8a71d5e3d91484c8fd1cacf3d85fffd1da52825ccffe16e",
+          "page_count": 29,
+          "extraction_method": "pypdf",
+          "is_current": 1,
+          "is_active": 1,
+          "content_format": "pdf"
+        }
+      ]
+    },
+    {
+      "source_id": "nhc-record-standard-2010",
+      "title": "病历书写基本规范",
+      "publisher": "中华人民共和国卫生部",
+      "source_url": "https://www.nhc.gov.cn/wjw/gfxwj/201002/79d42b9c8b3f47ee91000d31de116784.shtml",
+      "published_at": "2010-02-04",
+      "usage_scope": "病历书写与人工审核参考；不得自动批准诊断或治疗。",
+      "document_type": "record-standard",
+      "disease_scope": "通用病历书写",
+      "documents": [
+        {
+          "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+          "version": "卫医政发〔2010〕11号",
+          "content_sha256": "7558c6eac6a348a664e889f701a36bd994c48e9d2037b8233261ed1e40306f54",
+          "page_count": 1,
+          "extraction_method": "browser_utf8_markdown_v1",
+          "is_current": 1,
+          "is_active": 1,
+          "content_format": "markdown"
+        }
+      ]
+    },
+    {
+      "source_id": "nonclinical-acceptance-20261102-lighthouse",
+      "title": "非临床资料导入权限验收（已编辑）",
+      "publisher": "MediListen隔离验收",
+      "source_url": "https://example.invalid/nonclinical-acceptance",
+      "published_at": null,
+      "usage_scope": "非临床资料，仅用于导入、权限和检索验收，不作为医疗依据",
+      "document_type": "nonclinical-acceptance",
+      "disease_scope": "不适用",
+      "documents": [
+        {
+          "document_id": "nonclinical-acceptance-20261102-lighthouse-acceptance-20261102-1-cff6bb5046dc",
+          "version": "acceptance-20261102-1",
+          "content_sha256": "cff6bb5046dc9801ee9f770ea03d3c6441661776868302eed9d40824093a2e0b",
+          "page_count": 1,
+          "extraction_method": "browser_utf8_txt_v1",
+          "is_current": 1,
+          "is_active": 0,
+          "content_format": "txt"
+        }
+      ]
+    }
+  ],
+  "chunks": [
+    {
+      "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p002-c001",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "section": "二、流行病学 （一）传染源",
+      "page": 2,
+      "content_sha256": "5fdb41f2ef1fbabd8b498a83835bb93a4f5224153e282e83a1fdd6d77d4a19c6",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p003-c002",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "section": "5.妊娠及围产期妇女",
+      "page": 3,
+      "content_sha256": "0d625d13a09c3242994e0ae22614e362e0cbbce23e4a0b939f14bcd2afce33ee",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p004-c003",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "section": "1.流感病毒可侵犯下呼吸道，引起原发性病毒性肺炎",
+      "page": 4,
+      "content_sha256": "684b5377ce18fc063f846ac3002480694fca41d34daa88399ff410e3436e58d1",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p005-c004",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "section": "4.肌炎和横纹肌溶解主要表现为肌痛、肌无力、血清肌酸激 酶、肌红蛋白升高，严重者可导致急性肾损伤等",
+      "page": 5,
+      "content_sha256": "fea080ef66470d269fdd110250f755be58315da78103b91288a17f86ee3f9735",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p006-c005",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "section": "五、诊断 主要结合流行病学史、临床表现和病原学检查进行诊断",
+      "page": 6,
+      "content_sha256": "e148cfbb263c3448e87659c2e5a019d734c4f9e2f51f8e19dfeb0e8561ab5432",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p007-c006",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "section": "1.流感病毒核酸检测阳性",
+      "page": 7,
+      "content_sha256": "649597b485891d3d42fab01d47d68a8bdf516b241fa1455218087951dc3a932b",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+      "page": 8,
+      "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p009-c008",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "section": "3.非住院患者居家隔离，保持房间通风，佩戴口罩",
+      "page": 9,
+      "content_sha256": "f414ba5fc91a6c00e4783d1678219ac011ee6c4ced97d36f7e34aa4735bf9fde",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p010-c009",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "section": "2.抗流感病毒药物：我国目前上市的药物有神经氨酸酶抑制 剂、血凝素抑制剂和M2离子通道阻滞剂三种",
+      "page": 10,
+      "content_sha256": "d1af5a17e11318201f59631f6704860b2d8121f2083b418ec86d211f619e2a7d",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p011-c010",
+      "document_id": "nhc-influenza-2020-2020-693984e29ed6",
+      "section": "1.对于重症流感患者，抗病毒治疗疗程尚不明确，有条件的医 院可根据核酸检测结果适当延长抗病毒治疗时间",
+      "page": 11,
+      "content_sha256": "5940d378eeb2f722578f868c7ae460ed422130eb141dd2f2bccfe3341f721101",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c001",
+      "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+      "section": "正文",
+      "page": 1,
+      "content_sha256": "21e98725225295aeaf72661a719440692a1963504b55370f96a588ac4e799370",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002",
+      "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+      "section": "第一章   基本要求",
+      "page": 1,
+      "content_sha256": "df51a4a8805fbafeb453e7555aa21f223b69147e5a0ee84ecf8c1ed78efaa4be",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+      "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+      "section": "第二章  门（急）诊病历书写内容及要求",
+      "page": 1,
+      "content_sha256": "c9e565428b4c5a42972fdfaf8ca6368ca3ae6dc817971980cc6602e8d04c627a",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c004",
+      "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+      "section": "第三章  住院病历书写内容及要求",
+      "page": 1,
+      "content_sha256": "ba76a22a661c85affaeb6aebbfa34e223e68a5f97552b7fd1f8bd56d1d13305c",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c005",
+      "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+      "section": "第三章  住院病历书写内容及要求",
+      "page": 1,
+      "content_sha256": "0ec2b176e39f6176aedd0a12da385ce1c1cf8fb66b262aef84be6caee91256ed",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c006",
+      "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+      "section": "第三章  住院病历书写内容及要求",
+      "page": 1,
+      "content_sha256": "8b831a3db8a9193940fc96f396693284581ac32fd3a0d549051aa76d401187f1",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c007",
+      "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+      "section": "第三章  住院病历书写内容及要求",
+      "page": 1,
+      "content_sha256": "c016c484fb45a2c7473a736c0d74b8429e5351f9cb74b8d51d8db7780fd62f58",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c008",
+      "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+      "section": "第四章   打印病历内容及要求",
+      "page": 1,
+      "content_sha256": "dbfea5de681f864963dde54c0033f06a4f8a363882fdd0242372546856f5b196",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c009",
+      "document_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3",
+      "section": "第五章  其他",
+      "page": 1,
+      "content_sha256": "3d22d5b748ce9bb7c18dde51d91cc8478ec35f22efe7039ccf9098439cbd8012",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p001-c001",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "一、病原学特点 新型冠状病毒（以下简称新冠病毒，SARS-CoV-2）为β 属冠状病毒，有包膜，颗粒呈圆",
+      "page": 1,
+      "content_sha256": "f63aa6b8df60cb5c4c01579d9158facb5d45d436fb8a6bb4d0c4134b22c6d6a7",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p002-c002",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "新型冠状病毒感染诊疗方案（试行第十版） · 第2页",
+      "page": 2,
+      "content_sha256": "57bc0b9622ae987893222cadb3cd91cddf25587b091f7d23b26ba497bf570812",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p003-c003",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "二、流行病学特点 （一）传染源",
+      "page": 3,
+      "content_sha256": "e45d5ebff95511836e1bbdf9e3844ca66ebfdbb15db2b71f529a6dfa5a3b11a7",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "四、临床特点 （一）临床表现",
+      "page": 4,
+      "content_sha256": "d7516ea547d2e3a6ef3c1e5dcec1ec963b39e93532f8a9c11c60f208b0e60ea9",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p005-c005",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "1.一般检查",
+      "page": 5,
+      "content_sha256": "8dbfa10fc8fea046f3b94e340afacd6a430faaaea4a4c4010176456b2141fc20",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p006-c006",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "五、诊断 （一）诊断原则",
+      "page": 6,
+      "content_sha256": "f71f2afbcee422aeaaa5f538089b4c49cf37b7714798325353f8048dc57a13f7",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p007-c007",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "1.具有新冠病毒感染的相关临床表现",
+      "page": 7,
+      "content_sha256": "70123ea023f944b9c15d4c147259f59dc77b94f4f82999933c4f4140f2eb1a5f",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p008-c008",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "4.临床症状进行性加重，肺部影像学显示 24～48 小时 内病灶明显进展＞50%",
+      "page": 8,
+      "content_sha256": "55c0a1e0d84ac5ae4b54e99832d7ca8b6202b27636349e3afeb712a9790e9e21",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p009-c009",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "八、重型/危重型早期预警指标 （一）成人",
+      "page": 9,
+      "content_sha256": "4a22283788f8f129d93fc71f0bc5adf645371ae457faebc543a5d569555a11fc",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p010-c010",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "6.AST、ALT、CK 明显增高",
+      "page": 10,
+      "content_sha256": "0f4fd5963232ba55aad01b869e4f87ab11e510b88cc62193d92dc694a0c58888",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p011-c011",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "2.对重症高危人群应进行生命体征监测，特别是静息和 活动后的指氧饱和度等",
+      "page": 11,
+      "content_sha256": "3538004d4a961dddd8a2ed7488e371fb3ece3208119c66f6e010ba5953dbfdb7",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p012-c012",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "2.阿兹夫定片",
+      "page": 12,
+      "content_sha256": "1170750f824478f541b5ca81b08ee4df5af85291339b82e5b65d3dd722780396",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p013-c013",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "7.国家药品监督管理局批准的其他抗新冠病毒药物",
+      "page": 13,
+      "content_sha256": "5140937f884eef1823bc1760cabfbb35c942e54b93e19bdbb98fb293c10ee10e",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p014-c014",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "1.治疗原则:在上述治疗的基础上，积极防治并发症， 治疗基础疾病，预防继发感染，及时进行器官功能支持",
+      "page": 14,
+      "content_sha256": "ea4c462b83d82b2a4c84038d33477043ef5fa035270d2b54a2d2b199f5573e52",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p015-c015",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "新型冠状病毒感染诊疗方案（试行第十版） · 第15页",
+      "page": 15,
+      "content_sha256": "ba7b902b862dc1590fb62c7553304fd60d17b4f29c119ac981a64c15765f80bf",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p016-c016",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "新型冠状病毒感染诊疗方案（试行第十版） · 第16页",
+      "page": 16,
+      "content_sha256": "500f777b7e36c380abab55ff1ce05e4d5f33cb5a5104086183585d1bd2b4eef3",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p017-c017",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "3.循环支持:危重型病例可合并休克，应在充分液体复 苏的基础上，合理使用血管活性药物，密切监测患者血压、",
+      "page": 17,
+      "content_sha256": "10160bfe766cdd5c2a2f10995cae29660a25ba7dcbc5611d1756f9b766f00c4f",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p018-c018",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "6.重型或危重型妊娠患者：应多学科评估继续妊娠的风 险，必要时终止妊娠，剖宫产为首选",
+      "page": 18,
+      "content_sha256": "d247fea771ec43f5fe947442190508cb6b057bb7d869a4ba9d18131d098930f5",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p019-c019",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "1.治疗 1.1 清肺排毒汤 适用范围：适用于轻型、中型、重型、危重型病例，结 合患者情况规范使用",
+      "page": 19,
+      "content_sha256": "88a4b7992c69cf7480bda9194109ee4fdafe8588dbd0fd4ac1bb5dc591fb9df5",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p020-c020",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "新型冠状病毒感染诊疗方案（试行第十版） · 第20页",
+      "page": 20,
+      "content_sha256": "e34f36c5f300c915443b1b60b88a0944dc7c61e924c7541c43f8512a39093aa6",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p021-c021",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "1.3 中型 （1）湿毒郁肺证 临床表现：发热，咳嗽，恶风寒，周身酸痛，咽干咽痛， 或憋闷、腹胀便秘",
+      "page": 21,
+      "content_sha256": "868d09b38aafcaf851619b5f96cd99826d7cdd7d759a9ed3e3357c4dca50d0bb",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p022-c022",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "1.4 重型 （1）疫毒闭肺证 临床表现：发热，气喘促，胸闷，咳嗽，痰黄黏少，或 痰中带血，喘憋，口干苦",
+      "page": 22,
+      "content_sha256": "d8b53cdc380715ff7e5f3a0e57d159339455ba15d1792c7ccc918a488cd4a1f4",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p023-c023",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "新型冠状病毒感染诊疗方案（试行第十版） · 第23页",
+      "page": 23,
+      "content_sha256": "9e8bb7e9ab3b680d3a09f15935a2c85941f626d025e33c53fb7f7e7a42cfdda6",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p024-c024",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "1.5 危重型 （1）内闭外脱证 临床表现：呼吸困难、动则气喘，伴神昏，烦躁，汗出 肢冷",
+      "page": 24,
+      "content_sha256": "19a215d49ee2344f9b9de35078e1e87892d9f8aedf3b1409d490e06c6a027bd4",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p025-c025",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "新型冠状病毒感染诊疗方案（试行第十版） · 第25页",
+      "page": 25,
+      "content_sha256": "70e4ce3a12a14884082103262da60062db62cfda5d4d3fe8f2fcb7ad93c8a58e",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p026-c026",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "1.6 恢复期 （1）肺脾气虚证 临床表现：气短，倦怠乏力，纳差呕恶，痞满，大便无 力，便溏不爽",
+      "page": 26,
+      "content_sha256": "0ffa03dad05eeaa8b480f017556b29141cadb45904cf9e58d738d03f9a166ed8",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p027-c027",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "2.儿童治疗 儿童患者中医证候特点、核心病机与成人基本一致，应 结合儿童临床证候和生理病理特点辨证论治",
+      "page": 27,
+      "content_sha256": "f339911d7e513139a9e7d026620b1ab652ec4e6d669bd035d5a518e558be1919",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p028-c028",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "2.2 重型、危重型 参照上述重型、危重型方案，在辨证基础上，突出通腑",
+      "page": 28,
+      "content_sha256": "08398fadda84196acd53691568a38ccab5282446009bb2ffbd554411cd205e28",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p029-c029",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "十二、护理 根据患者病情，明确护理重点并做好基础护理",
+      "page": 29,
+      "content_sha256": "755ad7a77d08c68b30a905141e623b41f490cc4fcd839d1889b39085ec615573",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p030-c030",
+      "document_id": "nhc-covid19-trial-v10-v2-0d062b0213b1",
+      "section": "十四、住院患者的出院标准 病情明显好转，生命体征平稳，体温正常超过 24 小时， 肺部影像学显示急性渗出性",
+      "page": 30,
+      "content_sha256": "75669f8f61386fb2a712fc1d79de443280bcd2bf2380e6bb2c3a33e97ce7b838",
+      "population_scope": "all_ages_or_mixed",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "一、概述 肺炎支原体肺炎（mycoplasma pneumoniae pneumonia,MPP） 目前",
+      "page": 1,
+      "content_sha256": "49103c3c9f686cdd2163f0419035de43e18c973fbeb304dfe5916ced54dcd92f",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p002-c002",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "三、传播途径 儿童患者从密切接触的亲属及社区开始流行，容易在幼儿 园、学校等人员密集的环境中发生",
+      "page": 2,
+      "content_sha256": "629519b1f5fe0ef8ed9de1ecb2d0f1eefcfd3ca1faf3ccf901aee55c2ed4ddde",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "五、病理表现 成人文献显示轻症患者肺泡腔内有中性粒细胞浸润，重症 患者肺泡腔和肺泡壁还伴有淋巴细胞、浆细",
+      "page": 3,
+      "content_sha256": "049f3a046b326c1515777de280dbd39f69087c021ecac94ceb37158a3c9cdd8c",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p004-c004",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "七、影像学表现 影像学表现是临床判断病情和评估预后的主要依据之一",
+      "page": 4,
+      "content_sha256": "dc50239b78ceb39cced1d22bb657389a1888bff57c52752afb834a43e1901626",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p005-c005",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "八、可弯曲支气管镜下表现 可弯曲支气管镜（简称“支气管镜”）下表现与病程以及病情 严重程度有关",
+      "page": 5,
+      "content_sha256": "3107685f6026451364023ca058fc7d1d722bfffc44a179f002f88230424b4ba7",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p006-c006",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "十一、MP 的耐药性检测和临床意义 确定 MP 耐药的金标准方法是使用固体培养阳性的菌落进 行抗菌药物最低",
+      "page": 6,
+      "content_sha256": "589d583f8bfe26bca76280502cacb46ba51b298d6a56eafd8bd48fd7c8311d8d",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p007-c007",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+      "page": 7,
+      "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p008-c008",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "十四、常见肺内外并发症的早期识别和诊断 （一）肺内并发症 1.塑形性支气管炎（PB） PB 是引起 SMP",
+      "page": 8,
+      "content_sha256": "bbef25b4bfd15d776ebc81d2cdc05dd3da405fbc871cde76f9e4c5cc636bbf11",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p009-c009",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "2.肺栓塞（PE） 可独立发生肺内和肺外血栓栓塞性疾病如 肺动脉栓塞、肺静脉栓塞，还可同时并发心脏血栓、",
+      "page": 9,
+      "content_sha256": "886d3b481af13b4e43f621a08ff02cdf9c58016daac2977a9d91ffec4a1fe35a",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p010-c010",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "5.支气管哮喘急性发作 MP 是诱发哮喘发作的重要原因， 尤其是有个人或家族过敏史的患儿",
+      "page": 10,
+      "content_sha256": "e9c988481b5e07d14802f99446198369b84d8c5471c502ddb4b6a851ef11405a",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p011-c011",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "4.皮肤黏膜损害 包括荨麻疹、过敏性紫癜、多形红斑、 Stevens-Johnson syndrome、",
+      "page": 11,
+      "content_sha256": "017bb609958e63a643f67329ca3537378d1cc67d5371a5e8462e72191001dce5",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p012-c012",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "3.出现肺外器官并发症，但未达到危重症标准",
+      "page": 12,
+      "content_sha256": "653c244768f6b412a06a348324f97675a1bd60cde39a9fccaa0fc7e5f45f81a3",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p013-c013",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "十六、重症和危重症的早期预警指标 以下指标提示有发展为重症和危重症的风险： （一）治疗后72h 持续高热不",
+      "page": 13,
+      "content_sha256": "669845ace30de1f70ab32482ce53ba2fab5f2e8921ffbe8baac97c0f4f648863",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p014-c014",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "1.大环内酯类抗菌药物 包括阿奇霉素、克拉霉素、红霉素、 罗红霉素、乙酰麦迪霉素和乙酰吉他霉素等",
+      "page": 14,
+      "content_sha256": "a746018e07503ce8eb02e3af9b6a458627af02d5f861e49226f81455ae03a3b2",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p015-c015",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "3.喹诺酮类抗菌药物 主要包括左氧氟沙星和莫西沙星，用 于高度怀疑或明确 MP 耐药的 MUMPP、SM",
+      "page": 15,
+      "content_sha256": "50beb523ca38f17e4c0ba0ca2f1e776967841321560c415e8326d4d0b053acb1",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p016-c016",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "儿童肺炎支原体肺炎诊疗指南（2025年版） · 第16页",
+      "page": 16,
+      "content_sha256": "9982e4f846ae005781e90bb1f75e366072b462df22278ae02b90494a28f1f8ec",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p017-c017",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "儿童肺炎支原体肺炎诊疗指南（2025年版） · 第17页",
+      "page": 17,
+      "content_sha256": "afa028ed1c01810367fd53dce81243e24e4d1fd61c3f2610ce3847025477973b",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p018-c018",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "1.抗细菌治疗 如高度怀疑或已明确MPP 合并肺炎链球菌、流感嗜血杆菌 等感染，且耐药的可能性较低，可联",
+      "page": 18,
+      "content_sha256": "d273f63051c933cc8de1730a380afb70a02029d5c7683f9b27e3f16c6a7ce594",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p019-c019",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "3.抗真菌治疗 原发性免疫功能缺陷患儿、病程长且长期应用大剂量糖皮 质激素、气管插管等患儿，可能合并曲霉",
+      "page": 19,
+      "content_sha256": "5206e190c26dfac2f87656d80c9d98f0f8f1cb5cc7edb34ab0f14f8dade47a9e",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p020-c020",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "1.5-2 倍",
+      "page": 20,
+      "content_sha256": "23332aef86c876e5d4474c786778f7ad14d6e2d9173925d3935616d914fabc41",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p021-c021",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "1.呼吸支持 呼吸衰竭是 FMPP 最常见的器官功能障碍，呼吸支持是 FMPP 最主要的生命支持治疗",
+      "page": 21,
+      "content_sha256": "44d65beb9b86d3753f35c4b7e4c24c10576eb420778d2ff37b2ab547d90fe0da",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p022-c022",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "3.其他治疗 抗MP、丙种球蛋白、糖皮质激素使用等同前",
+      "page": 22,
+      "content_sha256": "620b96be00536441c2dd0a5e1125554e31602e2687f5e7a34766e65c6939a3f2",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p023-c023",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "1.治疗 1.1 轻症",
+      "page": 23,
+      "content_sha256": "6842949875ace939d0ea3ea1053774fb17e3d2cef4412383ed37a4e70393a6e1",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "儿童肺炎支原体肺炎诊疗指南（2025年版） · 第24页",
+      "page": 24,
+      "content_sha256": "4f6a73ced6183711a56706c25e482e931b5af9aee6611b074df5df406454feb3",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p025-c025",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "1.2 重症 （1）湿热闭肺证 症见：发热，咳嗽，气喘，咯痰不爽，食少腹胀，大便黏 腻，小便黄，舌红，苔",
+      "page": 25,
+      "content_sha256": "7177ec2b394cd528a134e8fe92892bea5b01f6f327d6635d47f448da5ae1b40b",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p026-c026",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "1.3 危重症 （1）心阳虚衰证 症见：面色苍白，口唇青紫，呼吸困难，或呼吸浅促，额 汗不温，四肢厥冷，",
+      "page": 26,
+      "content_sha256": "bd4e0b014056bc6994b466ce753a2af35121c9709e821987096b4c9cfddac8b6",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p027-c027",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "1.4 恢复期 （1）肺脾气虚证 症见：咳痰不爽，食少纳呆，多汗，气短懒言，面白神疲， 大便溏，舌淡，苔",
+      "page": 27,
+      "content_sha256": "bd4a6feded3cb663d1f15fe84c8e633628bb175db87822aee9153f7d1e90ac0b",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p028-c028",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "2.中医特色疗法 2.1 穴位贴敷疗法 适应症：咳嗽、咳痰、喘促等",
+      "page": 28,
+      "content_sha256": "094b640d30c02270eb8017f6859c3a628ac54f23a7e315e3e5921b3c15be688d",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p029-c029",
+      "document_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e",
+      "section": "2.3 拔罐疗法 适应症：咳痰喘证，肺部湿啰音难消者",
+      "page": 29,
+      "content_sha256": "816d6d0b37f76fb8975ad2109ce755460343ed7db44b381a635fc1ca83533414",
+      "population_scope": "child_only",
+      "active": true
+    },
+    {
+      "chunk_id": "nonclinical-acceptance-20261102-lighthouse-acceptance-20261102-1-cff6bb5046dc-p001-c001",
+      "document_id": "nonclinical-acceptance-20261102-lighthouse-acceptance-20261102-1-cff6bb5046dc",
+      "section": "正文",
+      "page": 1,
+      "content_sha256": "cff6bb5046dc9801ee9f770ea03d3c6441661776868302eed9d40824093a2e0b",
+      "population_scope": "all_ages_or_mixed",
+      "active": false
+    }
+  ]
+}

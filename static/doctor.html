@@ -6,11 +6,12 @@
     <title>MediListen - AI 智能病历助手</title>
     <link rel="icon" href="./brand/medilisten-v1.ico" sizes="any" />
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
-    <link rel="stylesheet" href="./doctor.css?v=alpha51-history-20261020" />
-    <link rel="stylesheet" href="./doctor-ui-v2.css?v=alpha51-task-layout-20261016" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-transcript-header-20261029" />
+    <link rel="stylesheet" href="./doctor.css?v=20261102-continuous-record-r2" />
+    <link rel="stylesheet" href="./doctor-ui-v2.css?v=20261102-continuous-record-r2" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=20261102-text-drawer-r1" />
   </head>
   <body class="doctor-mode standard-mode">
+<a class="skip-link" href="#mainContent">跳到主要内容</a>
     <div class="doctor-app">
       <header class="topbar">
         <div class="brand-block">
@@ -93,7 +94,7 @@
         </button>
         <button type="button" class="product-nav-item" data-product-view-target="encounter" aria-label="就诊工作区">
           <span class="product-nav-full">就诊工作区</span><span class="product-nav-short" aria-hidden="true">就诊</span>
-          <small>转写 · 病历 · 审核</small>
+          <small>转写·病历·审核</small>
         </button>
         <button type="button" class="product-nav-item" data-product-view-target="admin" aria-label="管理后台">
           <span class="product-nav-full">管理后台</span><span class="product-nav-short" aria-hidden="true">管理</span>
@@ -103,12 +104,12 @@
           <span class="environment-dot" aria-hidden="true"></span>
           <div>
             <strong>受控试点环境</strong>
-            <small>AI 结果需医生审核</small>
+            <small>AI结果需医生审核</small>
           </div>
         </div>
       </nav>
 
-      <main class="product-main">
+      <main id="mainContent" class="product-main" tabindex="-1">
 
       <section id="workbenchHome" class="product-view product-dashboard" data-product-view="workbench" aria-label="医生工作台与就诊列表">
         <div class="dashboard-hero">
@@ -166,11 +167,16 @@
             <button type="button" id="refreshWorklistButton">刷新</button>
           </div>
           <div id="dashboardEncounterList" class="encounter-worklist" aria-live="polite"></div>
+          <footer class="workbench-boundary">
+            <span class="environment-dot" aria-hidden="true"></span>
+            <p><strong>受控试点</strong> 当前只显示合成患者；接诊后的病历会在此按状态出现，AI 生成内容需医生审核。</p>
+          </footer>
         </section>
       </section>
 
       <section id="encounterView" class="product-view encounter-view alpha51-workspace" data-product-view="encounter" aria-label="患者就诊工作区">
         <section class="patient-bar encounter-patient-banner" aria-label="患者与会话信息">
+          <span id="patientAvatar" class="patient-avatar" aria-hidden="true">患</span>
           <div class="patient-identity-cell">
             <span class="meta-label">当前患者</span>
             <strong id="patientName">-</strong>
@@ -209,8 +215,8 @@
         </section>
 
         <section class="encounter-command-center" aria-label="病历生成流程与下一步操作">
-          <section class="workflow-panel" aria-label="病历生成流程">
-            <ol id="workflowSteps" class="workflow-steps"></ol>
+          <section class="workflow-panel" aria-label="病历生成流程" tabindex="0">
+            <ol id="workflowSteps" class="workflow-steps" tabindex="0" aria-label="就诊流程步骤"></ol>
           </section>
 
           <section id="stepPrompt" class="step-prompt" aria-live="polite">
@@ -292,6 +298,7 @@
             <span id="fieldCountBadge" class="status-badge neutral">-</span>
           </div>
           <div id="reviewBoundaryNotice" class="review-boundary-notice" hidden></div>
+          <nav id="recordNavigation" class="record-navigation" aria-label="病历章节定位" hidden></nav>
           <div id="recordFields" class="field-list"></div>
         </aside>
 
@@ -640,11 +647,11 @@
     </section>
 
     <dialog id="helpDialog" class="help-drawer" aria-labelledby="helpDialogTitle">
-      <header class="help-drawer-header"><h2 id="helpDialogTitle">使用帮助</h2><button type="button" id="closeEmbeddedHelpButton">关闭</button></header>
-      <p class="help-drawer-caption">帮助在本窗口内打开；关闭后继续当前操作。</p>
+      <header class="help-drawer-header"><h2 id="helpDialogTitle">使用帮助</h2><div class="help-drawer-actions"><button type="button" id="helpBackButton">返回上一页</button><button type="button" id="closeEmbeddedHelpButton">关闭</button></div></header>
+      <p class="help-drawer-caption">帮助在本窗口内打开；进入子页面后可用“返回上一页”，关闭后继续当前操作。</p>
       <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=alpha51-role-sections-20261027"></script>
+    <script src="./doctor.js?v=20261103-compact-review"></script>
   </body>
 </html>

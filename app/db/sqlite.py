@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import hashlib
+import hmac
 import os
 import sqlite3
+import time
 from contextlib import closing
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +16,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB_PATH = PROJECT_ROOT / "data" / "medical_record_agent.sqlite3"
 TERMINAL_TASK_STATUSES = {"WAITING_DOCTOR_REVIEW", "DONE", "FAILED"}
 CHECK_IN_STATUSES = {"registered", "checked_in", "in_progress", "completed", "cancelled"}
+DEPARTMENT_VISIBLE_ROLES = {"intake", "intake_admin", "frontdesk"}
+AUDIT_CHAIN_GENESIS = "0" * 64
+LOGIN_FAILURE_THRESHOLD = 5
+LOGIN_FAILURE_WINDOW_SECONDS = 900
+LOGIN_LOCK_SECONDS = 300
+USER_ADMIN_FIELDS = {"display_name", "role", "department_id", "is_active"}
 
 
 def utc_now() -> str:
@@ -27,15 +35,33 @@ def get_db_path() -> Path:
 def get_connection() -> sqlite3.Connection:
     db_path = get_db_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(db_path)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA journal_mode=WAL")
-    connection.execute("PRAGMA foreign_keys=ON")
-    connection.execute("PRAGMA busy_timeout=5000")
+    connection = sqlite3.connect(db_path, timeout=5)
+    try:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA journal_mode=WAL")
+        connection.execute("PRAGMA foreign_keys=ON")
+        connection.execute("PRAGMA busy_timeout=5000")
+    except Exception:
+        # Never leak a half-configured handle: on Windows an open file blocks
+        # backup, restore and temporary-directory cleanup.
+        connection.close()
+        raise
     return connection
 
 
 def init_db() -> None:
+    """Create or migrate the schema, tolerating a short startup lock race."""
+    for attempt in range(3):
+        try:
+            _init_db_once()
+            return
+        except sqlite3.OperationalError as exc:
+            if "locked" not in str(exc).lower() or attempt == 2:
+                raise
+            time.sleep(0.05 * (attempt + 1))
+
+
+def _init_db_once() -> None:
     with closing(get_connection()) as connection:
         connection.executescript(
             """
@@ -77,6 +103,21 @@ def init_db() -> None:
                 FOREIGN KEY(task_id) REFERENCES agent_task(id)
             );
 
+            CREATE TABLE IF NOT EXISTS audit_chain (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type TEXT NOT NULL,
+                resource_type TEXT,
+                resource_id TEXT,
+                actor_user_id INTEGER,
+                payload TEXT NOT NULL,
+                prev_hash TEXT NOT NULL,
+                entry_hash TEXT NOT NULL,
+                key_id TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_audit_chain_created_at ON audit_chain(created_at);
+
             CREATE TABLE IF NOT EXISTS auth_user (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL UNIQUE,
@@ -98,6 +139,16 @@ def init_db() -> None:
                 expires_at TEXT NOT NULL,
                 revoked_at TEXT,
                 FOREIGN KEY(user_id) REFERENCES auth_user(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS auth_login_attempt (
+                username TEXT NOT NULL,
+                client_ip TEXT NOT NULL,
+                failures INTEGER NOT NULL DEFAULT 0,
+                first_failed_at TEXT,
+                locked_until TEXT,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (username, client_ip)
             );
 
             CREATE TABLE IF NOT EXISTS patient (
@@ -206,6 +257,14 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, "agent_task", "encounter_id", "INTEGER")
     _ensure_column(connection, "agent_task", "current_record_revision_id", "INTEGER")
     _ensure_column(connection, "encounter", "check_in_status", "TEXT NOT NULL DEFAULT 'checked_in'")
+    _ensure_column(connection, "patient", "department_id", "TEXT")
+    _ensure_column(connection, "encounter", "department_id", "TEXT")
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_encounter_department ON encounter(department_id)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_patient_department ON patient(department_id)"
+    )
     _ensure_column(connection, "agent_task_step", "attempt_no", "INTEGER NOT NULL DEFAULT 1")
     _ensure_column(connection, "agent_task_step", "input_snapshot_json", "TEXT")
     _ensure_column(connection, "agent_task_step", "output_snapshot_json", "TEXT")
@@ -400,10 +459,17 @@ def _ensure_column(
         row["name"]
         for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()
     }
-    if column_name not in columns:
+    if column_name in columns:
+        return
+    try:
         connection.execute(
             f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
         )
+    except sqlite3.OperationalError as exc:
+        # Two processes may run the migration at the same moment. The loser
+        # sees "duplicate column name"; that is success, not a 500.
+        if "duplicate column name" not in str(exc).lower():
+            raise
 
 
 def _bootstrap_admin_user(connection: sqlite3.Connection) -> None:
@@ -891,6 +957,9 @@ def _insert_audit_log_row(
     task_id: int,
     event_type: str,
     event_detail: Any,
+    actor_user_id: int | None = None,
+    resource_type: str = "task",
+    resource_id: str | int | None = None,
 ) -> int:
     cursor = connection.execute(
         """
@@ -899,7 +968,23 @@ def _insert_audit_log_row(
         """,
         (task_id, event_type, json_dumps(event_detail), utc_now()),
     )
-    return int(cursor.lastrowid)
+    audit_id = int(cursor.lastrowid)
+    _append_audit_chain(
+        connection,
+        event_type=event_type,
+        payload=json_dumps(
+            {
+                "audit_id": audit_id,
+                "task_id": task_id,
+                "event_type": event_type,
+                "event_detail": event_detail,
+            }
+        ),
+        resource_type=resource_type,
+        resource_id=str(resource_id) if resource_id is not None else str(task_id),
+        actor_user_id=actor_user_id,
+    )
+    return audit_id
 
 
 def create_record_revision_for_task(
@@ -1039,6 +1124,11 @@ def apply_review_revision_transaction(
                 revision_id=revision_id,
                 workflow_status=workflow_status,
             )
+            saved_revision = connection.execute(
+                "SELECT id, revision_no, source, content_hash FROM record_revision WHERE id = ?",
+                (revision_id,),
+            ).fetchone()
+            result["record_revision"] = dict(saved_revision)
             _update_task_result_revision_row(
                 connection,
                 task_id=task_id,
@@ -1098,10 +1188,12 @@ def create_encounter(
     deidentified_id: str,
     display_name: str | None = None,
     check_in_status: str = "registered",
+    department_id: str | None = None,
 ) -> dict[str, Any]:
     init_db()
     now = utc_now()
     normalized_check_in_status = _validate_check_in_status(check_in_status)
+    department = (department_id or "").strip() or None
     with closing(get_connection()) as connection:
         patient = connection.execute(
             "SELECT * FROM patient WHERE deidentified_id = ?",
@@ -1111,24 +1203,38 @@ def create_encounter(
             cursor = connection.execute(
                 """
                 INSERT INTO patient (
-                    deidentified_id, display_name, created_by_user_id, created_at, updated_at
+                    deidentified_id, display_name, created_by_user_id,
+                    department_id, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (deidentified_id, display_name or deidentified_id, doctor_user_id, now, now),
+                (
+                    deidentified_id,
+                    display_name or deidentified_id,
+                    doctor_user_id,
+                    department,
+                    now,
+                    now,
+                ),
             )
             patient_id = int(cursor.lastrowid)
         else:
             patient_id = int(patient["id"])
+            # Backfill only; an existing department is never reassigned implicitly.
+            if department and patient["department_id"] is None:
+                connection.execute(
+                    "UPDATE patient SET department_id = ?, updated_at = ? WHERE id = ?",
+                    (department, now, patient_id),
+                )
         cursor = connection.execute(
             """
             INSERT INTO encounter (
                 patient_id, doctor_user_id, task_id, status, check_in_status,
-                current_revision_id, created_at, updated_at
+                current_revision_id, department_id, created_at, updated_at
             )
-            VALUES (?, ?, NULL, 'draft', ?, NULL, ?, ?)
+            VALUES (?, ?, NULL, 'draft', ?, NULL, ?, ?, ?)
             """,
-            (patient_id, doctor_user_id, normalized_check_in_status, now, now),
+            (patient_id, doctor_user_id, normalized_check_in_status, department, now, now),
         )
         encounter_id = int(cursor.lastrowid)
         connection.commit()
@@ -1218,11 +1324,19 @@ def bind_task_to_encounter(
 
         now = utc_now()
         if replaced_task_id is not None:
-            connection.execute(
-                "INSERT INTO audit_log (task_id, event_type, event_detail, created_at) VALUES (?, ?, ?, ?)",
-                (task_id, "failed_task_replaced", json_dumps({"previous_task_id": replaced_task_id,
-                 "encounter_id": encounter_id, "owner_user_id": owner_user_id,
-                 "reason": "explicit_generation_after_failure", "previous_result_preserved": True}), now),
+            _insert_audit_log_row(
+                connection,
+                task_id=task_id,
+                event_type="failed_task_replaced",
+                event_detail={
+                    "previous_task_id": replaced_task_id,
+                    "encounter_id": encounter_id,
+                    "owner_user_id": owner_user_id,
+                    "reason": "explicit_generation_after_failure",
+                    "previous_result_preserved": True,
+                },
+                resource_type="task",
+                resource_id=task_id,
             )
         connection.execute(
             """
@@ -1283,14 +1397,25 @@ def list_encounters(
     status: str | None = None,
     mine: bool = True,
     q: str | None = None,
+    department_id: str | None = None,
 ) -> list[dict[str, Any]]:
     init_db()
     clauses: list[str] = []
     params: list[Any] = []
+    department = (department_id or "").strip() or None
     if status:
         clauses.append("e.status = ?")
         params.append(status)
-    if role != "admin" or mine:
+    if role in DEPARTMENT_VISIBLE_ROLES and department:
+        # Front desk / intake work on one department. A legacy row without a
+        # stored department is visible only when its doctor belongs to the same
+        # department; it must not leak across departments.
+        clauses.append(
+            "(e.department_id = ? OR (e.department_id IS NULL AND e.doctor_user_id IN "
+            "(SELECT id FROM auth_user WHERE department_id = ?)))"
+        )
+        params.extend([department, department])
+    elif role != "admin" or mine:
         clauses.append("e.doctor_user_id = ?")
         params.append(user_id)
     if q:
@@ -1352,9 +1477,20 @@ def create_approval_for_task(
     actor_user_id: int | None = None,
     content_hash: str | None = None,
     approval_items: list[dict[str, Any]] | None = None,
+    expected_revision_id: int | None = None,
+    result: dict[str, Any] | None = None,
+    actor_detail: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Commit the signature, resolved fields, workflow and audit as one unit.
+
+    When supplied, result is the API's private snapshot; its receipt is populated
+    only after commit. Legacy callers without a snapshot sign the current row.
+    """
+    if result is not None and (expected_revision_id is None or content_hash is None):
+        raise ValueError("签署已加载的病历必须指定版本和内容校验值。")
     init_db()
-    with closing(get_connection()) as connection:
+    with closing(get_connection()) as connection, connection:
+        connection.execute("BEGIN IMMEDIATE")
         task = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
         if task is None:
             raise ValueError(f"Task not found: {task_id}")
@@ -1363,16 +1499,20 @@ def create_approval_for_task(
         if encounter_id is None or revision_id is None:
             raise ValueError("Task has no current record revision")
         revision = connection.execute(
-            "SELECT * FROM record_revision WHERE id = ?",
-            (revision_id,),
+            "SELECT * FROM record_revision WHERE id = ? AND task_id = ?",
+            (revision_id, task_id),
         ).fetchone()
         if revision is None:
             raise ValueError("Current record revision not found")
         revision_hash = revision["content_hash"] or record_content_hash(
             json.loads(revision["result_json"] or "{}")
         )
-        if content_hash is not None and content_hash != revision_hash:
-            raise ValueError("Approval content hash does not match current revision")
+        if ((expected_revision_id is not None and expected_revision_id != revision_id)
+                or (content_hash is not None and content_hash != revision_hash)):
+            raise StaleRecordRevisionError(
+                expected_revision_id=expected_revision_id, expected_content_hash=content_hash,
+                current_revision_id=revision_id, current_content_hash=revision_hash,
+            )
         active = connection.execute(
             """
             SELECT *
@@ -1427,10 +1567,30 @@ def create_approval_for_task(
             "UPDATE encounter SET status = 'approved', updated_at = ? WHERE id = ?",
             (now, encounter_id),
         )
-        connection.commit()
-        return dict(
-            connection.execute("SELECT * FROM approval WHERE id = ?", (approval_id,)).fetchone()
+        approval = dict(connection.execute("SELECT * FROM approval WHERE id = ?", (approval_id,)).fetchone())
+        signed_result = dict(result) if result is not None else json.loads(task["result_json"] or "{}")
+        signed_result.update({
+            "approved": True,
+            "record_revision": {"id": revision_id, "revision_no": revision["revision_no"],
+                                "source": revision["source"], "content_hash": revision_hash},
+            "approval": {key: approval[key] for key in (
+                "id", "revision_id", "content_hash", "approved_by_user_id", "created_at",
+            )},
+            "approval_summary": {"item_count": len(approval_items or []), "items": approval_items or []},
+        })
+        connection.execute(
+            "UPDATE agent_task SET current_stage = 'approved', result_json = ?, updated_at = ? WHERE id = ?",
+            (json_dumps(signed_result), now, task_id),
         )
+        _insert_audit_log_row(
+            connection, task_id=task_id, event_type="doctor_approved", actor_user_id=actor_user_id,
+            event_detail={"task_id": task_id, "revision_id": revision_id, "approval_id": approval_id,
+                          **(actor_detail or {})},
+        )
+        connection.commit()
+    if result is not None:
+        result.update(signed_result)
+    return approval
 
 
 def get_active_approval_for_task(task_id: int) -> dict[str, Any] | None:
@@ -1486,15 +1646,21 @@ def create_export_event_for_task(
     approval_id: int,
     actor_user_id: int | None,
     exports: dict[str, Any],
+    revision_id: int | None = None,
+    result: dict[str, Any] | None = None,
+    actor_detail: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     init_db()
     with closing(get_connection()) as connection:
+        connection.execute("BEGIN IMMEDIATE")
         approval = connection.execute(
-            "SELECT * FROM approval WHERE id = ? AND status = 'active' AND invalidated_at IS NULL",
-            (approval_id,),
+            """SELECT a.*, t.result_json AS task_result FROM approval a JOIN agent_task t
+               ON t.id = a.task_id AND t.current_record_revision_id = a.revision_id
+               WHERE a.id = ? AND t.id = ? AND a.status = 'active' AND a.invalidated_at IS NULL""",
+            (approval_id, task_id),
         ).fetchone()
-        if approval is None:
-            raise ValueError("Active approval not found")
+        if approval is None or (revision_id is not None and revision_id != approval["revision_id"]):
+            raise ValueError("病历版本或批准记录已变化，请重新核对后导出。")
         now = utc_now()
         cursor = connection.execute(
             """
@@ -1515,12 +1681,27 @@ def create_export_event_for_task(
             ),
         )
         export_event_id = int(cursor.lastrowid)
+        event = dict(connection.execute("SELECT * FROM export_event WHERE id = ?", (export_event_id,)).fetchone())
+        task_result = dict(result) if result is not None else json.loads(approval["task_result"] or "{}")
+        task_result["exports"] = exports
+        task_result["export_event"] = {key: event[key] for key in (
+            "id", "revision_id", "approval_id", "exported_by_user_id", "created_at",
+        )}
+        connection.execute(
+            "UPDATE agent_task SET current_stage = 'exported', result_json = ?, updated_at = ? WHERE id = ?",
+            (json_dumps(task_result), now, task_id),
+        )
         connection.execute(
             "UPDATE encounter SET status = 'exported', updated_at = ? WHERE id = ?",
             (now, approval["encounter_id"]),
         )
+        _insert_audit_log_row(
+            connection, task_id=task_id, event_type="export_completed", actor_user_id=actor_user_id,
+            event_detail={"task_id": task_id, "revision_id": approval["revision_id"],
+                          "approval_id": approval_id, **exports, **(actor_detail or {})},
+        )
         connection.commit()
-        return dict(connection.execute("SELECT * FROM export_event WHERE id = ?", (export_event_id,)).fetchone())
+        return event
 
 
 def list_export_events_for_task(task_id: int) -> list[dict[str, Any]]:
@@ -1536,6 +1717,19 @@ def list_export_events_for_task(task_id: int) -> list[dict[str, Any]]:
             (task_id,),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def latest_export_for_approval(task_id: int, approval_id: int, pdf_sha256: str | None = None) -> dict[str, Any] | None:
+    init_db()
+    digest_clause = "" if pdf_sha256 is None else " AND json_extract(exports_json, '$.pdf_sha256') = ?"
+    args = (task_id, approval_id) if pdf_sha256 is None else (task_id, approval_id, pdf_sha256)
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            "SELECT * FROM export_event WHERE task_id = ? AND approval_id = ?"
+            + digest_clause + " ORDER BY id DESC LIMIT 1",
+            args,
+        ).fetchone()
+    return row_to_dict(row)
 
 
 def update_task(
@@ -1674,19 +1868,213 @@ def finish_task_step(
         connection.commit()
 
 
-def create_audit_log(task_id: int, event_type: str, event_detail: Any) -> int:
-    init_db()
-    with closing(get_connection()) as connection:
-        cursor = connection.execute(
-            """
-            INSERT INTO audit_log (task_id, event_type, event_detail, created_at)
-            VALUES (?, ?, ?, ?)
-            """,
-            (task_id, event_type, json_dumps(event_detail), utc_now()),
+def _audit_hmac_key() -> bytes | None:
+    raw = os.environ.get("MRA_AUDIT_HMAC_KEY", "").strip()
+    return raw.encode("utf-8") if raw else None
+
+
+def _audit_hash(key: bytes | None, prev_hash: str, payload: str) -> tuple[str, str]:
+    material = f"{prev_hash}\n{payload}".encode("utf-8")
+    if key is not None:
+        return hmac.new(key, material, hashlib.sha256).hexdigest(), "hmac-sha256"
+    return hashlib.sha256(material).hexdigest(), "sha256"
+
+
+def _append_audit_chain(
+    connection: sqlite3.Connection,
+    *,
+    event_type: str,
+    payload: str,
+    resource_type: str | None = None,
+    resource_id: str | None = None,
+    actor_user_id: int | None = None,
+) -> dict[str, Any]:
+    row = connection.execute(
+        "SELECT entry_hash FROM audit_chain ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    prev_hash = row["entry_hash"] if row is not None else AUDIT_CHAIN_GENESIS
+    key = _audit_hmac_key()
+    entry_hash, key_id = _audit_hash(key, prev_hash, payload)
+    cursor = connection.execute(
+        """
+        INSERT INTO audit_chain (
+            event_type, resource_type, resource_id, actor_user_id,
+            payload, prev_hash, entry_hash, key_id, created_at
         )
-        audit_id = int(cursor.lastrowid)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            event_type,
+            resource_type,
+            resource_id,
+            actor_user_id,
+            payload,
+            prev_hash,
+            entry_hash,
+            key_id,
+            utc_now(),
+        ),
+    )
+    return {
+        "id": int(cursor.lastrowid),
+        "prev_hash": prev_hash,
+        "entry_hash": entry_hash,
+        "key_id": key_id,
+    }
+
+
+def append_audit_event(
+    event_type: str,
+    payload: Any,
+    *,
+    resource_type: str | None = None,
+    resource_id: str | int | None = None,
+    actor_user_id: int | None = None,
+) -> dict[str, Any]:
+    """Append a tamper-evident event that has no agent task (login, config)."""
+    init_db()
+    connection = get_connection()
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        entry = _append_audit_chain(
+            connection,
+            event_type=event_type,
+            payload=json_dumps(payload),
+            resource_type=resource_type,
+            resource_id=str(resource_id) if resource_id is not None else None,
+            actor_user_id=actor_user_id,
+        )
+        connection.commit()
+        return entry
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
+def verify_audit_chain(anchor: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Walk the chain and recompute every hash. Any edit breaks verification.
+
+    ``anchor`` is an externally stored ``{entries, head_hash}`` snapshot. It is
+    what makes a *tail* truncation detectable: the chain alone cannot notice
+    rows that were removed from its end.
+    """
+    init_db()
+    key = _audit_hmac_key()
+    with closing(get_connection()) as connection:
+        rows = connection.execute("SELECT * FROM audit_chain ORDER BY id ASC").fetchall()
+    prev = AUDIT_CHAIN_GENESIS
+    hashes: list[str] = []
+    for row in rows:
+        if row["key_id"] == "hmac-sha256" and key is None:
+            return {
+                "ok": False,
+                "entries": len(rows),
+                "broken_at": row["id"],
+                "reason": "missing_hmac_key",
+                "key_id": row["key_id"],
+            }
+        expected, key_id = _audit_hash(key, row["prev_hash"], row["payload"])
+        if row["prev_hash"] != prev:
+            return {
+                "ok": False,
+                "entries": len(rows),
+                "broken_at": row["id"],
+                "reason": "prev_hash_mismatch",
+                "expected_prev_hash": prev,
+                "stored_prev_hash": row["prev_hash"],
+                "key_id": key_id,
+            }
+        if not hmac.compare_digest(expected, row["entry_hash"]):
+            return {
+                "ok": False,
+                "entries": len(rows),
+                "broken_at": row["id"],
+                "reason": "hash_mismatch",
+                "expected_hash": expected,
+                "stored_hash": row["entry_hash"],
+                "key_id": key_id,
+            }
+        prev = row["entry_hash"]
+        hashes.append(row["entry_hash"])
+    report: dict[str, Any] = {
+        "ok": True,
+        "entries": len(rows),
+        "head": prev,
+        "key_id": "hmac-sha256" if key is not None else "sha256",
+    }
+    if anchor:
+        anchored_entries = int(anchor.get("entries") or 0)
+        anchored_head = anchor.get("head_hash")
+        if anchored_entries > len(rows):
+            return {
+                **report,
+                "ok": False,
+                "reason": "anchor_truncated",
+                "anchored_entries": anchored_entries,
+                "current_entries": len(rows),
+                "anchor": anchor,
+            }
+        if anchored_entries > 0 and hashes[anchored_entries - 1] != anchored_head:
+            return {
+                **report,
+                "ok": False,
+                "reason": "anchor_mismatch",
+                "anchored_entries": anchored_entries,
+                "anchored_head_hash": anchored_head,
+                "current_prefix_hash": hashes[anchored_entries - 1],
+                "anchor": anchor,
+            }
+        report["anchor"] = {
+            "checked": True,
+            "entries": anchored_entries,
+            "head_hash": anchored_head,
+            "anchored_at": anchor.get("anchored_at"),
+        }
+    return report
+
+
+def list_audit_chain_entries(limit: int = 50) -> list[dict[str, Any]]:
+    init_db()
+    bounded = max(1, min(int(limit), 500))
+    with closing(get_connection()) as connection:
+        rows = connection.execute(
+            "SELECT * FROM audit_chain ORDER BY id DESC LIMIT ?",
+            (bounded,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def create_audit_log(
+    task_id: int,
+    event_type: str,
+    event_detail: Any,
+    *,
+    actor_user_id: int | None = None,
+    resource_type: str = "task",
+    resource_id: str | int | None = None,
+) -> int:
+    init_db()
+    connection = get_connection()
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        audit_id = _insert_audit_log_row(
+            connection,
+            task_id=task_id,
+            event_type=event_type,
+            event_detail=event_detail,
+            actor_user_id=actor_user_id,
+            resource_type=resource_type,
+            resource_id=resource_id,
+        )
         connection.commit()
         return audit_id
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def get_task(task_id: int) -> dict[str, Any] | None:
@@ -1782,12 +2170,31 @@ def get_user_by_id(user_id: int) -> dict[str, Any] | None:
     return row_to_dict(row)
 
 
+def count_active_admins(exclude_user_id: int | None = None) -> int:
+    """How many enabled admins would remain after excluding one account."""
+    init_db()
+    with closing(get_connection()) as connection:
+        if exclude_user_id is None:
+            row = connection.execute(
+                "SELECT COUNT(*) AS count FROM auth_user WHERE role = 'admin' AND is_active = 1"
+            ).fetchone()
+        else:
+            row = connection.execute(
+                """
+                SELECT COUNT(*) AS count FROM auth_user
+                WHERE role = 'admin' AND is_active = 1 AND id != ?
+                """,
+                (exclude_user_id,),
+            ).fetchone()
+    return int(row["count"]) if row is not None else 0
+
+
 def list_users() -> list[dict[str, Any]]:
     init_db()
     with closing(get_connection()) as connection:
         rows = connection.execute(
             """
-            SELECT id, username, display_name, role, is_active,
+            SELECT id, username, display_name, role, department_id, is_active,
                    created_at, updated_at, last_login_at
             FROM auth_user
             ORDER BY id ASC
@@ -1861,3 +2268,188 @@ def revoke_auth_session(token_hash: str) -> None:
             (utc_now(), token_hash),
         )
         connection.commit()
+
+
+def revoke_user_sessions(user_id: int) -> int:
+    """Revoke every live session of a user (disable, role change, reset)."""
+    init_db()
+    with closing(get_connection()) as connection:
+        cursor = connection.execute(
+            """
+            UPDATE auth_session
+            SET revoked_at = ?
+            WHERE user_id = ? AND revoked_at IS NULL
+            """,
+            (utc_now(), user_id),
+        )
+        connection.commit()
+        return int(cursor.rowcount or 0)
+
+
+def update_user_admin(user_id: int, fields: dict[str, Any]) -> dict[str, Any] | None:
+    """Admin-only profile/role/department/active-state update."""
+    unknown = set(fields) - USER_ADMIN_FIELDS
+    if unknown:
+        raise ValueError(f"Unsupported user fields: {sorted(unknown)}")
+    if "role" in fields and fields["role"] not in {
+        "admin",
+        "doctor",
+        "frontdesk",
+        "intake",
+        "intake_admin",
+    }:
+        raise ValueError("Unsupported user role")
+    if "display_name" in fields and not (
+        isinstance(fields["display_name"], str) and fields["display_name"].strip()
+    ):
+        raise ValueError("display_name must be a non-empty string")
+    if "is_active" in fields and not isinstance(fields["is_active"], bool):
+        raise ValueError("is_active must be a boolean")
+    if "department_id" in fields and not (
+        fields["department_id"] is None or isinstance(fields["department_id"], str)
+    ):
+        raise ValueError("department_id must be a string or null")
+    init_db()
+    if not fields:
+        return get_user_by_id(user_id)
+    assignments = ", ".join(f"{name} = ?" for name in fields)
+    params = [int(bool(value)) if name == "is_active" else value for name, value in fields.items()]
+    now = utc_now()
+    with closing(get_connection()) as connection:
+        cursor = connection.execute(
+            f"UPDATE auth_user SET {assignments}, updated_at = ? WHERE id = ?",
+            (*params, now, user_id),
+        )
+        connection.commit()
+        if cursor.rowcount == 0:
+            return None
+    return get_user_by_id(user_id)
+
+
+def _seconds_until(value: str | None) -> int | None:
+    if not value:
+        return None
+    try:
+        remaining = (datetime.fromisoformat(value) - datetime.now(UTC)).total_seconds()
+    except ValueError:
+        return None
+    return max(0, int(remaining) + 1)
+
+
+def login_lock_state(username: str, client_ip: str) -> dict[str, Any] | None:
+    init_db()
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM auth_login_attempt
+            WHERE username = ? AND client_ip = ?
+            """,
+            (username, client_ip),
+        ).fetchone()
+    if row is None:
+        return None
+    retry_after = _seconds_until(row["locked_until"])
+    if retry_after is None or retry_after <= 0:
+        return None
+    return {
+        "locked": True,
+        "failures": int(row["failures"]),
+        "locked_until": row["locked_until"],
+        "retry_after": retry_after,
+    }
+
+
+def register_login_failure(
+    username: str,
+    client_ip: str,
+    *,
+    threshold: int = LOGIN_FAILURE_THRESHOLD,
+    window_seconds: int = LOGIN_FAILURE_WINDOW_SECONDS,
+    lock_seconds: int = LOGIN_LOCK_SECONDS,
+) -> dict[str, Any]:
+    """Count a failed login for one (username, IP) pair, locking after N."""
+    init_db()
+    now = datetime.now(UTC)
+    now_iso = now.isoformat()
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM auth_login_attempt
+            WHERE username = ? AND client_ip = ?
+            """,
+            (username, client_ip),
+        ).fetchone()
+        failures = 1
+        first_failed_at = now_iso
+        if row is not None:
+            first = row["first_failed_at"]
+            try:
+                first_dt = datetime.fromisoformat(first) if first else now
+            except ValueError:
+                first_dt = now
+            within_window = (now - first_dt).total_seconds() <= window_seconds
+            if row["locked_until"] and _seconds_until(row["locked_until"]) in (None, 0):
+                within_window = False
+            if within_window:
+                failures = int(row["failures"]) + 1
+                first_failed_at = first or now_iso
+        locked_until = None
+        if failures >= threshold:
+            locked_until = (now + timedelta(seconds=lock_seconds)).isoformat()
+        connection.execute(
+            """
+            INSERT INTO auth_login_attempt (
+                username, client_ip, failures, first_failed_at, locked_until, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(username, client_ip) DO UPDATE SET
+                failures = excluded.failures,
+                first_failed_at = excluded.first_failed_at,
+                locked_until = excluded.locked_until,
+                updated_at = excluded.updated_at
+            """,
+            (username, client_ip, failures, first_failed_at, locked_until, now_iso),
+        )
+        # Bound table growth from random usernames: retained for one day.
+        connection.execute(
+            "DELETE FROM auth_login_attempt WHERE updated_at < ?",
+            ((now - timedelta(days=1)).isoformat(),),
+        )
+        connection.commit()
+    if locked_until:
+        return {
+            "locked": True,
+            "failures": failures,
+            "locked_until": locked_until,
+            "retry_after": lock_seconds,
+        }
+    return {
+        "locked": False,
+        "failures": failures,
+        "remaining": max(0, threshold - failures),
+    }
+
+
+def clear_login_failures(username: str, client_ip: str) -> None:
+    init_db()
+    with closing(get_connection()) as connection:
+        connection.execute(
+            "DELETE FROM auth_login_attempt WHERE username = ? AND client_ip = ?",
+            (username, client_ip),
+        )
+        connection.commit()
+
+
+def audit_chain_head() -> dict[str, Any]:
+    init_db()
+    with closing(get_connection()) as connection:
+        count = connection.execute("SELECT COUNT(*) AS count FROM audit_chain").fetchone()
+        row = connection.execute(
+            "SELECT entry_hash, key_id, created_at FROM audit_chain ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+    return {
+        "entries": int(count["count"]) if count is not None else 0,
+        "head_hash": row["entry_hash"] if row is not None else AUDIT_CHAIN_GENESIS,
+        "key_id": row["key_id"] if row is not None else "sha256",
+        "last_entry_at": row["created_at"] if row is not None else None,
+    }

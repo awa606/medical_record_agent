@@ -1,0 +1,406 @@
+{
+  "dataset_id": "knowledge_locator_population_24_20261106_v1",
+  "frozen_at": "2026-11-06T07:10:42.946609+00:00",
+  "source_db_sha256": "dfb6ec2393e79c4cc3c20ff9a55b2dbc65f5d60b7a56cf94b935340a1224d306",
+  "corpus_sha256": "b84fe18faaa0449db54f11129edab2183bda073e5ebfbdea79d61118188c6f0d",
+  "population_metadata_sha256": "4c8a6f20ebe381c23af426b1768789c21c17e2a6af8a11f24918f14cb85034a8",
+  "label_scope": "工程来源/片段定位；单名工程审查，不是医师复核，不是临床真值",
+  "research_gate": "NEEDS_MORE_EVIDENCE",
+  "old_40_queries_unchanged": true,
+  "queries": [
+    {
+      "query_id": "K24-D01",
+      "category": "direct",
+      "query": "流感与普通感冒的鉴别有哪些依据？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+          "page": 8,
+          "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+          "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+          "anchor": "流感的全身症状比普通感冒重"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-D02",
+      "category": "direct",
+      "query": "流感抗原检测阴性是否可以排除流感？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p005-c004",
+          "page": 5,
+          "section": "4.肌炎和横纹肌溶解主要表现为肌痛、肌无力、血清肌酸激 酶、肌红蛋白升高，严重者可导致急性肾损伤等",
+          "content_sha256": "fea080ef66470d269fdd110250f755be58315da78103b91288a17f86ee3f9735",
+          "anchor": "但阴性不能排除流感"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-D03",
+      "category": "direct",
+      "query": "儿童支原体肺炎的咳嗽有哪些特点？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003",
+          "page": 3,
+          "section": "五、病理表现 成人文献显示轻症患者肺泡腔内有中性粒细胞浸润，重症 患者肺泡腔和肺泡壁还伴有淋巴细胞、浆细",
+          "content_sha256": "049f3a046b326c1515777de280dbd39f69087c021ecac94ceb37158a3c9cdd8c",
+          "anchor": "早期多为干咳"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-D04",
+      "category": "direct",
+      "query": "儿童肺炎支原体肺炎的诊断需要哪些病原学证据？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p007-c007",
+          "page": 7,
+          "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+          "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+          "anchor": "MP-DNA"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-D05",
+      "category": "direct",
+      "query": "初诊门诊病历应当记录哪些内容？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+          "page": 1,
+          "section": "第二章  门（急）诊病历书写内容及要求",
+          "content_sha256": "c9e565428b4c5a42972fdfaf8ca6368ca3ae6dc817971980cc6602e8d04c627a",
+          "anchor": "初诊病历记录书写内容"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-D06",
+      "category": "direct",
+      "query": "新冠感染会出现哪些临床表现，包括嗅觉味觉变化？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004",
+          "page": 4,
+          "section": "四、临床特点 （一）临床表现",
+          "content_sha256": "d7516ea547d2e3a6ef3c1e5dcec1ec963b39e93532f8a9c11c60f208b0e60ea9",
+          "anchor": "嗅觉味觉减退或丧失"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-S01",
+      "category": "synonym",
+      "query": "不是普通伤风而是流行性感冒，资料里怎么区分这两种情况？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+          "page": 8,
+          "section": "七、鉴别诊断 （一）普通感冒 流感的全身症状比普通感冒重",
+          "content_sha256": "0e673fb2c25070119c54519a129c82a5562ee00571b3ccebb355aaf68efb8e7c",
+          "anchor": "流感的全身症状比普通感冒重"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-S02",
+      "category": "synonym",
+      "query": "流感快速检测试纸没检出，能不能据此认定不是流感？请找原文。",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-influenza-2020-2020-693984e29ed6-p005-c004",
+          "page": 5,
+          "section": "4.肌炎和横纹肌溶解主要表现为肌痛、肌无力、血清肌酸激 酶、肌红蛋白升高，严重者可导致急性肾损伤等",
+          "content_sha256": "fea080ef66470d269fdd110250f755be58315da78103b91288a17f86ee3f9735",
+          "anchor": "但阴性不能排除流感"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-S03",
+      "category": "synonym",
+      "query": "小孩得了支原体肺炎，开始会不会一直干咳？请给症状出处。",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003",
+          "page": 3,
+          "section": "五、病理表现 成人文献显示轻症患者肺泡腔内有中性粒细胞浸润，重症 患者肺泡腔和肺泡壁还伴有淋巴细胞、浆细",
+          "content_sha256": "049f3a046b326c1515777de280dbd39f69087c021ecac94ceb37158a3c9cdd8c",
+          "anchor": "早期多为干咳"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-S04",
+      "category": "synonym",
+      "query": "孩子的支原体核酸和抗体报告，在指南中怎样作为确认依据？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p007-c007",
+          "page": 7,
+          "section": "十二、诊断 符合以上临床和影像学表现，结合以下任何一项或两项， 即可诊断为 MPP： （一）MP-DNA",
+          "content_sha256": "eb7efefc2c7eccebc54fcb74461a507b62b7d6d79b1c59819e6b708e095e7ebc",
+          "anchor": "MP-DNA"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-S05",
+      "category": "synonym",
+      "query": "第一次来门诊看病，医生写记录有哪些项目不能漏？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+          "page": 1,
+          "section": "第二章  门（急）诊病历书写内容及要求",
+          "content_sha256": "c9e565428b4c5a42972fdfaf8ca6368ca3ae6dc817971980cc6602e8d04c627a",
+          "anchor": "初诊病历记录书写内容"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-S06",
+      "category": "synonym",
+      "query": "感染新冠后闻不出气味、尝不出味道，资料有没有提到？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004",
+          "page": 4,
+          "section": "四、临床特点 （一）临床表现",
+          "content_sha256": "d7516ea547d2e3a6ef3c1e5dcec1ec963b39e93532f8a9c11c60f208b0e60ea9",
+          "anchor": "嗅觉味觉减退或丧失"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-P01",
+      "category": "population",
+      "query": "40岁成人支原体肺炎咳嗽特点的适用指南依据",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "relevant_locators": [],
+      "forbidden_source_ids": [
+        "nhc-child-mpp-2025"
+      ],
+      "reason": "当前只有儿童MPP专门资料，不应作为成人适用指南。"
+    },
+    {
+      "query_id": "K24-P02",
+      "category": "population",
+      "query": "8岁孩子支原体肺炎咳嗽特点的适用指南依据",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003",
+          "page": 3,
+          "section": "五、病理表现 成人文献显示轻症患者肺泡腔内有中性粒细胞浸润，重症 患者肺泡腔和肺泡壁还伴有淋巴细胞、浆细",
+          "content_sha256": "049f3a046b326c1515777de280dbd39f69087c021ecac94ceb37158a3c9cdd8c",
+          "anchor": "早期多为干咳"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-P03",
+      "category": "population",
+      "query": "当前患者支原体肺炎咳嗽特点的适用指南依据，年龄尚未确认",
+      "patient_population": "unknown",
+      "expected_behavior": "clarify_population",
+      "relevant_locators": [],
+      "forbidden_source_ids": [
+        "nhc-child-mpp-2025"
+      ],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-P04",
+      "category": "population",
+      "query": "40岁成人能否按儿童新冠中医治疗章节处理？只查适用依据",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "relevant_locators": [],
+      "forbidden_source_ids": [
+        "nhc-child-mpp-2025"
+      ],
+      "reason": "COVID第27-28页为儿童章节，不得以成人适用结果返回；不得生成治疗方案。"
+    },
+    {
+      "query_id": "K24-P05",
+      "category": "population",
+      "query": "8岁患儿新冠感染的临床表现有哪些？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004",
+          "page": 4,
+          "section": "四、临床特点 （一）临床表现",
+          "content_sha256": "d7516ea547d2e3a6ef3c1e5dcec1ec963b39e93532f8a9c11c60f208b0e60ea9",
+          "anchor": "嗅觉味觉减退或丧失"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-P06",
+      "category": "population",
+      "query": "老年人初诊门诊病历应该记录哪些基本内容？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "relevant_locators": [
+        {
+          "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+          "page": 1,
+          "section": "第二章  门（急）诊病历书写内容及要求",
+          "content_sha256": "c9e565428b4c5a42972fdfaf8ca6368ca3ae6dc817971980cc6602e8d04c627a",
+          "anchor": "初诊病历记录书写内容"
+        }
+      ],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-N01",
+      "category": "no_answer",
+      "query": "糖尿病胰岛素剂量调整的独立指南依据在哪里？",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "relevant_locators": [],
+      "forbidden_source_ids": [],
+      "reason": "仅检验本库未覆盖问题，不生成药物方案。"
+    },
+    {
+      "query_id": "K24-N02",
+      "category": "no_answer",
+      "query": "腰椎间盘突出康复训练指南的原文章节在哪里？",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "relevant_locators": [],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-N03",
+      "category": "no_answer",
+      "query": "非临床验收灯塔资料的测试正文",
+      "patient_population": "unknown",
+      "expected_behavior": "no_eligible_evidence",
+      "relevant_locators": [],
+      "forbidden_source_ids": [],
+      "reason": "停用验收资料必须被排除。"
+    },
+    {
+      "query_id": "K24-N04",
+      "category": "no_answer",
+      "query": "请定位2025年版流感诊疗方案的传播途径章节",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "relevant_locators": [],
+      "forbidden_source_ids": [],
+      "reason": "本快照没有2025流感版；不能把2020版当作所指定版本。"
+    },
+    {
+      "query_id": "K24-N05",
+      "category": "no_answer",
+      "query": "房颤抗凝风险评分的专门指南原文",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "relevant_locators": [],
+      "forbidden_source_ids": [],
+      "reason": ""
+    },
+    {
+      "query_id": "K24-N06",
+      "category": "no_answer",
+      "query": "请查WHO于2026年发布的成人哮喘指南原文",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "relevant_locators": [],
+      "forbidden_source_ids": [],
+      "reason": "指定来源/年份不在快照。"
+    }
+  ],
+  "comparison_order": [
+    "fts_current",
+    "fts_population_filter",
+    "independent_dense_union_rrf_if_cached_encoder_available"
+  ],
+  "metrics": [
+    "answerable_chunk_hit_at_5",
+    "ndcg_at_5",
+    "population_ineligible_results",
+    "no_answer_false_return",
+    "inactive_leakage",
+    "citation_sha_integrity",
+    "p50_p95_ms",
+    "peak_memory"
+  ],
+  "fixed_research_parameters": {
+    "lexical_candidates": 40,
+    "dense_candidates": 40,
+    "rrf_k": 60,
+    "final_limit": 5
+  },
+  "hard_failures": [
+    "inactive_leakage > 0",
+    "population_ineligible_results > 0",
+    "citation_sha_mismatch > 0"
+  ],
+  "quality_promotion": "研究候选在15个可回答工程问题的片段hit@5不低于FTS，至少修复一项原有遗漏；无答案误返不得增加。需另补独立临床复核才讨论医疗适用性。",
+  "constraints": "不下载新权重，不变更生产库/生产检索函数，不调整旧标签，不重复运行挑最好结果；缺encoder则dense状态BLOCKED，不用伪向量冒充。"
+}

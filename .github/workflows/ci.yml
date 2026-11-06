@@ -9,7 +9,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     steps:
       - name: Check out repository
@@ -35,6 +35,19 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: pytest -q
+
+      - name: Run UI layout and accessibility audit
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python scripts/ui_review_check.py
+
+      - name: Upload UI audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-review-evidence
+          path: .artifacts/ui-review-20261030
+          if-no-files-found: ignore
 
       - name: Check diff whitespace
         run: git diff --check

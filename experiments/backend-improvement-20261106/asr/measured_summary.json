@@ -1,0 +1,61 @@
+{
+  "scope": "isolated_compatibility_not_medical_role_validation",
+  "cloud_calls": 0,
+  "model_load_count": 1,
+  "production_modified": false,
+  "runs": [
+    {
+      "audio_seconds": 10,
+      "chunks": 14,
+      "seconds": 9.262651235000021,
+      "compute_only_rtf": 0.9262651235000021,
+      "chunk_compute_p95_seconds": 2.12062619430004,
+      "capture_arrival_pacing_measured": false,
+      "peak_rss_mib": 868.546875,
+      "speaker_turn_count": 6,
+      "detected_voice_count": 2
+    },
+    {
+      "audio_seconds": 60,
+      "chunks": 83,
+      "seconds": 135.70848452199994,
+      "compute_only_rtf": 2.2618080753666656,
+      "chunk_compute_p95_seconds": 3.7106187759999325,
+      "capture_arrival_pacing_measured": false,
+      "peak_rss_mib": 1029.00390625,
+      "speaker_turn_count": 32,
+      "detected_voice_count": 2
+    }
+  ],
+  "load_seconds": 3.5238568320000923,
+  "input_buffer_ms_excludes_compute": 1040,
+  "acoustic_metrics": {
+    "der": null,
+    "jer": null,
+    "blocker": "No module named 'sortedcontainers'"
+  },
+  "status": "COMPATIBILITY_MEASURED_NOT_PRODUCT_PASS",
+  "total_seconds": 203.10529726999994,
+  "peak_rss_mib": 1029.00390625,
+  "saved_output_scoring": {
+    "scope": "saved_output_scoring_no_model_call",
+    "speaker_count_error": 0,
+    "boundary_f1": 0.4444,
+    "mixed_utterance_rate": 0.125,
+    "role_consistency": 0.8783,
+    "der": null,
+    "jer": null,
+    "der_jer_status": "unavailable_pyannote_metrics_not_installed",
+    "asr_cer": null,
+    "medical_role_accuracy": null,
+    "patient_subject_accuracy": null,
+    "rtf": null,
+    "resource_peak": null,
+    "boundary_tolerance_seconds": 0.5,
+    "model_calls": 0
+  },
+  "decision": "NEEDS_MORE_EVIDENCE_CPU_REALTIME_TARGET_FAILED_NO_PRODUCTION_ADOPTION",
+  "first_failure_preserved": true,
+  "source_commit": "6df64031b9fa0ecebe50161df8ad42ed8d36595c",
+  "weight_revision": "f667ed73aee57d40cc39428eb768b4fd87a0a29e"
+}

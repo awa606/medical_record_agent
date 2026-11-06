@@ -176,7 +176,9 @@ def test_export_uses_authenticated_download_endpoint_not_server_paths() -> None:
     assert "renderExportDownloadActions" in detail_body
     assert "Object.entries(exports)" not in detail_body
     assert "Object.values(result.exports" not in export_body
-    assert 'downloadTaskExport("docx")' in export_body
+    assert 'downloadTaskExport("pdf", result.exports?.pdf_sha256, taskId)' in export_body
+    assert 'data-export-sha256=' in js
+    assert '?sha256=${encodeURIComponent(sha256)}' in js
 
 
 def test_admin_and_reference_copy_hide_debug_values() -> None:

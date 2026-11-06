@@ -514,6 +514,12 @@ def retrieve_knowledge(
                     for value in model.encode([query], normalize_embeddings=True, show_progress_bar=False)[0]
                 ]
                 mode = "hybrid_v1"
+            except ModuleNotFoundError as exc:
+                # The optional semantic-search package may be absent from an ASR
+                # image. Keep FTS usable without concealing unrelated import bugs.
+                if exc.name != "sentence_transformers":
+                    raise
+                query_vector = None
             except (OSError, RuntimeError, ValueError):
                 # The lexical index remains usable when a copied database does not
                 # have the embedding model in the local offline cache.

@@ -1,0 +1,37 @@
+{
+  "privacy_boundary": "仅合成查询、公开指南元数据/短定位锚点与内容SHA、工程指标；无数据库、原文病历、账号、录音、向量和权重",
+  "original_query_sha256": "4c53be03bff4b47e51102f426432906060505a94b68055fe8cf21a2c5a6d29e7",
+  "private_corpus_sha256": "b84fe18faaa0449db54f11129edab2183bda073e5ebfbdea79d61118188c6f0d",
+  "files": [
+    {
+      "path": "bge-equivalence.json",
+      "sha256": "decc6dc9f27e61086a509480f88ce1b83cfc59db65c9f1c38f0d6b9aa1b9db7e",
+      "bytes": 1484
+    },
+    {
+      "path": "bge_download_manifest.json",
+      "sha256": "4ab94320623b175ddb44aa924813110931f1422e2dd1633346abda76f7c1cf40",
+      "bytes": 2049
+    },
+    {
+      "path": "fts-results.json",
+      "sha256": "cd5081a0e748f32c254b0469e0b55ad2929bdbb62dddc0fa8ebbe8f6b0e8a644",
+      "bytes": 48231
+    },
+    {
+      "path": "invalid-empty-index-fixture.json",
+      "sha256": "1860460a1c15f66587312a0f109d175fb0ba3b885337a4cd3e41dc501b329465",
+      "bytes": 32938
+    },
+    {
+      "path": "queries24.preregistered.json",
+      "sha256": "4c53be03bff4b47e51102f426432906060505a94b68055fe8cf21a2c5a6d29e7",
+      "bytes": 16101
+    },
+    {
+      "path": "source_sha_manifest.json",
+      "sha256": "08a47eefdb5d1e07a10ac7bc6bc72f680e9b70f13038fe12aeb27e9e8e1c6def",
+      "bytes": 40230
+    }
+  ]
+}

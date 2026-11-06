@@ -5,6 +5,8 @@ import os
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -85,7 +87,16 @@ def test_api_uses_index_when_database_contains_chunks() -> None:
                 os.environ["MEDICAL_RECORD_AGENT_DB"] = previous
 
 
-def test_runtime_falls_back_to_fts_when_local_embedding_model_is_missing(monkeypatch) -> None:
+@pytest.mark.parametrize(
+    "failure, fallback_allowed",
+    [
+        (OSError("model cache unavailable"), True),
+        (ModuleNotFoundError("No module named 'sentence_transformers'", name="sentence_transformers"), True),
+        (ModuleNotFoundError("No module named 'unexpected_internal_module'", name="unexpected_internal_module"), False),
+    ],
+    ids=["offline-model-cache", "optional-package-missing", "unrelated-import-must-fail"],
+)
+def test_runtime_falls_back_to_fts_when_local_embedding_model_is_missing(monkeypatch, failure, fallback_allowed) -> None:
     with tempfile.TemporaryDirectory() as directory:
         previous = os.environ.get("MEDICAL_RECORD_AGENT_DB")
         os.environ["MEDICAL_RECORD_AGENT_DB"] = str(Path(directory) / "knowledge-offline.sqlite3")
@@ -113,12 +124,24 @@ def test_runtime_falls_back_to_fts_when_local_embedding_model_is_missing(monkeyp
                 connection.close()
 
             def missing_model(_model_id: str, _local_files_only: bool = True):
-                raise OSError("model cache unavailable")
+                raise failure
 
             monkeypatch.setattr(knowledge_store, "_embedding_model", missing_model)
+            if not fallback_allowed:
+                with pytest.raises(ModuleNotFoundError, match="unexpected_internal_module"):
+                    retrieve_knowledge("发热咳嗽", limit=5)
+                return
             result = retrieve_knowledge("发热咳嗽", limit=5)
             assert result["retrieval_mode"] == "fts5_v1"
             assert result["results"][0]["dense_score"] is None
+            assert result["results"][0]["page"] == 7
+            assert result["results"][0]["section"] == "风险"
+            assert result["results"][0]["content_sha256"]
+            verify_conn = get_connection()
+            try:
+                assert verify_conn.execute("SELECT COUNT(*) FROM knowledge_embedding").fetchone()[0] == 1
+            finally:
+                verify_conn.close()
         finally:
             if previous is None:
                 os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)

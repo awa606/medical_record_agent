@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
-from zipfile import ZipFile
 
 from playwright.sync_api import expect, sync_playwright
 
@@ -125,12 +124,11 @@ def test_doctor_a_local_encounter_flow_is_hidden_from_doctor_b() -> None:
             with page_a.expect_download(timeout=30000) as download_info:
                 page_a.click("#exportButton")
             download = download_info.value
-            docx_path = download_dir / download.suggested_filename
-            download.save_as(docx_path)
-            assert docx_path.exists()
-            assert docx_path.stat().st_size > 0
-            with ZipFile(docx_path) as docx:
-                assert "word/document.xml" in docx.namelist()
+            pdf_path = download_dir / download.suggested_filename
+            download.save_as(pdf_path)
+            assert pdf_path.exists()
+            assert pdf_path.stat().st_size > 800
+            assert pdf_path.read_bytes()[:5] == b"%PDF-"
 
             context_b = browser.new_context()
             page_b = context_b.new_page()
@@ -152,7 +150,7 @@ def test_doctor_a_local_encounter_flow_is_hidden_from_doctor_b() -> None:
                     fetch(`/api/tasks/${taskId}/events`),
                     fetch(`/api/tasks/${taskId}/export-readiness`),
                     fetch(`/api/tasks/${taskId}/export`, { method: 'POST' }),
-                    fetch(`/api/tasks/${taskId}/exports/docx`),
+                    fetch(`/api/tasks/${taskId}/exports/pdf`),
                   ];
                   return Promise.all(requests).then((responses) => responses.map((response) => response.status));
                 }""",

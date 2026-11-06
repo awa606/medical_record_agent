@@ -1,11 +1,11 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
-from io import BytesIO
 from pathlib import Path
-from zipfile import ZipFile
 
+import pymupdf
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
@@ -31,6 +31,7 @@ from app.db import (
 )
 from app.main import app
 from app.services import WORD_NOTICE
+from app.services.exporter import render_markdown
 from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, SafetyCheckResult, SourceSpan
 from tests.auth_helpers import create_user, login_as_user
 
@@ -308,21 +309,12 @@ class TaskApiTests(unittest.TestCase):
         exported = export_task(task_id)
         self.assertIn("export_readiness", exported)
         self.assertTrue(exported["export_readiness"]["ready"])
-        markdown_path = Path(exported["exports"]["markdown_path"])
-        word_path = Path(exported["exports"]["word_path"])
-
-        self.assertTrue(markdown_path.exists())
-        self.assertTrue(word_path.exists())
-        self.assertIn(WORD_NOTICE, markdown_path.read_text(encoding="utf-8"))
-        with ZipFile(word_path) as docx:
-            document_xml = docx.read("word/document.xml").decode("utf-8")
-        self.assertIn(WORD_NOTICE, document_xml)
-        self.assertIn("门诊病历", document_xml)
-        self.assertIn("主诉", document_xml)
-        self.assertIn("现病史", document_xml)
-        self.assertIn("医生修订", document_xml)
-        self.assertNotIn("鍙戠儹", document_xml)
-        self.assertNotIn("涓昏瘔", document_xml)
+        pdf_path = Path(exported["exports"]["pdf_path"])
+        self.assertTrue(pdf_path.exists())
+        pdf_bytes = pdf_path.read_bytes()
+        self.assertEqual(pdf_bytes[:5], b"%PDF-")
+        self.assertGreater(len(pdf_bytes), 800)
+        # Content semantics are covered in tests/test_exporter_review_format.py.
 
     def test_deleted_ai_diagnoses_remain_auditable_but_are_not_exported(self):
         result = MedicalRecordOrchestrator().run_from_text("左手手掌被咬了，大概两个小时左右，用酒精冲洗，牙龈出血。")
@@ -335,15 +327,18 @@ class TaskApiTests(unittest.TestCase):
         diagnoses = approved["result_json"]["fields"]["candidate_diagnoses"]
         self.assertTrue(all(d["deleted_by_doctor"] for d in diagnoses))
         exported = export_task(task_id)
-        markdown = Path(exported["exports"]["markdown_path"]).read_text(encoding="utf-8")
-        with ZipFile(exported["exports"]["word_path"]) as docx:
-            xml = docx.read("word/document.xml").decode("utf-8")
-        for body in (markdown, xml):
-            self.assertNotIn("医生已确认", body)
-            self.assertIn("无保留的候选诊断", body)
+        pdf_bytes = Path(exported["exports"]["pdf_path"]).read_bytes()
+        self.assertEqual(pdf_bytes[:5], b"%PDF-")
+        body = render_markdown(
+            MedicalRecordFields.model_validate(approved["result_json"]["fields"]),
+            SafetyCheckResult(passed=True),
+            approved=True,
+        )
+        self.assertNotIn("医生已确认", body)
+        self.assertIn("无保留的候选诊断", body)
         self.assertEqual(len(read_task(task_id)["result_json"]["fields"]["candidate_diagnoses"]), len(diagnoses))
 
-    def test_export_download_route_returns_docx_after_approval(self):
+    def test_export_download_route_returns_pdf_after_approval(self):
         client = TestClient(app)
         doctor = create_user(client, username="download-doctor")
         result = MedicalRecordOrchestrator().run_from_text("patient has fever for three days")
@@ -356,24 +351,39 @@ class TaskApiTests(unittest.TestCase):
         exported = client.post(f"/api/tasks/{task_id}/export")
         self.assertEqual(exported.status_code, 200, exported.text)
 
-        downloaded = client.get(f"/api/tasks/{task_id}/exports/docx")
+        downloaded = client.get(f"/api/tasks/{task_id}/exports/pdf")
         self.assertEqual(downloaded.status_code, 200, downloaded.text)
-        self.assertEqual(
-            downloaded.headers["content-type"],
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
+        self.assertEqual(downloaded.headers["content-type"], "application/pdf")
         self.assertIn(
-            f"task_{task_id}_medical_record.docx",
+            f"task_{task_id}_R1_export_1_medical_record.pdf",
             downloaded.headers.get("content-disposition", ""),
         )
-        with ZipFile(BytesIO(downloaded.content)) as docx:
-            document_xml = docx.read("word/document.xml").decode("utf-8")
-        self.assertIn(WORD_NOTICE, document_xml)
-        self.assertIn("门诊病历", document_xml)
-        self.assertIn("主诉", document_xml)
-        self.assertIn("现病史", document_xml)
-        self.assertNotIn("鍙戠儹", document_xml)
-        self.assertNotIn("涓昏瘔", document_xml)
+        self.assertEqual(downloaded.content[:5], b"%PDF-")
+        with pymupdf.open(stream=downloaded.content, filetype="pdf") as document:
+            self.assertEqual(document.page_count, 1)
+            text = "".join(page.get_text() for page in document)
+        self.assertIn("接诊医师", text)
+        self.assertIn("Test Doctor", text)
+
+    def test_export_pdf_does_not_print_non_doctor_task_owner_as_attending(self):
+        client = TestClient(app)
+        admin = create_user(client, username="download-admin", display_name="Local Admin", role="admin")
+        result = MedicalRecordOrchestrator().run_from_text("patient has fever for three days")
+        task_id = result["task_id"]
+        set_task_owner(task_id, admin["id"])
+
+        login_as_user(client, username="download-admin")
+        approved = client.post(f"/api/tasks/{task_id}/approve", json=self.approval_payload_for_task(task_id))
+        self.assertEqual(approved.status_code, 200, approved.text)
+        exported = client.post(f"/api/tasks/{task_id}/export")
+        self.assertEqual(exported.status_code, 200, exported.text)
+
+        downloaded = client.get(f"/api/tasks/{task_id}/exports/pdf")
+        self.assertEqual(downloaded.status_code, 200, downloaded.text)
+        with pymupdf.open(stream=downloaded.content, filetype="pdf") as document:
+            text = "".join(page.get_text() for page in document)
+        self.assertIn("接诊医师", text)
+        self.assertNotIn("Local Admin", text)
 
     def test_export_download_route_enforces_task_owner(self):
         client = TestClient(app)
@@ -389,7 +399,7 @@ class TaskApiTests(unittest.TestCase):
         client.post("/api/auth/logout")
 
         login_as_user(client, username="download-other")
-        forbidden = client.get(f"/api/tasks/{task_id}/exports/docx")
+        forbidden = client.get(f"/api/tasks/{task_id}/exports/pdf")
         self.assertEqual(forbidden.status_code, 403)
 
     def test_empty_approval_request_is_rejected(self):
@@ -403,6 +413,61 @@ class TaskApiTests(unittest.TestCase):
 
         self.assertIn(response.status_code, {400, 422})
         self.assertIsNone(get_active_approval_for_task(task_id))
+
+    def test_extended_clinical_conflict_cannot_be_signed_or_exported(self):
+        from app.db import list_export_events_for_task
+        fields = self._custom_fields(include_candidate=False)
+        fields.family_history = MedicalField(value="父亲有高血压", missing=False, status="conflicting")
+        task_id = self._create_reviewed_task(fields)
+        client = TestClient(app)
+        doctor = create_user(client, username="extended-review")
+        set_task_owner(task_id, doctor["id"])
+        login_as_user(client, username="extended-review")
+        payload = self._minimal_payload(task_id)
+        refused = client.post(f"/api/tasks/{task_id}/approve", json=payload)
+        self.assertEqual(refused.status_code, 409, refused.text)
+        self.assertIn("家族史存在证据冲突", refused.text)
+        self.assertFalse(client.get(f"/api/tasks/{task_id}/export-readiness").json()["ready"])
+        self.assertEqual(client.post(f"/api/tasks/{task_id}/export").status_code, 400)
+        self.assertIsNone(get_active_approval_for_task(task_id))
+        self.assertEqual(list_export_events_for_task(task_id), [])
+        # Extended history is outside the seven-field grounding contract. A
+        # client must not resolve it by merely changing its claimed citation.
+        current = client.get(f"/api/tasks/{task_id}").json()["result_json"]["fields"]
+        current["family_history"]["value"] = "已修正"
+        current["family_history"]["source_spans"] = [{"text":"不存在的引用"}]
+        attempt = client.post(f"/api/tasks/{task_id}/review", json={
+            "fields": current, "source_corrected_fields": ["family_history"],
+            "expected_revision_id": payload["revision_id"], "expected_content_hash": payload["content_hash"],
+        })
+        self.assertEqual(attempt.status_code, 422)
+        self.assertEqual(read_task(task_id)["current_record_revision_id"], payload["revision_id"])
+        # An explicit doctor entry can be signed only after a new revision.
+        current["family_history"]["value"] = "医生补录：家族史待进一步核对"
+        saved = client.post(f"/api/tasks/{task_id}/review", json={
+            "fields": current, "manual_takeover_fields": ["family_history"],
+            "expected_revision_id": payload["revision_id"], "expected_content_hash": payload["content_hash"],
+        })
+        self.assertEqual(saved.status_code, 200, saved.text)
+        repaired = saved.json()["result_json"]["fields"]["family_history"]
+        self.assertTrue(repaired["doctor_review_note"].startswith("manual_doctor_edit_v1:"))
+        self.assertFalse(repaired["confirmed_by_doctor"])
+        self.assertNotEqual(saved.json()["current_record_revision_id"], payload["revision_id"])
+        self.assertEqual(client.post(f"/api/tasks/{task_id}/approve", json=payload).status_code, 409)
+
+    def test_extended_decisions_reset_and_optional_blanks_do_not_block(self):
+        from tests.approval_helpers import approval_payload_for_fields
+        fields = self._custom_fields(include_candidate=False)
+        fields.family_history = MedicalField(value="父亲有高血压", missing=False, status="complete",
+                                             confirmed_by_doctor=True, doctor_review_status="content_confirmed")
+        task_id = self._create_reviewed_task(fields)
+        family = read_task(task_id)["result_json"]["fields"]["family_history"]
+        self.assertFalse(family["confirmed_by_doctor"])
+        self.assertEqual(family["doctor_review_status"], "pending")
+        core = approval_payload_for_fields(fields, task_id=task_id)
+        approved = approve_task(task_id, TaskApprovalRequest.model_validate(core))
+        self.assertTrue(approved["result_json"]["fields"]["family_history"]["confirmed_by_doctor"])
+        self.assertFalse(approved["result_json"]["fields"]["patient_address"]["confirmed_by_doctor"])
 
     def test_explicit_regular_field_confirmation_persists_approval_items(self):
         task_id = self._create_reviewed_task()
@@ -547,6 +612,94 @@ class TaskApiTests(unittest.TestCase):
         )
         self.assertIsNone(get_active_approval_for_task(task_id))
 
+    def test_save_after_signing_receipt_cannot_restore_older_task_state(self):
+        from app.db import create_approval_for_task, list_approvals_for_task
+
+        client = TestClient(app)
+        doctor = create_user(client, username="approval-interleaving")
+        login_as_user(client, username="approval-interleaving")
+        task_id = self._create_reviewed_task()
+        set_task_owner(task_id, doctor["id"])
+        payload = self._minimal_payload(task_id)
+        updated = self._custom_fields()
+        updated.chief_complaint.value = "发热4天"
+        edit = self._review_request(task_id, updated).model_dump()
+        path = f"/api/tasks/{task_id}"
+
+        def sign_then_save(*args, **kwargs):
+            receipt = create_approval_for_task(*args, **kwargs)
+            saved = client.post(path + "/review", json=edit)
+            self.assertEqual(saved.status_code, 200, saved.text)
+            return receipt
+
+        # Exact ordering of two genuine authenticated requests; no sleeps or locks in the test.
+        with patch("app.api.tasks.create_approval_for_task", side_effect=sign_then_save):
+            approved = client.post(path + "/approve", json=payload)
+        self.assertEqual(approved.status_code, 200, approved.text)
+        latest = client.get(path).json()
+        self.assertNotEqual(latest["current_record_revision_id"], payload["revision_id"])
+        self.assertEqual(latest["current_stage"], "waiting_doctor_review")
+        self.assertFalse(latest["result_json"]["approved"])
+        self.assertNotIn("approval", latest["result_json"])
+        self.assertEqual(latest["result_json"]["record_revision"]["id"], latest["current_record_revision_id"])
+        self.assertEqual(latest["result_json"]["fields"]["chief_complaint"]["value"], "发热4天")
+        self.assertIsNone(get_active_approval_for_task(task_id))
+        self.assertEqual(list_approvals_for_task(task_id)[0]["revision_id"], payload["revision_id"])
+        self.assertEqual(client.post(path + "/export").status_code, 400)
+
+    def test_equal_hash_new_revision_cannot_inherit_inflight_signature(self):
+        from app.db import create_approval_for_task, create_record_revision_for_task, get_record_revision, list_approvals_for_task
+        import json
+
+        client = TestClient(app)
+        doctor = create_user(client, username="approval-id-race")
+        login_as_user(client, username="approval-id-race")
+        task_id = self._create_reviewed_task()
+        set_task_owner(task_id, doctor["id"])
+        payload = self._minimal_payload(task_id)
+        revision_result = json.loads(get_record_revision(payload["revision_id"])["result_json"])
+
+        def save_identical_then_sign(*args, **kwargs):
+            # Re-record the exact immutable revision contents so only the ID changes.
+            new = create_record_revision_for_task(task_id, revision_result, actor_user_id=doctor["id"],
+                source="doctor_review", workflow_status="waiting_review")
+            self.assertNotEqual(new["id"], payload["revision_id"])
+            self.assertEqual(new["content_hash"], payload["content_hash"])
+            return create_approval_for_task(*args, **kwargs)
+
+        with patch("app.api.tasks.create_approval_for_task", side_effect=save_identical_then_sign):
+            refusal = client.post(f"/api/tasks/{task_id}/approve", json=payload)
+        self.assertEqual(refusal.status_code, 409, refusal.text)
+        self.assertEqual(list_approvals_for_task(task_id), [])
+        self.assertEqual(client.post(f"/api/tasks/{task_id}/export").status_code, 400)
+
+    def test_signature_and_fields_rollback_if_final_audit_write_fails(self):
+        from contextlib import closing
+        from app.db import list_approvals_for_task
+        from app.db.sqlite import get_connection
+        client = TestClient(app, raise_server_exceptions=False)
+        doctor = create_user(client, username="approval-atomic-audit")
+        login_as_user(client, username="approval-atomic-audit")
+        task_id = self._create_reviewed_task()
+        set_task_owner(task_id, doctor["id"])
+        path = f"/api/tasks/{task_id}"
+        before = client.get(path).json()
+        with closing(get_connection()) as db:
+            old_encounter_state = db.execute("SELECT status FROM encounter WHERE id=?", (before["encounter_id"],)).fetchone()[0]
+            db.execute("""CREATE TRIGGER refuse_signing_audit BEFORE INSERT ON audit_log
+                          WHEN NEW.event_type='doctor_approved'
+                          BEGIN SELECT RAISE(ABORT, 'audit unavailable'); END""")
+            db.commit()
+        failed = client.post(path + "/approve", json=self._minimal_payload(task_id))
+        self.assertEqual(failed.status_code, 500)
+        self.assertEqual(list_approvals_for_task(task_id), [])
+        self.assertEqual(client.get(path).json(), before)
+        self.assertEqual(client.post(path + "/export").status_code, 400)
+        with closing(get_connection()) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM approval_item WHERE task_id=?", (task_id,)).fetchone()[0], 0)
+            self.assertEqual(db.execute("SELECT status FROM encounter WHERE id=?", (before["encounter_id"],)).fetchone()[0],
+                             old_encounter_state)
+
     def test_old_approval_cannot_export_new_revision(self):
         task_id = self._create_reviewed_task()
         approve_task(task_id, TaskApprovalRequest.model_validate(self._minimal_payload(task_id)))
@@ -578,7 +731,7 @@ class TaskApiTests(unittest.TestCase):
         exported = export_task(task_id)
 
         self.assertTrue(exported["export_readiness"]["ready"])
-        self.assertTrue(Path(exported["exports"]["word_path"]).exists())
+        self.assertTrue(Path(exported["exports"]["pdf_path"]).exists())
 
     def test_export_readiness_blocks_provider_fallback_trace(self):
         result = MedicalRecordOrchestrator().run_from_text(

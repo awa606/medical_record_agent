@@ -4,13 +4,11 @@ Uses an isolated recorded Provider fixture; no ASR/model/network call. The old
 R1 and its incorrect coverage finding remain immutable historical evidence.
 """
 from copy import deepcopy
-from io import BytesIO
 import json
-from xml.etree import ElementTree
-from zipfile import ZipFile
 
 from app.db import get_active_approval_for_task, get_record_revision, get_task, list_approvals_for_task
-from app.schemas import SourceSpan
+from app.schemas import MedicalRecordFields, SafetyCheckResult, SourceSpan
+from app.services.exporter import render_markdown
 from tests.approval_helpers import review_payload_for_fields
 from tests.test_doctor_negative_paraphrase_api import (
     SOURCE, approve_current, fields_for, recorded_review,
@@ -24,11 +22,15 @@ REAL_DURATION_GAP = "症状持续时间未提及"
 def exported_text(client, task_id):
     response = client.post(f"/api/tasks/{task_id}/export")
     assert response.status_code == 200, response.text
-    downloaded = client.get(f"/api/tasks/{task_id}/exports/docx")
+    downloaded = client.get(f"/api/tasks/{task_id}/exports/pdf")
     assert downloaded.status_code == 200, downloaded.text
-    with ZipFile(BytesIO(downloaded.content)) as archive:
-        xml = ElementTree.fromstring(archive.read("word/document.xml"))
-    return "".join(xml.itertext())
+    assert downloaded.content[:5] == b"%PDF-"
+    result = json.loads(get_task(task_id)["result_json"])
+    return render_markdown(
+        MedicalRecordFields.model_validate(result["fields"]),
+        SafetyCheckResult.model_validate(result["safety_check"]),
+        approved=True,
+    )
 
 
 def test_review_recomputes_withdrawn_symptom_coverage_without_erasing_real_gaps(recorded_review):

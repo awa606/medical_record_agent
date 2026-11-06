@@ -1,14 +1,14 @@
 :root {
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
+  --primary: #1d4ed8;
+  --primary-hover: #1e40af;
   --bg: #f3f4f6;
   --surface: #ffffff;
   --surface-soft: #f9fafb;
   --line: #e5e7eb;
   --line-strong: #d1d5db;
   --text: #111827;
-  --muted: #6b7280;
-  --red: #ef4444;
+  --muted: #475569;
+  --red: #b91c1c;
   --red-soft: #fef2f2;
   --yellow: #f59e0b;
   --yellow-soft: #fffbeb;
@@ -197,7 +197,7 @@ pre {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
-  color: #9ca3af;
+  color: #64748b;
   font-weight: 800;
 }
 

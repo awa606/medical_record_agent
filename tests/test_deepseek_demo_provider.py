@@ -143,6 +143,7 @@ def test_status_endpoint_uses_free_probe_not_generation(tmp_path):
 def test_reused_provider_allows_separate_business_calls_with_distinct_diagnostics(tmp_path):
     with server() as (url, calls), patch.dict(os.environ, {'MRA_ANONYMIZE': '1', 'MEDICAL_RECORD_AGENT_DB': str(tmp_path / 'identity.sqlite3')}):
         provider = make_local(tmp_path, url)
+        provider.diagnostics_enabled = True  # Explicit synthetic evidence collection.
         provider.generate_fields_json('发热两天', timeout_seconds=1)
         provider.generate_fields_json('咳嗽两天', timeout_seconds=1)
     assert len(calls) == 2

@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-06T03:47:19.628Z`
-- Source hash: `ab6e3846304a225549df36c4e4ff5c04a09f521c47c5d1d5524e287281d0de3b`
+- Updated at: `2026-11-06T09:42:20.293Z`
+- Source hash: `588a5caa2eddf12ff8fecdeb2084f039186680f81be4f909569e74e5e09e77a7`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@3ac127632ac416bd4f28d5ca95cc5b0413c2afaf`
+- Repo: `codex/ui-hospital-record-v1@d1326199749b74213dff7f5c5eae6ffca725cc6f`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
-- Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **11月6日完成本地数据图解、可复算统计和评测准备：离线页面8项功能检查PASS、1项暗色截图采集，独立核对728种数量组合；原始样本和私人材料仅本地。无新增ASR/病历推理、训练、真实医生试用或部署；当前已查环境未就绪、docker运行容器0。既有首次模型失败及原验收缺项保留。Obsidian仅追加5.1正文与审计日志，任务元数据、日期、Gate与范围不变；5.1VERIFY、5.3BACKLOG。本次repo_sha是研究文档提交，不是新的运行版本。**
+- Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
+- Last merged PR: None
+- Forecast Alpha Exit: **26327原44115d88-perf2已恢复且就绪200；本轮六份后端文件3998194通过CI，真实E-4仅一次调用并识别遗漏/混放，未完成修订审核导出，未推广。默认诊断只存元数据。知识24查询8/15、Nemotron60秒计算135.708秒均不晋级。正式16项99h、5.1 VERIFY不变。 前端0.4.0仅实现候选，未改生产链，GUI与平台验收未完成。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 数据图解与评测准备已交付；授权音频闭环仍待验收** — `VERIFY`
+**5.1 · 三条主路径E2E Smoke** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,12 +54,11 @@
 
 ## Next
 
-- Single next task: 围绕5.1取得5–10场有明确评测许可的中文目标场景样本，核对本地环境后完成授权音频真实按钮闭环；随后核验同版受限业务恢复。数据图解不替代5.1验收，未满足原条件前不进入5.3。
-- Parallel waiting task: 真实数据研究仍NEEDS MORE EVIDENCE；本轮中文真实录音0场、英文模拟1场，四源尚未回复或交付。150场只是研究数量示意，不改Beta正式60–100例范围。硬件支线与既有任务依赖保持原记录。
+- Single next task: 0.4.0文档接诊原型已实现，44项模型测试通过。内置浏览器超时，等待用户允许独立Playwright后执行全流程、同条件截图、800x600与原生100/125/150%缩放；不得将当前候选称为GUI或审美通过。
+- Parallel waiting task: CI4d6c8a8已通过1858项；隔离3998194合成E-4一次生成暴露HPI用药覆盖缺口及过敏/伴随混放，新规则已隔离。先零调用定位对应字段正文与问答关联，再补修订审核；原26327保持44115d88，候选HOLD。 在线说话人CPU实时目标未过；BGE旧向量一致性未过；本地漏提独立研究。保留同期布局样机、三面板接诊原型、数据准备和用户视觉选择任务；原型未接生产API，硬件仍延期。
 
 ## Manual Actions
 
-- 落实有门诊经验的医学评审人员，核定参考事实与病历。
-- 等待PDCH协议及资格、IMCS具体许可、商业样本与含税报价；未核实预算内合格现货前保留3000元首批预算。
+- 回复独立测试浏览器授权与私有在线预览偏好；代码候选已本地可服务，用户视觉和目标医生验收另行记录。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

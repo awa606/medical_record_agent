@@ -1,0 +1,4 @@
+Datasette 0.65.5 project templates adapted for Chinese presentation.
+Copyright Datasette contributors. Apache License 2.0: see DATASETTE-LICENSE.txt.
+Local changes: Chinese labels, snapshot introduction and scoped display hooks.
+Upstream installation files and database/query identifiers are not modified.

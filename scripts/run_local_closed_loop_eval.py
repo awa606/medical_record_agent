@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import subprocess
 import time
@@ -46,6 +47,7 @@ def main():
     parser.add_argument("--start", type=int, required=True)
     parser.add_argument("--end", type=int, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--git-sha", help="Full material SHA for a source-mounted isolated container without git metadata")
     args = parser.parse_args()
     if args.output.exists():
         raise SystemExit("Refusing to overwrite an existing evaluation")
@@ -59,7 +61,9 @@ def main():
     os.environ.setdefault("LLM_MAX_RETRIES", "0")
     os.environ["MEDICAL_RECORD_AGENT_DB"] = str(args.output / "private.sqlite3")
     paths = sorted((ROOT / "data/clinical_e2e/field_disease_pack_v1/cases").glob("*.json"))[args.start-1:args.end]
-    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    sha = args.git_sha or subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError("a full material Git SHA is required")
     source_hash = hashlib.sha256(b"".join(p.relative_to(ROOT).as_posix().encode() + p.read_bytes() for p in sorted((ROOT / "app").rglob("*.py")))).hexdigest()
     result = {"started_at": datetime.now(timezone.utc).isoformat(), "git_sha": sha,
               "app_source_sha256": source_hash, "split": [args.start, args.end],

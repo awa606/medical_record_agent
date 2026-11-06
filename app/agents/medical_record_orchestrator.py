@@ -127,16 +127,19 @@ class MedicalRecordOrchestrator:
             )
             self._persist_result()
 
-            self._set_status(self.STATUS_WAITING_DOCTOR_REVIEW, "doctor_review")
-            self._persist_result()
+            # Pollers treat WAITING_DOCTOR_REVIEW as a terminal result. Persist
+            # its revision first so the published result can be reviewed safely.
             create_record_revision_for_task(
                 task_id,
                 self._result_payload(),
                 source="generation",
                 workflow_status="pending_review",
             )
+            self._set_status(self.STATUS_WAITING_DOCTOR_REVIEW, "doctor_review")
+            self._persist_result()
             return self._result()
         except Exception as exc:
+            self._capture_llm_trace()
             self.error_message = anonymize_text(str(exc))
             self._set_status(self.STATUS_FAILED, "failed")
             if self.task_id is not None:
@@ -211,7 +214,10 @@ class MedicalRecordOrchestrator:
         self._set_status(status, step_name)
         self._log_step(step_name, "started")
 
-        max_attempts = 3
+        # Generator owns provider-call retries. Multiplying those attempts here
+        # ignored LLM_MAX_RETRIES=0 and could issue nine calls for one operation.
+        max_attempts = (1 if step_name == "extract_fields"
+                        and getattr(self.llm, "manages_extraction_retries", False) else 3)
         for attempt in range(1, max_attempts + 1):
             step_id = create_task_step(
                 self._require_task_id(),
@@ -231,7 +237,8 @@ class MedicalRecordOrchestrator:
                 return result
             except Exception as exc:
                 error_message = anonymize_text(str(exc))
-                retry_count = increment_task_retry_count(self._require_task_id())
+                retry_count = (increment_task_retry_count(self._require_task_id())
+                               if attempt < max_attempts else get_task(self._require_task_id())["retry_count"])
                 create_audit_log(
                     self._require_task_id(),
                     "llm_retry_failed",
@@ -253,7 +260,7 @@ class MedicalRecordOrchestrator:
 
                 if os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"} or getattr(self.llm, "allow_mock_fallback", True) is False:
                     finish_task_step(step_id, status="FAILED", error_message=error_message)
-                    raise RuntimeError(f"{step_name} failed; strict mode forbids fallback") from exc
+                    raise RuntimeError(f"{step_name} failed; strict mode forbids fallback: {error_message}") from exc
                 self.degraded = True
                 self.degraded_messages.append(f"{step_name} failed after retries: {error_message}")
                 self._set_status(self.STATUS_DEGRADED, f"{step_name}_degraded")

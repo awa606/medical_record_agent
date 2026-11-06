@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% set status = status if status is defined else {"Forbidden":403,"Not found":404,"Not Found":404}.get(title,500) %}
+{% block title %}查看器提示 · {{ status }}{% endblock %}
+{% block content %}
+<h1>{{ {403:"需要本机授权",404:"未找到记录或页面",400:"查询条件无效"}.get(status,"查看器暂时无法完成操作") }}</h1>
+<p>{% if status == 403 %}请从对应版本的桌面启动器打开“数据与知识查看器”。未经授权无法浏览；本工具不允许写库、任意SQL查询或整库下载。{% else %}请返回数据目录重新选择，或检查筛选条件。源数据库保持不变。{% endif %}</p>
+<details><summary>技术信息（原始错误）</summary><p>HTTP {{ status }} · {{ title }}</p><pre>{{ error }}</pre></details>
+<a href="{{ urls.instance() }}">返回数据目录</a>
+{% endblock %}

@@ -1,0 +1,16 @@
+# Apply after compose.alpha51-candidate.yml. Never run both real model stacks.
+services:
+  ollama:
+    restart: "no"
+  app:
+    restart: "no"
+    environment:
+      MEDICAL_RECORD_AGENT_SESSION_COOKIE_NAME: ${MRA_COOKIE_NAME:?unique cookie name required}
+    volumes:
+      - type: bind
+        source: ${MRA_DEPLOYMENT_FILE:?absolute public environment descriptor required}
+        target: /app/static/deployment.json
+        read_only: true
+        bind: {create_host_path: false}
+  gateway:
+    restart: "no"

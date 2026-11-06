@@ -1,0 +1,11 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MediListen 试用反馈</title><link rel="stylesheet" href="guide.css">
+<header><span>MediListen · 试用反馈</span><a href="manual.html">操作手册</a></header><main><h1>记录一次真实的使用体验</h1><p>仅用于合成病例／模拟问诊。没有自动上传，也不读取病历、录音、账号或浏览器登录信息。</p>
+<form id="feedbackForm"><div class="row"><div><label for="tester">匿名试用编号</label><input id="tester" name="tester" required maxlength="40" placeholder="例如 D01"></div><div><label for="version">实际应用版本</label><input id="version" name="version" required maxlength="80" placeholder="从启动入口抄写"></div></div>
+<label for="task">本次任务</label><select id="task" name="task"><option>启动与登录</option><option>登记或恢复就诊</option><option>录音与上传</option><option>转写与角色确认</option><option>病历核对与修改</option><option>原文与指南查询</option><option>保存与审核</option><option>导出与历史重开</option></select>
+<div class="row"><div><label for="outcome">任务结果</label><select id="outcome" name="outcome"><option>独立完成</option><option>获得帮助后完成</option><option>未完成</option></select></div><div><label for="minutes">耗时（分钟，可留空）</label><input id="minutes" name="minutes" type="number" min="0" max="180" step="0.1"></div></div>
+<label for="expected">预期发生什么</label><textarea id="expected" name="expected" maxlength="2000" required></textarea>
+<label for="actual">实际发生什么／在哪一步卡住</label><textarea id="actual" name="actual" maxlength="2000" required></textarea>
+<label for="help">人工帮助或医生修改了什么</label><textarea id="help" name="help" maxlength="2000"></textarea>
+<label for="opinion">布局、用词和操作建议</label><textarea id="opinion" name="opinion" maxlength="2000"></textarea>
+<p><label><input id="safe" type="checkbox" required style="display:inline;width:auto"> 我已检查：不包含真实患者资料、密码、身份信息或音频。</label></p>
+<button class="primary" type="submit">下载反馈文件</button><p id="notice" role="status">填写内容仅停留在当前页面；关闭前请下载。不会自动发送给开发者。</p></form></main><script src="manual-evidence.js"></script><script src="feedback.js"></script></html>

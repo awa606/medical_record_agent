@@ -1,9 +1,11 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from app.agents import MedicalRecordOrchestrator
 from app.db import get_audit_logs, get_task, get_task_steps
+from app.agents import medical_record_orchestrator as orchestrator_module
 
 
 SNAKE_BITE_CONVERSATION = """
@@ -31,6 +33,40 @@ class MedicalRecordOrchestratorTests(unittest.TestCase):
     def tearDown(self):
         os.environ.pop("MEDICAL_RECORD_AGENT_DB", None)
         self.temp_dir.cleanup()
+
+    def test_review_status_is_published_only_after_revision_is_saved(self):
+        save_revision = orchestrator_module.create_record_revision_for_task
+        observations = []
+
+        def observe_revision_save(task_id, *args, **kwargs):
+            before = get_task(task_id)
+            observations.append((before["status"], before["current_record_revision_id"]))
+            revision = save_revision(task_id, *args, **kwargs)
+            after = get_task(task_id)
+            observations.append((after["status"], after["current_record_revision_id"]))
+            return revision
+
+        with patch.object(orchestrator_module, "create_record_revision_for_task", side_effect=observe_revision_save):
+            result = MedicalRecordOrchestrator().run_from_text(SNAKE_BITE_CONVERSATION)
+
+        self.assertEqual(len(observations), 2)
+        self.assertNotEqual(observations[0][0], MedicalRecordOrchestrator.STATUS_WAITING_DOCTOR_REVIEW)
+        self.assertIsNone(observations[0][1])
+        self.assertNotEqual(observations[1][0], MedicalRecordOrchestrator.STATUS_WAITING_DOCTOR_REVIEW)
+        self.assertIsNotNone(observations[1][1])
+        task = get_task(result["task_id"])
+        self.assertEqual(task["status"], MedicalRecordOrchestrator.STATUS_WAITING_DOCTOR_REVIEW)
+        self.assertEqual(task["current_record_revision_id"], observations[1][1])
+
+    def test_revision_save_failure_never_publishes_ready_for_review(self):
+        with patch.object(orchestrator_module, "create_record_revision_for_task", side_effect=OSError("revision save failed")):
+            result = MedicalRecordOrchestrator().run_from_text(SNAKE_BITE_CONVERSATION)
+
+        task = get_task(result["task_id"])
+        self.assertEqual(task["status"], MedicalRecordOrchestrator.STATUS_FAILED)
+        self.assertIsNone(task["current_record_revision_id"])
+        changed = [log["event_detail"] for log in get_audit_logs(result["task_id"]) if log["event_type"] == "status_changed"]
+        self.assertFalse(any(MedicalRecordOrchestrator.STATUS_WAITING_DOCTOR_REVIEW in detail for detail in changed))
 
     def test_run_from_text_completes_snake_bite_flow(self):
         orchestrator = MedicalRecordOrchestrator()

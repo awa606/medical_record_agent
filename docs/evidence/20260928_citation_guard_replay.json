@@ -1,0 +1,7186 @@
+{
+  "mode": "OFFLINE_REPLAY",
+  "new_model_calls": 0,
+  "manual_corrections": 0,
+  "historical_files_verified": 156,
+  "recorded_responses": 79,
+  "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+  "summary": {
+    "runs": {
+      "first_output_checked": {
+        "nonempty_fields": 24,
+        "conflicting_fields": 15,
+        "grounded_fields": 9
+      },
+      "saved_old_pipeline": {
+        "nonempty_fields": 9,
+        "conflicting_fields": 0,
+        "grounded_fields": 9
+      },
+      "fixed_pipeline": {
+        "nonempty_fields": 24,
+        "conflicting_fields": 15,
+        "grounded_fields": 9
+      }
+    },
+    "content-results": {
+      "first_output_checked": {
+        "nonempty_fields": 12,
+        "conflicting_fields": 0,
+        "grounded_fields": 12
+      },
+      "saved_old_pipeline": {
+        "nonempty_fields": 12,
+        "conflicting_fields": 0,
+        "grounded_fields": 12
+      },
+      "fixed_pipeline": {
+        "nonempty_fields": 12,
+        "conflicting_fields": 0,
+        "grounded_fields": 12
+      }
+    },
+    "negative-results": {
+      "first_output_checked": {
+        "nonempty_fields": 10,
+        "conflicting_fields": 2,
+        "grounded_fields": 8
+      },
+      "saved_old_pipeline": {
+        "nonempty_fields": 10,
+        "conflicting_fields": 2,
+        "grounded_fields": 8
+      },
+      "fixed_pipeline": {
+        "nonempty_fields": 10,
+        "conflicting_fields": 2,
+        "grounded_fields": 8
+      }
+    },
+    "dev-baseline": {
+      "first_output_checked": {
+        "nonempty_fields": 58,
+        "conflicting_fields": 4,
+        "grounded_fields": 54,
+        "expected_facts": 72,
+        "recovered_facts": 49
+      },
+      "saved_old_pipeline": {
+        "nonempty_fields": 58,
+        "conflicting_fields": 4,
+        "grounded_fields": 54,
+        "expected_facts": 72,
+        "recovered_facts": 49
+      },
+      "fixed_pipeline": {
+        "nonempty_fields": 58,
+        "conflicting_fields": 4,
+        "grounded_fields": 54,
+        "expected_facts": 72,
+        "recovered_facts": 49
+      }
+    },
+    "dev-enum": {
+      "first_output_checked": {
+        "nonempty_fields": 57,
+        "conflicting_fields": 3,
+        "grounded_fields": 54,
+        "expected_facts": 72,
+        "recovered_facts": 49
+      },
+      "saved_old_pipeline": {
+        "nonempty_fields": 57,
+        "conflicting_fields": 3,
+        "grounded_fields": 54,
+        "expected_facts": 72,
+        "recovered_facts": 49
+      },
+      "fixed_pipeline": {
+        "nonempty_fields": 57,
+        "conflicting_fields": 3,
+        "grounded_fields": 54,
+        "expected_facts": 72,
+        "recovered_facts": 49
+      }
+    }
+  },
+  "previously_masked_conflicts": 0,
+  "changed_runs": 6,
+  "metric_limit": "Automatic fact parser proxy, not clinical accuracy; old normalized output is not first-output quality.",
+  "schema_version": "mra-citation-replay-v1",
+  "captured_at": "2026-09-28T15:06:40+08:00",
+  "baseline_git_sha": "ca52f2d542411c961c92ea78d3d97550787b4b11",
+  "runtime_sha": "a3a5ca8719815007eb22b225ba30893a02157ed6",
+  "deployment_changed": false,
+  "guard_fix": "Validate original model values and references on a copy before canonicalizing audio source spans; preserve conflicts and original values/indices.",
+  "red_test": "16 failed, 6 passed before fix; 23 generator/approval regression cases after adding the persistence test.",
+  "verification": {
+    "targeted": "78 passed",
+    "integration": "65 passed",
+    "full_pytest": "632 passed, 1 skipped, 1 warning in 464.13s (0:07:44)",
+    "rule_safety": "240 cases / 206 facts; PASS; no model calls",
+    "frontend_syntax": "PASS",
+    "diff_check": "PASS",
+    "release_gate": "NOT RUN; 5.1 VERIFY; 5.3 not started",
+    "replay_byte_identical": true,
+    "payload_normalization_repairs_in_79": 0
+  },
+  "rows": [
+    {
+      "input_id": "baseline-1.private",
+      "group": "runs",
+      "raw_sha256": "55354e4f13db25602f903122ca48f905a26fea5a14fbf9fef3ca2278f257fed8",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 1,
+          "grounded_fields": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 3,
+          "conflicting_fields": 0,
+          "grounded_fields": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 1,
+          "grounded_fields": 3
+        }
+      },
+      "raw_citation_errors": {
+        "chief_complaint": [
+          "index_text_mismatch",
+          "quote_not_in_source"
+        ]
+      },
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "conflicting",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "conflicting",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {
+        "chief_complaint": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        }
+      }
+    },
+    {
+      "input_id": "baseline-2.private",
+      "group": "runs",
+      "raw_sha256": "f1c689a32bd82142bf078fed121e93e6ab8af0351697a8447987dd72629e82a2",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 1,
+          "grounded_fields": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 3,
+          "conflicting_fields": 0,
+          "grounded_fields": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 1,
+          "grounded_fields": 3
+        }
+      },
+      "raw_citation_errors": {
+        "chief_complaint": [
+          "index_text_mismatch",
+          "quote_not_in_source"
+        ]
+      },
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "conflicting",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "conflicting",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {
+        "chief_complaint": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        }
+      }
+    },
+    {
+      "input_id": "baseline-3.private",
+      "group": "runs",
+      "raw_sha256": "d52a3e7c247610b05f5f88f2f2f62caf3fdd0eb6f38833b9cacadd32fbe1698f",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 1,
+          "grounded_fields": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 3,
+          "conflicting_fields": 0,
+          "grounded_fields": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 1,
+          "grounded_fields": 3
+        }
+      },
+      "raw_citation_errors": {
+        "chief_complaint": [
+          "index_text_mismatch",
+          "quote_not_in_source"
+        ]
+      },
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "conflicting",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "conflicting",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {
+        "chief_complaint": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        }
+      }
+    },
+    {
+      "input_id": "source_enum-1.private",
+      "group": "runs",
+      "raw_sha256": "b525e830f55d83b8bb2f05a14c559431a00748510de5697ef660dfc833de7e2c",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 4,
+          "grounded_fields": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 4,
+          "grounded_fields": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "conflicting",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "conflicting",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {
+        "chief_complaint": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        },
+        "present_illness": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        },
+        "accompanying_symptoms": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        },
+        "allergy_history": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        }
+      }
+    },
+    {
+      "input_id": "source_enum-2.private",
+      "group": "runs",
+      "raw_sha256": "83d85f7c546321dcdbae404db4d2406782f87f915372146eb6763aa6af215d8b",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 4,
+          "grounded_fields": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 4,
+          "grounded_fields": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "conflicting",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "conflicting",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {
+        "chief_complaint": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        },
+        "present_illness": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        },
+        "accompanying_symptoms": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        },
+        "allergy_history": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        }
+      }
+    },
+    {
+      "input_id": "source_enum-3.private",
+      "group": "runs",
+      "raw_sha256": "bbde7a889574250ff521fb354ad8833a367ed82241ecba79e1582ccd90873649",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 4,
+          "grounded_fields": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 4,
+          "grounded_fields": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "conflicting",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "conflicting",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {
+        "chief_complaint": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        },
+        "present_illness": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        },
+        "accompanying_symptoms": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        },
+        "allergy_history": {
+          "before": "missing",
+          "after": "conflicting",
+          "value_changed": true,
+          "source_changed": true
+        }
+      }
+    },
+    {
+      "input_id": "source_content_enum-1.private",
+      "group": "content-results",
+      "raw_sha256": "1f32879a64db034edead296e3a98364125d3b842306d727912fd8ee7b4f392ba",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 0,
+          "grounded_fields": 4
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 0,
+          "grounded_fields": 4
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 0,
+          "grounded_fields": 4
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "source_content_enum-2.private",
+      "group": "content-results",
+      "raw_sha256": "148dca9a2ae4455c3c681dc72fa8fd0588ab53c794625bde665e792ea771f36e",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 0,
+          "grounded_fields": 4
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 0,
+          "grounded_fields": 4
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 0,
+          "grounded_fields": 4
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "source_content_enum-3.private",
+      "group": "content-results",
+      "raw_sha256": "abdf2ef4f00c71e6aa50a2e5723f8657742ed412034e7bda884d267b039a48de",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 0,
+          "grounded_fields": 4
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 0,
+          "grounded_fields": 4
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 4,
+          "conflicting_fields": 0,
+          "grounded_fields": 4
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "complete",
+          "missing",
+          "complete",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "baseline-family.private",
+      "group": "negative-results",
+      "raw_sha256": "46f77e55fd8faf7096f6b19e2fb34aab30277618b048a6414ff52054aa2b8dce",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 1,
+          "grounded_fields": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 1,
+          "grounded_fields": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 1,
+          "grounded_fields": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "conflicting",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "conflicting",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "conflicting",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "baseline-missing.private",
+      "group": "negative-results",
+      "raw_sha256": "c43e1f1388f07318677ab2211994bbfac8e4ac92919ed1cffc5e6da271f65728",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "baseline-negative_allergy.private",
+      "group": "negative-results",
+      "raw_sha256": "f2f80a7344b9d3c2f83bb6960fe3962e005e38319a15142fd954e17d305b59ba",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "complete",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "baseline-question.private",
+      "group": "negative-results",
+      "raw_sha256": "5fdd7633556829c393e9b7a322109c7263e274e5884ec0e0643fb1ed45d70755",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "baseline-treatment.private",
+      "group": "negative-results",
+      "raw_sha256": "adb5db3b51a648510b157a6db7904c700e37a5923b1fff9f69c6d159166966f7",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "enum-family.private",
+      "group": "negative-results",
+      "raw_sha256": "c08325324f97228d7317a16298f563d62b8a8a4d4df92c2e3cb1b2dd6c9c4865",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 1,
+          "grounded_fields": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 1,
+          "grounded_fields": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 1,
+          "grounded_fields": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "conflicting",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "conflicting",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "conflicting",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "enum-missing.private",
+      "group": "negative-results",
+      "raw_sha256": "f979db938d91aabe83b4d5c8bcc6988cd2044d6d2f62032275c3d9a8103f6591",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "enum-negative_allergy.private",
+      "group": "negative-results",
+      "raw_sha256": "e904e2f58b69a010d4670ac74d9b59bf241c64dbc21a0d397cd12d63094c11ec",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "complete",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "complete",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "enum-question.private",
+      "group": "negative-results",
+      "raw_sha256": "61a22b07edb411bf8b9759123b57221478944019c04b6e2262d451fb0119fd1b",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "enum-treatment.private",
+      "group": "negative-results",
+      "raw_sha256": "a700d42959b135fc9112eb31d852feaa2d0e138faf12287002f50f65bf2a30a0",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_001_short_fever_temp",
+      "group": "dev-baseline",
+      "raw_sha256": "6972e023d7e98a1d32e4ffe48c63decc0bd53c211f8361637ee49f3c0e17b67f",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_002_short_fever_headache",
+      "group": "dev-baseline",
+      "raw_sha256": "d03a44a341a42ec488e4fd69b8e592113ad5445c7842b39fc0207b926111e510",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 1,
+          "grounded_fields": 1,
+          "expected_facts": 3,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 1,
+          "grounded_fields": 1,
+          "expected_facts": 3,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 1,
+          "grounded_fields": 1,
+          "expected_facts": 3,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {
+        "present_illness": [
+          "index_text_mismatch",
+          "quote_not_in_source"
+        ]
+      },
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_003_fever_duration",
+      "group": "dev-baseline",
+      "raw_sha256": "6c677b86260272e85539524d601b08cc43be634abaa597d9d9dbfe8d59baa683",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_004_cough_duration_only",
+      "group": "dev-baseline",
+      "raw_sha256": "22d0c3ec44feccd226567abb28af7608440b1d4ea35a3468f147fde3ab453784",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_005_absent_fever_headache",
+      "group": "dev-baseline",
+      "raw_sha256": "826d11cefdf06398d4958f6306d9bff77918a17575bbe3d3295d1799cfd02943",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_006_question_answer_absent_fever",
+      "group": "dev-baseline",
+      "raw_sha256": "1465ba0e35858b5c6c3eff7aead737566216b341f7e3488f5e344bc9e1baa149",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_007_resolved_fever",
+      "group": "dev-baseline",
+      "raw_sha256": "efe3d777c6fe6103c0433c90802ac36e75ebe92b84dd60f5cd9479e0f8e1a931",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_008_ibuprofen_defervescence",
+      "group": "dev-baseline",
+      "raw_sha256": "0e0ae3ba27e8a1273a0ef7a2a1a291547c48567b2e2a3010a914d6206f4be06b",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_009_fever_cough",
+      "group": "dev-baseline",
+      "raw_sha256": "99ad2b51aee2b46e9d6bf51d57e862ec28348461dab6bf192971267422713914",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_010_fever_headache_duration",
+      "group": "dev-baseline",
+      "raw_sha256": "59ee2a163c7b2fe38d5d4f914803d1126de644b9cd20104b47f185b874036687",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_011_three_party_child_fever",
+      "group": "dev-baseline",
+      "raw_sha256": "e0aece688d7f28e6c7376030b559e06467d1383dfdfa9e19c1d304dbb8ca5585",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 3,
+          "conflicting_fields": 1,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 3,
+          "conflicting_fields": 1,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 3,
+          "conflicting_fields": 1,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "conflicting",
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "conflicting",
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "conflicting",
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_012_family_medication_effect",
+      "group": "dev-baseline",
+      "raw_sha256": "585425e28f6c19fcbfb65d7ab244282bc0ec0107330839cfaa7cd5479cfaddab",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 2,
+          "grounded_fields": 0,
+          "expected_facts": 3,
+          "recovered_facts": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 2,
+          "grounded_fields": 0,
+          "expected_facts": 3,
+          "recovered_facts": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 2,
+          "grounded_fields": 0,
+          "expected_facts": 3,
+          "recovered_facts": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "conflicting",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "conflicting",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "conflicting",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          true,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          true,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          true,
+          true,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_013_insufficient_hot",
+      "group": "dev-baseline",
+      "raw_sha256": "badd87de25594672f19ca1dd0fb25c906bca320e0e42b0307e9924568259f61d",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_014_out_of_scope_abdominal",
+      "group": "dev-baseline",
+      "raw_sha256": "e44b1986b7ae1fcd0a646cb01ffa6432a82c38e19daa4dcaf3f2b9ac56ee8cfe",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_015_asr_typo_fever",
+      "group": "dev-baseline",
+      "raw_sha256": "636ee86d87008030e9ae87b49d85665e8c8c44bdaa5e4b55fb09ab317d175034",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_016_asr_cough_temp",
+      "group": "dev-baseline",
+      "raw_sha256": "4e5fdfbf0171841d56716e6596d470deea6f102f032d96f4d876ba9fbe154c4a",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_017_fever_duration_temp_cough",
+      "group": "dev-baseline",
+      "raw_sha256": "3e9c5b8b8fab1703e1ca17d680f31a4c81e391dfbe2a0a2496c52ed37d9929bc",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_018_negative_cough_context",
+      "group": "dev-baseline",
+      "raw_sha256": "1b8b165e3478b51fd1c1aa5dce14112ca12a8c8c574130b23ab080472bc0b0de",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_019_resolved_after_antipyretic",
+      "group": "dev-baseline",
+      "raw_sha256": "c201f42fcf55c3fced08fe72a3d0fa6a4b5a1f6463201254c151ceed0cecaf53",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_020_fever_chest_tightness",
+      "group": "dev-baseline",
+      "raw_sha256": "a75914e894e841502e3310c24b6c285b25bc3cc095fd378567b0901f87ef9bd0",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_021_flu_like",
+      "group": "dev-baseline",
+      "raw_sha256": "9837c6d558f5e8a30b01aed786994c7cc4e3d14917d7dfdb90cabc379c45e8d8",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_022_pulmonary_reference",
+      "group": "dev-baseline",
+      "raw_sha256": "ef63670025d86a3f9fff4ad4948a001cd0d42c6e0d8364ad0a5639d5b07636c3",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_023_insufficient_general",
+      "group": "dev-baseline",
+      "raw_sha256": "d45c039f2cacc6f06eecf32820f3e858f9d8ad893aa3234b914220050c1e3c1e",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 0,
+          "recovered_facts": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 0,
+          "recovered_facts": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 0,
+          "recovered_facts": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_024_unspecified_treatment",
+      "group": "dev-baseline",
+      "raw_sha256": "a0708b5e17dbce2235ab99c9689e1f4d73ea4ddd760f30801dc4cab55a035563",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_025_temperature_only",
+      "group": "dev-baseline",
+      "raw_sha256": "23ad18faf3ae430d979bdea5ce72d4754d3dbd75fde2f1978649afce540a267f",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_026_absent_fever_cough",
+      "group": "dev-baseline",
+      "raw_sha256": "3c1c77ec7ecaf71ff6619aed4cb525ada49501ee8eb3b6161ced3c782d1ccd6d",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_027_self_correction_absent",
+      "group": "dev-baseline",
+      "raw_sha256": "6fe47327e44d394f09d5802e773683a4ca0fbcdddb7bc61b599e279a0b2a01d8",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_028_numeric_duration",
+      "group": "dev-baseline",
+      "raw_sha256": "59b1c7dc894f5b61a78eae4ad7186a26a80a71de43ed5d991589fb5d1aa8044d",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_029_high_fever",
+      "group": "dev-baseline",
+      "raw_sha256": "c6e7ea1ace1ba611d8bc819a3168e1fc064cc3f75fd23ece90589a21def5b701",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_030_fever_headache_cough",
+      "group": "dev-baseline",
+      "raw_sha256": "641d7a464138978a934eb830d8f1bd33caa9936c2a1e48c79dc450c1e4f33a15",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_001_short_fever_temp",
+      "group": "dev-enum",
+      "raw_sha256": "f99f4c77f5585a9420eb9465ec98eb4363e16269d0e91f500cacf69d28f212ec",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_002_short_fever_headache",
+      "group": "dev-enum",
+      "raw_sha256": "0288dec3188e248875e3884bf76e7c0ac172e7c15f968cb9a3f1c597d1550265",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_003_fever_duration",
+      "group": "dev-enum",
+      "raw_sha256": "38399a54150afb09572d259ab20d675aa73293270cdb40c2965afcb64b55842c",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_004_cough_duration_only",
+      "group": "dev-enum",
+      "raw_sha256": "50f6603fec103dbd3077b4bbc477e18095a3d3cbe174a6532dcdc455e402fa25",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_005_absent_fever_headache",
+      "group": "dev-enum",
+      "raw_sha256": "9248cef383e96a3fb2f1efd2ad1455b078537f8dcc058ce26becd4b74235189c",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_006_question_answer_absent_fever",
+      "group": "dev-enum",
+      "raw_sha256": "9894f3f835df7ca963554b309a06e162642676c36002b61af37fbe0313be1e6b",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 0,
+          "conflicting_fields": 0,
+          "grounded_fields": 0,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_007_resolved_fever",
+      "group": "dev-enum",
+      "raw_sha256": "38b08a25702ae4de2fbfe74cdd6a62a291bd0bb18c9cb83dbe1dca759d37d27e",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_008_ibuprofen_defervescence",
+      "group": "dev-enum",
+      "raw_sha256": "0e5c5a7fee57019cd2844a82e259b951d560ce2a75bbc5cc6663621371fb13cb",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 0,
+          "grounded_fields": 1,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_009_fever_cough",
+      "group": "dev-enum",
+      "raw_sha256": "b5837ba57c292bcbe8568e56c3b5f97eddfa46f029c383ddf6453fc7683768f1",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_010_fever_headache_duration",
+      "group": "dev-enum",
+      "raw_sha256": "6527b5b3e5ed19619736b0a6f21e83fc4f25424f6960054ab840ce71f9ab3b03",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_011_three_party_child_fever",
+      "group": "dev-enum",
+      "raw_sha256": "02cde0f14e7d85403c0e8d2e0c6699e006d66bf9ce3b3eb3e28ac0a78fe45b53",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 3,
+          "conflicting_fields": 2,
+          "grounded_fields": 1,
+          "expected_facts": 3,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 3,
+          "conflicting_fields": 2,
+          "grounded_fields": 1,
+          "expected_facts": 3,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 3,
+          "conflicting_fields": 2,
+          "grounded_fields": 1,
+          "expected_facts": 3,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "conflicting",
+          "missing",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_012_family_medication_effect",
+      "group": "dev-enum",
+      "raw_sha256": "c2c09c720ac025ac2aea75772e26c81207c2ade04dab26897151e7b80ae3a917",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 1,
+          "grounded_fields": 0,
+          "expected_facts": 3,
+          "recovered_facts": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 1,
+          "grounded_fields": 0,
+          "expected_facts": 3,
+          "recovered_facts": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 1,
+          "conflicting_fields": 1,
+          "grounded_fields": 0,
+          "expected_facts": 3,
+          "recovered_facts": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "missing",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "missing",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "missing",
+          "conflicting",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_013_insufficient_hot",
+      "group": "dev-enum",
+      "raw_sha256": "1ef7fe69833ab1bbe85265cf35e3a492e6ca6b205b19e661663a713de36da40f",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_014_out_of_scope_abdominal",
+      "group": "dev-enum",
+      "raw_sha256": "1d4a16719dfe7729355e7ea3692fd67952d0c55d6a95c36e037009d99f0bc9d9",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_015_asr_typo_fever",
+      "group": "dev-enum",
+      "raw_sha256": "e590a9d43bb52b78f071a2111d621c83aff36889fc835282c5295454b515587c",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_016_asr_cough_temp",
+      "group": "dev-enum",
+      "raw_sha256": "e73256e9deb338b7d353de946e3d30089393d20c672bf1203c74dfd470595988",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_017_fever_duration_temp_cough",
+      "group": "dev-enum",
+      "raw_sha256": "d692ae0fa1cac47e9a28aa88d2934403023ee0b4f99931fc86fabc0e4178c8ec",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_018_negative_cough_context",
+      "group": "dev-enum",
+      "raw_sha256": "3e7655c1d6abb3871c1d393b3e29ef9822cab5e18f8ad4bc4d3fb368d9501952",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_019_resolved_after_antipyretic",
+      "group": "dev-enum",
+      "raw_sha256": "a7f83aa075c0f00344487882d51ebd0dc27d2d53ce4cb672d98fae9c559fe192",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_020_fever_chest_tightness",
+      "group": "dev-enum",
+      "raw_sha256": "d7c901af0b7bfc42cd226176f49836d03d55afe0c67597208746c027029f5975",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_021_flu_like",
+      "group": "dev-enum",
+      "raw_sha256": "4b67fe109132b7ae56d24240df8c64316a6f544bcbbe74cb631037b1a20d706a",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_022_pulmonary_reference",
+      "group": "dev-enum",
+      "raw_sha256": "50a8f73c25e58da7efe8c8c5ce3317a01b8f439d46f08cb3f12235ed472da784",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_023_insufficient_general",
+      "group": "dev-enum",
+      "raw_sha256": "440bb3b27200cc9fee04e05a3b5dbee43319cab4c9ad52ee81b429b738fe4982",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 0,
+          "recovered_facts": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 0,
+          "recovered_facts": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 0,
+          "recovered_facts": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_024_unspecified_treatment",
+      "group": "dev-enum",
+      "raw_sha256": "561956426137c0872251e15094c9cefab89b7628c029c141db16190b09c10415",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 0
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_025_temperature_only",
+      "group": "dev-enum",
+      "raw_sha256": "c0e977a981b0ed1be70407ff610e661a859c87a9df3d7c0614ebfb7c69533d2b",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_026_absent_fever_cough",
+      "group": "dev-enum",
+      "raw_sha256": "f4bde27f393a1e83991da77da79517e869828071830e24529b064a8d1797de90",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_027_self_correction_absent",
+      "group": "dev-enum",
+      "raw_sha256": "caec00bbe4a5fdbd0f574ee43239cae3d18e5596cd32209cf772061793c2b7ab",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 1,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_028_numeric_duration",
+      "group": "dev-enum",
+      "raw_sha256": "34e1bcedb9e68cd9e53b1f337f3a002acc8af528451322cb55f4182971f2f2ce",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 3,
+          "recovered_facts": 2
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_029_high_fever",
+      "group": "dev-enum",
+      "raw_sha256": "4ca87334073948733adc3742b31a13e5c8801532a5b98819935b70574023556d",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 2,
+          "recovered_facts": 1
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    },
+    {
+      "input_id": "ce2e_v1_030_fever_headache_cough",
+      "group": "dev-enum",
+      "raw_sha256": "bfbc4b932cfcf8d5fccf772404d592824cbf81bf1e555fe20cfc747d7393f86a",
+      "metrics": {
+        "first_output_checked": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "saved_old_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        },
+        "fixed_pipeline": {
+          "nonempty_fields": 2,
+          "conflicting_fields": 0,
+          "grounded_fields": 2,
+          "expected_facts": 4,
+          "recovered_facts": 3
+        }
+      },
+      "raw_citation_errors": {},
+      "previously_masked_conflicts": [],
+      "field_statuses": {
+        "first_output_checked": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "saved_old_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ],
+        "fixed_pipeline": [
+          "complete",
+          "complete",
+          "missing",
+          "missing",
+          "missing",
+          "missing",
+          "missing"
+        ]
+      },
+      "field_nonempty": {
+        "first_output_checked": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "saved_old_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "fixed_pipeline": [
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "changed_fields": {}
+    }
+  ],
+  "field_order": [
+    "chief_complaint",
+    "present_illness",
+    "previous_treatment",
+    "accompanying_symptoms",
+    "past_history",
+    "allergy_history",
+    "physical_exam"
+  ],
+  "field_matrix_note": "Each status/nonempty array follows field_order; no field values or source text are exported.",
+  "local_evidence": {
+    "replay/replay.private.json": "c0765ebab1e154bd8f78c8ef4f469b08881eff7644530f290a7bf03df193e307",
+    "red-tests.txt": "588710f4a2690d0674ff358cdd00f5d42384e59e3d1c31a0e4d3d69e7061e59a",
+    "targeted-tests.txt": "74c959f07479b230d888c08a3ef195a5a4e2401c16f251b42fe06e2527e64204",
+    "integration-tests-final.txt": "4532a6bd406413b02e5e06d049139593c52fcf208d07405c3d94faf9b88ece0d",
+    "rule-safety.json": "4a1b05ae56c06b052a40613ee5ffc4e61d2ec069e7f848ff3e66c4a4011777a8",
+    "syntax-and-diff.json": "08b3545375406d129067399321bb0056457659af2e61db673fa6dbe7369a675c",
+    "runtime-unmodified.json": "ef4e4bbf04168daaa7834b41d830cad7647137854414bcf915e9c96466f91004",
+    "pytest-full.txt": "667a5970517ce204122028b6b0626ab3adebffedb83dd91d1e5b12e28164e226",
+    "replay-determinism.json": "d23d4537bd31547bef660975795dc87a8819c7208d15f4b3ff80c85f7df1bdaf",
+    "sensitive-scan.json": "498863d168c56b2a6dc4a2af1968e7f58301562715c931ee27fbfd5b7df17086"
+  },
+  "replay_script_sha256": "b536a892a9bb30052127951a5c9b2cfc7091f4e3885aeb2df75609c34bc35aad"
+}

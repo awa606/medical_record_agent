@@ -2,12 +2,70 @@ from __future__ import annotations
 
 from typing import Any
 import re
-from app.services.clinical_facts import extract_clinical_facts
+from app.services.clinical_facts import (
+    _CLAUSE_BREAK as _CLINICAL_CLAUSE_BREAK,
+    clinical_experiencer,
+    clinical_segment_contexts,
+    extract_clinical_facts,
+)
 from app.services.privacy import anonymize_text
 
 
 LIVE_DRAFT_STATUS = "temporary"
 MAX_SUMMARY_ITEMS = 3
+
+
+def _patient_fact_text(segment: dict[str, Any]) -> str:
+    """Select source clauses before any live rule sees symptom keywords.
+
+    Unresolved speakers remain in the transcript, but are not patient facts.
+    Speaker identity alone is insufficient: a patient can describe a relative,
+    and a family member can explicitly report the child's symptoms.
+    """
+    role = {
+        "患者": "患者", "病人": "患者", "patient": "患者",
+        "医生": "医生", "医师": "医生", "doctor": "医生",
+        "家属": "家属", "家长": "家属", "陪同人员": "家属",
+    }.get(str(segment.get("role") or "").strip().lower())
+    if role is None:
+        return ""
+    text = str(segment.get("text") or "")
+    prefix = f"{role}："
+    target = "child" if role == "家属" and re.search(r"孩子|儿子|女儿", text) else "unknown"
+    selected = []
+    subject_context = prefix
+    for sentence in re.finditer(r"[^。！？!?\n]+[。！？!?]?", text):
+        value = sentence.group()
+        contexts = clinical_segment_contexts(prefix + value)
+        if not contexts or contexts[0].question or re.search(r"有没有|是否|是不是|[?？]|(?:吗|么|呢)[。\s]*$", value):
+            continue
+        # A doctor's own symptoms or an unanchored observation are not the
+        # patient's history. Explicit patient observations remain usable.
+        if role == "医生" and not re.search(r"患者|病人|患儿", value):
+            continue
+        clauses = []
+        # Use the same contrast boundaries as clinical fact polarity/subject
+        # parsing, so the final speaker's clause cannot claim earlier facts.
+        for clause in _CLINICAL_CLAUSE_BREAK.split(value):
+            quote = clause.strip("。！？!? \t\r\n")
+            if not quote:
+                continue
+            if re.search(r"(?:我是|我叫).*(?:妈妈|爸爸|母亲|父亲|家属|家长)", quote):
+                # Resolve an introduction as the reporter, not as the child
+                # named inside it. This context is never emitted as evidence.
+                subject_context += "我自己，"
+                continue
+            subject_context += quote + "，"
+            doctor_subjects = re.findall(r"患者|病人|我|本人", subject_context)
+            if role == "医生" and doctor_subjects and doctor_subjects[-1] in {"我", "本人"}:
+                continue
+            if clinical_experiencer(
+                subject_context, speaker=role, patient_target=target
+            ) == "patient":
+                clauses.append(quote)
+        if clauses:
+            selected.append("，".join(clauses))
+    return "。".join(selected)
 
 
 def normalize_live_segment(segment: dict[str, Any], *, sequence: int | None = None) -> dict[str, Any]:
@@ -73,12 +131,9 @@ def build_live_clinical_snapshot(
     usable_segments = [segment for segment in stable_segments if str(segment.get("text") or "").strip()]
     fact_segments = []
     for segment in usable_segments:
-        text = str(segment.get("text") or "")
-        if segment.get("role") in {"医生", "doctor"} and re.search(r"吗|么|有没有|是否|[?？]", text):
-            continue
-        if segment.get("role") in {"待确认", "unknown"}:
-            continue
-        fact_segments.append(segment)
+        text = _patient_fact_text(segment)
+        if text:
+            fact_segments.append({**segment, "text": text})
     combined = anonymize_text(" ".join(str(segment.get("text") or "") for segment in fact_segments))
     evidence_ids = [str(segment.get("segment_id")) for segment in fact_segments if segment.get("segment_id")]
     record_patch = _build_record_patch(combined, evidence_ids)
@@ -121,7 +176,9 @@ def _build_record_patch(text: str, evidence_ids: list[str]) -> dict[str, Any]:
     allergy_facts = [
         fact
         for fact in extract_clinical_facts(text)
-        if fact.type == "allergy" and fact.experiencer == "patient"
+        # Subjects have already been resolved per source clause, before
+        # concatenation discards speaker context (including child reports).
+        if fact.type == "allergy"
     ]
     if allergy_facts:
         allergy_text = "；".join(dict.fromkeys(fact.evidence for fact in allergy_facts if fact.evidence))

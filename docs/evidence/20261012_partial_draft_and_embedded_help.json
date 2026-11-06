@@ -1,0 +1,303 @@
+{
+  "delivery_sha": "770bd920aecb45ecf0e3966db948f34b6d6fd637",
+  "feature_commit": "381b747229a8d8fd53f31f2dfdec5ad9e32a9ced",
+  "status": "REVIEW_WORKFLOW_CANDIDATE_NOT_STABLE_RELEASE",
+  "at": "2026-10-12T04:14:10.269616+00:00",
+  "active_environment": {
+    "port": 8798,
+    "image": "mra51-partial-review:770bd920aecb",
+    "provider": "ollama",
+    "model": "qwen3:4b",
+    "temperature": 0,
+    "retry_budget": 0,
+    "mock_or_cloud_fallback": false
+  },
+  "scope": [
+    "seven-field isolation",
+    "explicit physician resolution with provenance",
+    "embedded help",
+    "late knowledge response drawer race fix"
+  ],
+  "regression": {
+    "passed": 727,
+    "skipped": 2,
+    "warnings": 1,
+    "subtests_passed": 8,
+    "elapsed_seconds": 647.3,
+    "source": "isolated source for delivery_sha; later clinical-fact experiments excluded from this build"
+  },
+  "rule_safety": {
+    "cases": 240,
+    "dangerous_errors": 0,
+    "clinical_accuracy_claim": false
+  },
+  "real_model_diagnostics": [
+    {
+      "input_id": "B01",
+      "status": "WAITING_DOCTOR_REVIEW",
+      "error": null,
+      "elapsed_seconds": 16.21,
+      "attempt_count": 1,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "fallback": false,
+      "supported_fields": [
+        "chief_complaint",
+        "accompanying_symptoms",
+        "allergy_history"
+      ],
+      "conflicting_fields": [
+        "present_illness"
+      ],
+      "missing_fields": [
+        "previous_treatment",
+        "past_history",
+        "physical_exam"
+      ],
+      "whole_case_first_pass": "FAIL"
+    },
+    {
+      "input_id": "I01",
+      "status": "WAITING_DOCTOR_REVIEW",
+      "error": null,
+      "elapsed_seconds": 17.52,
+      "attempt_count": 1,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "fallback": false,
+      "supported_fields": [
+        "present_illness",
+        "accompanying_symptoms",
+        "past_history",
+        "allergy_history"
+      ],
+      "conflicting_fields": [
+        "chief_complaint"
+      ],
+      "missing_fields": [
+        "previous_treatment",
+        "physical_exam"
+      ],
+      "whole_case_first_pass": "FAIL"
+    },
+    {
+      "input_id": "P01",
+      "status": "FAILED",
+      "error": "extract_fields failed; strict mode forbids fallback: ollama field extraction failed: LLM_OUTPUT_CONTRADICTION: 模型输出矛盾，未采纳；未生成可审核病历。",
+      "elapsed_seconds": 8.64,
+      "attempt_count": 1,
+      "model_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "fallback": false,
+      "supported_fields": [],
+      "conflicting_fields": [
+        "chief_complaint",
+        "present_illness",
+        "previous_treatment",
+        "accompanying_symptoms",
+        "past_history",
+        "allergy_history",
+        "physical_exam"
+      ],
+      "missing_fields": [],
+      "whole_case_first_pass": "FAIL"
+    }
+  ],
+  "real_paths": {
+    "text": {
+      "encounter_id": 11,
+      "task_id": 8,
+      "first_statuses": {
+        "chief_complaint": "complete",
+        "present_illness": "conflicting",
+        "previous_treatment": "missing",
+        "accompanying_symptoms": "complete",
+        "past_history": "missing",
+        "allergy_history": "complete",
+        "physical_exam": "missing"
+      },
+      "manual_corrections": [
+        "present_illness"
+      ],
+      "saved_revision": 13,
+      "embedded_help_edit_preserved": true,
+      "export_verified": true,
+      "history_verified": true,
+      "first_harness_status": "FAILED",
+      "harness_failure_class": "checked hidden new-input form instead of visible restored original text; retained failed run; history verified separately without model retry"
+    },
+    "uploaded_audio": {
+      "encounter_id": 13,
+      "task_id": 9,
+      "audio_sha256": "e0d16a3192b99ee99c74fc730facd22338cd4da2a3bb28da980d6d99375f74a4",
+      "seconds": 60,
+      "new_asr_run": true,
+      "new_physical_recording": false,
+      "engine": "funasr-paraformer-zh",
+      "segment_count": 21,
+      "manual_role_mapping": {
+        "spk0": "患者",
+        "spk1": "医生"
+      },
+      "role_after_confirmation": "passed",
+      "first_statuses": {
+        "chief_complaint": "complete",
+        "present_illness": "complete",
+        "previous_treatment": "complete",
+        "accompanying_symptoms": "missing",
+        "past_history": "complete",
+        "allergy_history": "missing",
+        "physical_exam": "missing"
+      },
+      "manual_corrections": [
+        "chief_complaint"
+      ],
+      "saved_revision": 15,
+      "embedded_help_edit_preserved": true,
+      "export_verified": true,
+      "history_verified": true,
+      "first_harness_status": "FAILED",
+      "harness_failure_class": "history selector hit hidden drawer control; retained failed run; visible dashboard history verified separately without model retry"
+    },
+    "physical_microphone": {
+      "status": "NOT_TESTED_ON_DELIVERY_SHA",
+      "user_response": "will assist later"
+    }
+  },
+  "release_gates": {
+    "5.1": "VERIFY",
+    "5.3": "NOT_STARTED",
+    "actual_100_125_150_zoom": "PENDING_USER",
+    "portable_offline_archive": "NOT_VERIFIED",
+    "stable_pilot": "NOT_RELEASED",
+    "isolated_runtime_reconstruction": "PASS_WITH_REUSED_READ_ONLY_CACHES"
+  },
+  "private_evidence_root": ".artifacts/partial-draft-20261012/",
+  "isolated_restore": {
+    "git_sha": "770bd920aecb45ecf0e3966db948f34b6d6fd637",
+    "port": 18998,
+    "new_directory": true,
+    "separate_business_database": true,
+    "model_caches": "existing local caches reused read-only; not a self-contained release archive",
+    "captured_at": "2026-10-12T04:19:43.174458+00:00",
+    "full_portable_archive": "NOT_TESTED",
+    "ready": 200,
+    "data_fingerprints_match": true,
+    "counts": {
+      "patient": 12,
+      "encounter": 13,
+      "agent_task": 9,
+      "record_revision": 15,
+      "approval": 6,
+      "export_event": 8,
+      "knowledge_source": 4,
+      "knowledge_document": 4,
+      "knowledge_chunk": 78,
+      "knowledge_embedding": 78
+    },
+    "external_connections": {
+      "app": "BLOCKED",
+      "gateway": "BLOCKED",
+      "ollama": "BLOCKED"
+    },
+    "approved_history_restored": true,
+    "embedded_help_restored": true,
+    "knowledge_status": 200,
+    "status": "PASS_ISOLATED_OFFLINE_RUNTIME_RECONSTRUCTION",
+    "source_resumed_ready": 200,
+    "source_data_unchanged": true,
+    "first_attempt": "deployment/data/network checks passed; browser harness read uninitialized app state; original failure retained"
+  },
+  "database_counts": {
+    "patient": 12,
+    "encounter": 13,
+    "agent_task": 9,
+    "record_revision": 15,
+    "approval": 6,
+    "export_event": 8,
+    "knowledge_source": 4,
+    "knowledge_document": 4,
+    "knowledge_chunk": 78,
+    "knowledge_embedding": 78
+  },
+  "deployment_switch_data_unchanged": true,
+  "ready_observation": {
+    "seconds": 1201.703,
+    "samples": 39,
+    "all_ready": true,
+    "max_success_age": 254.555,
+    "failures": [],
+    "includes_business_operations": true
+  },
+  "final_runtime_audit": {
+    "git_sha": "770bd920aecb45ecf0e3966db948f34b6d6fd637",
+    "checked_at": "2026-10-12T04:31:00.693787+00:00",
+    "image": "mra51-partial-review:770bd920aecb",
+    "restart_policy": "unless-stopped",
+    "/health": 200,
+    "/ready": 200,
+    "/static/help/index.html": 200,
+    "/static/deployment.json": 200,
+    "anonymous_task_status": 401,
+    "retrieval_mode": "hybrid_v1",
+    "knowledge_result_count": 5,
+    "retrieval_keys": [
+      "count",
+      "disclaimer",
+      "query",
+      "related_fields",
+      "results",
+      "retrieval_mode"
+    ],
+    "static/doctor.js": {
+      "status": 200,
+      "content_matches_git_lf_normalized": true,
+      "served_sha256": "010e3ce1023c9a30aa5320d592ffbe74b8fdaedd9232a9917c6ffb16f03e8afe"
+    },
+    "static/doctor.html": {
+      "status": 200,
+      "content_matches_git_lf_normalized": true,
+      "served_sha256": "5cd32d8317abb39b658d3d8a31aff622446f091aceb4eaa5ca3d429b1fe2d623"
+    },
+    "static/doctor-workspace.css": {
+      "status": 200,
+      "content_matches_git_lf_normalized": true,
+      "served_sha256": "85a374d0b251131a7baf14033d093fadd7d3560ec249af685ed5d1adf6a5c31d"
+    },
+    "data_browser": {
+      "available": true,
+      "phase": "AUTH_REQUIRED",
+      "url": "http://127.0.0.1:8797/",
+      "snapshot_at": "2026-10-12T04:24:43.858262+00:00",
+      "source_label": "使用测试版 · 770bd920aecb45ecf0e3966db948f34b6d6fd637",
+      "readonly_snapshot": true
+    },
+    "viewer_anonymous/": 403,
+    "viewer_anonymous/mra_snapshot.db": 403,
+    "viewer_anonymous/mra_snapshot?sql=select+1": 403
+  },
+  "data_viewer": {
+    "url": "http://127.0.0.1:8797/",
+    "snapshot_at": "2026-10-12T04:24:43.858262+00:00",
+    "source_label": "使用测试版 · 770bd920aecb45ecf0e3966db948f34b6d6fd637",
+    "readonly": true,
+    "anonymous_status": 403,
+    "arbitrary_sql_status": 403,
+    "whole_database_download_status": 403
+  },
+  "project_management": {
+    "snapshot_at": "2026-10-12T04:28:27.551579+00:00",
+    "verified_source_files": 188,
+    "source_mismatch": 0,
+    "task_count": 16,
+    "planned_hours": 99,
+    "states": {
+      "done": 8,
+      "verify": 3,
+      "blocked": 1,
+      "backlog": 4
+    },
+    "task_51": "VERIFY",
+    "task_53": "BACKLOG",
+    "obsidian_sync": "PENDING_CLI_TIMEOUT_NO_WRITE",
+    "status_mirror": "UNCHANGED_OTHER_BRANCH_EVIDENCE_PRESERVED",
+    "fresh_snapshot_claim": false
+  }
+}

@@ -9,6 +9,26 @@ import uuid
 import logging
 import traceback
 from pathlib import Path
+from starlette.concurrency import run_in_threadpool
+
+
+# These values route ASR resources; an ID-like digit run is not patient prose.
+# Keep only the generated UUID4 hex contract, never arbitrary IDs or URLs.
+_UUID4_HEX = r"[0-9a-f]{12}4[0-9a-f]{3}[89ab][0-9a-f]{15}"
+_ASR_ID_KEYS = {"audio_id", "session_id", "live_session_id"}
+_ASR_URL_PATTERNS = {
+    "media_url": rf"/api/audio/{_UUID4_HEX}/media",
+    "events_url": rf"/api/asr/sessions/{_UUID4_HEX}/events",
+    "result_url": rf"/api/asr/sessions/{_UUID4_HEX}/result",
+}
+
+
+def _is_asr_routing_value(key: str, value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    pattern = _UUID4_HEX if key in _ASR_ID_KEYS else _ASR_URL_PATTERNS.get(key)
+    return pattern is not None and re.fullmatch(pattern, value) is not None
+
 
 def enabled() -> bool:
     flag = os.getenv("MRA_ANONYMIZE")
@@ -60,7 +80,16 @@ def anonymize_payload(value):
         for key in ("patient_display_name", "patient_name"):
             if isinstance(value.get(key), str):
                 register_identity(value[key])
-        return {key: anonymize_payload(item) for key, item in value.items()}
+        # Revision and citation digests are opaque integrity values, not prose.
+        # A numeric run inside a SHA must not break optimistic concurrency.
+        digest_keys = {"content_hash", "current_content_hash", "expected_content_hash", "content_sha256"}
+        return {
+            key: item if (
+                key in digest_keys and isinstance(item, str)
+                and re.fullmatch(r"[0-9a-fA-F]{64}", item)
+            ) or _is_asr_routing_value(key, item) else anonymize_payload(item)
+            for key, item in value.items()
+        }
     if isinstance(value, list):
         return [anonymize_payload(item) for item in value]
     if isinstance(value, str):
@@ -75,8 +104,11 @@ def anonymous_sse_frame(frame: bytes) -> bytes:
     if data:
         try:
             safe = json.dumps(anonymize_payload(json.loads(data)), ensure_ascii=False)
-            lines = [line for line in lines if not line.startswith("data:")]
+            lines = [anonymize_text(line) for line in lines if not line.startswith("data:")]
             lines.append("data: " + safe)
+            # The structured payload has already been sanitized by field.
+            # Re-scanning serialized JSON would corrupt preserved digests again.
+            return "\n".join(lines).encode("utf-8")
         except ValueError:
             lines = [anonymize_text(line) for line in lines]
     return anonymize_text("\n".join(lines)).encode("utf-8")
@@ -106,6 +138,18 @@ def install_anonymous_logging() -> None:
     factory.anonymous_records = True
     logging.setLogRecordFactory(factory)
 
+def _anonymous_json_body(body: bytes, request_path: str = "") -> bytes:
+    payload = json.loads(body)
+    version = payload.get("version") if isinstance(payload, dict) else None
+    if request_path == "/static/deployment.json" and isinstance(version, str) and re.fullmatch(r"[0-9a-fA-F]{40}", version):
+        # Only this document's top-level Git SHA is immutable deployment metadata.
+        safe = anonymize_payload({key: value for key, value in payload.items() if key != "version"})
+        safe["version"] = version
+    else:
+        safe = anonymize_payload(payload)
+    return json.dumps(safe, ensure_ascii=False).encode()
+
+
 class AnonymousResponses:
     """Sanitize JSON and SSE at the final ASGI boundary without buffering streams."""
     def __init__(self, app):
@@ -114,6 +158,7 @@ class AnonymousResponses:
     async def __call__(self, scope, receive, send):
         if scope.get("type") != "http" or not enabled():
             return await self.app(scope, receive, send)
+        request_path = scope.get("path", "")
         start = None
         content_type = ""
         buffer = b""
@@ -133,7 +178,8 @@ class AnonymousResponses:
                 buffer += message.get("body", b"")
                 if not message.get("more_body"):
                     try:
-                        body = json.dumps(anonymize_payload(json.loads(buffer)), ensure_ascii=False).encode()
+                        # Identity-map SQLite I/O must not block other ASGI requests.
+                        body = await run_in_threadpool(_anonymous_json_body, buffer, request_path)
                     except (ValueError, UnicodeError):
                         body = b'{"detail":"anonymous response serialization failed"}'
                         start["status"] = 500
@@ -143,9 +189,11 @@ class AnonymousResponses:
                 buffer += message.get("body", b"")
                 while match := re.search(rb"\r?\n\r?\n", buffer):
                     frame, buffer = buffer[:match.start()], buffer[match.end():]
-                    await send({"type":"http.response.body", "body":anonymous_sse_frame(frame)+b"\n\n", "more_body":True})
+                    safe_frame = await run_in_threadpool(anonymous_sse_frame, frame)
+                    await send({"type":"http.response.body", "body":safe_frame+b"\n\n", "more_body":True})
                 if not message.get("more_body"):
-                    await send({**message,"body":anonymous_sse_frame(buffer)})
+                    safe_tail = await run_in_threadpool(anonymous_sse_frame, buffer)
+                    await send({**message,"body":safe_tail})
             else:
                 await send(message)
         await self.app(scope, receive, wrapped)

@@ -1151,12 +1151,38 @@ def update_encounter_check_in_status(encounter_id: int, check_in_status: str) ->
     return get_encounter(encounter_id) or {}
 
 
+def _failed_task_has_no_record(connection: sqlite3.Connection, encounter: Any) -> bool:
+    """Only an intact failed attempt without clinical artifacts may be superseded."""
+    previous_id = encounter["task_id"]
+    if previous_id is None or encounter["current_revision_id"] is not None:
+        return False
+    previous = connection.execute("SELECT * FROM agent_task WHERE id = ?", (previous_id,)).fetchone()
+    if (previous is None or previous["status"] != "FAILED"
+            or previous["encounter_id"] != encounter["id"]
+            or previous["owner_user_id"] != encounter["doctor_user_id"]
+            or encounter["check_in_status"] not in {"checked_in", "in_progress"}):
+        return False
+    for table in ("record_revision", "approval", "export_event"):
+        if connection.execute(f"SELECT 1 FROM {table} WHERE encounter_id = ? OR task_id = ? LIMIT 1",
+                              (encounter["id"], previous_id)).fetchone():
+            return False
+    return True
+
+
+def can_retry_failed_encounter(encounter_id: int) -> bool:
+    init_db()
+    with closing(get_connection()) as connection:
+        encounter = connection.execute("SELECT * FROM encounter WHERE id = ?", (encounter_id,)).fetchone()
+        return encounter is not None and _failed_task_has_no_record(connection, encounter)
+
+
 def bind_task_to_encounter(
     task_id: int,
     encounter_id: int,
     *,
     owner_user_id: int,
     check_in_status: str | None = "in_progress",
+    allow_failed_replacement: bool = False,
 ) -> dict[str, Any]:
     init_db()
     if owner_user_id is None:
@@ -1167,6 +1193,9 @@ def bind_task_to_encounter(
         else None
     )
     with closing(get_connection()) as connection:
+        # Check and replace the active pointer under the same write lock. A
+        # concurrent second submission must see the new CREATED task and fail.
+        connection.execute("BEGIN IMMEDIATE")
         task = connection.execute("SELECT * FROM agent_task WHERE id = ?", (task_id,)).fetchone()
         if task is None:
             raise ValueError(f"Task not found: {task_id}")
@@ -1177,12 +1206,24 @@ def bind_task_to_encounter(
             raise ValueError("Encounter has no doctor owner")
         if int(encounter["doctor_user_id"]) != int(owner_user_id):
             raise ValueError("Task owner does not match encounter doctor")
+        replaced_task_id = None
         if encounter["task_id"] is not None and int(encounter["task_id"]) != int(task_id):
-            raise ValueError("Encounter is already bound to a different task")
+            if not (allow_failed_replacement and task["status"] == "CREATED"
+                    and task["encounter_id"] is None
+                    and _failed_task_has_no_record(connection, encounter)):
+                raise ValueError("Encounter is already bound to a different task")
+            replaced_task_id = int(encounter["task_id"])
         if task["encounter_id"] is not None and int(task["encounter_id"]) != int(encounter_id):
             raise ValueError("Task is already bound to a different encounter")
 
         now = utc_now()
+        if replaced_task_id is not None:
+            connection.execute(
+                "INSERT INTO audit_log (task_id, event_type, event_detail, created_at) VALUES (?, ?, ?, ?)",
+                (task_id, "failed_task_replaced", json_dumps({"previous_task_id": replaced_task_id,
+                 "encounter_id": encounter_id, "owner_user_id": owner_user_id,
+                 "reason": "explicit_generation_after_failure", "previous_result_preserved": True}), now),
+            )
         connection.execute(
             """
             UPDATE agent_task

@@ -25,12 +25,23 @@ class OllamaLLMProvider:
             )
         self.base_url = base_url.rstrip("/")
         self.model = model
+        self.response_metadata: dict = {}
+        self.diagnostics_enabled = False
+        self.last_diagnostic_response = None
+        self.readiness_probe = False
 
     def generate_fields_json(
         self,
         conversation_text: str,
         *,
         timeout_seconds: float,
+    ) -> LLMProviderResponse:
+        from app.services.llm.readiness import inference_slot
+        with inference_slot(self.base_url, self.model, probe=self.readiness_probe):
+            return self._generate_fields_json(conversation_text, timeout_seconds=timeout_seconds)
+
+    def _generate_fields_json(
+        self, conversation_text: str, *, timeout_seconds: float,
     ) -> LLMProviderResponse:
         from app.services.llm.readiness import model_digest
         digest = model_digest(self.base_url, self.model)
@@ -54,6 +65,8 @@ class OllamaLLMProvider:
         )
 
         start = time.perf_counter()
+        self.response_metadata = {}
+        self.last_diagnostic_response = None
         try:
             with request.urlopen(req, timeout=timeout_seconds) as response:
                 raw = response.read().decode("utf-8")
@@ -64,7 +77,14 @@ class OllamaLLMProvider:
             raise RuntimeError(f"ollama LLM request failed: {exc.reason}") from exc
 
         latency_ms = int((time.perf_counter() - start) * 1000)
+        if self.diagnostics_enabled:
+            self.last_diagnostic_response = raw
         data = json.loads(raw)
+        self.response_metadata = {key: data[key] for key in (
+            "done_reason", "total_duration", "load_duration", "prompt_eval_count",
+            "prompt_eval_duration", "eval_count", "eval_duration") if key in data}
+        if self.diagnostics_enabled:
+            self.last_diagnostic_response = data
         content = _content_from_ollama_response(data)
         parsed_content = json.loads(content)
         fields_payload = (

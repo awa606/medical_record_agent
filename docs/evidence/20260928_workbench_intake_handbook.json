@@ -1,0 +1,75 @@
+{
+  "date": "2026-09-28",
+  "wbs": "5.1",
+  "status": "VERIFY",
+  "application_sha": "86f4b582e48b790385d251cfc45ee158d0c66652",
+  "decision": "ADAPT existing workbench and encounter APIs",
+  "scope": "synthetic patient presentation, workbench intake, protected workspace navigation, product handbook",
+  "public_api_database_provider_safety_thresholds_changed": false,
+  "workflow": {
+    "encounter_id": 10,
+    "task_id": 8,
+    "first_chief_complaint_status": "conflicting",
+    "scripted_doctor_modified_fields": 1,
+    "initial_revision": 16,
+    "saved_revision": 17,
+    "reopened_revision": 17,
+    "export_sha256": "c8b5aade9c9bd20e26515e6b2a433fe4a45e47ad814f35bbd87c296b314557ae",
+    "result": "passed after capture-driver recovery, not uninterrupted three-path E2E",
+    "recording_capture": "test browser device only; not physical microphone evidence"
+  },
+  "validation": {
+    "pytest_passed": 608,
+    "pytest_skipped": 1,
+    "prototype_checks_passed": 76,
+    "frontend_syntax": "PASS",
+    "git_diff_check": "PASS",
+    "manual_html_sections": 14,
+    "manual_screenshots": 13,
+    "pdf_pages": 16,
+    "pdf_bookmarks": 15,
+    "pdf_sha256": "20d926a7bbcab12c6a88a81a0cab97b816c0495dd468faa9f274fb6c9f291b13",
+    "manual_visual_review": "all 16 pages rendered; compact overviews and expanded controls inspected",
+    "old_data_rows_preserved": {
+      "patient": true,
+      "record_revision": true,
+      "approval": true,
+      "approval_item": true,
+      "export_event": true,
+      "knowledge_source": true,
+      "knowledge_document": true,
+      "knowledge_chunk": true,
+      "knowledge_embedding": true
+    },
+    "static_resources": {
+      "doctor.html": true,
+      "doctor.js": true,
+      "doctor.css": true,
+      "doctor-ui-v2.css": true,
+      "doctor-workspace.css": true
+    },
+    "ready_after_container_backup": "200 on three consecutive checks",
+    "container_sqlite_quick_check": "ok"
+  },
+  "knowledge_counts": {
+    "knowledge_source": 5,
+    "knowledge_document": 7,
+    "knowledge_chunk": 116,
+    "knowledge_embedding": 96
+  },
+  "retained_failures": [
+    "First chief complaint citation conflict; one explicitly recorded doctor correction",
+    "Browser driver initially clicked background workbench before closing export drawer; re-login restored exact Revision17",
+    "One SQLITE_IOERR readiness sample near host-side backup; cause not established; container-local backup and subsequent readiness passed",
+    "Old test setup skipped required encounter selection; real visible intake and asynchronous completion now required",
+    "One Windows test ephemeral port was browser-restricted; test uses available high port without disabling browser security"
+  ],
+  "remaining": [
+    "model chief complaint grounding, omission and field attribution quality",
+    "final-version physical microphone path and actual display acceptance",
+    "complete three-path evidence and fresh-directory offline restoration",
+    "5.3 has not started"
+  ],
+  "local_evidence_root": ".artifacts/workbench-flow-20260928",
+  "release_status": "CANDIDATE_NOT_RELEASED"
+}

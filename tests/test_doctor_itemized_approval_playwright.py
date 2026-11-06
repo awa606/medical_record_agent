@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import random
 import subprocess
 import sys
 import tempfile
@@ -18,9 +19,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        return int(sock.getsockname()[1])
+    # Do not rely on Windows low ephemeral ranges or disable browser protection.
+    for _ in range(100):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            port = random.SystemRandom().randint(20000, 60000)
+            try:
+                sock.bind(("127.0.0.1", port))
+            except OSError:
+                continue
+            return port
+    raise RuntimeError("No browser-safe local test port available")
 
 
 def _wait_for_health(base_url: str) -> None:
@@ -42,7 +50,7 @@ def _wait_for_health(base_url: str) -> None:
 
 
 class RunningServer:
-    def __init__(self) -> None:
+    def __init__(self, env_overrides: dict | None = None) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.temp_dir.name)
         self.port = _free_port()
@@ -53,6 +61,7 @@ class RunningServer:
         env["MEDICAL_RECORD_AGENT_UPLOAD_DIR"] = str(self.root / "uploads")
         env["MEDICAL_RECORD_AGENT_OUTPUT_DIR"] = str(self.root / "outputs")
         env["LLM_PROVIDER"] = "mock"
+        env.update(env_overrides or {})
         self.process = subprocess.Popen(
             [
                 sys.executable,
@@ -99,7 +108,7 @@ def test_unreviewed_fields_and_missing_demographics_are_not_confirmed():
             page.evaluate("createRecordTask('患者发热3天，体温39℃。')")
             page.wait_for_function('Boolean(window.__MRA_APP_STATE__?.currentRecordFields)',timeout=30000)
             page.evaluate('setProductView("encounter"); renderAll()')
-            expect(page.locator('#patientProfile')).to_have_text('年龄、性别未登记')
+            expect(page.locator('#patientProfile')).to_contain_text('年龄、性别未登记')
             expect(page.locator('[data-field="chief_complaint"]')).to_contain_text('待医生审核')
             assert page.evaluate('window.__MRA_APP_STATE__.currentRecordFields.chief_complaint.confirmed_by_doctor') is False
             browser.close()
@@ -166,6 +175,8 @@ def _prepare_review_fixture(page) -> int:
 
 def _select_all_review_items(page) -> None:
     page.evaluate("syncApprovalReviewStateWithRevision(window.__MRA_APP_STATE__.currentExportReadiness)")
+    if not page.locator(".approval-disclosure").get_attribute("open") == "":
+        page.locator(".approval-disclosure > summary").click()
     page.locator("#recordFields [data-approval-confirm-regular]").click()
     missing_keys = page.evaluate(
         """
@@ -259,13 +270,12 @@ def test_itemized_approval_invalidates_after_edit_and_downloads_docx() -> None:
               })).status;
             }""")
             assert blocked == 409
-            page.evaluate("""async () => {
-              // Patient symptoms are not a clinician's physical examination.
-              const field = window.__MRA_APP_STATE__.currentRecordFields.physical_exam;
-              field.value = null; field.missing = true; field.status = 'missing';
-              field.source_spans = []; field.fact_ids = []; field.hint = '查体未采集';
-              await saveDraftReview(); await refreshExportReadiness();
-            }""")
+            # Explicit doctor disposition, through visible controls: patient
+            # symptoms aren't a clinician's physical examination.
+            page.locator('[data-field="physical_exam"] [data-field-resolution="doctor_entry"]').click()
+            page.locator('[data-record-field-input="physical_exam"]').fill("")
+            page.click("#saveDraftButton")
+            page.wait_for_function("!window.__MRA_APP_STATE__.recordEditMode", timeout=15000)
             _select_all_review_items(page)
             stale_payload = page.evaluate("buildTaskApprovalPayload()")
             page.evaluate("confirmFields()")

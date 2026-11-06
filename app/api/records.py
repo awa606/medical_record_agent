@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.agents import MedicalRecordOrchestrator
 from app.api.auth import current_user_from_request, require_current_user
-from app.db import bind_task_to_encounter, get_encounter, set_task_owner
+from app.db import bind_task_to_encounter, can_retry_failed_encounter, get_encounter, set_task_owner, update_task
 from app.schemas import ASRResult, ASRSegment, MedicalRecordFields, SafetyCheckResult, SourceSpan
 from app.services import LLMProviderUnavailableError, create_llm_record_generator
 from app.services.asr.role_quality import build_speaker_role_quality
@@ -409,6 +409,8 @@ def _stable_preview_input(payload: PreviewRecordRequest) -> tuple[str, list[dict
             status_code=409,
             detail="结构化预览需要先完成稳定的说话人角色映射。",
         )
+    # Check every stable speaker before dropping unmapped turns from the preview.
+    _require_segments_role_quality(payload.conversation_text, stable)
     conversation = "\n".join(
         f"[{segment['role']}] {str(segment.get('text') or '').strip()}"
         for segment in mapped
@@ -500,7 +502,7 @@ def _generation_owner_for_encounter(encounter_id: int, request: Request | None) 
     if check_in_status in {"completed", "cancelled"}:
         raise HTTPException(status_code=409, detail="Encounter is closed and cannot generate a record")
     existing_task_id = encounter.get("task_id")
-    if existing_task_id is not None:
+    if existing_task_id is not None and not can_retry_failed_encounter(encounter_id):
         raise HTTPException(status_code=409, detail="Encounter is already bound to a task")
     return int(encounter_doctor_id)
 
@@ -618,8 +620,10 @@ def generate_record(
                 payload.encounter_id,
                 owner_user_id=encounter_owner_id,
                 check_in_status="in_progress",
+                allow_failed_replacement=True,
             )
         except ValueError as exc:
+            update_task(task_id, status="FAILED", current_stage="failed", error_message="Encounter binding rejected; generation was not started")
             raise HTTPException(status_code=409, detail=str(exc)) from exc
     elif user is not None:
         set_task_owner(task_id, user.id)

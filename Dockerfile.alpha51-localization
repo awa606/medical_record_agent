@@ -1,0 +1,9 @@
+# Display resources only; keep each environment's existing backend and models.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+ARG DISPLAY_SHA
+ARG BACKEND_SHA
+LABEL org.opencontainers.image.revision=${DISPLAY_SHA}
+LABEL org.medilisten.backend.revision=${BACKEND_SHA}
+LABEL org.medilisten.patch.scope="chinese-display-only"
+COPY static/doctor.html static/doctor.js /app/static/

@@ -32,7 +32,23 @@ async def lifespan(app: FastAPI):
     init_db()
     if is_prewarm_enabled():
         start_funasr_prewarm()
-    yield
+    from app.services.llm.factory import get_llm_status, create_llm_provider
+    from app.services.llm.readiness import start_monitor
+    monitor = None
+    status = get_llm_status(check_reachable=False)
+    if status.get("provider") == "ollama" and status.get("mode") in {"live", "edge"}:
+        try:
+            provider = create_llm_provider()
+        except RuntimeError:
+            pass  # /ready reports invalid configuration; /health stays available.
+        else:
+            monitor = start_monitor(provider.base_url, provider.model)
+    try:
+        yield
+    finally:
+        if monitor:
+            monitor[0].set()
+            monitor[1].join(timeout=3)
 
 
 app = FastAPI(title="Medical Record Agent", lifespan=lifespan)

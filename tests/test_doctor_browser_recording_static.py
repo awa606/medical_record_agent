@@ -77,7 +77,8 @@ def test_doctor_recording_replaces_reserved_placeholder() -> None:
     placeholder = "浏览器麦克风录音暂未接入"
 
     assert placeholder not in script
-    assert 'openDrawer("recordingPanel", "浏览器录音生成病历")' in script
+    # Recording placement is verified on the actual page by Playwright.
+    # Do not pin this behavior to the obsolete drawer implementation.
     assert "completeBrowserRecordingUpload" in script
     assert "continueGeneratingFromTranscription(transcribed)" in script
 
@@ -87,12 +88,12 @@ def test_doctor_recording_requires_visible_encounter_selection() -> None:
     stylesheet = (ROOT / "static" / "doctor-ui-v2.css").read_text(encoding="utf-8")
 
     assert "pendingInputMethodAfterEncounterSelection" in script
-    assert "请先选择已报到或问诊中的患者，再开始录音生成" in script
+    assert "请在工作台完成报到" in script
     assert "encounter-selection-notice" in script
     assert ".encounter-selection-notice" in stylesheet
-    assert "开始问诊并录音" in script
-    assert "选择并开始录音" in script
-    assert 'data-after-restore-input="record"' in script
+    assert "开始接诊" in script
+    assert "选择并开始录音" not in script
+    assert 'data-after-restore-input="record"' not in script
     input_button_handler = script[
         script.index('$("inputMethodButton").addEventListener("click"') :
         script.index('$("displaySettingsButton").addEventListener("click"')
@@ -130,9 +131,10 @@ def test_doctor_recording_submit_keeps_progress_visible_until_task_created() -> 
     assert "closeDrawer()" not in before_upload
     assert "正在转写录音并生成病历草稿，请保持页面打开。" in submit_body
     assert "录音转写完成，正在生成结构化病历草稿..." in submit_body
-    assert "病历草稿已生成，可在工作区继续修改、审核和导出。" in submit_body
+    assert "录音转写完成，病历生成任务已提交，请等待草稿结果。" in submit_body
     assert "const generated = await continueGeneratingFromTranscription(transcribed)" in submit_body
-    assert 'showToast("病历草稿已生成，请继续修改和审核")' in submit_body
+    assert 'showToast("病历生成任务已提交，请等待草稿结果")' in submit_body
+    assert "病历草稿已生成" not in submit_body
 
 
 def test_doctor_recording_drawer_close_does_not_silently_cancel_active_recording() -> None:
@@ -160,8 +162,8 @@ def test_doctor_recording_live_gate_uses_follow_chunks_and_transcript_events() -
     assert 'listenForAsrEvents(`/api/asr/sessions/${encodeURIComponent(liveSessionId)}/events`)' in script
     assert 'form.append("chunk_started_at_ms"' in script
     assert 'form.append("chunk_ended_at_ms"' in script
-    assert 'source.addEventListener("transcript.partial", handleTranscriptSegment)' in script
-    assert 'source.addEventListener("transcript.stable", handleTranscriptSegment)' in script
+    assert 'listenCurrentAsrEvent("transcript.partial", handleTranscriptSegment)' in script
+    assert 'listenCurrentAsrEvent("transcript.stable", handleTranscriptSegment)' in script
 
 
 def test_doctor_live_clinical_reference_handles_versioned_sse_events() -> None:
@@ -170,11 +172,11 @@ def test_doctor_live_clinical_reference_handles_versioned_sse_events() -> None:
     assert "liveClinicalDraft" in script
     assert "function applyLiveClinicalDraft" in script
     assert "version <= Number(appState.liveClinicalVersion || 0)" in script
-    assert 'source.addEventListener("record.live_patch"' in script
-    assert 'source.addEventListener("clinical_processing.started"' in script
-    assert 'source.addEventListener("clinical_processing.failed"' in script
-    assert 'source.addEventListener("session.finalizing"' in script
-    assert 'source.addEventListener("session.finalized"' in script
+    assert 'listenCurrentAsrEvent("record.live_patch"' in script
+    assert 'listenCurrentAsrEvent("clinical_processing.started"' in script
+    assert 'listenCurrentAsrEvent("clinical_processing.failed"' in script
+    assert 'listenCurrentAsrEvent("session.finalizing"' in script
+    assert 'listenCurrentAsrEvent("session.finalized"' in script
 
 
 def test_doctor_live_clinical_reference_summary_is_bounded_and_detailed() -> None:
@@ -188,9 +190,10 @@ def test_doctor_live_clinical_reference_summary_is_bounded_and_detailed() -> Non
     assert ".slice(0, 3)" in script
     assert "data-evidence-segment-id" in script
     assert "实时草稿为临时内容" in script
-    assert "data-live-clinical-action=\"mark-asked\"" in script
-    assert "data-live-clinical-action=\"add-question\"" in script
-    assert "data-live-clinical-action=\"adopt-candidate\"" in script
+    assert "data-live-clinical-action=\"mark-asked\"" not in script
+    assert "data-live-clinical-action=\"add-question\"" not in script
+    assert "data-live-clinical-action=\"adopt-candidate\"" not in script
+    assert "此处仅供查看，不会写入病历" in script
     assert "live-clinical-actions" in stylesheet
 
 
@@ -224,10 +227,11 @@ def test_fixed_audio_demo_uses_live_follow_and_idempotent_convergence() -> None:
     assert "FIXED_DEMO_CHUNK_SECONDS" in script
     assert "uploadFixedDemoAudioChunk" in script
     assert "固定音频跟随识别演示" in script
-    assert "开始问诊演示" in script
+    assert "开始录音问诊" in script
     assert "结束问诊并生成正式病历" in script
     assert "/converge-record" in script
-    assert 'key: "start-live-demo", label: "开始问诊演示"' in script
+    assert 'key: "record-audio", label: "开始录音"' in script
+    assert 'if (encounterReadyForInput()) await startBrowserRecording();' in script
     assert 'key: "finalize-live-demo", label: "结束问诊并生成正式病历"' in script
     assert 'appState.fixedDemoStatus === "ready_to_finalize"' in script
     assert 'button.textContent = "结束问诊并生成正式病历"' in script

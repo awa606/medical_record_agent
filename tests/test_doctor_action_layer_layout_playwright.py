@@ -268,7 +268,9 @@ def test_long_transcript_scrolls_inside_transcript_region_and_action_bar_is_clic
                 assert metrics["firstText"]["width"] >= 115
                 assert metrics["textWhiteSpace"] == "normal"
                 assert metrics["textWordBreak"] == "normal"
-                assert metrics["textOverflowWrap"] == "normal"
+                # Keep normal word breaking; allow long unbroken identifiers to
+                # wrap inside the role block instead of widening the column.
+                assert metrics["textOverflowWrap"] == "anywhere"
                 assert metrics["actionBar"]["top"] >= 0
                 assert metrics["actionBar"]["bottom"] <= height
 
@@ -292,14 +294,7 @@ def test_detail_drawer_actions_remain_clickable_above_action_bar() -> None:
             page.evaluate(
                 """
                 () => {
-                  document.querySelector("#drawerTitle").textContent = "临床参考详情";
-                  document.querySelector("#drawerBackdrop").classList.add("active");
-                  const drawer = document.querySelector("#drawer");
-                  drawer.classList.add("active");
-                  drawer.setAttribute("aria-hidden", "false");
-                  document.querySelectorAll(".drawer-panel").forEach((panel) => panel.classList.remove("active"));
-                  document.querySelector("#detailPanel").classList.add("active");
-                  document.querySelector("#detailDrawerContent").innerHTML = `
+                  openDetailDrawer("临床参考详情", `
                     <div class="detail-section">
                       <h3>支持证据</h3>
                       <p>${"发热咳嗽，建议继续询问危险征象。".repeat(90)}</p>
@@ -315,7 +310,7 @@ def test_detail_drawer_actions_remain_clickable_above_action_bar() -> None:
                         <button type="button" data-live-clinical-action="close">关闭详情</button>
                       </div>
                     </div>
-                  `;
+                  `);
                 }
                 """
             )

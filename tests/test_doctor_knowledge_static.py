@@ -43,6 +43,7 @@ def test_admin_knowledge_ui_uses_real_api_and_safe_utf8_rendering() -> None:
     assert 'id="adminKnowledgePanel"' in html
     assert "/api/knowledge/admin/import" in doctor_js
     assert "/api/knowledge/admin/test-search" in doctor_js
-    assert "/api/knowledge/admin/documents/${encodeURIComponent(documentId)}" in doctor_js
+    assert '"/api/knowledge/admin/documents/" + encodeURIComponent' in doctor_js
     assert 'new TextDecoder("utf-8", { fatal: true })' in doctor_js
-    assert "escapeHtml(document.title)" in doctor_js
+    assert "escapeHtml(doc.title)" in doctor_js
+    assert "safeKnowledgeUrl(url)" in doctor_js

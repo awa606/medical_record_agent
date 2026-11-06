@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-12",
+  "app_code_sha": "b6c8158132746ab3571e29eff6885cd597e4bbf3",
+  "release_status": "CANDIDATE_NOT_RELEASED",
+  "doctor_url": "http://127.0.0.1:8798/static/doctor.html",
+  "viewer_url": "http://127.0.0.1:8797/",
+  "viewer_snapshot_at": "2026-10-12T01:45:48.870160+00:00",
+  "readiness_observation": {
+    "seconds": 1201.89,
+    "samples": 39,
+    "all_ready": true,
+    "max_success_age": 252.34,
+    "failures": []
+  },
+  "temperature_comparison": [
+    {
+      "temperature": 0,
+      "first_pass_cases": 0,
+      "cases": 9,
+      "calls": 9,
+      "median_seconds": 8.17,
+      "manual_corrections": 0
+    },
+    {
+      "temperature": 0.7,
+      "first_pass_cases": 0,
+      "cases": 9,
+      "calls": 9,
+      "median_seconds": 6.88,
+      "manual_corrections": 0
+    }
+  ],
+  "temperature_candidate": "REJECTED",
+  "production_temperature": 0,
+  "knowledge_query": {
+    "mode": "hybrid_v1",
+    "count": 5,
+    "meaning": "single actual query; not frozen-set acceptance"
+  },
+  "viewer_checks": {
+    "anonymous_http": 403,
+    "tables": {
+      "patient": 200,
+      "encounter": 200,
+      "record_revision": 200,
+      "approval": 200,
+      "export_event": 200,
+      "knowledge_source": 200,
+      "knowledge_document": 200,
+      "knowledge_chunk": 200,
+      "knowledge_embedding_metadata": 200
+    },
+    "foreign_key_patient_opened": true,
+    "filter_http": 200,
+    "sql_http": 403,
+    "download_http": 403,
+    "snapshot_counts": {
+      "patient": 8,
+      "agent_task": 6,
+      "encounter": 9,
+      "record_revision": 9,
+      "revision_field": 63,
+      "approval": 3,
+      "export_event": 3,
+      "knowledge_source": 4,
+      "knowledge_document": 4,
+      "knowledge_chunk": 78,
+      "knowledge_embedding_metadata": 78
+    }
+  },
+  "data_tables_unchanged": true,
+  "data_table_count": 10,
+  "regression": {
+    "pytest_passed": 714,
+    "skipped": 2,
+    "warnings": 1,
+    "subtests": 8,
+    "independent_viewer": 10,
+    "rule_cases": 240
+  },
+  "final_real_paths": "NOT_TESTED_THIS_VERSION",
+  "physical_display": "NOT_TESTED_THIS_VERSION",
+  "isolated_offline_restore": "NOT_TESTED_THIS_VERSION",
+  "wbs_5_1": "VERIFY",
+  "wbs_5_3": "BACKLOG",
+  "stable_pilot": "NOT_RELEASED"
+}

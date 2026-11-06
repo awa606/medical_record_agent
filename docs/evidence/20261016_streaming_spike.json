@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-16",
+  "protocol": "one paired real-paced stream; 10s then 2s; no retry",
+  "input_sha256": "e0d16a3192b99ee99c74fc730facd22338cd4da2a3bb28da980d6d99375f74a4",
+  "model_path": "/app/model_cache/modelscope/models/iic--speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online/snapshots/master",
+  "device": "cpu",
+  "production_modified": false,
+  "browser_or_microphone_test": false,
+  "cer": {
+    "status": "NOT_TESTED",
+    "reason": "No human reference available; prior ASR output is not ground truth."
+  },
+  "role_accuracy": {
+    "status": "NOT_TESTED",
+    "reason": "Live online model emits unresolved role=None; no diarization in this child."
+  },
+  "protocol_observation_values_not_approved_acceptance": {
+    "first_returned_text_seconds_2s_arm_max": 3,
+    "chunk_end_latency_p95_seconds_max": 2,
+    "final_backlog_seconds_max": 2
+  },
+  "user_approved_streaming_research_targets": {
+    "first_text_seconds_max": 4,
+    "stable_text_latency_p95_seconds_max": 5,
+    "processing_rtf_less_than": 1,
+    "missing_chunks": 0,
+    "duplicate_chunks": 0,
+    "out_of_order_chunks": 0,
+    "status": "NOT_TESTED",
+    "note": "原协议额外观察值不替代用户批准目标；原始协议保留，不追改执行记录。"
+  },
+  "resource_stop": {
+    "linux_available_mib_min": 1536,
+    "process_peak_rss_mib_max": 3072,
+    "wall_seconds_max": 420,
+    "backlog_seconds_max": 15
+  },
+  "arms": [],
+  "network_attempts": [],
+  "status": "STOPPED",
+  "audio": {
+    "seconds": 60.0,
+    "sample_rate": 16000,
+    "channels": 1,
+    "sample_width": 2
+  },
+  "memory_before_load": {
+    "linux_available_mib": 8871.82,
+    "process_peak_rss_mib": 19.66
+  },
+  "model_weight_sha256": "4fdfb48ed4471777c9a511e96a2acae17f77cac9d709cc756634622769192a64",
+  "load_seconds": 30.644,
+  "stream_config": {
+    "sample_rate": 16000,
+    "chunk_size": [
+      0,
+      10,
+      5
+    ],
+    "encoder_chunk_look_back": 4,
+    "decoder_chunk_look_back": 1,
+    "segment_seconds": 6.0
+  },
+  "failure": {
+    "type": "RuntimeError",
+    "message": "SPIKE_RESOURCE_STOP: {\"linux_available_mib\": 5908.64, \"process_peak_rss_mib\": 3113.52}"
+  },
+  "memory_final": {
+    "linux_available_mib": 5908.64,
+    "process_peak_rss_mib": 3113.52
+  },
+  "runtime_image": "mra51-responsive:a5c480b",
+  "runtime_code_sha": "a5c480bce8870466a9eada60efc3fe38bccb6267",
+  "failure_class": "RESOURCE_GUARD_STOPPED_NOT_OOM",
+  "production_after": {
+    "health_status": 200,
+    "app_running": true,
+    "ollama_running": true,
+    "app_oom_killed": false,
+    "ollama_oom_killed": false
+  },
+  "artifacts": [
+    {
+      "name": "protocol.py",
+      "path": "D:\\MediListen_离线归档\\20261016_streaming_spike\\protocol.py",
+      "sha256": "53a3928fc702570f414f7dee26e9dcf7200bd630688bac953b4342a1f4ca703e"
+    },
+    {
+      "name": "execution.log",
+      "path": "D:\\MediListen_离线归档\\20261016_streaming_spike\\execution.log",
+      "sha256": "4968b6a2e69e50e0da3d6fbb121a9e9079fea59e6435032866cfcdf45224876a"
+    },
+    {
+      "name": "result.json",
+      "path": "D:\\MediListen_离线归档\\20261016_streaming_spike\\result.json",
+      "sha256": "571ba1adfd19343dbf761852f20eeadc24b0609c76f9e7080598d0fbbd05e49d"
+    }
+  ],
+  "deterministic_regression": {
+    "initial_live_clinical_tests_passed": 34,
+    "initial_combined_tests_passed": 138,
+    "review_added_red_cases": 16,
+    "live_clinical_tests_passed": 50,
+    "combined_tests_passed": 154,
+    "combined_subtests_passed": 4,
+    "model_accuracy_claim": false
+  }
+}

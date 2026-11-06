@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from tests.test_doctor_history_restore import run_browser_logic
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,7 +24,35 @@ def test_doctor_approval_panel_renders_revision_and_itemized_actions() -> None:
     css = read_static("doctor-ui-v2.css")
 
     assert "function renderApprovalChecklist" in js
-    assert "当前版本 #" in js
+    rendered = run_browser_logic(r'''
+const nodes = new Map();
+document.getElementById = id => {
+  if (!nodes.has(id)) nodes.set(id, {innerHTML:'',textContent:'',className:''});
+  return nodes.get(id);
+};
+appState.currentTaskId=11;
+appState.currentTask={id:11,current_record_revision_id:81};
+appState.currentEncounter={id:13,current_revision:{id:81,revision_no:2}};
+appState.currentExportReadiness={revision_id:81,revision_number:2,approved:false};
+appState.currentRecordFields=Object.fromEntries(FIELD_DEFS.map(([key])=>[key,
+  {value:null,missing:true,status:'missing',hint:'未记录',source_spans:[]}]));
+appState.currentRecordFields.chief_complaint={value:'发热2天',missing:false,status:'complete',source_spans:[]};
+renderFields();
+const saved=nodes.get('recordFields').innerHTML;
+appState.currentTask={id:11,current_record_revision_id:82};
+renderFields();
+console.log(JSON.stringify({saved,unknown: nodes.get('recordFields').innerHTML}));
+''')
+    assert "当前版本 #2" in rendered["saved"]
+    assert "当前版本 #81" not in rendered["saved"]
+    assert "医生分项审核 · 版本 #2" in rendered["saved"]
+    assert "医生分项审核 · 版本 #81" not in rendered["saved"]
+    assert 'data-open-detail="history:record"' in rendered["saved"]
+    assert "历史版本" in rendered["saved"]
+    assert "当前版本 待核验" in rendered["unknown"]
+    assert "当前版本 #82" not in rendered["unknown"]
+    assert "医生分项审核 · 版本 待核验" in rendered["unknown"]
+    assert "医生分项审核 · 版本 #82" not in rendered["unknown"]
     assert "data-approval-confirm-regular" in js
     assert "data-approval-missing-key" in js
     assert "data-approval-diagnosis-index" in js

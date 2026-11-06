@@ -1,0 +1,74 @@
+{
+  "decision_id": "deepseek-isolated-adapter-20261019",
+  "scope": "隔离 DeepSeek HTTP 适配与人工审核候选的技术输入，不是生产模型质量放行",
+  "internal_assets": [
+    "LLMRecordGenerator 完整校验链",
+    "extraction_schema 七字段 Schema",
+    "numbered_source",
+    "anonymize_text",
+    "B01/I01/P01 历史匿名输入与锁定预期"
+  ],
+  "options": [
+    {
+      "name": "直接修改现有 Online Provider",
+      "decision": "未选，先在隔离工具证明官方请求兼容与预算保护"
+    },
+    {
+      "name": "隔离 DeepSeek Chat Completions",
+      "decision": "完成技术 Spike，供后续独立生产设计评审使用"
+    },
+    {
+      "name": "新抽取框架或自动重试",
+      "decision": "未选，避免引入新的重试层或混淆首次模型结果"
+    }
+  ],
+  "official_sources": [
+    "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/",
+    "https://api-docs.deepseek.com/api/create-chat-completion"
+  ],
+  "contract": {
+    "model": "deepseek-flash",
+    "endpoint": "https://api.deepseek.com/chat/completions",
+    "thinking": "disabled",
+    "response_format": "json_object",
+    "temperature": 0,
+    "max_tokens": 4096,
+    "automatic_retries": 0
+  },
+  "budget": {
+    "scope": "仅此项目工具的调用，不能保证账户其他调用不消费",
+    "limit_cny": 20,
+    "input_peak_cny_per_million": 2,
+    "output_peak_cny_per_million": 8,
+    "per_call_reservation_cny": 0.098304,
+    "exception_policy": "异常不自动退款；用量超过预留上限后停止后续调用并要求核账"
+  },
+  "verification": {
+    "local_http_tests": "17 passed，涵盖完整 Generator、零重试、错误/空/截断响应、预算、重定向和凭据保护",
+    "real_http_calls": 3,
+    "valid_complete_responses": 3,
+    "generator_usable": 2,
+    "locked_quality_expectations_met": 1,
+    "production_transport_factory_tests": "52 passed，含原17项Spike及新增安全/配置/并发预算/旧Provider兼容；独立pytest临时目录",
+    "offline_replay_after_rule_fix": {
+      "case": "P01",
+      "new_api_calls": 0,
+      "generator_usable": true,
+      "quality_expectations_met": false,
+      "meaning": "规则误拦修复，原模型仍漏伴随症状及过敏不明；不是模型能力提升"
+    }
+  },
+  "technical_gate": "PASS_FOR_ISOLATED_HTTP_ADAPTER",
+  "quality_gate": "NEEDS MORE EVIDENCE",
+  "production_gate": "增量设计记录 docs/engineering/20261019_online_demo_review.md 后已抽出显式选择的生产适配器；52项定向测试通过，尚未由本子任务部署",
+  "production_activation": "仅 ONLINE_LLM_PROFILE=deepseek_demo；复用同一预算账本、每业务调用零自动重试、无 Mock；免费 GET /models 探测不代表生成质量通过",
+  "failures": [
+    "B01：没有胸痛未进入任何 value，仅在过敏字段引文保留；现病史覆盖未达预期",
+    "I01：既有事实覆盖与引用检查通过，四字段重复整句仍需医生核对和编辑",
+    "P01：漏伴随症状及过敏不明；值未重复孩子限定的规则误拦已局部修复，同一原始响应离线回放可保留主诉及现病史；覆盖门仍未通过"
+  ],
+  "local_evidence": ".artifacts/online-demo-20261019/quality-20261019/reviewed-summary.json",
+  "next_minimal_validation": "主线程在隔离候选验证真实按钮审核流程；保留首次质量未过，禁止将人工修订或规则修复计为模型提升",
+  "raw_artifacts_policy": "匿名输入、原始响应、usage、阶段结果、预算账本仅存本地；密钥不写日志",
+  "scoring_correction": "初版引用评分错误要求引文与整句完全相等；按生产分句及包含匹配复核，B01/I01/P01原始引用错误均为0。保留v1评分副本，事实遗漏结论不变。"
+}

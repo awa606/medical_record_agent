@@ -16,6 +16,7 @@ from app.services.exporter import DEFAULT_OUTPUT_DIR
 from app.services.asr.prewarm import get_prewarm_status
 from app.services.llm.factory import get_llm_status
 from app.services.llm.readiness import check as check_local_model
+from app.services.llm.online_readiness import check as check_online_model
 from app.services.runtime_limits import directory_free_bytes
 
 
@@ -100,6 +101,9 @@ def _check_provider() -> dict[str, Any]:
             error = status.get("fallback_reason") or "Live/Edge mode requires a configured non-mock provider"
     if mode == "edge" and status.get("provider") != "ollama":
         ok, error = False, "Edge mode requires a local Ollama provider"
+    if (mode == "live" and status.get("provider") == "online"
+            and os.environ.get("ONLINE_LLM_PROFILE") != "deepseek_demo"):
+        ok, error = False, "ONLINE_READINESS_PROFILE_REQUIRED"
     if ok and mode in {"live", "edge"} and status.get("provider") == "ollama":
         from app.services.llm.factory import create_llm_provider
         try:
@@ -112,6 +116,18 @@ def _check_provider() -> dict[str, Any]:
         status.update(checked=True, reachable=ok, fallback=False, fallback_reason=error)
         if mode == "edge":
             status["fallback_provider"] = None
+    if (ok and mode == "live" and status.get("provider") == "online"
+            and os.environ.get("ONLINE_LLM_PROFILE") == "deepseek_demo"):
+        from app.services.llm.factory import create_llm_provider
+        try:
+            provider = create_llm_provider(mode=mode)
+            probe = check_online_model(provider)
+        except Exception:
+            probe = {"ok": False, "error": "ONLINE_CONFIGURATION_INVALID", "inference_called": False}
+        ok, error = probe["ok"], probe.get("error")
+        status["runtime_probe"] = probe
+        status.update(checked=True, reachable=ok, fallback=False, fallback_reason=error,
+                      fallback_provider=None)
     return {"ok": ok, "status": status, "error": error}
 
 

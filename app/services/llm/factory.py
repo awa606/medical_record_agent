@@ -9,6 +9,7 @@ from app.services.llm.llm_record_generator import LLMRecordGenerator
 from app.services.llm.mock_provider import MockLLMProvider
 from app.services.llm.ollama_provider import OllamaLLMProvider
 from app.services.llm.online_provider import OnlineLLMProvider
+from app.services.llm.deepseek_provider import DeepSeekDemoProvider
 
 
 SUPPORTED_LLM_PROVIDERS = {"mock", "online", "ollama"}
@@ -39,6 +40,14 @@ def _provider_name(provider_name: str | None = None) -> str:
     return provider
 
 
+def _online_profile() -> str:
+    profile = os.environ.get("ONLINE_LLM_PROFILE", "").strip()
+    if profile not in {"", "deepseek_demo"}:
+        # Do not echo arbitrary configuration content (which could contain a key).
+        raise LLMProviderUnavailableError("Unsupported ONLINE_LLM_PROFILE")
+    return profile
+
+
 def create_llm_provider(provider_name: str | None = None, *, mode: str | None = None) -> LLMProvider:
     provider = _provider_name(provider_name)
     if _record_provider_mode(mode) == "edge":
@@ -48,6 +57,8 @@ def create_llm_provider(provider_name: str | None = None, *, mode: str | None = 
     if provider == "mock":
         return MockLLMProvider()
     if provider == "online":
+        if _online_profile() == "deepseek_demo":
+            return DeepSeekDemoProvider.from_environment()
         return OnlineLLMProvider(
             api_base=os.environ.get("ONLINE_LLM_API_BASE", ""),
             api_key=os.environ.get("ONLINE_LLM_API_KEY", ""),
@@ -70,7 +81,9 @@ def create_llm_record_generator(
         selected_mode = _record_provider_mode(mode)
     except ValueError as exc:
         raise LLMProviderUnavailableError(str(exc)) from exc
-    allow_mock_fallback = _fallback_allowed(selected_mode)
+    explicit_online_profile = ((provider_name or os.environ.get("LLM_PROVIDER") or "mock").strip().lower() == "online"
+                               and bool(os.environ.get("ONLINE_LLM_PROFILE", "").strip()))
+    allow_mock_fallback = _fallback_allowed(selected_mode) and not explicit_online_profile
     try:
         requested_provider = _provider_name(provider_name)
     except Exception as exc:  # noqa: BLE001 - invalid runtime config must not break demos.
@@ -102,13 +115,17 @@ def create_llm_record_generator(
             mode=selected_mode,
             allow_mock_fallback=allow_mock_fallback,
         )
-    return LLMRecordGenerator(
+    generator = LLMRecordGenerator(
         provider=provider,
         requested_provider=requested_provider,
         requested_model=requested_model or provider.model,
         mode=selected_mode,
         allow_mock_fallback=allow_mock_fallback,
     )
+    if isinstance(provider, DeepSeekDemoProvider):
+        # One paid request per business operation, regardless of legacy defaults.
+        generator.max_retries = 0
+    return generator
 
 
 def _requested_model_for(provider: str) -> str | None:
@@ -125,7 +142,8 @@ def get_llm_status(*, check_reachable: bool = False) -> dict[str, Any]:
         mode = _record_provider_mode()
     except ValueError:
         mode = "demo"
-    fallback_allowed = _fallback_allowed(mode)
+    fallback_allowed = _fallback_allowed(mode) and not (
+        raw_provider == "online" and bool(os.environ.get("ONLINE_LLM_PROFILE", "").strip()))
     status: dict[str, Any] = {
         "provider": raw_provider,
         "model": _requested_model_for(raw_provider) or "not_configured",
@@ -175,6 +193,12 @@ def get_llm_status(*, check_reachable: bool = False) -> dict[str, Any]:
     try:
         provider = create_llm_provider(raw_provider)
         timeout = _timeout_seconds()
+        if isinstance(provider, DeepSeekDemoProvider):
+            probe = provider.probe(timeout_seconds=min(timeout, 5))
+            status.update(reachable=probe["reachable"], fallback=False,
+                          fallback_reason=probe["error_code"], models=probe["models"],
+                          probe_inference_called=False)
+            return status
         response = provider.generate_fields_json(
             "患者发热3天，最高体温40℃，服用布洛芬后仍反复发热。",
             timeout_seconds=timeout,
@@ -197,6 +221,16 @@ def get_llm_status(*, check_reachable: bool = False) -> dict[str, Any]:
 
 def _missing_config(provider: str) -> list[str]:
     if provider == "online":
+        try:
+            profile = _online_profile()
+        except LLMProviderUnavailableError:
+            return ["Unsupported ONLINE_LLM_PROFILE"]
+        if profile == "deepseek_demo":
+            try:
+                DeepSeekDemoProvider.from_environment()
+            except Exception as exc:
+                return [str(exc) if isinstance(exc, RuntimeError) else type(exc).__name__]
+            return []
         keys = ["ONLINE_LLM_API_BASE", "ONLINE_LLM_API_KEY", "ONLINE_LLM_MODEL"]
     elif provider == "ollama":
         keys = ["OLLAMA_BASE_URL", "OLLAMA_MODEL"]

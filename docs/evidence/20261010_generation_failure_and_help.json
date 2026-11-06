@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-10T15:27:10.140585+08:00",
+  "app_git_sha": "02af90b87ce1bd59cb6c5457a12de65109efe2ca",
+  "runtime_port": 8798,
+  "model": "qwen3:4b",
+  "model_changed": false,
+  "new_model_calls": 3,
+  "auto_retries": 0,
+  "mock_or_cloud_fallback": false,
+  "cases": [
+    {
+      "id": "B01",
+      "seconds": 12.85,
+      "result": "引用冲突，需核对",
+      "first_output_pass": false
+    },
+    {
+      "id": "I01",
+      "seconds": 13.8,
+      "result": "主诉引用冲突，需核对",
+      "first_output_pass": false
+    },
+    {
+      "id": "P01",
+      "seconds": 7.87,
+      "result": "FAILED / LLM_OUTPUT_CONTRADICTION",
+      "first_output_pass": false,
+      "normal_revision_created": false
+    }
+  ],
+  "pytest": {
+    "passed": 704,
+    "skipped": 2,
+    "subtests": 8,
+    "seconds": 495.67
+  },
+  "rule_safety": {
+    "cases": 240,
+    "matched_facts": 206,
+    "dangerous_flips": 0
+  },
+  "help_resources_passed": 15,
+  "database_tables_unchanged": 10,
+  "knowledge_probe": {
+    "mode": "hybrid_v1",
+    "results": 5,
+    "large_sample_verified": false
+  },
+  "release_status": "CANDIDATE_NOT_RELEASED",
+  "wbs_51": "VERIFY",
+  "wbs_53": "BACKLOG",
+  "showcase_8795": "unchanged"
+}

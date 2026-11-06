@@ -1,0 +1,131 @@
+{
+  "status": "CANDIDATE_NOT_RELEASED",
+  "application_sha": "a5c480bce8870466a9eada60efc3fe38bccb6267",
+  "image": "mra51-responsive:a5c480b",
+  "image_id": "sha256:b6d91ce683c6c75f1e0143b525bc75985ab13c15a1f3bc423bd2e4d85be6d08e",
+  "development_changes": [
+    "736a193000917122cffdd7104699232415f4aed7",
+    "442ba6f78702ade6e07944841e2d90486321be4e"
+  ],
+  "workflow": {
+    "audio": {
+      "encounter_id": 14,
+      "task_id": 10,
+      "revision_id": 17,
+      "status": "exported",
+      "manual_edited_fields": [
+        "chief_complaint"
+      ],
+      "model": "qwen3:4b",
+      "actual_extraction_provider": "ollama",
+      "first_generation_is_model_accuracy": false
+    },
+    "text": {
+      "encounter_id": 15,
+      "task_id": 11,
+      "revision_id": 19,
+      "status": "exported",
+      "manual_edited_fields": [
+        "present_illness"
+      ],
+      "model": "qwen3:4b",
+      "actual_extraction_provider": "ollama",
+      "first_generation_is_model_accuracy": false
+    }
+  },
+  "archive": {
+    "id": "response-upload-a5c480b-20261015-r1",
+    "file_count": 221,
+    "bytes": 10990374801,
+    "application_port": 19002,
+    "viewer_port": 19003
+  },
+  "source_deployment": {
+    "port": 8798,
+    "viewer_port": 8797,
+    "tables_unchanged": 11,
+    "viewer_sampled_at": "2026-10-15T02:07:34.993620+00:00"
+  },
+  "runtime": {
+    "health": {
+      "count": 4,
+      "max_ms": 313.0,
+      "p95_ms": 313.0,
+      "failures": 0
+    },
+    "login": {
+      "count": 4,
+      "max_ms": 1156.0,
+      "p95_ms": 1156.0,
+      "failures": 0
+    },
+    "history": {
+      "count": 4,
+      "max_ms": 1281.0,
+      "p95_ms": 1281.0,
+      "failures": 0
+    }
+  },
+  "tests": {
+    "release_passed": 745,
+    "skipped": 2,
+    "subtests_passed": 8,
+    "warnings": 1,
+    "previous_heavy_io_run_failed": 1,
+    "viewer_passed": 10
+  },
+  "deferred": [
+    "physical_microphone",
+    "actual_browser_zoom_and_external_display",
+    "alpha_5_3_five_consecutive_flows"
+  ],
+  "model_first_output_quality": "NOT_PASSED",
+  "evidence_sha256": {
+    ".artifacts/asr-responsiveness-20261015/runtime-final-restored.json": "a779f1600a4ff0cc4d70145a74a264c965f20101de71a33339c01f4b1ec886a8",
+    ".artifacts/asr-responsiveness-20261015/pytest-release-final.txt": "63c5ffa14be89f1cfa4373a352c5b851ba4f6705da58451790eacb6086e9a22f",
+    ".artifacts/asr-responsiveness-20261015/pytest-release-final-isolated.txt": "c567ae7a6c08ec9c4bf40e8090073f27b854b793135d15af3bf056a73c35af1e",
+    ".artifacts/asr-responsiveness-20261015/upload-role-green.txt": "2df9891ea940f6d8e70ea30a3a4d0dd79877411192c9a4f0b86a75e425de49f2",
+    ".artifacts/asr-responsiveness-20261015/final/restored-core.json": "7272bf3f643d893c5e28ce5fdd54e4e9fc194cdbcd85c083eda7248e2180c7e6",
+    ".artifacts/asr-responsiveness-20261015/final/restart-validation.json": "ccd91c56a49bcc467bc016e2202f07d93153b376911d215deb84a9c52d9507dd",
+    ".artifacts/asr-responsiveness-20261015/final/restored-knowledge-40.json": "309db7383d9314ea069f6d5d6e57e2487dbb591b500b33080cf43e009bf5477c",
+    ".artifacts/asr-responsiveness-20261015/final/viewer-tests.txt": "74b386c6fb9020f2e441d027958725d042de07d672d54e300afa96a82a8be84a",
+    ".artifacts/asr-responsiveness-20261015/final/audio-first.json": "43f01b6ab1ea09018b03a48cfbae76823a942ce98aed099b8e07d679c41b2f7d",
+    ".artifacts/asr-responsiveness-20261015/final/text-first.json": "492054c36266b079744272be3ff383fce56d3f488f7ef4d5c0f78d6ec1ed716b",
+    ".artifacts/asr-responsiveness-20261015/final/audio-final.json": "9c472ba7e2ca124d127172cf28e64364605d767c4ce7d390fe2321a647cb9ab1",
+    ".artifacts/asr-responsiveness-20261015/final/text-final.json": "a81f9277f4af7760457e03ea9a732742c83928f1806035ae4633429cf148d453",
+    ".artifacts/asr-responsiveness-20261015/final/audio-final.docx": "ca0ae2cf078f297183e6b22af3745eab839d7099395d84d279fac7f51305bf28",
+    ".artifacts/asr-responsiveness-20261015/final/text-final.docx": "f301682dd5f461c84667811e6db1a5f01c39a724a67f561102152ef5fe274f50",
+    ".artifacts/asr-responsiveness-20261015/final/audio-final.markdown": "799e329c1c19b74e585663cf425ef9d1c2a1c9feb675ab6017576ef7e220b182",
+    ".artifacts/asr-responsiveness-20261015/final/text-final.markdown": "e6be4a7351de8eeef0e9d61788ea6009d662c60a4e9584186c85fa0eed3a19ea",
+    ".artifacts/asr-responsiveness-20261015/ci-code.txt": "37af167afd974ccffaf973d197b71505e35d819709fed389a1fab7ac7915be48",
+    ".artifacts/asr-responsiveness-20261015/final/idle-readiness.json": "d23e69255e7e85abcf252d32952f9c06e28b74a8b7deb46dc1bf67d7259bbfea"
+  },
+  "backend_registered_sha": "a5a373fcbd97ff59526e92ce661debbb54a9fe4e",
+  "image_label_legacy_note": "legacy patch.scope and duplicate backend label are not authoritative for changed files",
+  "development_ci": {
+    "sha": "650aafb0acbb97aabda13df05ee80bc9d99453cd",
+    "run_id": 38670102890,
+    "result": "success",
+    "python_passed": 784,
+    "skipped": 2,
+    "subtests_passed": 8,
+    "warnings": 1,
+    "viewer_passed": 10,
+    "prototype_passed": 76
+  },
+  "idle_readiness": {
+    "status": "PASS",
+    "started_at": "2026-10-15T10:15:24+0800",
+    "finished_at": "2026-10-15T10:35:27+0800",
+    "elapsed_seconds": 1202.19,
+    "health_ready_checks": 42,
+    "failures": 0,
+    "task_counts_after": {
+      "WAITING_DOCTOR_REVIEW": 9
+    },
+    "max_ms": {
+      "health": 172,
+      "ready": 3094
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "schema_version": "knowledge_ingest_manifest_v2",
+  "package_id": "course-0929-full-index-candidate-v1",
+  "scope": "发热/呼吸与病历书写的医生人工参考证据；不得成为患者事实、自动诊断、治疗建议或批准依据。",
+  "sources": [
+    {
+      "source_id": "nhc-covid19-trial-v10",
+      "title": "新型冠状病毒感染诊疗方案（试行第十版）",
+      "publisher": "国家卫生健康委员会、国家中医药管理局",
+      "version": "试行第十版 · 完整章节索引v2",
+      "published_at": "2023-01-06",
+      "source_url": "https://www.nhc.gov.cn/cms-search/downFiles/460b0e7b19bd42f3bba00c1efb9b6811.pdf",
+      "download_url": "https://www.nhc.gov.cn/cms-search/downFiles/460b0e7b19bd42f3bba00c1efb9b6811.pdf",
+      "file_name": "nhc_covid19_v10.pdf",
+      "expected_sha256": "66d5ae641499c722b974a483748e9817cbfe55b6b83a9a08f366d1f0ed3d8440",
+      "usage_scope": "临床表现、诊断、分型和重症风险提示。",
+      "page_ranges": [
+        [
+          1,
+          30
+        ]
+      ],
+      "acquisition_note": "从国家卫生健康委员会公开PDF直接取得。",
+      "document_type": "clinical-reference",
+      "disease_scope": "新型冠状病毒感染",
+      "content_format": "pdf",
+      "default_active": false,
+      "index_profile": "full-pages-v1",
+      "original_filename": "nhc_covid19_v10.pdf"
+    },
+    {
+      "source_id": "nhc-child-mpp-2025",
+      "title": "儿童肺炎支原体肺炎诊疗指南（2025年版）",
+      "publisher": "国家卫生健康委办公厅、国家中医药局综合司",
+      "version": "2025年版 · 完整章节索引v2",
+      "published_at": "2025-09-09",
+      "source_url": "https://www.nhc.gov.cn/yzygj/c100068/202509/19e7145436b049a68d4ba8c2060dfa56/files/%E5%84%BF%E7%AB%A5%E8%82%BA%E7%82%8E%E6%94%AF%E5%8E%9F%E4%BD%93%E8%82%BA%E7%82%8E%E8%AF%8A%E7%96%97%E6%8C%87%E5%8D%97%EF%BC%882025%E5%B9%B4%E7%89%88%EF%BC%89.pdf",
+      "download_url": "https://www.baiyinqu.gov.cn/XZJDBMDW/bmdw/byqwsjkj/fdzdgknr/ylws/art/2025/art_267dc3d84c914e19a8d97514853168cb.html",
+      "file_name": "nhc_child_mpp_2025.pdf",
+      "expected_sha256": "452e1442cbcae7231e1bac8f23031f84085a7e75aef347fac6d9a04162575b32",
+      "usage_scope": "仅适用于儿童MPP；医生参考。索引1–29页正文；第30页流程图和31–32页专家名单不转为文本索引。不得自动给药。",
+      "page_ranges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "acquisition_note": "国家卫健委主链接在2026-09-14返回502；从白银区人民政府公开附件取得同名PDF。",
+      "document_type": "clinical-reference",
+      "disease_scope": "儿童肺炎支原体肺炎",
+      "content_format": "pdf",
+      "default_active": false,
+      "index_profile": "full-pages-v1",
+      "original_filename": "nhc_child_mpp_2025.pdf"
+    },
+    {
+      "source_id": "nhc-influenza-2025",
+      "title": "流行性感冒诊疗方案（2025年版）",
+      "publisher": "国家卫生健康委办公厅、国家中医药局办公室",
+      "version": "2025年版 · 完整章节索引v1",
+      "published_at": "2025-01-20",
+      "source_url": "https://www.nhc.gov.cn/ylyjs/zcwj/202501/f8fcecca59a048bebc4a71847ce57594.shtml",
+      "download_url": "https://www.gov.cn/zhengce/zhengceku/202501/P020250124508295134878.pdf",
+      "file_name": "nhc_influenza_2025.pdf",
+      "expected_sha256": "d19f8cba72af08fd11fe17c0d6c3614c9aaac8d8c77fa803e7e9b999abea1125",
+      "usage_scope": "临床表现、重症高危因素、鉴别和就医风险提示。",
+      "page_ranges": [
+        [
+          1,
+          18
+        ]
+      ],
+      "acquisition_note": "国务院政策库官方PDF，2026-09-27下载；国家卫健委通知页本次412，PDF读取成功。",
+      "document_type": "clinical-reference",
+      "disease_scope": "流感",
+      "content_format": "pdf",
+      "default_active": false,
+      "original_filename": "nhc_influenza_2025.pdf",
+      "index_profile": "full-pages-v1"
+    }
+  ]
+}

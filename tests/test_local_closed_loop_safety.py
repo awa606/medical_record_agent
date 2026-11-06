@@ -252,7 +252,7 @@ def test_ambiguous_audio_role_and_missing_flag_cannot_hide_values():
     assert ground_fields(f,'发热',segments).chief_complaint.status=='conflicting'
 
 
-def test_model_paraphrase_is_replaced_by_unique_patient_source_quotes():
+def test_invalid_model_paraphrase_and_indices_are_not_repaired_by_source_quotes():
     fields = MedicalRecordFields(
         present_illness=MedicalField(
             value="患者发热并伴咳嗽",
@@ -269,20 +269,22 @@ def test_model_paraphrase_is_replaced_by_unique_patient_source_quotes():
         {"segment_id": "d1", "role": "医生", "text": "有没有胸痛？", "start_time": 3.0, "end_time": 4.0},
     ]
 
-    repaired, trace = reconcile_extractive_fields(fields, trusted)
+    source = "就是发烧嗯。就还会有咳嗽。有没有胸痛？"
+    original = fields.present_illness.model_dump()
+    repaired, trace = reconcile_extractive_fields(fields, trusted, source=source)
     checked = ground_fields(
         repaired,
         "就是发烧嗯。就还会有咳嗽。有没有胸痛？",
         trusted,
     )
 
-    assert checked.present_illness.value == "就是发烧嗯；就还会有咳嗽"
-    assert [span.segment_id for span in checked.present_illness.source_spans] == ["p1", "p2"]
-    assert checked.present_illness.status == "partial"
-    assert trace["present_illness"]["rejected_reasons"] == ["role_not_allowed"]
+    assert checked.present_illness.value == original["value"]
+    assert [span.index for span in checked.present_illness.source_spans] == [8, 21, 22]
+    assert checked.present_illness.status == "conflicting"
+    assert trace["present_illness"]["strategy"] == "preserve_original_conflict"
 
 
-def test_field_without_any_unique_role_safe_quote_is_removed():
+def test_field_without_any_unique_role_safe_quote_remains_conflicting():
     fields = MedicalRecordFields(
         present_illness=MedicalField(
             value="发热伴胸痛",
@@ -298,14 +300,33 @@ def test_field_without_any_unique_role_safe_quote_is_removed():
         {"segment_id": "d2", "role": "医生", "text": "有没有胸痛？"},
     ]
 
-    repaired, trace = reconcile_extractive_fields(fields, trusted)
+    repaired, trace = reconcile_extractive_fields(fields, trusted, source="发热。有没有胸痛？")
 
-    assert repaired.present_illness.missing is True
-    assert repaired.present_illness.value is None
-    assert repaired.present_illness.source_spans == []
-    assert repaired.present_illness.status == "missing"
-    assert trace["present_illness"]["strategy"] == "discard_unsupported_field"
-    assert trace["present_illness"]["accepted_span_count"] == 0
+    assert repaired.present_illness.missing is False
+    assert repaired.present_illness.value == "发热伴胸痛"
+    assert len(repaired.present_illness.source_spans) == 2
+    assert repaired.present_illness.status == "conflicting"
+    assert trace["present_illness"]["strategy"] == "preserve_original_conflict"
+
+
+def test_observed_qwen_citation_corruption_is_not_silently_repaired():
+    # Anonymous Realtek pair, 2026-09-27: the value was copied correctly but
+    # Qwen emitted a malformed quote. An index or matching value alone must
+    # not turn this first output into verified source evidence.
+    source = "患者今天发热三十八点二度，伴有咳嗽和咽痛，没有胸痛，也没有药物过敏史。"
+    fields = MedicalRecordFields(chief_complaint=MedicalField(
+        value=source.rstrip("。"),
+        source_spans=[SourceSpan(text="患者今天发热三十八点二度，伴有咳嗽和咽: 0", index=0)],
+    ))
+    checked = ground_fields(fields.model_copy(deep=True), "[患者] " + source)
+    assert checked.chief_complaint.status == "conflicting"
+    repaired, trace = reconcile_extractive_fields(fields, [
+        {"segment_id": "anonymous-p1", "role": "患者", "text": source},
+    ], source="[患者] " + source)
+    assert repaired.chief_complaint.value == source.rstrip("。")
+    assert not repaired.chief_complaint.missing
+    assert repaired.chief_complaint.status == "conflicting"
+    assert trace["chief_complaint"]["strategy"] == "preserve_original_conflict"
 
 
 def test_inconsistent_missing_model_field_is_discarded_fail_closed():

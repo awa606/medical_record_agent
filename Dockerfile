@@ -27,6 +27,8 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 
 COPY . .
 
+RUN python scripts/package_help.py --output /app/static/help
+
 RUN mkdir -p /app/runtime/uploads /app/runtime/outputs /app/runtime/speaker_profiles /app/model_cache/hf /app/model_cache/modelscope \
     && ln -s /app/model_cache/modelscope /app/.modelscope \
     && groupadd --system appuser \

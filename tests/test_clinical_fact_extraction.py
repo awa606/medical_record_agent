@@ -62,7 +62,9 @@ class ClinicalFactExtractionTests(unittest.TestCase):
     def test_treatment_fact_is_extracted_without_inventing_duration(self):
         fields = MockLLM().extract_fields("吃了布洛芬以后体温降下来了")
 
-        self.assertEqual(fields.previous_treatment.value, "服用布洛芬后体温下降")
+        # Preserve the actual utterance instead of manufacturing a canonical
+        # medication/effect phrase from independent keyword hits.
+        self.assertEqual(fields.previous_treatment.value, "吃了布洛芬以后体温降下来了")
         self.assertIn("曾有发热", fields.chief_complaint.value)
         self.assertNotIn("发热3天", fields.chief_complaint.value)
         self.assertTrue(fields.previous_treatment.source_spans)

@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-11-05T15:58:42.418Z",
-  "source_hash": "565cc7a0bd44a310c19f4b12d974c8f3b4faacda5a21aa433592ae10d58c860d",
+  "updated_at": "2026-11-06T11:09:11.005358+08:00",
+  "source_hash": "3f18d54a03e71946399b6c7562e33cbef1f9fe5f120fedab889f4bdbb965ad04",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "d094b28b8fdeaf3c88d43b18e1a63e5e805a63ad",
+  "repo_sha": "f279c30bc3af5484df19c6ffb791cd1dcfe742df",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/ui-hospital-record-v1",
   "active_pr": {
@@ -87,15 +87,13 @@
     }
   },
   "purchase_decision": "DEFERRED",
-  "next_task": "先对独立接诊原型完成用户视觉确认、真实缩放与同条件任务对照，再冻结行为规范并进入工程设计；生产患者草稿持久化与接口恢复仍未放行。原有口语用药遗漏、知识排序、人工角色统计及PDF分页问题独立保留。",
+  "next_task": "用户直接试用新版逐句采集交互原型，记录布局与操作意见；随后补实际缩放和同条件任务对照，再决定是否冻结生产设计。",
   "parallel_waiting_task": "硬件1.1至1.4继续延期；模型首次漏提、字段混放及自我纠正质量独立保留，不由原型演示替代。",
   "manual_actions": [
-    "打开独立原型确认病历为主、原文可固定的视觉方向；目标医生独立试用与同条件对照另行记录。"
+    "在本地23711原型点击下一句，体验同步病历、辅助参考和核对流程；用户视觉确认与目标医生独立试用分别记录。"
   ],
-  "forecast_alpha_exit": "本轮交付仅为独立合成前端原型，30项状态测试及两例四字段浏览器流程完成；Research NEEDS MORE EVIDENCE，生产Design未进入。真实缩放、直接刷新确认继续分支、同条件效率对照、用户与医生验收未齐；本轮未复验真实ASR、模型、麦克风、生产PDF或历史运行包。正式16项99h和所有task metadata保持，5.1继续VERIFY，原失败与发布限制保留，不给出新阶段退出日期。",
+  "forecast_alpha_exit": "本轮为独立合成前端样机，44项状态测试通过，实际采集手改、保存R2、签署、TXT下载内容和返回主线走通；三视口及指定键盘检查完成。Research NEEDS MORE EVIDENCE，生产Design未进入。原生刷新继续分支、临时采集真实刷新恢复、实际缩放和用户/医生验收仍缺；不改16项99h、5.1 VERIFY或硬件延期，不给新阶段退出日期。",
   "source_files": {
-    ".obsidian/plugins/project-planner-engineering/main.js": "e4006974bdcc45cb5ab80aebc5b9fd721a24c451ea883fd7d7e5239676017cca",
-    ".obsidian/plugins/project-planner-engineering/manifest.json": "23672403c65ab17af6d28d84bbd822fab00ceeac1961612eb5cf9d514befa979",
     "Projects/Medical_Record_Agent/0 Alpha工程版交付包.md": "4bbfbde20927f571d673cf59c31b172af0fa742c4825695eb13682f4dff2231d",
     "Projects/Medical_Record_Agent/00_Project_Home.md": "8ec8c964b0158f0c1eda5cd2727257408cd671d5da2e4cebae16b6fc21af1829",
     "Projects/Medical_Record_Agent/01_Project_Charter.md": "a4f99c0402a0eb280d477a24b9276e41d372bef50ac4e9b5dd7e6aef620e3440",
@@ -218,7 +216,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "1ee4fdb3d66362b8465079446b153da4d1189988c923a62997cf0409cc46d5ef",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "e34589620214ee8c782280e4722813bbd0b256c63e5623b482f3f764a26b61a0",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -294,13 +292,15 @@
   },
   "extra_source_files": {
     ".artifacts/review-fix-20261102/hardware-status-preserved.json": "80bc286c3f03a9cdc361ffa84e89f64bba265e7f3f0c0c067c2cf2c3d0142d26",
-    "experiments/frontend-design-20261105/README.md": "fe431a050f7effedda58056727416df2e0711aaf2b673db0bf95058a8cd057be",
-    "experiments/frontend-design-20261105/RESEARCH.md": "5d121df277e215b5443e8a6be0b4139cc06e0126c7833c55fdb19a8a2dafe146",
-    "experiments/frontend-design-20261105/design-qa.md": "155d0a5ac33a2fb4271ce3203800a2f8aa0c002b5e5c7f3d3a9e7eb17b8857ca"
+    "experiments/frontend-design-20261106/README.md": "77a8868bcac333beb93824af1328a249c7de737acf74395b6650c86fb2b977c4",
+    "experiments/frontend-design-20261106/RESEARCH.md": "f5c98f3559fa63c1c57ecb3205ab43ccce6a56fefc8b2950f14db9f997c8bf49",
+    "experiments/frontend-design-20261106/REVIEW.md": "b2a63a528f7a0fa0850b42720f08cbb62080533ff7c70534fa0783b5493ea2a7",
+    "experiments/frontend-design-20261106/VISUAL_REVIEW.md": "bd404f90c2b04bd1f58247eefd88db9cbb58b078cabb98d2ea1957e8d809d79f",
+    "experiments/frontend-design-20261106/design-qa.md": "c6d3a32f2c0e1322d5c47807c1e24c9fc3024651fd867974226b9ad080ab60e1"
   },
   "snapshot_verification": {
     "result": "PASS",
-    "checked": 224,
+    "checked": 222,
     "mismatch": 0
   }
 }

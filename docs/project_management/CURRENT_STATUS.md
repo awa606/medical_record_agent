@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-05T15:58:42.418Z`
-- Source hash: `565cc7a0bd44a310c19f4b12d974c8f3b4faacda5a21aa433592ae10d58c860d`
+- Updated at: `2026-11-06T11:09:11.005358+08:00`
+- Source hash: `3f18d54a03e71946399b6c7562e33cbef1f9fe5f120fedab889f4bdbb965ad04`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@d094b28b8fdeaf3c88d43b18e1a63e5e805a63ad`
+- Repo: `codex/ui-hospital-record-v1@f279c30bc3af5484df19c6ffb791cd1dcfe742df`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
-- Forecast Alpha Exit: **本轮交付仅为独立合成前端原型，30项状态测试及两例四字段浏览器流程完成；Research NEEDS MORE EVIDENCE，生产Design未进入。真实缩放、直接刷新确认继续分支、同条件效率对照、用户与医生验收未齐；本轮未复验真实ASR、模型、麦克风、生产PDF或历史运行包。正式16项99h和所有task metadata保持，5.1继续VERIFY，原失败与发布限制保留，不给出新阶段退出日期。**
+- Forecast Alpha Exit: **本轮为独立合成前端样机，44项状态测试通过，实际采集手改、保存R2、签署、TXT下载内容和返回主线走通；三视口及指定键盘检查完成。Research NEEDS MORE EVIDENCE，生产Design未进入。原生刷新继续分支、临时采集真实刷新恢复、实际缩放和用户/医生验收仍缺；不改16项99h、5.1 VERIFY或硬件延期，不给新阶段退出日期。**
 
 ## Progress
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 先对独立接诊原型完成用户视觉确认、真实缩放与同条件任务对照，再冻结行为规范并进入工程设计；生产患者草稿持久化与接口恢复仍未放行。原有口语用药遗漏、知识排序、人工角色统计及PDF分页问题独立保留。
+- Single next task: 用户直接试用新版逐句采集交互原型，记录布局与操作意见；随后补实际缩放和同条件任务对照，再决定是否冻结生产设计。
 - Parallel waiting task: 硬件1.1至1.4继续延期；模型首次漏提、字段混放及自我纠正质量独立保留，不由原型演示替代。
 
 ## Manual Actions
 
-- 打开独立原型确认病历为主、原文可固定的视觉方向；目标医生独立试用与同条件对照另行记录。
+- 在本地23711原型点击下一句，体验同步病历、辅助参考和核对流程；用户视觉确认与目标医生独立试用分别记录。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

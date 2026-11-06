@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-06T15:37:17.222380+08:00`
-- Source hash: `80599b927667a35916789e6e39f45497120b7bf4b4133d45b09476afdd326f19`
+- Updated at: `2026-11-06T07:38:32.051Z`
+- Source hash: `9d2d72a8409d1ff292958c521a207f3b35bdcee547db7398a4d16c516ccf14cc`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@2263df9c86c7607e005e2575208bf46b97ec7605`
+- Repo: `codex/ui-hospital-record-v1@3998194c63068cb2cea149cfdce180e5078ebe56`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
 - Last merged PR: None
-- Forecast Alpha Exit: **本轮实质交付为隔离三布局原型，44项复用状态测试通过；采集切布局保稿、保存R2刷新、四项核对签署、患者切换及三CSS视口已观察。800窄屏原文面板首次失败修复后定向复验；下载事件15秒超时，实际TXT及内容未验，另保留5项P3。真实100%/125%/150%缩放、完整键盘、同条件效率、用户与医生验收、音频模型和生产导出未齐。生产Research NEEDS MORE EVIDENCE，Design未进入；16项99h、5.1 VERIFY和硬件延期不改，不给新阶段退出日期。**
+- Forecast Alpha Exit: **26327原44115d88-perf2已恢复；规则、实时事实和默认关闭的中断恢复代码已交付。知识24查询8/15、人群过滤30到0但无答案仍失败；Nemotron60秒计算135.708秒不晋级。正式16项99h和5.1 VERIFY不变，不预报新退出日期。**
 
 ## Progress
 
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: 用户在同一合成病例下直接切换A文书优先、B持续对照、C问题引导，确认布局方向；随后补下载文件、同条件效率对照与真实缩放验证。
-- Parallel waiting task: 硬件1.1至1.4继续延期；模型首次质量、生产输入归属与保稿修复及并行后端工作分别保留，原型不替代其验收。
+- Single next task: 锁定本批后端修复的隔离候选，验证实际页面、单实例恢复及CI后再决定运行升级；不扩展页面或替换当前DeepSeek。
+- Parallel waiting task: 在线说话人CPU实时目标未过；BGE旧向量一致性未过；本地字段漏提仍独立研究。保留同期三种布局样机、数据准备和用户视觉选择任务；硬件仍延期。
 
 ## Manual Actions
 

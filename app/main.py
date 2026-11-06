@@ -22,6 +22,11 @@ from app.api import (
 from app.db import init_db
 from app.services.privacy import AnonymousResponses, install_anonymous_logging
 from app.services.asr.prewarm import is_prewarm_enabled, start_funasr_prewarm
+from app.services.task_recovery import (
+    acquire_startup_lock,
+    fail_interrupted_tasks,
+    retain_lock_until_process_exit,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -30,26 +35,40 @@ STATIC_DIR = PROJECT_ROOT / "static"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
-    if is_prewarm_enabled():
-        start_funasr_prewarm()
-    from app.services.llm.factory import get_llm_status, create_llm_provider
-    from app.services.llm.readiness import start_monitor
+    database_lock = acquire_startup_lock()
+    lock_retained = False
     monitor = None
-    status = get_llm_status(check_reachable=False)
-    if status.get("provider") == "ollama" and status.get("mode") in {"live", "edge"}:
-        try:
-            provider = create_llm_provider()
-        except RuntimeError:
-            pass  # /ready reports invalid configuration; /health stays available.
-        else:
-            monitor = start_monitor(provider.base_url, provider.model)
     try:
+        init_db()
+        if database_lock is not None:
+            fail_interrupted_tasks(database_lock)
+        if is_prewarm_enabled():
+            start_funasr_prewarm()
+        from app.services.llm.factory import get_llm_status, create_llm_provider
+        from app.services.llm.readiness import start_monitor
+        status = get_llm_status(check_reachable=False)
+        if status.get("provider") == "ollama" and status.get("mode") in {"live", "edge"}:
+            try:
+                provider = create_llm_provider()
+            except RuntimeError:
+                pass  # /ready reports invalid configuration; /health stays available.
+            else:
+                monitor = start_monitor(provider.base_url, provider.model)
+        if database_lock is not None:
+            retain_lock_until_process_exit(database_lock)
+            lock_retained = True
         yield
     finally:
-        if monitor:
-            monitor[0].set()
-            monitor[1].join(timeout=3)
+        try:
+            if monitor:
+                monitor[0].set()
+                monitor[1].join(timeout=3)
+        finally:
+            # Before yield there are no accepted request writers. After yield,
+            # BackgroundTasks/daemon writers may outlive lifespan shutdown, so
+            # the process registry intentionally retains the lock until OS exit.
+            if database_lock is not None and not lock_retained:
+                database_lock.release()
 
 
 app = FastAPI(title="Medical Record Agent", lifespan=lifespan)

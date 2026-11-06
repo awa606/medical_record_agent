@@ -10,15 +10,19 @@ from app.services.treatment_context import treatment_contexts
 
 GAP_PREFIX = "本次病程用药待核对（原文第"
 GAP_HINT = "现病史可能遗漏本次用药，请核对下列原文后修改并保存。"
-_TIME = {"昨日": "昨天", "今日": "今天", "昨夜": "昨晚"}
+_TIME = {"昨日": "昨天", "今日": "今天", "昨夜": "昨晚", "昨天晚上": "昨晚", "昨日晚上": "昨晚"}
+_RECENT_TIME = r"昨天晚上|昨日晚上|昨天|昨日|今天|今日|前天|昨晚|昨夜|今早"
+# Do not mistake "yesterday morning" for an entire-day denial of an evening
+# intake. These extra qualifiers only constrain retractions, not new intake.
+_RETRACTION_TIME = r"(?:昨天|昨日)(?:凌晨|清晨|早上|上午|中午|下午|傍晚|晚上|夜里|白天)|" + _RECENT_TIME
 _COUNT = str.maketrans("一二两三四五六七八九", "1223456789")
 _N = r"(?:[一二两三四五六七八九]|[1-9])次"
 # This is a deliberately small comparison contract, not a drug dictionary.
 # Restrict to completed, single-agent, directly attributed statements. Reject
 # qualifiers we cannot interpret instead of guessing an illness, dose or effect.
 _INTAKE = re.compile(
-    rf"(?:我|患者|本人|孩子|儿子|女儿)?(?P<day>昨天|昨日|今天|今日|前天|昨晚|昨夜|今早)"
-    rf"(?:曾经|已经|曾|已)?(?:吃过|吃了|用过|用了|服用过|服用了|服用|口服过|口服了|口服)"
+    rf"(?:我|患者|本人|孩子|儿子|女儿)?(?P<day>{_RECENT_TIME})"
+    rf"(?:曾经|已经|曾|已)?(?:吃过|吃了|用过|用了|服用过|服用了|服用|口服过|口服了|口服|吃的那个|用的那个)"
     rf"(?P<before>{_N})?(?P<drug>布洛芬|对乙酰氨基酚|阿司匹林|阿莫西林)(?P<after>{_N})?"
 )
 _LABEL = re.compile(r"^\s*(?:[【\[](?:患者|病人|家属|家长|patient)[】\]]\s*[：:]?|(?:患者|病人|家属|家长|patient)\s*[：:])\s*", re.I)
@@ -93,8 +97,8 @@ def _intake_rows(text, *, require_role):
                         position=offset + denial.start()) != "patient":
                     continue
                 other_days = {_TIME.get(item, item) for item in
-                    re.findall(r"昨天|昨日|今天|今日|前天|昨晚|昨夜|今早", rest[:denial.start()])}
-                if other_days and day not in other_days:
+                    re.findall(_RETRACTION_TIME, rest[:denial.start()])}
+                if other_days and day not in other_days and not (day == "昨晚" and "昨天" in other_days):
                     continue
                 obj = denial.group(1).strip()
                 if drug == obj:

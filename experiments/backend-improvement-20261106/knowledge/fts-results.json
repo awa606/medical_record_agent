@@ -1,0 +1,1265 @@
+{
+  "harness_revision": 2,
+  "prior_run_invalid": "spike_results.json used empty FTS indexes; scores are not valid retrieval results",
+  "indexed_rows": 79,
+  "source_db_sha256": "dfb6ec2393e79c4cc3c20ff9a55b2dbc65f5d60b7a56cf94b935340a1224d306",
+  "queries_sha256": "4c53be03bff4b47e51102f426432906060505a94b68055fe8cf21a2c5a6d29e7",
+  "research_gate": "NEEDS_MORE_EVIDENCE",
+  "clinical_accuracy": "NOT_MEASURED",
+  "summary": {
+    "fts_current": {
+      "answerable_count": 15,
+      "chunk_hit_count": 8,
+      "chunk_hit_at_5": 0.5333333333333333,
+      "mean_ndcg_at_5": 0.4678521707204,
+      "population_ineligible_results": 30,
+      "no_answer_query_count": 9,
+      "no_answer_false_return_count": 9,
+      "inactive_leakage": 0,
+      "citation_sha_mismatch": 0,
+      "lexical_only_p50_ms": 2.178,
+      "lexical_only_p95_ms": 3.4617
+    },
+    "fts_population_filter": {
+      "answerable_count": 15,
+      "chunk_hit_count": 8,
+      "chunk_hit_at_5": 0.5333333333333333,
+      "mean_ndcg_at_5": 0.47539531690476383,
+      "population_ineligible_results": 0,
+      "no_answer_query_count": 9,
+      "no_answer_false_return_count": 9,
+      "inactive_leakage": 0,
+      "citation_sha_mismatch": 0,
+      "lexical_only_p50_ms": 2.178,
+      "lexical_only_p95_ms": 3.4617
+    }
+  },
+  "cases": [
+    {
+      "query_id": "K24-D01",
+      "category": "direct",
+      "variant": "fts_current",
+      "query": "流感与普通感冒的鉴别有哪些依据？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 24,
+      "returned_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p007-c007",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p008-c008",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p010-c010",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p010-c010"
+      ],
+      "expected_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 3,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.8032
+    },
+    {
+      "query_id": "K24-D01",
+      "category": "direct",
+      "variant": "fts_population_filter",
+      "query": "流感与普通感冒的鉴别有哪些依据？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 24,
+      "returned_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p010-c010",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p013-c013",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c005",
+        "nhc-influenza-2020-2020-693984e29ed6-p007-c006"
+      ],
+      "expected_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.8032
+    },
+    {
+      "query_id": "K24-D02",
+      "category": "direct",
+      "variant": "fts_current",
+      "query": "流感抗原检测阴性是否可以排除流感？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 36,
+      "returned_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p007-c006",
+        "nhc-influenza-2020-2020-693984e29ed6-p005-c004",
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p006-c006",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p007-c007"
+      ],
+      "expected_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p005-c004"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 0.6309297535714575,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.3758
+    },
+    {
+      "query_id": "K24-D02",
+      "category": "direct",
+      "variant": "fts_population_filter",
+      "query": "流感抗原检测阴性是否可以排除流感？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 36,
+      "returned_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p007-c006",
+        "nhc-influenza-2020-2020-693984e29ed6-p005-c004",
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p006-c006",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p007-c007"
+      ],
+      "expected_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p005-c004"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 0.6309297535714575,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.3758
+    },
+    {
+      "query_id": "K24-D03",
+      "category": "direct",
+      "variant": "fts_current",
+      "query": "儿童支原体肺炎的咳嗽有哪些特点？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p017-c017",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p014-c014",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p013-c013"
+      ],
+      "expected_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.4894
+    },
+    {
+      "query_id": "K24-D03",
+      "category": "direct",
+      "variant": "fts_population_filter",
+      "query": "儿童支原体肺炎的咳嗽有哪些特点？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p017-c017",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p014-c014",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p013-c013"
+      ],
+      "expected_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.4894
+    },
+    {
+      "query_id": "K24-D04",
+      "category": "direct",
+      "variant": "fts_current",
+      "query": "儿童肺炎支原体肺炎的诊断需要哪些病原学证据？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p023-c023",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p017-c017",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p016-c016"
+      ],
+      "expected_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p007-c007"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 3.2504
+    },
+    {
+      "query_id": "K24-D04",
+      "category": "direct",
+      "variant": "fts_population_filter",
+      "query": "儿童肺炎支原体肺炎的诊断需要哪些病原学证据？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p023-c023",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p017-c017",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p016-c016"
+      ],
+      "expected_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p007-c007"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 3.2504
+    },
+    {
+      "query_id": "K24-D05",
+      "category": "direct",
+      "variant": "fts_current",
+      "query": "初诊门诊病历应当记录哪些内容？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 18,
+      "returned_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c008",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c007",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c005"
+      ],
+      "expected_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.4629
+    },
+    {
+      "query_id": "K24-D05",
+      "category": "direct",
+      "variant": "fts_population_filter",
+      "query": "初诊门诊病历应当记录哪些内容？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 18,
+      "returned_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c008",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c007",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c005"
+      ],
+      "expected_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.4629
+    },
+    {
+      "query_id": "K24-D06",
+      "category": "direct",
+      "variant": "fts_current",
+      "query": "新冠感染会出现哪些临床表现，包括嗅觉味觉变化？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p007-c007",
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p006-c006",
+        "nhc-influenza-2020-2020-693984e29ed6-p003-c002"
+      ],
+      "expected_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 3.6496
+    },
+    {
+      "query_id": "K24-D06",
+      "category": "direct",
+      "variant": "fts_population_filter",
+      "query": "新冠感染会出现哪些临床表现，包括嗅觉味觉变化？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p007-c007",
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p006-c006",
+        "nhc-influenza-2020-2020-693984e29ed6-p003-c002"
+      ],
+      "expected_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 3.6496
+    },
+    {
+      "query_id": "K24-S01",
+      "category": "synonym",
+      "variant": "fts_current",
+      "query": "不是普通伤风而是流行性感冒，资料里怎么区分这两种情况？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 25,
+      "returned_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p013-c013",
+        "nhc-influenza-2020-2020-693984e29ed6-p002-c001",
+        "nhc-influenza-2020-2020-693984e29ed6-p011-c010",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p002-c002"
+      ],
+      "expected_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 1,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.8333
+    },
+    {
+      "query_id": "K24-S01",
+      "category": "synonym",
+      "variant": "fts_population_filter",
+      "query": "不是普通伤风而是流行性感冒，资料里怎么区分这两种情况？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 25,
+      "returned_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p013-c013",
+        "nhc-influenza-2020-2020-693984e29ed6-p002-c001",
+        "nhc-influenza-2020-2020-693984e29ed6-p011-c010",
+        "nhc-influenza-2020-2020-693984e29ed6-p005-c004"
+      ],
+      "expected_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.8333
+    },
+    {
+      "query_id": "K24-S02",
+      "category": "synonym",
+      "variant": "fts_current",
+      "query": "流感快速检测试纸没检出，能不能据此认定不是流感？请找原文。",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 29,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p003-c003",
+        "nhc-influenza-2020-2020-693984e29ed6-p007-c006",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p006-c006",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p010-c010",
+        "nhc-influenza-2020-2020-693984e29ed6-p005-c004"
+      ],
+      "expected_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p005-c004"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 0.38685280723454163,
+      "population_ineligible_count": 2,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.7919
+    },
+    {
+      "query_id": "K24-S02",
+      "category": "synonym",
+      "variant": "fts_population_filter",
+      "query": "流感快速检测试纸没检出，能不能据此认定不是流感？请找原文。",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 29,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p003-c003",
+        "nhc-influenza-2020-2020-693984e29ed6-p007-c006",
+        "nhc-influenza-2020-2020-693984e29ed6-p005-c004",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p017-c017",
+        "nhc-influenza-2020-2020-693984e29ed6-p010-c009"
+      ],
+      "expected_ids": [
+        "nhc-influenza-2020-2020-693984e29ed6-p005-c004"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 0.5,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.7919
+    },
+    {
+      "query_id": "K24-S03",
+      "category": "synonym",
+      "variant": "fts_current",
+      "query": "小孩得了支原体肺炎，开始会不会一直干咳？请给症状出处。",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 35,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p013-c013",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p014-c014",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p002-c002"
+      ],
+      "expected_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.0541
+    },
+    {
+      "query_id": "K24-S03",
+      "category": "synonym",
+      "variant": "fts_population_filter",
+      "query": "小孩得了支原体肺炎，开始会不会一直干咳？请给症状出处。",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 35,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p013-c013",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p014-c014",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p002-c002"
+      ],
+      "expected_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.0541
+    },
+    {
+      "query_id": "K24-S04",
+      "category": "synonym",
+      "variant": "fts_current",
+      "query": "孩子的支原体核酸和抗体报告，在指南中怎样作为确认依据？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 31,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p010-c010",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p006-c006",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p005-c005"
+      ],
+      "expected_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p007-c007"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.6175
+    },
+    {
+      "query_id": "K24-S04",
+      "category": "synonym",
+      "variant": "fts_population_filter",
+      "query": "孩子的支原体核酸和抗体报告，在指南中怎样作为确认依据？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 31,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p010-c010",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p006-c006",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p005-c005"
+      ],
+      "expected_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p007-c007"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.6175
+    },
+    {
+      "query_id": "K24-S05",
+      "category": "synonym",
+      "variant": "fts_current",
+      "query": "第一次来门诊看病，医生写记录有哪些项目不能漏？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 18,
+      "returned_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c005",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c006",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p006-c006",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002"
+      ],
+      "expected_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 1,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.6277
+    },
+    {
+      "query_id": "K24-S05",
+      "category": "synonym",
+      "variant": "fts_population_filter",
+      "query": "第一次来门诊看病，医生写记录有哪些项目不能漏？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 18,
+      "returned_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c005",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c006",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c007"
+      ],
+      "expected_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.6277
+    },
+    {
+      "query_id": "K24-S06",
+      "category": "synonym",
+      "variant": "fts_current",
+      "query": "感染新冠后闻不出气味、尝不出味道，资料有没有提到？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p030-c030",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p007-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p019-c019"
+      ],
+      "expected_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.5207
+    },
+    {
+      "query_id": "K24-S06",
+      "category": "synonym",
+      "variant": "fts_population_filter",
+      "query": "感染新冠后闻不出气味、尝不出味道，资料有没有提到？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p030-c030",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p007-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p019-c019"
+      ],
+      "expected_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.5207
+    },
+    {
+      "query_id": "K24-P01",
+      "category": "population",
+      "variant": "fts_current",
+      "query": "40岁成人支原体肺炎咳嗽特点的适用指南依据",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p016-c016",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p014-c014",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p017-c017"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 5,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 3.0051
+    },
+    {
+      "query_id": "K24-P01",
+      "category": "population",
+      "variant": "fts_population_filter",
+      "query": "40岁成人支原体肺炎咳嗽特点的适用指南依据",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p010-c010",
+        "nhc-influenza-2020-2020-693984e29ed6-p004-c003",
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p019-c019",
+        "nhc-influenza-2020-2020-693984e29ed6-p010-c009"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 3.0051
+    },
+    {
+      "query_id": "K24-P02",
+      "category": "population",
+      "variant": "fts_current",
+      "query": "8岁孩子支原体肺炎咳嗽特点的适用指南依据",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p016-c016",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p014-c014",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p017-c017"
+      ],
+      "expected_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.5766
+    },
+    {
+      "query_id": "K24-P02",
+      "category": "population",
+      "variant": "fts_population_filter",
+      "query": "8岁孩子支原体肺炎咳嗽特点的适用指南依据",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p016-c016",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p014-c014",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p017-c017"
+      ],
+      "expected_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.5766
+    },
+    {
+      "query_id": "K24-P03",
+      "category": "population",
+      "variant": "fts_current",
+      "query": "当前患者支原体肺炎咳嗽特点的适用指南依据，年龄尚未确认",
+      "patient_population": "unknown",
+      "expected_behavior": "clarify_population",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p024-c024",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p016-c016",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p014-c014",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p017-c017"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 5,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.9227
+    },
+    {
+      "query_id": "K24-P03",
+      "category": "population",
+      "variant": "fts_population_filter",
+      "query": "当前患者支原体肺炎咳嗽特点的适用指南依据，年龄尚未确认",
+      "patient_population": "unknown",
+      "expected_behavior": "clarify_population",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p010-c010",
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c005",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p019-c019"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.9227
+    },
+    {
+      "query_id": "K24-P04",
+      "category": "population",
+      "variant": "fts_current",
+      "query": "40岁成人能否按儿童新冠中医治疗章节处理？只查适用依据",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p019-c019",
+        "nhc-influenza-2020-2020-693984e29ed6-p011-c010",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p028-c028",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p008-c008",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p027-c027"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 2,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.9761
+    },
+    {
+      "query_id": "K24-P04",
+      "category": "population",
+      "variant": "fts_population_filter",
+      "query": "40岁成人能否按儿童新冠中医治疗章节处理？只查适用依据",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p019-c019",
+        "nhc-influenza-2020-2020-693984e29ed6-p011-c010",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p008-c008",
+        "nhc-influenza-2020-2020-693984e29ed6-p004-c003",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p007-c007"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.9761
+    },
+    {
+      "query_id": "K24-P05",
+      "category": "population",
+      "variant": "fts_current",
+      "query": "8岁患儿新冠感染的临床表现有哪些？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p007-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p015-c015",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p006-c006",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p003-c003",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p012-c012"
+      ],
+      "expected_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 3.4617
+    },
+    {
+      "query_id": "K24-P05",
+      "category": "population",
+      "variant": "fts_population_filter",
+      "query": "8岁患儿新冠感染的临床表现有哪些？",
+      "patient_population": "child",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p007-c007",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p015-c015",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p006-c006",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p003-c003",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p012-c012"
+      ],
+      "expected_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p004-c004"
+      ],
+      "chunk_hit_at_5": false,
+      "ndcg_at_5": 0.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 3.4617
+    },
+    {
+      "query_id": "K24-P06",
+      "category": "population",
+      "variant": "fts_current",
+      "query": "老年人初诊门诊病历应该记录哪些基本内容？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 17,
+      "returned_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c008",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p003-c003",
+        "nhc-influenza-2020-2020-693984e29ed6-p002-c001"
+      ],
+      "expected_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.6772
+    },
+    {
+      "query_id": "K24-P06",
+      "category": "population",
+      "variant": "fts_population_filter",
+      "query": "老年人初诊门诊病历应该记录哪些基本内容？",
+      "patient_population": "adult",
+      "expected_behavior": "eligible_evidence",
+      "candidate_count": 17,
+      "returned_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c008",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p003-c003",
+        "nhc-influenza-2020-2020-693984e29ed6-p002-c001"
+      ],
+      "expected_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003"
+      ],
+      "chunk_hit_at_5": true,
+      "ndcg_at_5": 1.0,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": null,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.6772
+    },
+    {
+      "query_id": "K24-N01",
+      "category": "no_answer",
+      "variant": "fts_current",
+      "query": "糖尿病胰岛素剂量调整的独立指南依据在哪里？",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 27,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p008-c008",
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p016-c016",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p020-c020",
+        "nhc-influenza-2020-2020-693984e29ed6-p010-c009"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 2,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.8893
+    },
+    {
+      "query_id": "K24-N01",
+      "category": "no_answer",
+      "variant": "fts_population_filter",
+      "query": "糖尿病胰岛素剂量调整的独立指南依据在哪里？",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 27,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p008-c008",
+        "nhc-influenza-2020-2020-693984e29ed6-p008-c007",
+        "nhc-influenza-2020-2020-693984e29ed6-p010-c009",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p019-c019",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p012-c012"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.8893
+    },
+    {
+      "query_id": "K24-N02",
+      "category": "no_answer",
+      "variant": "fts_current",
+      "query": "腰椎间盘突出康复训练指南的原文章节在哪里？",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 15,
+      "returned_ids": [
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p029-c029",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p029-c029",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p028-c028",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p007-c007",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p012-c012"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 4,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.408
+    },
+    {
+      "query_id": "K24-N02",
+      "category": "no_answer",
+      "variant": "fts_population_filter",
+      "query": "腰椎间盘突出康复训练指南的原文章节在哪里？",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 15,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p029-c029",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p016-c016",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p012-c012",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c004"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.408
+    },
+    {
+      "query_id": "K24-N03",
+      "category": "no_answer",
+      "variant": "fts_current",
+      "query": "非临床验收灯塔资料的测试正文",
+      "patient_population": "unknown",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c001",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c004",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p026-c026"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.127
+    },
+    {
+      "query_id": "K24-N03",
+      "category": "no_answer",
+      "variant": "fts_population_filter",
+      "query": "非临床验收灯塔资料的测试正文",
+      "patient_population": "unknown",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 40,
+      "returned_ids": [
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c002",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c001",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c003",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c004",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p026-c026"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.127
+    },
+    {
+      "query_id": "K24-N04",
+      "category": "no_answer",
+      "variant": "fts_current",
+      "query": "请定位2025年版流感诊疗方案的传播途径章节",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 35,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p003-c003",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p002-c002",
+        "nhc-influenza-2020-2020-693984e29ed6-p002-c001",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p002-c002",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p023-c023"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 1,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.229
+    },
+    {
+      "query_id": "K24-N04",
+      "category": "no_answer",
+      "variant": "fts_population_filter",
+      "query": "请定位2025年版流感诊疗方案的传播途径章节",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 35,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p003-c003",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p002-c002",
+        "nhc-influenza-2020-2020-693984e29ed6-p002-c001",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p023-c023",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p025-c025"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 2.229
+    },
+    {
+      "query_id": "K24-N05",
+      "category": "no_answer",
+      "variant": "fts_current",
+      "query": "房颤抗凝风险评分的专门指南原文",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 23,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p018-c018",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p020-c020",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p012-c012",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p018-c018",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c006"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 2,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.6254
+    },
+    {
+      "query_id": "K24-N05",
+      "category": "no_answer",
+      "variant": "fts_population_filter",
+      "query": "房颤抗凝风险评分的专门指南原文",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 23,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p018-c018",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p012-c012",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c006",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p013-c013",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p030-c030"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.6254
+    },
+    {
+      "query_id": "K24-N06",
+      "category": "no_answer",
+      "variant": "fts_current",
+      "query": "请查WHO于2026年发布的成人哮喘指南原文",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 23,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p012-c012",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p001-c001",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c009",
+        "nhc-child-mpp-2025-2025-v2-3c2f529ae70e-p003-c003",
+        "nhc-influenza-2020-2020-693984e29ed6-p010-c009"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 2,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.4923
+    },
+    {
+      "query_id": "K24-N06",
+      "category": "no_answer",
+      "variant": "fts_population_filter",
+      "query": "请查WHO于2026年发布的成人哮喘指南原文",
+      "patient_population": "adult",
+      "expected_behavior": "no_eligible_evidence",
+      "candidate_count": 23,
+      "returned_ids": [
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p012-c012",
+        "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c009",
+        "nhc-influenza-2020-2020-693984e29ed6-p010-c009",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p002-c002",
+        "nhc-covid19-trial-v10-v2-0d062b0213b1-p011-c011"
+      ],
+      "expected_ids": [],
+      "chunk_hit_at_5": null,
+      "ndcg_at_5": null,
+      "population_ineligible_count": 0,
+      "inactive_count": 0,
+      "no_answer_false_return": true,
+      "citation_sha_mismatch": 0,
+      "lexical_elapsed_ms": 1.4923
+    }
+  ],
+  "dense_query_encoding": {
+    "status": "BLOCKED",
+    "reason": "sentence_transformers unavailable; current mounted ASR cache does not contain the pinned BGE model; no weights downloaded"
+  },
+  "rrf_mechanism_only": {
+    "synthetic_rank_lists": true,
+    "passed": true,
+    "not_model_quality": true
+  },
+  "limits": [
+    "single engineer source-locator labels, no clinical review",
+    "mixed-population passages need finer metadata",
+    "population filtering alone has no abstention or disease/version relevance model",
+    "FTS latency excludes dense encoding and reranking"
+  ]
+}

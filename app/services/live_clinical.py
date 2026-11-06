@@ -134,13 +134,23 @@ def build_live_clinical_snapshot(
         text = _patient_fact_text(segment)
         if text:
             fact_segments.append({**segment, "text": text})
-    combined = anonymize_text(" ".join(str(segment.get("text") or "") for segment in fact_segments))
-    evidence_ids = [str(segment.get("segment_id")) for segment in fact_segments if segment.get("segment_id")]
-    record_patch = _build_record_patch(combined, evidence_ids)
-    alerts = _build_alerts(combined, evidence_ids)
+    # Keep each source attached while assembling temporary fields. Joining all
+    # text first loses the relation between a fact and its recording segment.
+    for segment in fact_segments:
+        segment["text"] = anonymize_text(segment["text"])
+    combined = " ".join(segment["text"] for segment in fact_segments)
+    record_patch = _build_sourced_record_patch(fact_segments)
+    alerts_by_id: dict[str, dict[str, Any]] = {}
+    for segment in fact_segments:
+        ids = [str(segment["segment_id"])] if segment.get("segment_id") else []
+        for alert in _build_alerts(segment["text"], ids):
+            if alert["id"] in alerts_by_id:
+                current = alerts_by_id[alert["id"]]["evidence_segment_ids"]
+                current.extend(value for value in ids if value not in current)
+            else:
+                alerts_by_id[alert["id"]] = alert
+    alerts = list(alerts_by_id.values())
     missing_items = _build_missing_items(combined)
-    differentials = _build_differentials(combined, evidence_ids) if not re.search(r"(?:无|没有|否认).{0,4}(?:发热|咳嗽)", combined) else []
-    care_plan = _build_care_plan(combined, evidence_ids)
     next_questions = _build_next_questions(combined)
 
     return {
@@ -154,11 +164,49 @@ def build_live_clinical_snapshot(
         "record_patch": record_patch,
         "alerts": alerts[:MAX_SUMMARY_ITEMS],
         "missing_items": missing_items[:MAX_SUMMARY_ITEMS],
-        "differentials": differentials[:MAX_SUMMARY_ITEMS],
-        "care_plan": care_plan[:MAX_SUMMARY_ITEMS],
+        # No guideline-backed decision service is connected to this live path.
+        # Preserve the event schema without inventing diagnoses or test orders.
+        "differentials": [],
+        "care_plan": [],
         "next_questions": next_questions[:MAX_SUMMARY_ITEMS],
         "stable_segment_count": len(usable_segments),
     }
+
+
+def _build_sourced_record_patch(segments: list[dict[str, Any]]) -> dict[str, Any]:
+    parts = []
+    for segment in segments:
+        ids = [str(segment["segment_id"])] if segment.get("segment_id") else []
+        parts.append((segment["text"], ids, _build_record_patch(segment["text"], ids)))
+    combined = " ".join(text for text, _, _ in parts)
+    patch = _build_record_patch(combined, [])
+    for name in list(patch):
+        if name == "present_illness":
+            # The preview is intentionally bounded; cite only sources whose
+            # text actually falls inside that displayed prefix.
+            consumed, ids = 0, []
+            for text, source_ids, _ in parts:
+                if consumed >= 120:
+                    break
+                ids.extend(source_ids)
+                consumed += len(" ".join(text.split())) + 1
+            patch[name]["evidence_segment_ids"] = list(dict.fromkeys(ids))
+            continue
+        relevant = [field_map[name] for _, _, field_map in parts if name in field_map]
+        if name == "chief_complaint":
+            terms = patch[name]["value"].split("伴")
+            relevant = [field for field in relevant if any(term in field["value"] for term in terms)]
+        else:
+            # A field value is composed only from the matching source fields,
+            # not from one arbitrary sentence in the complete transcript.
+            patch[name]["value"] = "；".join(dict.fromkeys(field["value"] for field in relevant))
+        if not relevant:
+            del patch[name]
+            continue
+        patch[name]["evidence_segment_ids"] = list(dict.fromkeys(
+            value for field in relevant for value in field["evidence_segment_ids"]
+        ))
+    return patch
 
 
 def _build_record_patch(text: str, evidence_ids: list[str]) -> dict[str, Any]:
@@ -196,7 +244,7 @@ def _field(value: str, evidence_ids: list[str]) -> dict[str, Any]:
         "value": value,
         "state": "updated",
         "temporary": True,
-        "evidence_segment_ids": evidence_ids[:5],
+        "evidence_segment_ids": list(dict.fromkeys(evidence_ids)),
     }
 
 
@@ -206,10 +254,10 @@ def _build_alerts(text: str, evidence_ids: list[str]) -> list[dict[str, Any]]:
         alerts.append(
             {
                 "id": "danger-breathing",
-                "title": "呼吸困难或胸痛需优先评估",
-                "summary": "转写中出现胸痛、呼吸困难或气短相关表述，建议医生立即追问并评估生命体征。",
+                "title": "转写提及呼吸困难或胸痛",
+                "summary": "请优先核对这段患者原话；本提示只定位症状，不代表诊断或检查建议。",
                 "severity": "warning",
-                "evidence_segment_ids": evidence_ids[:5],
+                "evidence_segment_ids": list(dict.fromkeys(evidence_ids)),
                 "status": LIVE_DRAFT_STATUS,
             }
         )
@@ -217,10 +265,10 @@ def _build_alerts(text: str, evidence_ids: list[str]) -> list[dict[str, Any]]:
         alerts.append(
             {
                 "id": "danger-high-fever",
-                "title": "高热需要风险复核",
-                "summary": "出现高热相关表述，建议结合体温、精神状态和基础疾病复核。",
+                "title": "转写提及高热",
+                "summary": "请核对这段体温原话；本提示不代表诊断或处理方案。",
                 "severity": "warning",
-                "evidence_segment_ids": evidence_ids[:5],
+                "evidence_segment_ids": list(dict.fromkeys(evidence_ids)),
                 "status": LIVE_DRAFT_STATUS,
             }
         )
@@ -228,116 +276,66 @@ def _build_alerts(text: str, evidence_ids: list[str]) -> list[dict[str, Any]]:
 
 
 def _build_missing_items(text: str) -> list[dict[str, Any]]:
-    candidates = [
-        ("missing-temperature", "补充最高体温和持续时间", ["发热", "发烧", "体温"]),
-        ("missing-sputum", "补充咳痰颜色和痰量", ["咳嗽", "咳痰"]),
-        ("missing-exposure", "询问流感或呼吸道感染接触史", ["发热", "咳嗽"]),
-        ("missing-allergy", "确认药物过敏史", ["用药", "退烧药", "抗生素"]),
-    ]
     return [
-        {"id": item_id, "summary": summary, "status": "pending_doctor_question"}
-        for item_id, summary, keywords in candidates
-        if _contains_any(text, keywords)
+        {"id": f"missing-{key}", "summary": question, "status": "pending_doctor_question"}
+        for key, question in _unanswered_questions(text)
     ]
-
-
-def _build_differentials(text: str, evidence_ids: list[str]) -> list[dict[str, Any]]:
-    items: list[dict[str, Any]] = []
-    if _contains_any(text, ["发热", "发烧", "体温"]):
-        items.append(
-            _differential(
-                "diff-fever",
-                "发热待查",
-                "已出现发热相关证据，需要结合病程、体温和伴随症状继续判断。",
-                evidence_ids,
-            )
-        )
-    if _contains_any(text, ["咳嗽", "咳痰", "胸痛", "呼吸困难"]):
-        items.append(
-            _differential(
-                "diff-lung-infection",
-                "肺部感染",
-                "发热伴呼吸道症状时需排查肺部感染。",
-                evidence_ids,
-            )
-        )
-    if _contains_any(text, ["咽痛", "流感", "乏力", "肌肉酸痛"]):
-        items.append(
-            _differential(
-                "diff-influenza",
-                "甲型流感",
-                "发热合并全身症状或接触史时，可作为鉴别诊断参考。",
-                evidence_ids,
-            )
-        )
-    return items
-
-
-def _differential(item_id: str, name: str, summary: str, evidence_ids: list[str]) -> dict[str, Any]:
-    return {
-        "id": item_id,
-        "name": name,
-        "summary": summary,
-        "supporting_evidence": evidence_ids[:5],
-        "missing_evidence": ["需医生补充问诊和查体"],
-        "recommended_questions": ["继续询问病程、最高体温、伴随症状和接触史"],
-        "recommended_tests": ["血常规", "CRP"],
-        "confidence_state": "preliminary",
-        "status": LIVE_DRAFT_STATUS,
-    }
-
-
-def _build_care_plan(text: str, evidence_ids: list[str]) -> list[dict[str, Any]]:
-    plans: list[dict[str, Any]] = []
-    if _contains_any(text, ["发热", "发烧", "咳嗽", "咳痰"]):
-        plans.append(
-            _care_plan(
-                "care-cbc-crp",
-                "完善血常规及CRP",
-                "评估感染及炎症程度。",
-                evidence_ids,
-            )
-        )
-    if _contains_any(text, ["咳嗽", "咽痛", "流感"]):
-        plans.append(
-            _care_plan(
-                "care-respiratory-pathogen",
-                "考虑呼吸道病原检测",
-                "结合流行病学史和症状判断是否需要病原学检测。",
-                evidence_ids,
-            )
-        )
-    if _contains_any(text, ["发热", "发烧"]):
-        plans.append(
-            _care_plan(
-                "care-supportive",
-                "对症支持处理",
-                "根据体温、饮水、精神状态和禁忌证进行医生确认后的对症处理。",
-                evidence_ids,
-            )
-        )
-    return plans
-
-
-def _care_plan(item_id: str, title: str, summary: str, evidence_ids: list[str]) -> dict[str, Any]:
-    return {
-        "id": item_id,
-        "title": title,
-        "summary": summary,
-        "reason": "来自实时转写稳定片段的临时参考，需医生确认。",
-        "evidence_segment_ids": evidence_ids[:5],
-        "status": "pending_doctor_confirmation",
-    }
 
 
 def _build_next_questions(text: str) -> list[dict[str, Any]]:
-    questions: list[dict[str, Any]] = []
+    return [
+        {"id": f"next-{key}", "question": question}
+        for key, question in _unanswered_questions(text)
+    ]
+
+
+def _unanswered_questions(text: str) -> list[tuple[str, str]]:
+    """Ask about missing source information, without inferring a diagnosis.
+
+    Only explicit answers in patient-filtered clauses suppress a question.
+    A cough's duration must not silently become the duration of fever.
+    """
+    questions: list[tuple[str, str]] = []
+    clauses = re.split(r"[，,。；;!?！？\n]", text)
+    uncertainty = r"可能|不确定|不知道|不清楚|说不清|好像|估计|没有量|没量|未测|没测"
+    certain_clauses = [clause for clause in clauses if not re.search(uncertainty, clause)]
     if _contains_any(text, ["发热", "发烧"]):
-        questions.append({"id": "next-temperature", "question": "最高体温是多少，持续了几天？"})
+        measured = any(
+            not re.search(uncertainty, clause)
+            and any(fact.type == "measurement" for fact in extract_clinical_facts(clause))
+            for clause in clauses
+        )
+        duration = any(
+            _contains_any(clause, ["发热", "发烧"])
+            and not re.search(uncertainty, clause)
+            and any(fact.type == "duration" for fact in extract_clinical_facts(clause))
+            for clause in clauses
+        )
+        missing = []
+        if not measured:
+            missing.append("最高体温")
+        if not duration:
+            missing.append("发热持续时间")
+        if missing:
+            questions.append(("temperature", "请补充" + "和".join(missing) + "。"))
     if _contains_any(text, ["咳嗽", "咳痰"]):
-        questions.append({"id": "next-sputum", "question": "是否咳痰，痰的颜色和量如何？"})
-    if _contains_any(text, ["胸痛", "呼吸困难", "气短"]):
-        questions.append({"id": "next-red-flags", "question": "是否有胸痛、气短、喘憋或血氧下降？"})
+        # A tentative colour or an explicit unknown is not an answered slot.
+        answered = "。".join(certain_clauses)
+        absent = re.search(r"(?:没有|没|无|不)\s*(?:咳)?痰|干咳", answered)
+        color = re.search(r"(?:白|黄|绿|红|血|透明|清|铁锈).{0,2}痰|痰.{0,4}(?:白|黄|绿|红|血|透明|清|铁锈)", answered)
+        amount = re.search(r"(?:少量|大量|很多|不多|一点|较多|较少).{0,3}痰|痰.{0,4}(?:少量|大量|很多|不多|一点|较多|较少)", answered)
+        if not absent and not (color and amount):
+            needed = [name for name, known in (("痰的颜色", color), ("痰量", amount)) if not known]
+            questions.append(("sputum", "是否咳痰？如有，请补充" + "和".join(needed) + "。"))
+    exposure_known = any(re.search(r"接触史|接触过|接触了|接触患者|接触病人|没接触|未接触|无接触", clause) for clause in certain_clauses)
+    if _contains_any(text, ["发热", "咳嗽"]) and not exposure_known:
+        questions.append(("exposure", "是否有流感或呼吸道感染接触史？"))
+    allergy_known = any(
+        fact.type == "allergy" and fact.assertion != "uncertain"
+        for fact in extract_clinical_facts(text)
+    )
+    if _contains_any(text, ["用药", "退烧药", "抗生素"]) and not allergy_known:
+        questions.append(("allergy", "请确认药物过敏史。"))
     return questions
 
 

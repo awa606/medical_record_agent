@@ -9,11 +9,15 @@ _BREAK = re.compile(r"[，,；;。！？!?\n]|但是|不过|然而|而是|但|�
 _ROLE = re.compile(r"^\s*(?:[\[【](?:患者|病人|医生|医师|家属|家长)[\]】]\s*[:：]?|(?:患者|病人|医生|医师|家属|家长)\s*[:：])\s*")
 _ACTION = re.compile(
     r"服用|服药|口服|用药|吃药|注射|吃了|用了|"
+    # A colloquial relative clause still names an intake action. Keep its
+    # qualifier in the original clause so negation/advice checks remain in force.
+    r"(?:吃|用)的那个(?=布洛芬|退热药|退烧药|对乙酰氨基酚|阿司匹林|头孢|青霉素|阿莫西林)|"
     r"(?:吃|用)(?:过)?(?=(?:[一二两三四五六七八九十\d]+次)?"
     r"(?:布洛芬|退热药|退烧药|对乙酰氨基酚|阿司匹林|头孢|青霉素|阿莫西林))"
 )
 _UNCERTAIN = re.compile(r"不确定|不知道|不清楚|说不清|可能|疑似|有没有|是否")
 _PROPOSED = re.compile(r"建议|计划|准备|打算|拟|考虑|可以|应该|需要|不必|无需|假如|假设|倘若|(?<!主)要是|若|如果|明天|将要")
+_COLLOQUIAL_INTENT = re.compile(r"(?:要|想|买来|拿来|留着)$")
 _NEGATED = re.compile(r"否认|没有|未曾|未|没|不再|不曾|不能|不要|不$")
 _FOLLOWED_ADVICE = re.compile(r"(?:已经|已|曾经|曾)(?:按照|按|遵照|遵循)(?:医生|医师)?的?(?:建议|医嘱)$")
 _SEQUENTIAL_ACTION = re.compile(r"就(?=(?:自行|已经|按时|规律|立即|马上)?$)")
@@ -86,6 +90,8 @@ def treatment_contexts(text: str) -> list[TreatmentContext]:
             followed = _FOLLOWED_ADVICE.search(prefix)
             modality_prefix = prefix[:followed.start()] if followed else prefix
             proposed = carried_advice or bool(_PROPOSED.search(modality_prefix))
+            if match.group().endswith("的那个") and _COLLOQUIAL_INTENT.search(modality_prefix):
+                proposed = True
             actions.append(proposed)
             # "没有吃早饭就服用..." negates eating, not taking medication.
             # Conditions remain checked against the complete prefix above.

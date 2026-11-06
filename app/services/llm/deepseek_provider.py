@@ -66,6 +66,30 @@ class SpikeError(RuntimeError):
     pass
 
 
+def operational_metadata(value: object) -> dict:
+    """Bounded allowlist: no prompt, result, exception body or arbitrary nesting."""
+    if not isinstance(value, dict):
+        return {}
+    result = {}
+    for key in ('request_id', 'model', 'finish_reason', 'budget_call_id',
+                'transport_mode', 'field_contract', 'code'):
+        item = value.get(key)
+        if isinstance(item, str) and (item == '[REDACTED]' or re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', item)):
+            result[key] = item
+    latency = value.get('latency_ms')
+    if type(latency) is int and latency >= 0:
+        result['latency_ms'] = latency
+    if type(value.get('auto_retry')) is bool:
+        result['auto_retry'] = value['auto_retry']
+    usage = value.get('usage')
+    if isinstance(usage, dict):
+        result['usage'] = {key: usage[key] for key in
+            ('prompt_tokens', 'completion_tokens', 'total_tokens',
+             'prompt_cache_hit_tokens', 'prompt_cache_miss_tokens')
+            if type(usage.get(key)) is int and usage[key] >= 0}
+    return result
+
+
 def safe_failure_code(exc: Exception) -> str:
     """Classify typed transport reasons without retaining arbitrary error text.
 
@@ -215,7 +239,7 @@ class ExplicitHTTPSProxyHandler(request.ProxyHandler):
 class DeepSeekDemoProvider:
     name = 'online'
     model = MODEL
-    diagnostics_enabled = True
+    diagnostics_enabled = False
 
     def __init__(self, *, api_key: str, output: Path, ledger: BudgetLedger,
                  case_id: str = 'business', endpoint: str = ENDPOINT, local_test: bool = False,
@@ -314,6 +338,14 @@ class DeepSeekDemoProvider:
             return {'reachable': False, 'model': MODEL, 'models': [], 'error_code': code, 'inference_called': False}
 
     def save(self, name: str, value: object) -> None:
+        # Only an explicit synthetic-test opt-in permits source/response capture.
+        # Error bodies can echo input too; they are raw diagnostics, not telemetry.
+        if name == 'response_metadata.json':
+            value = operational_metadata(value)
+        elif name == 'failure.json':
+            value = operational_metadata(value)
+        elif not self.diagnostics_enabled:
+            return
         # The API must not echo a credential into diagnostic artifacts.
         safe = json.dumps(value, ensure_ascii=False).replace(self.api_key, '[REDACTED]')
         write_json(self.output / name, json.loads(safe))
@@ -373,7 +405,7 @@ class DeepSeekDemoProvider:
             data = json.loads(raw)
             # Keep trace/status safe even if an upstream response echoes a key.
             data = json.loads(json.dumps(data, ensure_ascii=False).replace(self.api_key, '[REDACTED]'))
-            self.last_diagnostic_response = data
+            self.last_diagnostic_response = data if self.diagnostics_enabled else None
             self.save('raw_response.json', data)
             if not isinstance(data, dict):
                 raise SpikeError('RESPONSE_NOT_OBJECT')
@@ -381,9 +413,9 @@ class DeepSeekDemoProvider:
             if not isinstance(choices, list) or len(choices) != 1 or not isinstance(choices[0], dict):
                 raise SpikeError('RESPONSE_CHOICES_INVALID')
             choice = choices[0]
-            self.response_metadata = {**self.response_metadata, 'request_id': data.get('id'), 'model': data.get('model'),
+            self.response_metadata = operational_metadata({**self.response_metadata, 'request_id': data.get('id'), 'model': data.get('model'),
                 'finish_reason': choice.get('finish_reason'), 'usage': data.get('usage'),
-                'latency_ms': int((time.perf_counter() - start) * 1000), 'budget_call_id': call_id}
+                'latency_ms': int((time.perf_counter() - start) * 1000), 'budget_call_id': call_id})
             if choice.get('finish_reason') != 'stop':
                 raise SpikeError('RESPONSE_NOT_COMPLETE')
             message = choice.get('message')
@@ -399,7 +431,8 @@ class DeepSeekDemoProvider:
             if not isinstance(data.get('model'), str) or not data['model']:
                 raise SpikeError('RESPONSE_MODEL_MISSING')
             self.save('model_first_output.json', parsed_fields)
-            self.ledger.finish(call_id, usage=usage)
+            # Accounting never needs arbitrary upstream fields or response text.
+            self.ledger.finish(call_id, usage={k: usage[k] for k in ('prompt_tokens', 'completion_tokens')})
             budget_settled = True
             if usage['prompt_tokens'] > INPUT_TOKEN_RESERVE or usage['completion_tokens'] > OUTPUT_TOKEN_LIMIT:
                 raise SpikeError('SERVER_USAGE_EXCEEDED_RESERVATION')
@@ -411,6 +444,8 @@ class DeepSeekDemoProvider:
             self.save('failure.json', {'code': code, 'budget_call_id': call_id, 'auto_retry': False})
             raise SpikeError(code) from None
         finally:
+            self.response_metadata.setdefault('latency_ms', int((time.perf_counter() - start) * 1000))
+            self.response_metadata.setdefault('budget_call_id', call_id)
             self.save('response_metadata.json', self.response_metadata)
         return LLMProviderResponse(provider=self.name, model=data['model'], content=content,
                                    latency_ms=self.response_metadata['latency_ms'])

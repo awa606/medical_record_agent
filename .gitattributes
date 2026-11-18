@@ -3,3 +3,5 @@ data/asr_eval/executable_clinical_v1/audio/**/*.flac filter=lfs diff=lfs merge=l
 # Frozen research evidence is byte-hashed; do not normalize line endings.
 experiments/backend-improvement-20261106/knowledge/*.json -text whitespace=trailing-space,space-before-tab,cr-at-eol
 experiments/backend-improvement-20261106/asr/measured_summary.json -text whitespace=trailing-space,space-before-tab,cr-at-eol
+# Unified diff context includes one leading space even on an empty source line.
+experiments/course-defense-20261118/classroom-ui.patch -text whitespace=-blank-at-eol

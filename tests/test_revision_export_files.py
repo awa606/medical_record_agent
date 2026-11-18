@@ -48,6 +48,39 @@ def export(client, task_id):
     return response.json()["exports"]
 
 
+def test_browser_export_preconditions_reject_stale_revision_and_approval(signed_case):
+    client, task_id, output_dir = signed_case
+    url = f"/api/tasks/{task_id}/export"
+    ready = client.get(f"{url}-readiness").json()
+    expected = {f"expected_{key}": ready[key] for key in ("revision_id", "approval_id")}
+    for key in expected:
+        response = client.post(url, params={**expected, key: expected[key] + 1})
+        assert response.status_code == 409
+    assert not list_export_events_for_task(task_id)
+    assert not list(output_dir.rglob("*.pdf"))
+    assert client.post(url, params=expected).status_code == 200
+    assert len(list_export_events_for_task(task_id)) == 1
+
+
+def test_restored_signed_pdf_download_uses_current_root_and_receipt(signed_case, tmp_path, monkeypatch):
+    client, task_id, _ = signed_case
+    receipt = export(client, task_id)
+    original = Path(receipt["pdf_path"])
+    restored_root = tmp_path / "relocated" / "outputs"
+    restored_root.mkdir(parents=True)
+    monkeypatch.setenv("MEDICAL_RECORD_AGENT_OUTPUT_DIR", str(restored_root))
+    url = f"/api/tasks/{task_id}/exports/pdf"
+    assert client.get(url).status_code == 404
+    restored = restored_root / original.name
+    restored.write_bytes(b"damaged restore")
+    assert client.get(url).status_code == 409
+    restored.write_bytes(original.read_bytes())
+    response = client.get(url, params={"sha256": receipt["pdf_sha256"]})
+    assert response.status_code == 200
+    assert hashlib.sha256(response.content).hexdigest() == receipt["pdf_sha256"]
+    assert len(list_export_events_for_task(task_id)) == 1
+
+
 def test_old_pdf_survives_revised_code_and_repeated_exports(signed_case):
     client, task_id, _ = signed_case
     first = export(client, task_id)

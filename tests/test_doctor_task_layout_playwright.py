@@ -76,7 +76,8 @@ def test_historical_empty_display_and_strict_text_roles_do_not_mutate_history():
                 s.taskStatus='exported';s.currentTask.current_stage='exported';
                 const revision = currentRevisionInfo(null);
                 s.currentExportReadiness={task_id:s.currentTaskId, ready:true,
-                    revision_id:revision.revisionId, content_hash:revision.contentHash};
+                    revision_id:revision.revisionId, content_hash:revision.contentHash,
+                    current_stage:'exported', approval_id:41, exports:{pdf_path:'synthetic-legacy.pdf'}};
                 renderAll();
             }""")
             expect(page.locator('#reviewStatus')).to_have_text('已导出')

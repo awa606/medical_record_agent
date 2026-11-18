@@ -76,11 +76,11 @@ appState.currentEncounter={id:13}; appState.currentTaskId=11;
 let release; api=()=>new Promise(resolve=>release=resolve);
 const pending=refreshExportReadiness();
 appState.encounterRestoreVersion++;appState.currentEncounter={id:14};appState.currentTaskId=12;
-appState.currentExportReadiness={revision_id:20};appState.currentExports={txt:'new'};
+appState.currentExportReadiness={revision_id:20,exports:{pdf_path:'new.pdf'}};
 release({revision_id:19,exports:{txt:'old'}});await pending;
-console.log(JSON.stringify({readiness:appState.currentExportReadiness,exports:appState.currentExports}));
+console.log(JSON.stringify(appState.currentExportReadiness));
 ''')
-    assert result == {'readiness': {'revision_id': 20}, 'exports': {'txt': 'new'}}
+    assert result == {'revision_id': 20, 'exports': {'pdf_path': 'new.pdf'}}
 
 
 def test_late_export_failure_does_not_clear_new_patient_approval():

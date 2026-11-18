@@ -87,6 +87,8 @@ def main():
                 identity = {}
             if identity.get("service") != "medilisten-course-replay-20261118":
                 raise RuntimeError("选定的端口已被其他程序占用。")
+            if identity.get("variant") != "classroom-review-2":
+                raise RuntimeError("旧版课堂回放仍在此端口运行。请在原启动窗口按回车结束，再启动当前版本。已保存病历会保留。")
             print("课堂回放已经启动，登录信息在原启动窗口。")
             if not args.no_browser:
                 webbrowser.open(base+"/static/doctor.html")
@@ -107,7 +109,7 @@ def main():
                 try:
                     identity = session.get(base+"/course/identity",timeout=.8).json()
                     health = session.get(base+"/health",timeout=2).json()
-                    if identity.get("variant") == "classroom-projection-1" and health.get("status") == "ok":
+                    if identity.get("variant") == "classroom-review-2" and health.get("status") == "ok":
                         break
                 except requests.RequestException:
                     pass

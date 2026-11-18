@@ -4,7 +4,8 @@ import asyncio
 import hashlib
 import json
 import os
-from pathlib import Path
+import re
+from pathlib import Path, PureWindowsPath
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
@@ -858,7 +859,12 @@ def _export_doctor_name(task: dict[str, Any], encounter: dict[str, Any]) -> str 
 
 
 @router.post("/{task_id}/export")
-def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
+def export_task(
+    task_id: int,
+    request: Request = None,
+    expected_revision_id: int | None = None,
+    expected_approval_id: int | None = None,
+) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
     approval = get_active_approval_for_task(task_id)
     readiness = _build_export_readiness(
@@ -868,6 +874,9 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
         active_approval=approval,
         current_revision=_current_revision_or_error(task),
     )
+    if ((expected_revision_id is not None and expected_revision_id != readiness["revision_id"])
+            or (expected_approval_id is not None and expected_approval_id != readiness["approval_id"])):
+        raise HTTPException(status_code=409, detail="病历版本或审核记录已更新，请重新查看当前病历后导出。")
     if readiness["errors"]:
         raise HTTPException(status_code=400, detail=readiness)
 
@@ -925,7 +934,9 @@ def _export_output_root() -> Path:
     return Path(os.environ.get("MEDICAL_RECORD_AGENT_OUTPUT_DIR", DEFAULT_OUTPUT_DIR)).resolve()
 
 
-def _resolve_export_download_path(exports: dict[str, str], export_format: str) -> tuple[Path, str, str]:
+def _resolve_export_download_path(
+    exports: dict[str, str], export_format: str, *, task_id: int, revision_id: int, approval_id: int,
+) -> tuple[Path, str, str]:
     config = EXPORT_DOWNLOADS.get(export_format)
     if config is None:
         raise HTTPException(
@@ -942,7 +953,14 @@ def _resolve_export_download_path(exports: dict[str, str], export_format: str) -
         raise HTTPException(status_code=404, detail="Export file not found")
 
     output_root = _export_output_root()
-    export_path = Path(raw_path).resolve()
+    # Signed files live directly under the output root. Their stored absolute
+    # path can refer to a different machine after restoring a complete backup.
+    filename = PureWindowsPath(raw_path).name
+    signed_filename = rf"task_{task_id}_r{revision_id}_a{approval_id}_[a-z0-9_]+_medical_record\.pdf"
+    if exports.get("pdf_sha256") and re.fullmatch(signed_filename, filename):
+        export_path = (output_root / filename).resolve()
+    else:
+        export_path = Path(raw_path).resolve()
     try:
         export_path.relative_to(output_root)
     except ValueError as exc:
@@ -969,7 +987,10 @@ def download_task_export(task_id: int, export_format: str, request: Request = No
     if event is None or event["revision_id"] != revision["id"]:
         raise HTTPException(status_code=404 if sha256 is not None else 409, detail="当前批准版本没有对应的导出记录。")
     exports = json.loads(event["exports_json"])
-    export_path, extension, media_type = _resolve_export_download_path(exports, export_format.lower())
+    export_path, extension, media_type = _resolve_export_download_path(
+        exports, export_format.lower(), task_id=task_id, revision_id=int(revision["id"]),
+        approval_id=int(approval["id"]),
+    )
     pdf_bytes = export_path.read_bytes()
     expected = exports.get("pdf_sha256")
     # Legacy event files used this one fixed name and did not record a digest.

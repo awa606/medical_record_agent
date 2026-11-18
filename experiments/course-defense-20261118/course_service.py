@@ -3,7 +3,7 @@ from pathlib import Path
 import os, sys, json, hashlib, datetime, socket
 HERE = Path(__file__).resolve().parent
 D = HERE / '冻结资产'
-SRC = D / 'source'
+SRC = HERE / '运行源'
 os.chdir(SRC)
 sys.path.insert(0, str(SRC))
 run = Path(os.environ['COURSE_RUNTIME'])
@@ -11,6 +11,10 @@ port = int(os.environ['COURSE_PORT'])
 def h(b):return hashlib.sha256(b).hexdigest()
 for path,expected in json.loads((D/'frozen-sha256.json').read_text(encoding='utf8')).items():
  if h((D/path).read_bytes())!=expected:raise SystemExit('演示资产校验失败：'+path)
+runtime_manifest = (SRC/'runtime-sha256.json').read_bytes()
+for path, expected in json.loads(runtime_manifest).items():
+    if h((SRC/path).read_bytes()) != expected:
+        raise SystemExit('工作台运行文件校验失败：'+path)
 
 for name in ('uploads','outputs','speaker-profiles','logs'): (run/name).mkdir(parents=True,exist_ok=True)
 c=json.loads((run/'本机账户.json').read_text(encoding='utf8'))
@@ -56,20 +60,17 @@ async def no_simulated_asr(request,call_next):
  if path.startswith(('/api/audio','/api/asr/','/api/llm/test')):
   return JSONResponse(status_code=409,content={'detail':'独立回放版仅演示固定合成文本的病历审核。录音、上传和在线生成需使用对应的实时服务。'})
  return await call_next(request)
-from fastapi.responses import HTMLResponse, FileResponse
 from starlette.requests import Request
-from starlette.responses import Response
 
 @app.middleware('http')
 async def course_presentation(request: Request, call_next):
-    if request.url.path == '/static/doctor.html':
-        content = (SRC/'static/doctor.html').read_text(encoding='utf8')
-        content = content.replace('</head>', '<link rel="stylesheet" href="/course/projector.css?v=1"></head>')
-        return HTMLResponse(content, headers={'Cache-Control': 'no-store'})
-    if request.url.path == '/course/projector.css':
-        return FileResponse(HERE/'投影.css', media_type='text/css')
     if request.url.path == '/course/identity':
-        return JSONResponse({'service':'medilisten-course-replay-20261118','variant':'classroom-projection-1','port':port})
+        return JSONResponse({'service':'medilisten-course-replay-20261118','variant':'classroom-review-2',
+                             'runtime_sha256':h(runtime_manifest),'port':port})
+    if request.url.path == '/static/doctor.html':
+        response = await call_next(request)
+        response.headers['Cache-Control'] = 'no-store'
+        return response
     return await call_next(request)
 
 import uvicorn

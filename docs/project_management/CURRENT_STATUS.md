@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-06T09:42:20.293Z`
-- Source hash: `588a5caa2eddf12ff8fecdeb2084f039186680f81be4f909569e74e5e09e77a7`
+- Updated at: `2026-11-18T04:51:09.235Z`
+- Source hash: `2004a18e334e2bbc2210bac2314506bff48b6fdd703bcfa0640351a67bedc4c8`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@d1326199749b74213dff7f5c5eae6ffca725cc6f`
+- Repo: `codex/ui-hospital-record-v1@1e9f4da1263ce74c89b6567425ba116a3e71a16b`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · OPEN
-- Last merged PR: None
-- Forecast Alpha Exit: **26327原44115d88-perf2已恢复且就绪200；本轮六份后端文件3998194通过CI，真实E-4仅一次调用并识别遗漏/混放，未完成修订审核导出，未推广。默认诊断只存元数据。知识24查询8/15、Nemotron60秒计算135.708秒均不晋级。正式16项99h、5.1 VERIFY不变。 前端0.4.0仅实现候选，未改生产链，GUI与平台验收未完成。**
+- Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
+- Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
+- Forecast Alpha Exit: **既有5.1仍为VERIFY，5.3为BACKLOG，硬件暂缓。课程候选已保存独立软件环境复现、角色流程与前端构建证据，正式阶段继续按原门禁核验。**
 
 ## Progress
 
@@ -54,11 +54,11 @@
 
 ## Next
 
-- Single next task: 0.4.0文档接诊原型已实现，44项模型测试通过。内置浏览器超时，等待用户允许独立Playwright后执行全流程、同条件截图、800x600与原生100/125/150%缩放；不得将当前候选称为GUI或审美通过。
-- Parallel waiting task: CI4d6c8a8已通过1858项；隔离3998194合成E-4一次生成暴露HPI用药覆盖缺口及过敏/伴随混放，新规则已隔离。先零调用定位对应字段正文与问答关联，再补修订审核；原26327保持44115d88，候选HOLD。 在线说话人CPU实时目标未过；BGE旧向量一致性未过；本地漏提独立研究。保留同期布局样机、三面板接诊原型、数据准备和用户视觉选择任务；原型未接生产API，硬件仍延期。
+- Single next task: 继续核验真实授权音频、目标医生操作和候选部署的三条主路径，按原任务逐项留证。
+- Parallel waiting task: 课程回放完成双软件环境复现和模拟医生可见按钮走查，独立诊疗评价、自然问诊实时音频、实体硬件仍待取得对应证据。
 
 ## Manual Actions
 
-- 回复独立测试浏览器授权与私有在线预览偏好；代码候选已本地可服务，用户视觉和目标医生验收另行记录。
+- 在实际教室投影并由授课教师或目标医生独立试用后登记意见。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

@@ -30,9 +30,54 @@ def _is_asr_routing_value(key: str, value: object) -> bool:
     return pattern is not None and re.fullmatch(pattern, value) is not None
 
 
+_TRUE_VALUES = {"1", "true", "yes", "on"}
+_FALSE_VALUES = {"0", "false", "no", "off"}
+
+
+def _explicit_flag() -> bool | None:
+    raw = os.getenv("MRA_ANONYMIZE")
+    if raw is None or not raw.strip():
+        return None
+    value = raw.strip().lower()
+    if value in _TRUE_VALUES:
+        return True
+    if value in _FALSE_VALUES:
+        return False
+    return None
+
+
 def enabled() -> bool:
-    flag = os.getenv("MRA_ANONYMIZE")
-    return flag.lower() in {"1", "true", "yes"} if flag is not None else os.getenv("RECORD_PROVIDER_MODE", "demo") == "edge"
+    """Redaction is on unless it was explicitly switched off.
+
+    An external online provider must never receive raw patient prose, so the
+    default follows the outbound boundary instead of the demo default.
+    """
+    flag = _explicit_flag()
+    if flag is not None:
+        return flag
+    if (os.getenv("LLM_PROVIDER") or "").strip().lower() == "online":
+        return True
+    return (os.getenv("RECORD_PROVIDER_MODE") or "demo").strip().lower() == "edge"
+
+
+def unredacted_outbound_allowed() -> bool:
+    return (os.getenv("MRA_ALLOW_UNREDACTED_OUTBOUND") or "").strip().lower() in _TRUE_VALUES
+
+
+def outbound_redaction_required(provider_name: str | None = None) -> bool:
+    provider = (provider_name or os.getenv("LLM_PROVIDER") or "mock").strip().lower()
+    return provider == "online"
+
+
+def assert_outbound_redaction(provider_name: str | None = None) -> None:
+    if not outbound_redaction_required(provider_name):
+        return
+    if enabled() or unredacted_outbound_allowed():
+        return
+    raise RuntimeError(
+        "ONLINE_ANONYMIZATION_REQUIRED: set MRA_ANONYMIZE=1 before sending patient text "
+        "to an external LLM (or set MRA_ALLOW_UNREDACTED_OUTBOUND=1 to accept the risk)"
+    )
 
 def _connection():
     from app.db import get_db_path

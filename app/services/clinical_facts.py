@@ -32,6 +32,8 @@ class ClinicalFact:
     evidence_span_id: str | None = None
     review_status: ReviewStatus = "pending"
     source_span: SourceSpan = field(default_factory=lambda: SourceSpan(text=""))
+    # Verbatim statement for the body when the source sentence spans fields.
+    field_excerpt: str | None = None
 
 
 _SPLIT_RE = re.compile(r"[。！？!?\n]+")
@@ -62,7 +64,7 @@ _CHINESE_TEMPERATURES = {
 
 _NEGATION_WORDS = ("没有", "没", "无", "不", "否认", "未")
 _UNCERTAINTY_WORDS = ("不确定", "不知道", "说不清", "可能", "疑似", "不清楚")
-_FAMILY_WORDS = ("父亲", "母亲", "家属", "孩子", "儿子", "女儿", "丈夫", "妻子", "爷爷", "奶奶")
+_FAMILY_WORDS = ("父亲", "母亲", "爸爸", "妈妈", "家属", "孩子", "儿子", "女儿", "丈夫", "妻子", "爷爷", "奶奶")
 _HISTORICAL_WORDS = ("既往", "曾经", "以前", "过去", "小时候")
 _RESOLVED_WORDS = ("已缓解", "已经好了", "现在好了", "已退热", "已经退了", "已经脱敏", "现在已经脱敏", "不再")
 _COUGH_SYNONYMS = ("咳嗽", "有点咳", "一直咳", "咳了")
@@ -104,7 +106,7 @@ _ROLE_PREFIX = re.compile(
     r"|(医生|医师|患者|病人|家属|家长|待确认|doctor|patient)(?:\s*[：:]|回答|说|称|问))\s*", re.I,
 )
 _CLAUSE_BREAK = re.compile(r"[，,；;]|但是|不过|然而|但")
-_SUBJECT = re.compile(r"父亲|母亲|家属|丈夫|妻子|爷爷|奶奶|孩子|儿子|女儿|患者|病人|本人|她|他|我(?=自己|本人|有|患|没|咳|发|胸|头|不舒服)")
+_SUBJECT = re.compile(r"父亲|母亲|爸爸|妈妈|家属|丈夫|妻子|爷爷|奶奶|孩子|儿子|女儿|患者|病人|本人|她|他|我(?=对|自己|本人|有|患|没|咳|发|胸|头|不舒服)")
 
 
 @dataclass(frozen=True)
@@ -196,6 +198,7 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
         unit: str | None = None,
         evidence: str,
         index: int | None,
+        field_excerpt: str | None = None,
     ) -> None:
         nonlocal next_id
         facts.append(
@@ -215,6 +218,7 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
                     index=index,
                     text=evidence,
                 ),
+                field_excerpt=field_excerpt,
             )
         )
         next_id += 1
@@ -272,17 +276,21 @@ def extract_clinical_facts(text: str) -> list[ClinicalFact]:
                 evidence=treatment.text, index=index,
             )
 
-        for allergy in _allergy_mentions(normalized):
-            assertion, certainty = _semantic_assertion(normalized, allergy)
+        for allergy, position, statement in _allergy_clauses(segment):
+            assertion, certainty = _semantic_assertion(segment if context.speaker == "医生" else statement, allergy)
+            if any(word in statement for word in _UNCERTAINTY_WORDS) or re.search(r"未明确|尚未查明|以后再问", statement):
+                assertion, certainty = "uncertain", "uncertain"
             add(
                 type_="allergy",
                 name=allergy,
                 assertion=assertion,
-                experiencer=subject(allergy),
-                temporality="resolved" if assertion == "resolved" else _temporality(_concept_scope(normalized, allergy)),
+                experiencer=clinical_experiencer(segment, speaker=context.speaker,
+                    patient_target=context.patient_target, position=position),
+                temporality="resolved" if assertion == "resolved" else _temporality(statement),
                 certainty=certainty,
                 evidence=segment,
                 index=index,
+                field_excerpt=statement,
             )
 
         for symptom_name, keywords in _RESPIRATORY_SYMPTOMS.items():
@@ -472,6 +480,52 @@ def _allergy_mentions(text: str) -> list[str]:
     return mentions[:1]
 
 
+_REACTION_LINK = re.compile(r"表现为|表现是|引起|导致|所致|伴有|伴随|出现|发生|(?:过敏|服药|服用|用药|注射|接触).{0,8}(?:时|后)")
+_REAFFIRMED_ALLERGY = re.compile(r"(?:我|本人)?(?:是|确实|的确|真的|会|有|也)+过敏(?:的)?$")
+# Only discard an independent symptom or measurement. Keep unknown adjacent
+# wording: it can retract, qualify or describe the reaction.
+_SYMPTOM_TERMS = "|".join(re.escape(term) for names in _RESPIRATORY_SYMPTOMS.values() for term in names)
+_PLAIN_OBSERVATION = re.compile(
+    rf"(?:(?:{_SYMPTOM_TERMS})|咯血|咳血|体温|烧到|烧至|最高|最低|约|持续|昨天|今天|已有|已经|否认|没有|无|有|伴|也|我|、|和|及|"
+    r"[0-9.一二两三四五六七八九十]+|小时|天|周|℃|°C|度)+", re.I,
+)
+
+
+def _allergy_clauses(segment: str):
+    """Keep the original sentence as evidence, and project the patient's allergy statement for display."""
+    label = _ROLE_PREFIX.match(segment)
+    offset = label.end() if label else 0
+    clauses = list(re.finditer(r"[^，,；;]+", segment[offset:]))
+    for i, clause in enumerate(clauses):
+        if i and "过敏" in clauses[i - 1].group() and (
+            _REAFFIRMED_ALLERGY.fullmatch(clause.group()) or re.match(r"过敏(?:时|后)", clause.group())
+        ):
+            continue  # An affirmation of the named allergen, not another allergy.
+        for concept in _allergy_mentions(clause.group()):
+            first = last = i
+            # Keep dependent reactions and qualifiers, including a doctor's
+            # question followed by an explicit answer. Drop independent history.
+            while first and _linked_allergy_clause(clauses[first - 1].group(), clause.group()):
+                first -= 1
+            while last + 1 < len(clauses) and _linked_allergy_clause(
+                clauses[last + 1].group(), segment[offset + clause.start():offset + clauses[last].end()]
+            ):
+                last += 1
+            start = offset + clauses[first].start()
+            end = offset + clauses[last].end()
+            yield concept, offset + clause.start() + clause.group().find(concept), segment[start:end].strip()
+
+
+def _linked_allergy_clause(text: str, anchor: str) -> bool:
+    if _REAFFIRMED_ALLERGY.fullmatch(text) or re.match(r"过敏(?:时|后)", text):
+        return True
+    if "过敏" in text or re.search(r"父亲|母亲|爸爸|妈妈|家属|丈夫|妻子|另外|此外|另诉", text):
+        return False
+    if _REACTION_LINK.search(anchor) or _REACTION_LINK.search(text):
+        return True
+    return _PLAIN_OBSERVATION.fullmatch(text.strip()) is None and not treatment_contexts(text)
+
+
 def _answered_question_facts(text: str) -> list[tuple[FactType, str, str]]:
     results: list[tuple[FactType, str, str]] = []
     concepts: list[tuple[FactType, str, tuple[str, ...]]] = [
@@ -513,7 +567,7 @@ def _extract_duration(text: str) -> str | None:
 
 def _dedupe_facts(facts: list[ClinicalFact]) -> list[ClinicalFact]:
     deduped: list[ClinicalFact] = []
-    seen: set[tuple[str, str, str, str, str, str, str | None]] = set()
+    seen: set[tuple[str, str, str, str, str, str, str | None, str | None]] = set()
     for fact in facts:
         key = (
             fact.type,
@@ -523,6 +577,10 @@ def _dedupe_facts(facts: list[ClinicalFact]) -> list[ClinicalFact]:
             fact.temporality,
             fact.certainty,
             fact.value,
+            # Distinct unlisted allergens share the fallback name "过敏".
+            # For a named allergen, retain the existing deduplication of
+            # the question-answer and sentence parsers' identical fact.
+            fact.field_excerpt if fact.type == "allergy" and fact.name == "过敏" else None,
         )
         if key in seen:
             continue
@@ -540,12 +598,12 @@ def _build_allergy_history(
             return MedicalField.missing_field("仅提及家族过敏信息，患者本人过敏史尚未确认")
         return MedicalField.missing_field("过敏史尚未提及")
 
-    exact_evidence = "；".join(_unique([fact.evidence for fact in allergies if fact.evidence]))
+    allergy_text = "；".join(_unique([fact.field_excerpt or fact.evidence for fact in allergies]))
     uncertain = [fact for fact in allergies if fact.assertion == "uncertain"]
     resolved = [fact for fact in allergies if fact.assertion == "resolved"]
     if uncertain:
         return _field_from_facts(
-            exact_evidence,
+            allergy_text,
             allergies,
             confidence=0.55,
             status="partial",
@@ -554,7 +612,7 @@ def _build_allergy_history(
         )
     if resolved:
         return _field_from_facts(
-            exact_evidence,
+            allergy_text,
             allergies,
             confidence=0.72,
             status="partial",
@@ -562,7 +620,7 @@ def _build_allergy_history(
             hint="既往过敏或脱敏状态需医生复核。",
         )
     return _field_from_facts(
-        exact_evidence,
+        allergy_text,
         allergies,
         confidence=0.86,
         status="complete",
@@ -694,13 +752,24 @@ def _build_accompanying_symptoms(positive_symptoms: list[ClinicalFact], chief: M
 def _build_previous_treatment(treatments: list[ClinicalFact]) -> MedicalField:
     if not treatments:
         return MedicalField.missing_field("既往处理尚未提及")
+    missing = []
+    for fact in treatments:
+        text = fact.value or ""
+        if fact.assertion == "uncertain":
+            missing.append("是否实际用药")
+        elif fact.assertion == "present":
+            if not re.search(r"(?:\d+(?:\.\d+)?|[一二两三四五六七八九十半]+)\s*(?:mg|g|mL|毫克|克|毫升|片|粒|袋|支)", text, re.I):
+                missing.append("用药剂量")
+            if not re.search(r"昨天|昨日|昨晚|今天|今早|今晚|前天|当日|(?:\d+|[一二两三四五六七八九十]+)(?:天|小时|分钟)前", text):
+                missing.append("处理时间")
+    missing = _unique(missing)
     return _field_from_facts(
         "；".join(_unique([fact.value or fact.name for fact in treatments])),
         treatments,
         confidence=0.8,
-        status="partial",
-        missing_elements=["用药剂量", "处理时间"],
-        hint="用药剂量和处理时间是什么？",
+        status="partial" if missing else "complete",
+        missing_elements=missing,
+        hint=f"请核对{'、'.join(missing)}。" if missing else None,
     )
 
 

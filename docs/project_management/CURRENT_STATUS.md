@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-06T03:47:19.628Z`
-- Source hash: `ab6e3846304a225549df36c4e4ff5c04a09f521c47c5d1d5524e287281d0de3b`
+- Updated at: `2026-11-18T08:48:14.323Z`
+- Source hash: `ba87d16a794915977a3bf61990340af9731ee720643da1c6b1536bca1c0806c0`
 - Phase: **Alpha**
-- Repo: `codex/alpha51-demo-visual-e2e@3ac127632ac416bd4f28d5ca95cc5b0413c2afaf`
+- Repo: `codex/ui-hospital-record-v1@ba5624270cbc654d42fc191820f2811dddfe76f9`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Active PR: [#113](https://github.com/awa606/medical_record_agent/pull/113) · DRAFT
+- Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **11月6日完成本地数据图解、可复算统计和评测准备：离线页面8项功能检查PASS、1项暗色截图采集，独立核对728种数量组合；原始样本和私人材料仅本地。无新增ASR/病历推理、训练、真实医生试用或部署；当前已查环境未就绪、docker运行容器0。既有首次模型失败及原验收缺项保留。Obsidian仅追加5.1正文与审计日志，任务元数据、日期、Gate与范围不变；5.1VERIFY、5.3BACKLOG。本次repo_sha是研究文档提交，不是新的运行版本。**
+- Forecast Alpha Exit: **5.1 仍为 VERIFY，5.3 为 BACKLOG。课堂工作台复验见同轮证据，正式 Alpha 门禁按原计划执行。**
 
 ## Progress
 
@@ -25,7 +25,7 @@
 
 ## Current Task
 
-**5.1 · 数据图解与评测准备已交付；授权音频闭环仍待验收** — `VERIFY`
+**5.1 · 三条主路径E2E Smoke** — `VERIFY`
 
 ## Hardware Gate
 
@@ -54,12 +54,11 @@
 
 ## Next
 
-- Single next task: 围绕5.1取得5–10场有明确评测许可的中文目标场景样本，核对本地环境后完成授权音频真实按钮闭环；随后核验同版受限业务恢复。数据图解不替代5.1验收，未满足原条件前不进入5.3。
-- Parallel waiting task: 真实数据研究仍NEEDS MORE EVIDENCE；本轮中文真实录音0场、英文模拟1场，四源尚未回复或交付。150场只是研究数量示意，不改Beta正式60–100例范围。硬件支线与既有任务依赖保持原记录。
+- Single next task: 继续核验真实授权音频、目标医生操作和候选部署的三条主路径，按原任务逐项留证。
+- Parallel waiting task: 课堂审核版完成合成病例全程走查及迁移恢复；临床独立评价、真实录音和院内系统联调待取得证据。
 
 ## Manual Actions
 
-- 落实有门诊经验的医学评审人员，核定参考事实与病历。
-- 等待PDCH协议及资格、IMCS具体许可、商业样本与含税报价；未核实预算内合格现货前保留3000元首批预算。
+- 在实际教室投影并由授课教师或目标医生独立试用后登记意见。
 
 JSON mirror: [`CURRENT_STATUS.json`](CURRENT_STATUS.json)

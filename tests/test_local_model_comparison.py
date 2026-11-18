@@ -105,7 +105,7 @@ def test_comparison_rejects_pipeline_fact_loss_even_when_first_output_passes(tmp
 
     comparison.main()
 
-    report = json.loads((output / "report.json").read_text())
+    report = json.loads((output / "report.json").read_text(encoding="utf-8"))
     assert all(all(row["first_output_checks"].values()) for row in report["calls"])
     assert report["passed"] == 0
     assert report["stage_counts"]["first_output_passed"] == 3
@@ -190,7 +190,7 @@ def test_comparison_recognizes_real_generator_wrapped_empty_refusal(tmp_path, mo
         "--expected-digest", "a" * 64, "--output", str(output), "--base-sha", "b" * 40,
         "--deadline", "2099-01-01T00:00:00+00:00"])
     comparison.main()
-    report = json.loads((output / "report.json").read_text())
+    report = json.loads((output / "report.json").read_text(encoding="utf-8"))
     assert report["passed"] == 3
     assert report["stage_counts"]["expected_safe_refusal"] == 3
     assert report["stage_counts"]["generated_draft"] == 0

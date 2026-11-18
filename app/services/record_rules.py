@@ -78,6 +78,50 @@ def _line_for(label: str, draft_text: str) -> str:
     return ""
 
 
+_ALLERGY_DRUG_RULES = {
+    "青霉素": ("青霉素", "阿莫西林", "氨苄西林", "哌拉西林", "苄青霉素"),
+    "头孢": ("头孢",),
+    "磺胺": ("磺胺",),
+    "阿司匹林": ("阿司匹林", "拜阿司匹灵"),
+}
+
+
+def allergy_treatment_errors(record: MedicalRecordFields) -> list[str]:
+    """Conservative text-level allergy/treatment conflict check.
+
+    This is a safety prompt, not an allergy database or prescribing engine.
+    """
+    allergy_field = record.allergy_history
+    if allergy_field.missing or not str(allergy_field.value or "").strip():
+        return []
+    allergy_text = str(allergy_field.value)
+    treatment_text = " ".join(
+        str(getattr(record, key).value or "")
+        for key in ("treatment_notes", "treatment_plan")
+        if getattr(record, key).value
+    ).strip()
+    if not treatment_text:
+        return []
+    treatment_clauses = re.split(r"[，,。；;]", treatment_text)
+    safe_clauses = [clause for clause in treatment_clauses if not re.search(r"避免|禁用|忌用|不用", clause)]
+    safe_treatment = " ".join(safe_clauses)
+    errors: list[str] = []
+    for allergen, drugs in _ALLERGY_DRUG_RULES.items():
+        relevant = [
+            clause
+            for clause in re.split(r"[，,。；;]", allergy_text)
+            if allergen in clause and not re.search(r"否认|无|阴性|不过敏", clause)
+        ]
+        if not relevant:
+            continue
+        hits = [drug for drug in drugs if drug in safe_treatment]
+        if hits:
+            errors.append(
+                f"过敏史提示“{allergen}”过敏，处理意见含“{hits[0]}”；请核对并修改后再导出。"
+            )
+    return errors
+
+
 def check_draft_safety(
     draft_text: str,
     fields: MedicalRecordFields | dict,
@@ -122,6 +166,8 @@ def check_draft_safety(
         warnings.append("过敏史未提及，建议医生补问。")
     if record.physical_exam.missing:
         warnings.append("查体未提及，需医生查体补充。")
+
+    errors.extend(allergy_treatment_errors(record))
 
     return SafetyCheckResult(
         passed=not errors,

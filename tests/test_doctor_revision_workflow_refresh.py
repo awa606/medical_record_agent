@@ -45,3 +45,22 @@ def test_deleted_ai_candidate_is_not_reported_as_disease_exclusion():
 console.log(JSON.stringify(referenceReviewStatus({doctor_review_status:'ai_candidate_deleted'})));
 ''')
     assert observed == '已移除AI候选'
+
+
+def test_current_export_file_requires_the_active_approval_and_revision():
+    observed = run_browser_logic(r'''
+Object.assign(appState, {currentEncounter:{id:13}, currentTaskId:9,
+ currentTask:{id:9, current_record_revision_id:19, result_json:{
+   record_revision:{id:19,content_hash:'hash19'},export_event:{revision_id:19,approval_id:2}
+ }}});
+const ready={task_id:9, ready:true, approval_id:2, revision_id:19, content_hash:'hash19',
+ current_stage:'EXPORTED', exports:{pdf_path:'legacy.pdf'}};
+const bound = changes => Boolean(currentExportFile({...ready, ...changes}));
+const states=[bound({}),bound({current_stage:'approved'}),bound({ready:false}),
+ bound({task_id:10}),bound({revision_id:20}),bound({approval_id:3}),bound({content_hash:'other'}),
+ bound({exports:null})];
+delete appState.currentTask.result_json.export_event;
+states.push(bound({})); // Legacy metadata, protected download will look up the event.
+console.log(JSON.stringify(states));
+''')
+    assert observed == [True, False, False, False, False, False, False, False, True]

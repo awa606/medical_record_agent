@@ -47,5 +47,14 @@ class UserPublic(BaseModel):
     last_login_at: str | None = None
 
 
+class UpdateUserRequest(BaseModel):
+    """Admin update. ``exclude_unset`` distinguishes "clear" from "unchanged"."""
+
+    display_name: str | None = Field(default=None, min_length=1, max_length=80)
+    role: UserRole | None = None
+    department_id: str | None = Field(default=None, max_length=80)
+    is_active: bool | None = None
+
+
 class UserListResponse(BaseModel):
     users: list[UserPublic]

@@ -71,7 +71,7 @@ def _assert_text_source(page):
     expect(page.locator("#transcriptHeading")).to_have_text("输入原文")
     expect(page.locator("#transcriptSourceNotice")).to_be_visible()
     expect(page.locator("#transcriptSourceNotice")).to_have_text(
-        "文本输入 · 未关联录音\n本病例没有音频时间"
+        "文本输入 · 无录音时间"
     )
     expect(page.locator("#transcriptList")).to_contain_text("文本病例咳嗽两天")
     expect(page.locator("#transcriptList")).to_contain_text("这两天有什么不舒服")

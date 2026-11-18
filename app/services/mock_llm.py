@@ -161,23 +161,18 @@ def _extract_physical_exam_field(segments: list[str]) -> MedicalField:
     return _field(value, spans, 0.72)
 
 
+_FEVER_01_DEMO_SCRIPT = (
+    "[医生] 这次主要哪里不舒服？[患者] 发热3天了，3天前淋雨受凉后开始发热。[医生] 最高体温多少？有没有咳嗽咳痰？"
+    "[患者] 最高体温40℃，体温多在39到40℃，伴咳嗽、咳痰，曾有铁锈色痰。[医生] 之前在哪里看过，用过什么药？"
+    "[患者] 当地卫生院考虑感冒，服用布洛芬后可以退热，但还是反复发热。[医生] 食欲睡眠和大小便怎么样？既往有什么病史和过敏史？"
+    "[患者] 病程中食欲不佳，睡眠尚可，大小便正常。既往体健，否认肺结核、肝炎等传染病史，按计划预防接种，未发现食物或药品过敏史。"
+)
+
+
 def _is_fever_case(conversation: str) -> bool:
-    if not _contains(conversation, ["发热", "发烧", "体温"]):
-        return False
-    full_case_markers = [
-        "淋雨受凉",
-        "最高体温",
-        "体温多",
-        "咳嗽",
-        "咳痰",
-        "铁锈色痰",
-        "卫生院",
-        "布洛芬",
-        "反复发热",
-        "食欲不佳",
-        "既往体健",
-    ]
-    return sum(1 for marker in full_case_markers if marker in conversation) >= 4
+    # This canned output belongs only to its exact synthetic dialogue. Mere
+    # mention of its drug (e.g. a denial or a proposal) is not evidence of use.
+    return "".join(conversation.split()) == "".join(_FEVER_01_DEMO_SCRIPT.split())
 
 
 def _extract_fever_fields(conversation: str, segments: list[str]) -> MedicalRecordFields:
@@ -321,16 +316,18 @@ def mock_extract_fields(conversation: str) -> MedicalRecordFields:
     if clinical_fact_fields is not None and _should_prioritize_clinical_fact_fields(conversation, clinical_fact_fields):
         return validate_field_evidence(clinical_fact_fields, conversation)
 
+    allergy = (clinical_fact_fields.allergy_history
+               if clinical_fact_fields and not clinical_fact_fields.allergy_history.missing
+               else MedicalField.missing_field())
     knowledge_candidates = infer_common_cold_candidates(conversation, segments)
     if knowledge_candidates:
-        return validate_field_evidence(
-            _extract_common_cold_fields(conversation, segments, knowledge_candidates),
-            conversation,
-        )
+        fields = _extract_common_cold_fields(conversation, segments, knowledge_candidates)
+        fields.allergy_history = allergy
+        return validate_field_evidence(fields, conversation)
 
     physical_exam = _extract_physical_exam_field(segments)
     if not physical_exam.missing:
-        return MedicalRecordFields(physical_exam=physical_exam)
+        return MedicalRecordFields(physical_exam=physical_exam, allergy_history=allergy)
 
     treatments = _extract_treatments(conversation)
     symptoms = _extract_symptoms(conversation)
@@ -427,7 +424,7 @@ def mock_extract_fields(conversation: str) -> MedicalRecordFields:
         present_illness=present_illness,
         previous_treatment=previous_treatment,
         accompanying_symptoms=accompanying_symptoms,
-        allergy_history=MedicalField.missing_field(),
+        allergy_history=allergy,
         past_history=MedicalField.missing_field(),
         physical_exam=_extract_physical_exam_field(segments),
         candidate_diagnoses=candidate_diagnoses,

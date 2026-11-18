@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import closing
 import sqlite3
 
+import pytest
 from playwright.sync_api import expect, sync_playwright
 
 from tests.test_doctor_itemized_approval_playwright import (
@@ -64,7 +65,7 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             assert original_revision is not None
 
             page.click("#editRecordButton")
-            expect(page.locator("#recordFields [data-record-field-input]")).to_have_count(7)
+            expect(page.locator("#recordFields [data-record-field-input]")).to_have_count(21)
             original_past_history = page.locator('[data-record-field-input="past_history"]').input_value()
             page.locator('[data-record-field-input="past_history"]').fill("本次修改随后取消")
             page.click("#cancelRecordEditButton")
@@ -220,7 +221,8 @@ def test_field_edit_focus_save_failure_and_completed_review_disclosure() -> None
         server.close()
 
 
-def test_committed_save_with_failed_refresh_requires_verification_not_resubmit() -> None:
+@pytest.mark.parametrize("local_value", ["读取失败后的本地追加内容", ""], ids=["append", "clear"])
+def test_committed_save_with_failed_refresh_requires_verification_not_resubmit(local_value) -> None:
     server = RunningServer()
     try:
         with sync_playwright() as playwright:
@@ -231,11 +233,19 @@ def test_committed_save_with_failed_refresh_requires_verification_not_resubmit()
             page.click('[data-record-edit-field="past_history"]')
             editor = page.locator('[data-record-field-input="past_history"]')
             editor.fill("医生确认既往史本次未详细采集")
+            posted_reviews = []
+            page.on("request", lambda request: posted_reviews.append(request.url)
+                    if request.method == "POST" and request.url.endswith("/review") else None)
             page.route("**/export-readiness", lambda route: route.abort())
             page.click("#saveDraftButton")
             expect(page.locator(".record-version")).to_contain_text("服务器已接受保存", timeout=15000)
             expect(page.locator("#saveDraftButton")).to_be_disabled()
-            editor.fill("读取失败后的本地追加内容")
+            expect(editor).to_be_editable()
+            editor.fill(local_value)
+            # A passive same-task refresh can complete after the doctor resumes typing.
+            await_read = "async () => {await refreshTask(appState.currentTaskId); return appState.currentRecordFields.past_history.value}"
+            assert (page.evaluate(await_read) or "") == local_value
+            expect(editor).to_have_value(local_value)
             expect(page.locator("#saveDraftButton")).to_be_disabled()
             expect(page.locator("#cancelRecordEditButton")).to_be_disabled()
             page.unroute("**/export-readiness")
@@ -244,7 +254,11 @@ def test_committed_save_with_failed_refresh_requires_verification_not_resubmit()
             persisted = page.evaluate("async id => (await api(`/api/tasks/${id}`)).result_json.fields.past_history.value", task_id)
             assert persisted == "医生确认既往史本次未详细采集"
             page.locator(".record-recovery summary").click()
-            expect(page.locator(".record-recovery")).to_contain_text("读取失败后的本地追加内容")
+            expect(page.locator(".record-recovery")).to_contain_text(local_value or "（留空）")
+            page.locator("[data-record-reapply]").click()
+            expect(editor).to_be_editable()
+            expect(editor).to_have_value(local_value)
+            assert len(posted_reviews) == 1
             browser.close()
     finally:
         server.close()

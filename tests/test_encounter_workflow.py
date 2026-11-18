@@ -19,7 +19,7 @@ from app.db import (
 )
 from app.main import app
 from app.schemas import MedicalRecordFields
-from tests.auth_helpers import create_user, login_as_user
+from tests.auth_helpers import authenticated_request, create_user, login_as_user
 
 
 class EncounterWorkflowTests(unittest.TestCase):
@@ -60,10 +60,10 @@ class EncounterWorkflowTests(unittest.TestCase):
                 os.environ[key] = value
         self.temp_dir.cleanup()
 
-    def approval_payload_for_task(self, task_id: int) -> dict:
-        task = read_task(task_id)
+    def approval_payload_for_task(self, task_id: int, request=None) -> dict:
+        task = read_task(task_id, request)
         fields = task["result_json"]["fields"]
-        readiness = read_export_readiness(task_id)
+        readiness = read_export_readiness(task_id, request)
         return {
             "revision_id": readiness.revision_id,
             "content_hash": readiness.content_hash,
@@ -101,12 +101,21 @@ class EncounterWorkflowTests(unittest.TestCase):
         self.assertEqual(revisions[0]["source"], "generation")
 
     def test_review_after_approval_invalidates_old_approval_and_blocks_export(self):
-        result = MedicalRecordOrchestrator().run_from_text("patient has fever for three days")
-        task_id = result["task_id"]
+        client = TestClient(app)
+        doctor = create_user(client, username="workflow-owner")
+        login_as_user(client, username="workflow-owner")
+        generated = client.post(
+            "/api/records/generate",
+            json={"conversation_text": "patient has fever for three days"},
+        )
+        self.assertEqual(generated.status_code, 200, generated.text)
+        task_id = generated.json()["task_id"]
+        request = authenticated_request(doctor)
 
         approved = approve_task(
             task_id,
-            TaskApprovalRequest.model_validate(self.approval_payload_for_task(task_id)),
+            TaskApprovalRequest.model_validate(self.approval_payload_for_task(task_id, request)),
+            request=request,
         )
         active_approval = get_active_approval_for_task(task_id)
         self.assertIsNotNone(active_approval)
@@ -121,7 +130,7 @@ class EncounterWorkflowTests(unittest.TestCase):
                 "missing_elements": ["duration"],
             }
         )
-        readiness = read_export_readiness(task_id)
+        readiness = read_export_readiness(task_id, request)
         reviewed = review_task(
             task_id,
             ReviewRequest(
@@ -129,6 +138,7 @@ class EncounterWorkflowTests(unittest.TestCase):
                 expected_revision_id=readiness.revision_id,
                 expected_content_hash=readiness.content_hash,
             ),
+            request=request,
         )
         self.assertEqual(reviewed["current_stage"], "waiting_doctor_review")
 
@@ -138,7 +148,7 @@ class EncounterWorkflowTests(unittest.TestCase):
         self.assertEqual(revisions[-1]["source"], "doctor_review")
 
         with self.assertRaises(HTTPException) as blocked:
-            export_task(task_id)
+            export_task(task_id, request=request)
         self.assertEqual(blocked.exception.status_code, 400)
         self.assertTrue(any("医生批准" in item for item in blocked.exception.detail["errors"]))
 
@@ -157,14 +167,20 @@ class EncounterWorkflowTests(unittest.TestCase):
         self.assertIsNotNone(task["encounter_id"])
         self.assertIsNotNone(task["current_record_revision_id"])
 
-        approved = client.post(f"/api/tasks/{task_id}/approve", json=self.approval_payload_for_task(task_id))
+        approved = client.post(
+            f"/api/tasks/{task_id}/approve",
+            json=self.approval_payload_for_task(task_id, authenticated_request(doctor)),
+        )
         self.assertEqual(approved.status_code, 200, approved.text)
         approval = get_active_approval_for_task(task_id)
         self.assertIsNotNone(approval)
         self.assertEqual(approval["approved_by_user_id"], doctor["id"])
         self.assertEqual(approval["revision_id"], get_task(task_id)["current_record_revision_id"])
 
-        duplicate = client.post(f"/api/tasks/{task_id}/approve", json=self.approval_payload_for_task(task_id))
+        duplicate = client.post(
+            f"/api/tasks/{task_id}/approve",
+            json=self.approval_payload_for_task(task_id, authenticated_request(doctor)),
+        )
         self.assertEqual(duplicate.status_code, 409)
 
         exported = client.post(f"/api/tasks/{task_id}/export")

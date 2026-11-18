@@ -8,14 +8,13 @@ from __future__ import annotations
 from copy import deepcopy
 import json
 import socket
-from xml.etree import ElementTree
-from zipfile import ZipFile
-from io import BytesIO
 
 from fastapi.testclient import TestClient
 import pytest
 
 from app.agents import MedicalRecordOrchestrator
+from app.schemas import MedicalRecordFields, SafetyCheckResult
+from app.services.exporter import render_markdown
 from app.db import (
     get_active_approval_for_task,
     get_record_revision,
@@ -144,11 +143,14 @@ def test_doctor_negative_paraphrase_revision_approval_export_preserves_old_model
     assert exported.status_code == 200, exported.text
     exported_task = client.get(f"/api/tasks/{task_id}").json()
     assert exported_task["result_json"]["export_event"]["revision_id"] == approval["revision_id"]
-    docx = client.get(f"/api/tasks/{task_id}/exports/docx")
-    assert docx.status_code == 200
-    with ZipFile(BytesIO(docx.content)) as archive:
-        root = ElementTree.fromstring(archive.read("word/document.xml"))
-    text = "".join(root.itertext())
+    pdf = client.get(f"/api/tasks/{task_id}/exports/pdf")
+    assert pdf.status_code == 200
+    assert pdf.content[:5] == b"%PDF-"
+    text = render_markdown(
+        MedicalRecordFields.model_validate(exported_task["result_json"]["fields"]),
+        SafetyCheckResult.model_validate(exported_task["result_json"]["safety_check"]),
+        approved=True,
+    )
     assert "否认发热" in text
     assert "刚才说发烧；其实没有发热" in text
 

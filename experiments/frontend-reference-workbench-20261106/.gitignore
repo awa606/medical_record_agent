@@ -1,0 +1,7 @@
+dist/
+.qa-profile/
+qa/.profile/
+__pycache__/
+*.log
+
+直接打开工作台.html

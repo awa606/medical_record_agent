@@ -1,0 +1,56 @@
+# Candidate acceptance overlay: real FunASR, mock LLM, isolated port.
+#
+#   docker compose -f docker-compose.yml -f config/docker-compose.candidate.yml up -d --build
+#   python scripts/demo_flow.py --base-url http://127.0.0.1:26310 --audio-file <authorized.wav>
+#
+# Real ASR uses the shared model cache; the LLM stays mock so no paid call is made.
+services:
+  medical-record-agent:
+    image: medical-record-agent:candidate-${CANDIDATE_VERSION:-local}
+    container_name: medical-record-agent-candidate
+    networks:
+      - candidate_net
+    ports: !override
+      - "${MRA_HOST_PORT:-26310}:8000"
+    environment:
+      LLM_PROVIDER: mock
+      RECORD_PROVIDER_MODE: demo
+      SPEAKER_ROLE_PROVIDER: rules
+      MEDICAL_RECORD_AGENT_ASR_ENGINE: funasr
+      MEDICAL_RECORD_AGENT_REQUIRE_FUNASR: "1"
+      ASR_PREWARM_ENABLED: "1"
+      FUNASR_DEVICE: cpu
+      MRA_ANONYMIZE: "1"
+      MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP: "1"
+      MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_USERNAME: admin
+      MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD: candidate-admin-123
+      MEDICAL_RECORD_AGENT_SESSION_HOURS: "8"
+      MEDICAL_RECORD_AGENT_COOKIE_SECURE: "0"
+      HF_HOME: /app/model_cache/hf
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      MODELSCOPE_CACHE: /app/model_cache/modelscope
+      MODELSCOPE_HOME: /app/model_cache/modelscope
+      TORCH_HOME: /app/model_cache/torch
+      XDG_CACHE_HOME: /app/model_cache/xdg
+    volumes: !override
+      - ./data/candidate_runtime:/app/runtime
+      - mra_candidate_models:/app/model_cache
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/ready"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 300s
+    restart: "no"
+
+networks:
+  candidate_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${CANDIDATE_SUBNET:-10.250.251.0/24}
+
+volumes:
+  mra_candidate_models:
+    external: true

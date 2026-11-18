@@ -1,0 +1,64 @@
+# Demo overlay: mock provider, no ASR prewarm, one command runs the continuous flow.
+#
+#   docker compose -f docker-compose.yml -f config/docker-compose.demo.yml up -d --build
+#   docker compose -f docker-compose.yml -f config/docker-compose.demo.yml logs demo-runner
+#
+# This is a demonstration profile, not the hospital candidate profile.
+services:
+  medical-record-agent:
+    image: medical-record-agent:demo-${DEMO_VERSION:-20261030}
+    container_name: medical-record-agent-demo
+    networks:
+      - demo_net
+    ports:
+      - "${MRA_HOST_PORT:-26300}:8000"
+    environment:
+      LLM_PROVIDER: mock
+      RECORD_PROVIDER_MODE: demo
+      SPEAKER_ROLE_PROVIDER: rules
+      MEDICAL_RECORD_AGENT_ASR_ENGINE: mock
+      MEDICAL_RECORD_AGENT_REQUIRE_FUNASR: "0"
+      ASR_PREWARM_ENABLED: "0"
+      MRA_ANONYMIZE: "1"
+      MEDICAL_RECORD_AGENT_AUTH_BOOTSTRAP: "1"
+      MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_USERNAME: admin
+      MEDICAL_RECORD_AGENT_BOOTSTRAP_ADMIN_PASSWORD: demo-admin-123
+      MEDICAL_RECORD_AGENT_SESSION_HOURS: "8"
+      MEDICAL_RECORD_AGENT_COOKIE_SECURE: "0"
+    volumes:
+      - ./data/demo_runtime:/app/runtime
+    restart: "no"
+
+  demo-runner:
+    image: medical-record-agent:demo-${DEMO_VERSION:-20261030}
+    container_name: medical-record-agent-demo-runner
+    networks:
+      - demo_net
+    depends_on:
+      medical-record-agent:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /app
+    volumes:
+      - ./data/demo_runtime:/app/runtime
+    command:
+      - python
+      - scripts/demo_flow.py
+      - --base-url
+      - http://medical-record-agent:8000
+      - --admin-user
+      - admin
+      - --admin-password
+      - demo-admin-123
+      - --json-out
+      - /app/runtime/demo_flow.json
+    restart: "no"
+
+networks:
+  # Docker Desktop can exhaust its default address pool when many projects
+  # exist; the demo profile pins a dedicated /24 so it always starts.
+  demo_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${DEMO_SUBNET:-10.250.250.0/24}

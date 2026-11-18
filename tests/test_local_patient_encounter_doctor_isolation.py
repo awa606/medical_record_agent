@@ -180,7 +180,7 @@ class LocalPatientEncounterIsolationTests(unittest.TestCase):
             403,
         )
         self.assertEqual(client.post(f"/api/tasks/{task_id}/export").status_code, 403)
-        self.assertEqual(client.get(f"/api/tasks/{task_id}/exports/docx").status_code, 403)
+        self.assertEqual(client.get(f"/api/tasks/{task_id}/exports/pdf").status_code, 403)
 
     def test_task_encounter_integrity_conflict_blocks_high_risk_even_for_admin(self):
         client = TestClient(app)

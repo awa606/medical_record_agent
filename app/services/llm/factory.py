@@ -10,6 +10,7 @@ from app.services.llm.mock_provider import MockLLMProvider
 from app.services.llm.ollama_provider import OllamaLLMProvider
 from app.services.llm.online_provider import OnlineLLMProvider
 from app.services.llm.deepseek_provider import DeepSeekDemoProvider
+from app.services.privacy import assert_outbound_redaction
 
 
 SUPPORTED_LLM_PROVIDERS = {"mock", "online", "ollama"}
@@ -59,11 +60,16 @@ def create_llm_provider(provider_name: str | None = None, *, mode: str | None = 
     if provider == "online":
         if _online_profile() == "deepseek_demo":
             return DeepSeekDemoProvider.from_environment()
-        return OnlineLLMProvider(
+        instance = OnlineLLMProvider(
             api_base=os.environ.get("ONLINE_LLM_API_BASE", ""),
             api_key=os.environ.get("ONLINE_LLM_API_KEY", ""),
             model=os.environ.get("ONLINE_LLM_MODEL", ""),
         )
+        try:
+            assert_outbound_redaction("online")
+        except RuntimeError as exc:
+            raise LLMProviderUnavailableError(str(exc)) from exc
+        return instance
     if provider == "ollama":
         return OllamaLLMProvider(
             base_url=os.environ.get("OLLAMA_BASE_URL", ""),

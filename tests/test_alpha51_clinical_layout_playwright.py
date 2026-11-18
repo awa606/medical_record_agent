@@ -42,7 +42,10 @@ def test_clinical_density_and_auxiliary_panel_preserves_edit(page, width, height
         choose_scene(page, scene)
         metrics = page.evaluate("""() => {
           const selectors = ['.transcript-column','.field-column','.assist-column'];
-          return {width:document.documentElement.scrollWidth, columns:selectors.map(sel => {
+          return {width:document.documentElement.scrollWidth,
+            stepsBottom:document.querySelector('.encounter-command-center').getBoundingClientRect().bottom,
+            chiefTop:document.querySelector('[data-field="chief_complaint"] .field-value')?.getBoundingClientRect().top,
+            columns:selectors.map(sel => {
             const x=document.querySelector(sel), r=x.getBoundingClientRect();
             return {width:r.width,top:r.top,display:getComputedStyle(x).display};
           }), recordFont:getComputedStyle(document.querySelector('.field-value') || document.querySelector('.field-list')).fontSize};
@@ -50,7 +53,11 @@ def test_clinical_density_and_auxiliary_panel_preserves_edit(page, width, height
         assert metrics['width'] <= width + 1, (scene,metrics)
         columns = metrics['columns']
         if width >= 900:
-            assert columns[1]['top'] <= 180, (scene,metrics)
+            # Leave the approved 8px gap below the steps, even when patient identity wraps.
+            assert abs(columns[1]['top'] - metrics['stepsBottom'] - 8) <= 1, (scene,metrics)
+            assert columns[1]['top'] <= 193, (scene,metrics)
+            if width >= 1366 and scene in {'long', 'review'}:
+                assert columns[1]['top'] < metrics['chiefTop'] < height, (scene,metrics)
             total = sum(c['width'] for c in columns)
             for col,ratio in zip(columns,[.24,.54,.22]):
                 assert abs(col['width']/total-ratio) < .01, metrics

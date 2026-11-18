@@ -1,0 +1,120 @@
+/* Scoped course projection theme. The preserved replay source stays byte-identical. */
+body.doctor-mode {
+  font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  color: #173442;
+  background: #eef3f3;
+}
+body.doctor-mode button, body.doctor-mode input, body.doctor-mode textarea,
+body.doctor-mode select { font-family: inherit; }
+body.doctor-mode .topbar { border-bottom: 2px solid #17635e; background: #fcfefe; }
+body.doctor-mode .brand-copy h1 { font-family: "Segoe UI", sans-serif; letter-spacing: -.035em; }
+body.doctor-mode .deployment-badge { color: #26565d; font-weight: 600; }
+body.doctor-mode .product-nav { background: #123c43; }
+body.doctor-mode .product-nav-item.active, body.doctor-mode .product-nav-item.active:hover {
+  background: #dff1ed; color: #103d43; box-shadow: inset 4px 0 #47aa9b;
+}
+body.doctor-mode .product-nav-item.active small { color: #305a61; }
+body.doctor-mode .alpha51-workspace .panel-header {
+  background: #eff7f5; border-bottom: 1px solid #cededb;
+}
+body.doctor-mode .alpha51-workspace .panel-header h2 {
+  font-size: 20px; line-height: 1.35; color: #144947; letter-spacing: .015em;
+}
+body.doctor-mode .alpha51-workspace .record-section .field-title {
+  color: #163a40; font-size: 22px; line-height: 1.48;
+}
+body.doctor-mode .alpha51-workspace .record-section .field-value {
+  color: #172e36; font-size: 19px; line-height: 1.55;
+}
+body.doctor-mode .alpha51-workspace .record-section .field-meta button {
+  font-size: 15px; color: #075553; font-weight: 650; text-underline-offset: .2em;
+}
+body.doctor-mode .alpha51-workspace .field-column .record-navigation button,
+body.doctor-mode .alpha51-workspace .field-status-inline { font-size: 15px; }
+body.doctor-mode .alpha51-workspace .record-navigation { gap: 5px; }
+body.doctor-mode .alpha51-workspace .record-section-header { background: #e8f2ef; }
+body.doctor-mode .detail-drawer-content { font-size: 16px; line-height: 1.6; }
+body.doctor-mode button:focus-visible, body.doctor-mode a:focus-visible {
+  outline: 3px solid #006e67; outline-offset: 2px;
+}
+body.doctor-mode .review-issue-card {
+  flex: none; min-width: 0; margin: 8px 0 4px; padding: 12px 14px;
+  border: 1px solid #c9dcd7; border-left: 4px solid #187267; border-radius: 8px;
+  background: #f4f9f7; color: #173a37; overflow-wrap: anywhere;
+}
+body.doctor-mode .review-issue-card .issue-heading,
+body.doctor-mode .review-issue-card .issue-actions,
+body.doctor-mode .review-clear {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 7px 12px;
+}
+body.doctor-mode .review-issue-card .issue-heading { justify-content: space-between; }
+body.doctor-mode .review-issue-card strong { font-size: 20px; line-height: 1.35; }
+body.doctor-mode .review-issue-card .issue-heading span,
+body.doctor-mode .review-issue-card small { color: #435c58; font-size: 14px; line-height: 1.4; }
+body.doctor-mode .review-issue-card .issue-comparison {
+  display: grid; grid-template-columns: 1fr 1.15fr; gap: 8px 16px; margin: 8px 0;
+}
+body.doctor-mode .review-issue-card .issue-comparison p,
+body.doctor-mode .review-issue-card .issue-reason {
+  margin: 2px 0; font-size: 16px; line-height: 1.48; color: #183a38;
+}
+body.doctor-mode .review-issue-card .issue-reason { margin: 6px 0; }
+body.doctor-mode .review-issue-card button {
+  min-height: 36px; padding: 5px 12px; background: white; border: 1px solid #85aaa3;
+  border-radius: 5px; color: #134c44; font-size: 15px; font-weight: 600;
+}
+body.doctor-mode .review-issue-card .issue-action { background: #145d52; border-color: #145d52; color: #fff; }
+body.doctor-mode .review-issue-card .issue-next { margin-left: auto; background: transparent; border-color: transparent; }
+body.doctor-mode .alpha51-workspace .approval-disclosure .approval-entry-label {
+  color: #375950; background: transparent; border: 0; box-shadow: none;
+}
+@media (max-width: 700px) {
+  body.doctor-mode .review-issue-card .issue-comparison { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  body.doctor-mode .topbar {
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; padding: 6px 10px;
+  }
+  body.doctor-mode .topbar .brand-block {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center; gap: 6px; width: 100%; min-width: 0;
+  }
+  body.doctor-mode .brand-block .deployment-badge {
+    max-width: 11em; white-space: normal; line-height: 1.3; font-size: 12px;
+  }
+  body.doctor-mode .top-actions {
+    position: relative; width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 4px;
+  }
+  body.doctor-mode .top-actions .display-settings-menu,
+  body.doctor-mode .top-actions .auth-status { display: inline-flex; }
+  body.doctor-mode .top-actions .auth-status { padding-inline-start: 4px; }
+  body.doctor-mode .top-actions button { padding-inline: 8px; font-size: 14px; }
+  body.doctor-mode .top-actions .display-settings-menu { position: static; }
+  body.doctor-mode .top-actions .display-settings-popover {
+    inset-inline: auto 0; width: min(100%, 320px); max-height: 68dvh; overflow-y: auto;
+  }
+  body.doctor-mode .alpha51-workspace .workflow-panel { padding: 4px; }
+  body.doctor-mode .alpha51-workspace .workflow-steps {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px;
+    margin: 0; padding: 0; mask-image: none;
+  }
+  body.doctor-mode .alpha51-workspace .workflow-step {
+    display: flex; flex-direction: column; min-width: 0; gap: 3px; padding: 3px 0;
+  }
+  body.doctor-mode .alpha51-workspace .workflow-step::after { display: none; }
+  body.doctor-mode .alpha51-workspace .workflow-label {
+    margin: 0; font-size: 13px; line-height: 1.3; text-align: center;
+    white-space: normal; overflow-wrap: anywhere;
+  }
+}
+@media (min-width:1280px) {
+  body.doctor-mode .doctor-app { grid-template-columns: 152px minmax(0, 1fr); }
+  body.doctor-mode .alpha51-workspace .workbench {
+    grid-template-columns: minmax(0, 26fr) minmax(0, 54fr) minmax(0, 20fr);
+  }
+  body.doctor-mode .alpha51-workspace .workflow-steps .step-label { font-size: 15px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; }
+}
+

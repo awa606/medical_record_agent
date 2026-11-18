@@ -1,0 +1,50 @@
+/* Scoped course projection theme. The preserved replay source stays byte-identical. */
+body.doctor-mode {
+  font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  color: #173442;
+  background: #eef3f3;
+}
+body.doctor-mode button, body.doctor-mode input, body.doctor-mode textarea,
+body.doctor-mode select { font-family: inherit; }
+body.doctor-mode .topbar { border-bottom: 2px solid #17635e; background: #fcfefe; }
+body.doctor-mode .brand-copy h1 { font-family: "Segoe UI", sans-serif; letter-spacing: -.035em; }
+body.doctor-mode .deployment-badge { color: #26565d; font-weight: 600; }
+body.doctor-mode .product-nav { background: #123c43; }
+body.doctor-mode .product-nav-item.active, body.doctor-mode .product-nav-item.active:hover {
+  background: #dff1ed; color: #103d43; box-shadow: inset 4px 0 #47aa9b;
+}
+body.doctor-mode .product-nav-item.active small { color: #305a61; }
+body.doctor-mode .alpha51-workspace .panel-header {
+  background: #eff7f5; border-bottom: 1px solid #cededb;
+}
+body.doctor-mode .alpha51-workspace .panel-header h2 {
+  font-size: 20px; line-height: 1.35; color: #144947; letter-spacing: .015em;
+}
+body.doctor-mode .alpha51-workspace .record-section .field-title {
+  color: #163a40; font-size: 22px; line-height: 1.48;
+}
+body.doctor-mode .alpha51-workspace .record-section .field-value {
+  color: #172e36; font-size: 19px; line-height: 1.55;
+}
+body.doctor-mode .alpha51-workspace .record-section .field-meta button {
+  font-size: 15px; color: #075553; font-weight: 650; text-underline-offset: .2em;
+}
+body.doctor-mode .alpha51-workspace .field-column .record-navigation button,
+body.doctor-mode .alpha51-workspace .field-status-inline { font-size: 15px; }
+body.doctor-mode .alpha51-workspace .record-navigation { gap: 5px; }
+body.doctor-mode .alpha51-workspace .record-section-header { background: #e8f2ef; }
+body.doctor-mode .detail-drawer-content { font-size: 16px; line-height: 1.6; }
+body.doctor-mode button:focus-visible, body.doctor-mode a:focus-visible {
+  outline: 3px solid #006e67; outline-offset: 2px;
+}
+@media (min-width:1280px) {
+  body.doctor-mode .doctor-app { grid-template-columns: 152px minmax(0, 1fr); }
+  body.doctor-mode .alpha51-workspace .workbench {
+    grid-template-columns: minmax(0, 26fr) minmax(0, 54fr) minmax(0, 20fr);
+  }
+  body.doctor-mode .alpha51-workspace .workflow-steps .step-label { font-size: 15px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; }
+}
+

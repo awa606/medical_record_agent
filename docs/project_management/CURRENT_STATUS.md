@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-23T19:28:45.764Z`
-- Source hash: `098854d5d78bbcd4d0a2adc49cf4c8faee4c6a46d2502af9eb109a99d42cdd21`
+- Updated at: `2026-11-23T20:18:01.945Z`
+- Source hash: `a00d32a19bcdb4cb365e6b73923af0778526c9f6eabcde823dab8943f1f13c55`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@a68a40cab9e5ed9decc42a8c6deb1174bae9a0c7`
+- Repo: `codex/ui-hospital-record-v1@b9550de01467c5152f970170f0bc662c99db36d2`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 评估跨句病程和主体的时间变化；为真实科室盲评及院内试点配对数据，并扩大指南片段定位复验。
+- Single next task: 复核病程时序、主体和不确定性对首稿的影响，收回目标医生独立评审和获权单科室配对素材。
 - Parallel waiting task: 继续项目内可复查的工程门禁；待正式教师评分、目标医生盲评与院方受控接口条件。
 
 ## Manual Actions

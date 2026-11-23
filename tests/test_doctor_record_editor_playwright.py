@@ -126,6 +126,33 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(detail).to_contain_text("内容校验值（SHA256）")
             expect(detail.locator('a[href^="https://www.nhc.gov.cn/"]')).to_have_count(1)
             expect(detail.get_by_role("note")).to_have_text(DEFAULT_DISCLAIMER)
+            expect(detail.get_by_role("region", name="本次检索与来源")).to_contain_text("1 份资料")
+            expect(detail.get_by_text("选择来源核对原文", exact=False)).to_have_count(0)
+
+            # Two passages in one version share an original; a new version is a second source.
+            original = {"document_id": "record-rule", "version": "2024", "title": "文书示例",
+                        "source_url": "https://example.org/2024"}
+            revised = {**original, "version": "2025", "source_url": "https://example.org/2025"}
+            page.click("#closeDrawerButton")
+            page.route("**/api/knowledge/retrieve", lambda route: route.fulfill(
+                json={"results": [original, {**original, "section": "第二章"}, revised]}))
+            page.locator('[data-knowledge-field="chief_complaint"]').first.press("Enter")
+            directory = detail.get_by_role("region", name="本次检索与来源")
+            expect(directory).to_contain_text("3 个片段，来自 2 份资料")
+            directory.locator("summary").press("Enter")
+            expect(directory.get_by_role("link")).to_have_text(["文书示例 · 2024", "文书示例 · 2025"])
+            expect(directory.get_by_role("link").last).to_have_attribute("href", revised["source_url"])
+            page.unroute("**/api/knowledge/retrieve")
+
+            page.click("#closeDrawerButton")
+            page.route("**/api/knowledge/retrieve", lambda route: route.fulfill(
+                json={"results": [original, {"title": "旧资料"}]}))
+            page.locator('[data-knowledge-field="chief_complaint"]').first.press("Enter")
+            expect(directory).to_contain_text("2 个片段")
+            expect(directory).to_contain_text("部分片段缺少文档标识或版本，无法核定资料总数")
+            expect(directory.locator("details")).to_have_count(0)
+            page.unroute("**/api/knowledge/retrieve")
+
             # Older responses can omit the notice, and a source-specific notice
             # can include literal angle brackets. Both must survive an empty result.
             for response, expected_notice in (

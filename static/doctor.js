@@ -3670,6 +3670,45 @@ function renderKnowledgeResultDetails(result = {}) {
   `;
 }
 
+function renderKnowledgeSourceIndex(results) {
+  const documents = new Map();
+  let complete = true;
+  for (const item of results) {
+    const id = typeof item.document_id === "string" ? item.document_id.trim() : "";
+    const version = typeof item.version === "string" ? item.version.trim() : "";
+    if (!id || id === "-" || !version || version === "-") {
+      complete = false;
+      break;
+    }
+    const key = JSON.stringify([id, version]);
+    const doc = documents.get(key) || { title: item.title || item.source_id || id, version };
+    if (!doc.url) {
+      for (const value of [item.source_url, item.url]) {
+        if (typeof value !== "string" || !/^https?:\/\//i.test(value.trim())) continue;
+        const url = safeKnowledgeUrl(value.trim());
+        if (url) {
+          doc.url = url;
+          break;
+        }
+      }
+    }
+    documents.set(key, doc);
+  }
+  const items = [...documents.values()];
+  const count = complete ? `，来自 <strong>${items.length} 份资料</strong>` : "";
+  const missingMetadata = complete ? "" : "部分片段缺少文档标识或版本，无法核定资料总数。";
+  let directory = "";
+  if (complete && items.length > 1 && items.some(doc => doc.url)) {
+    const links = items.map(doc => {
+      const title = escapeHtml(`${doc.title} · ${doc.version}`);
+      return `<li>${doc.url ? `<a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
+        : `${title}（未提供来源链接）`}</li>`;
+    });
+    directory = `<details><summary>选择来源核对原文（需联网）</summary><ol>${links.join("")}</ol></details>`;
+  }
+  return `<section aria-label="本次检索与来源"><p>检索返回 <strong>${results.length} 个片段</strong>${count}，按匹配度排列。${missingMetadata}请对照来源原文，核对片段能否回答当前问题。</p>${directory}</section>`;
+}
+
 function renderFieldKnowledgeSearch(key) {
   const state = appState.fieldKnowledgeSearch[key] || {};
   const title = FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1] || "病历字段";
@@ -3681,7 +3720,8 @@ function renderFieldKnowledgeSearch(key) {
   if (!results.length) {
     return `<div>${notice}<div class="empty-state">没有找到与“${escapeHtml(title)}”匹配的已启用知识来源。</div></div>`;
   }
-  return notice + results.map((item) => detailSection(item.title || item.source_id || "知识来源", renderKnowledgeResultDetails(item))).join("");
+  return renderKnowledgeSourceIndex(results) + notice +
+    results.map((item) => detailSection(item.title || item.source_id || "知识来源", renderKnowledgeResultDetails(item))).join("");
 }
 
 async function retrieveKnowledgeForField(key) {

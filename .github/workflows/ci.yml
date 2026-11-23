@@ -31,6 +31,20 @@ jobs:
       - name: Build allowlisted help bundle
         run: python scripts/package_help.py
 
+      - name: Verify four doctors completing separate synthetic visits
+        run: python -m scripts.benchmarks.verify_concurrent_visits .artifacts/concurrent-visits
+
+      - name: Upload concurrent visit measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-concurrent-visits
+          include-hidden-files: true
+          path: |
+            .artifacts/concurrent-visits/serial.json
+            .artifacts/concurrent-visits/parallel.json
+          if-no-files-found: ignore
+
       - name: Run Python tests
         env:
           PYTHONPATH: ${{ github.workspace }}

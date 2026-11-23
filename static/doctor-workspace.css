@@ -276,6 +276,13 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
 .reference-detail .field-evidence-detail strong { font-size: 14px; font-weight: 600; }
 .reference-detail .field-evidence-detail span, .reference-detail .field-evidence-detail small { font-size: 14px; color: #526477; }
 .reference-detail .field-evidence-detail p { font-size: 16px; line-height: 1.65; margin: 8px 0; }
+.field-source-context { margin-top: 8px; min-width: 0; }
+.field-source-context summary { width: fit-content; padding: 6px 4px; color: #245479; cursor: pointer; }
+.field-source-context summary:focus-visible { outline: 2px solid #245479; outline-offset: 2px; }
+.field-source-context ol { margin: 4px 0; padding: 0; list-style: none; }
+.field-source-context li { padding: 6px 10px; border-left: 2px solid #c4d3df; overflow-wrap: anywhere; }
+.field-source-context li strong { margin-right: 8px; }
+.field-source-context li div { white-space: pre-wrap; line-height: 1.6; }
 .reference-detail .empty-state { padding: 0; min-height: 0; background: transparent; border: 0; text-align: left; font-size: 14px; color: #526477; }
 .reference-detail :focus-visible { outline: 2px solid #1765a8; outline-offset: 3px; }
 @media (max-width: 680px) {

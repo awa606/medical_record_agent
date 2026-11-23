@@ -15,7 +15,7 @@ const window = {location, clearTimeout, setTimeout, history: {replaceState(_s,_t
 }}};
 const store = new Map([['mra-session-encounter:saved', JSON.stringify({encounterId:13,ownerId:1})]]);
 const sessionStorage = {getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v)};
-const document = {getElementById:()=>({load(){},pause(){},removeAttribute(){}})};
+const document = {querySelectorAll:()=>[],getElementById:()=>({load(){},pause(){},removeAttribute(){}})};
 let source = fs.readFileSync('static/doctor.js','utf8').replace(/\ninit\(\);\s*$/, '');
 source += `
 renderAll=()=>{}; renderModelAndKnowledgeStatus=()=>{}; renderAssist=()=>{}; renderDebug=()=>{};
@@ -177,6 +177,29 @@ release({revision_id:19,approved:true});await pending;
 console.log(JSON.stringify(appState.currentExportReadiness));
 ''')
     assert result == {'revision_id': 20, 'approved': False}
+
+
+def test_field_receipt_updates_only_the_open_review_section_and_ignores_old_encounters():
+    result = run_browser_logic(r'''
+const field={value:"合成记录",status:"complete",missing:false,confirmed_by_doctor:true,doctor_review_status:"content_confirmed"};
+appState.currentEncounter={id:13,current_revision:{id:19,content_hash:"original"}};
+appState.currentTaskId=11; appState.currentTask={id:11,current_record_revision_id:19,result_json:{approved:true}};
+activeRecordFields=()=>({chief_complaint:field}); doctorDisplayState=()=>({key:"review"});
+const panel={innerHTML:""}; document.getElementById=()=>({querySelector:s=>s==="[data-field-review-details]"?panel:null});
+openFieldReview={key:"chief_complaint",title:"主诉",drawerVersion:detailDrawerVersion,context:captureReadContext()};
+let release, fail; api=()=>new Promise((resolve,reject)=>{release=resolve;fail=reject});
+const first=refreshExportReadiness(); const loading=panel.innerHTML.includes("正在读取本版审核回执");
+fail(Error("simulated read failure")); await first;
+const failed=panel.innerHTML.includes("本版审核回执读取失败");
+const second=refreshExportReadiness(); release({ready:true,task_id:11,revision_id:19,content_hash:"original",approval_id:1});
+await second; const signed=panel.innerHTML.includes("内容已确认");
+const old=refreshExportReadiness(); appState.currentEncounter={id:14}; appState.currentTaskId=12;
+appState.currentTask={id:12,current_record_revision_id:20};
+appState.currentExportReadiness=null; panel.innerHTML="新就诊";
+release({ready:true,task_id:11,revision_id:19,content_hash:"original",approval_id:1});await old;
+console.log(JSON.stringify({loading,failed,signed,kept:panel.innerHTML,ready:appState.currentExportReadiness}));
+''')
+    assert result == {"loading": True, "failed": True, "signed": True, "kept": "新就诊", "ready": None}
 
 
 def test_unauthenticated_boot_does_not_read_session_or_patient():

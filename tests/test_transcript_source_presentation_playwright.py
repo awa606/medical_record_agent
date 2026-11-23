@@ -80,7 +80,8 @@ def test_historical_field_evidence_uses_clinical_sentence_and_discards_unverifie
             repeated = "喝水后我头晕"
             segments = [
                 {"segment_id": "d", "role": "医生", "text": "先听我说。" + repeated, "start": 1, "end": 4},
-                {"segment_id": "p", "role": "患者", "text": repeated, "start": 9, "end": 11},
+                {"segment_id": "p", "role": "患者", "text": repeated, "start": 9, "end": 11,
+                 "role_source": "manual", "reviewed_by_doctor": True},
                 {"segment_id": "n", "role": "患者", "text": "睡得不错"},
             ]
             transcript = "\n".join(f"[{row['role']}] {row['text']}" for row in segments)
@@ -94,6 +95,7 @@ def test_historical_field_evidence_uses_clinical_sentence_and_discards_unverifie
                 ({"text": "先听我说", "segment_id": "d", "start_time": 9}, unknown, None),
                 ({"text": "[患者] " + repeated, "segment_id": "p", "start_time": 9.5}, "00:09.5–00:11.0", "患者"),
                 ({"text": "睡得不错", "start_time": 0}, unknown, "患者"),
+                ({"text": "先听我说。" + repeated, "segment_id": "d"}, "00:01.0–00:04.0", "医生"),
             ]
             source = {"audio_id": uploaded.json()["audio_id"], "engine": "mock",
                       "conversation_text": transcript, "text": transcript, "segments": segments}
@@ -110,8 +112,24 @@ def test_historical_field_evidence_uses_clinical_sentence_and_discards_unverifie
                 assert ("说话人标注" in body) == bool(role), (span, body)
                 if role:
                     assert "说话人标注　" + role in body
+                expect(cards.nth(i).locator("summary")).to_have_count(int(i in {0, 1, 6, 8}))
+            for i in (0, 1, 8):
+                summary = cards.nth(i).locator("summary")
+                summary.focus()
+                page.keyboard.press("Enter")
+                lines = cards.nth(i).locator(".field-source-context li")
+                assert lines.count() == (2 if i == 8 else 3)
+                current = lines.filter(has_text="引用所在句")
+                expect(current).to_contain_text("患者" if i == 1 else "医生（角色待核）")
+                expect(current).to_contain_text(cases[i][0]["text"])
+                following = lines.filter(has_text="后一句")
+                expect(following).to_contain_text("睡得不错" if i == 1 else repeated)
+                expect(following).to_contain_text("患者（角色待核）" if i == 1 else "患者")
+                page.keyboard.press("Space")
+                expect(lines.first).to_be_hidden()
             page.set_viewport_size({"width": 390, "height": 520})
             panel = page.locator("#detailPanel")
+            page.locator("#closeDrawerButton").focus()
             expect(page.locator("#closeDrawerButton")).to_be_focused()
             assert panel.evaluate("el => el.scrollHeight > el.clientHeight")
             page.keyboard.press("Tab")
@@ -128,6 +146,39 @@ def test_historical_field_evidence_uses_clinical_sentence_and_discards_unverifie
             page.wait_for_function("() => document.querySelector('#detailPanel').scrollTop === 0")
             page.keyboard.press("Escape")
             expect(page.locator('[data-open-detail="field:present_illness"]').first).to_be_focused()
+            page.set_viewport_size({"width": 390, "height": 844})
+
+            # Same doctor, new saved task: source identity, role and sentence index must agree.
+            text = "医生：刚才如何？\n患者：稍稍头晕，又缓过来了！\n家属：我当时也在场。\n没有录入说话人。"
+            text_spans = [{"text": "头晕", "index": 1}, {"text": "头晕"}, {"text": "头晕", "index": 0},
+                          {"text": "患者：没有录入说话人", "index": 3}]
+            def check_saved(patient, kind, original, asr, spans):
+                saved_fields = {"present_illness": {**fields["present_illness"], "source_spans": spans}}
+                target = _saved_encounter(server, login["id"], patient, kind, original, asr, saved_fields)
+                _open_from_workbench(page, target)
+                page.locator('[data-open-detail="field:present_illness"]').first.click()
+                expect(cards).to_have_count(len(spans))
+                return cards.locator("summary")
+
+            summaries = check_saved("SIM-CONTEXT-TEXT", "text", text, None, text_spans)
+            expect(summaries).to_have_count(1)
+            summaries.click()
+            lines = cards.first.locator("li")
+            expect(lines).to_have_text(["前一句医生刚才如何？", "引用所在句患者稍稍头晕，又缓过来了！", "后一句家属我当时也在场。"])
+            assert page.locator("#detailPanel").evaluate("el => el.scrollWidth <= el.clientWidth + 1")
+            page.keyboard.press("Escape")
+            for patient, kind, original, bad_source in [
+                ("SIM-CONTEXT-NONE", "text", "", None),
+                ("SIM-CONTEXT-TYPE", "unknown", text, None),
+                ("SIM-CONTEXT-MISSING", "audio", text, None),
+                ("SIM-CONTEXT-SCALAR", "audio", text, {**source, "segments": "旧记录"}),
+                ("SIM-CONTEXT-NULL", "audio", text, {**source, "segments": [segments[0], None]}),
+            ]:
+                summaries = check_saved(patient, kind, original, bad_source, text_spans[:1])
+                expect(summaries).to_have_count(0)
+                expect(cards.first).to_contain_text("头晕")
+                expect(cards.first).not_to_contain_text("家属")
+                page.keyboard.press("Escape")
     finally:
         server.close()
 

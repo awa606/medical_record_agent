@@ -14,6 +14,7 @@ const appState = {
   currentSafetyCheck: null,
   currentQualityReport: null,
   currentExportReadiness: null,
+  fieldReceiptRead: null,
   exportIssue: null,
   currentAgentTrace: null,
   currentLlmStatus: null,
@@ -655,6 +656,7 @@ function isCurrentRead(context) {
 }
 
 function beginEncounterRead() {
+  document.querySelectorAll(".field-source-context").forEach(node => node.remove());
   appState.encounterReadController?.abort();
   appState.encounterReadController = new AbortController();
   appState.encounterRestoreError = "";
@@ -768,14 +770,20 @@ async function refreshExportReadiness({ raiseOnError = false } = {}) {
   if (!appState.currentTaskId) return null;
   const context = captureReadContext();
   const revisionId = appState.currentTask?.current_record_revision_id;
+  appState.fieldReceiptRead = { context, state: "loading" };
+  refreshOpenFieldReview();
   try {
     const readiness = await readApi(`/api/tasks/${context.taskId}/export-readiness`);
     if (!isCurrentRead(context) || revisionId !== appState.currentTask?.current_record_revision_id) return null;
     appState.currentExportReadiness = readiness;
+    appState.fieldReceiptRead = { context, state: exportReadinessMatches(readiness) ? "ready" : "failed" };
+    refreshOpenFieldReview();
     return readiness;
   } catch (error) {
     if (!isCurrentRead(context) || revisionId !== appState.currentTask?.current_record_revision_id) return null;
     appState.currentExportReadiness = null;
+    appState.fieldReceiptRead = { context, state: "failed" };
+    refreshOpenFieldReview();
     if (raiseOnError) throw error;
     return null;
   }
@@ -1084,7 +1092,8 @@ async function openEncounterWorklist() {
 
 function restoreTaskSource(task) {
   const result = task?.result_json || {};
-  const source = result.asr_source;
+  const raw = result.asr_source;
+  const source = raw && !validEvidenceSegments(raw) ? { ...raw, segments: [] } : raw;
   // Original input is independent of the editable draft and its revisions.
   appState.currentInputText = result.conversation_text || task?.input_text || "";
   appState.currentAsrResult = source && (source.segments?.length || source.text || source.conversation_text) ? source : null;
@@ -2703,6 +2712,7 @@ function renderTranscriptionFailurePanel() {
 
 let drawerReturnFocus = null;
 let detailDrawerVersion = 0;
+let openFieldReview = null;
 let helpReturnFocus = null;
 let helpPushedState = false;
 
@@ -3446,15 +3456,27 @@ function evidenceQuote(text) {
 }
 
 function evidenceSentences(text) {
-  let speaker = null;
-  return String(text || "").split(/[。！？!?\n]+/).filter(part => part.trim()).map(part => {
-    speaker = explicitTextRole(part)?.label || speaker;
-    return { quote: evidenceQuote(part), speaker };
+  let speaker = null; // Preserve the existing alignment convention across transcript lines.
+  return String(text || "").split("\n").flatMap(line => {
+    let lineSpeaker = null;
+    const parts = line.match(/[^。！？!?]+[。！？!?]*/g) || [];
+    return parts.filter(part => part.replace(/[。！？!?]+$/, "").trim()).map(part => {
+      const role = explicitTextRole(part);
+      speaker = role?.label || speaker;
+      lineSpeaker = role?.label || lineSpeaker;
+      return { quote: evidenceQuote(part), speaker, lineSpeaker, text: part.slice(role?.prefixLength || 0).trim() };
+    });
   });
 }
 
+function validEvidenceSegments(source) {
+  return Array.isArray(source?.segments) && source.segments.length > 0
+    && source.segments.every(segment => typeof segment?.text === "string" && segment.text.trim());
+}
+
 function sourceSpanEvidence(span, source) {
-  const segments = source?.segments || [];
+  if (!validEvidenceSegments(source)) return null;
+  const segments = source.segments;
   const quote = evidenceQuote(span.text);
   if (!quote || !segments.length) return null;
   let speaker = explicitTextRole(span.text)?.label;
@@ -3507,15 +3529,90 @@ function formatEvidenceTime(value) {
   return `${String(minutes).padStart(2, "0")}:${seconds.toFixed(1).padStart(4, "0")}`;
 }
 
-function renderFieldEvidenceDetails(field) {
+function persistedFieldSource(field, key) {
+  const task = appState.currentTask;
+  if (!key || appState.recordEditMode || !task?.id || task.id !== appState.currentTaskId
+      || !task.encounter_id || String(task.encounter_id) !== String(selectedEncounterId())
+      || !appState.authUser?.id || (task.owner_user_id != null && task.owner_user_id !== appState.authUser.id)
+      || field !== task.result_json?.fields?.[key]) return null;
+  const asr = task.result_json.asr_source;
+  const imported = asr?.engine === "text-import" || asr?.audio_id === "text-import";
+  if (asr && !imported) {
+    if (!asr.audio_id || !validEvidenceSegments(asr)) return null;
+    const rows = asr.segments.flatMap(segment => evidenceSentences(segment.text).map(row => ({...row, segment})));
+    return { rows, asr };
+  }
+  if (task.input_type !== "text") return null;
+  return { rows: evidenceSentences(task.input_text || task.result_json.conversation_text) };
+}
+
+function contextRole(row) {
+  const segment = row.segment;
+  if (!segment) return row.lineSpeaker || "角色未记录";
+  const role = segment.role || "";
+  const reviewed = segment.reviewed_by_doctor === true && !segment.needs_review && !segment.provisional
+    && (!segment.role_source || String(segment.role_source).startsWith("manual"));
+  if (!role || ["待确认", "待校正", "unknown"].includes(role)) return "角色待核";
+  return reviewed ? role : role + "（角色待核）";
+}
+
+function renderSourceContext(span, source) {
+  if (!source || source.rows.length < 2) return "";
+  const { rows, asr } = source;
+  const role = explicitTextRole(span.text);
+  const literal = String(span.text || "").slice(role?.prefixLength || 0).trim().replace(/[。！？!?]+$/, "");
+  if (!literal) return "";
+  const matchesRole = row => {
+    const speaker = row.segment ? explicitTextRole("[" + row.segment.role + "]")?.label : row.lineSpeaker;
+    return !role || role.label === speaker;
+  };
+  const matches = row => row.text.includes(literal) && matchesRole(row);
+  let index = span.index;
+  let last = index;
+  if (asr) {
+    const evidence = sourceSpanEvidence(span, asr);
+    if (!evidence || ((span.start_time ?? span.start) != null && evidence.start == null)
+        || ((span.end_time ?? span.end) != null && evidence.end == null)) return "";
+    if (index == null) {
+      const positions = rows.map((row, i) => row.segment === evidence.segment && matches(row) ? i : -1).filter(i => i >= 0);
+      if (positions.length === 1) {
+        index = last = positions[0];
+      } else {
+        // Source corrections can cite a complete, uniquely identified multi-sentence turn.
+        const turn = evidence.segment;
+        const turnText = String(turn.text).slice(explicitTextRole(turn.text)?.prefixLength || 0).trim().replace(/[。！？!?]+$/, "");
+        if (positions.length || !span.segment_id || turnText !== literal) return "";
+        index = rows.findIndex(row => row.segment === turn);
+        last = rows.findLastIndex(row => row.segment === turn);
+      }
+    } else {
+      const sentences = evidenceSentences(asr.conversation_text || asr.text);
+      if (rows.length !== sentences.length || !sentences.every((row, i) => row.quote === rows[i].quote)
+          || rows[index]?.segment !== evidence.segment) return "";
+    }
+  } else if (span.segment_id != null || (span.start_time ?? span.start) != null || (span.end_time ?? span.end) != null) return "";
+  if (!Number.isInteger(index) || !rows[index] || !matchesRole(rows[index])
+      || (index === last && !matches(rows[index])) || (index === 0 && last === rows.length - 1)) return "";
+  const lines = [[index - 1, "前一句"], [index, "引用所在句"], [last + 1, "后一句"]]
+    .filter(([i]) => rows[i]).map(([i, label]) => {
+      const row = rows[i];
+      const text = i === index && last > index ? rows.slice(index, last + 1).map(part => part.text).join("") : row.text;
+      return `<li><strong>${label}</strong><span>${escapeHtml(contextRole(row))}</span><div>${escapeHtml(text)}</div></li>`;
+    });
+  return `<details class="field-source-context"><summary>看前后原话</summary><ol>${lines.join("")}</ol><small>相邻原话仅供对照。</small></details>`;
+}
+
+function renderFieldEvidenceDetails(field, key = null) {
   const spans = field?.source_spans || [];
   if (!spans.length) {
     return `<div class="empty-state">此字段没有保存原文引用。可在问诊原文中核对。</div>`;
   }
   const kind = fieldEvidenceSourceKind();
   const audioSource = kind === "audio";
+  const saved = persistedFieldSource(field, key);
   return `<div class="detail-evidence-list">${spans.map((span, index) => {
-    const evidence = audioSource ? sourceSpanEvidence(span, appState.currentAsrResult) : null;
+    const evidence = audioSource ? sourceSpanEvidence(span, key && appState.currentTask?.result_json
+      ? appState.currentTask.result_json.asr_source : appState.currentAsrResult) : null;
     const segment = evidence?.segment || {};
     const quote = span.text || segment.text || "";
     const start = formatEvidenceTime(evidence?.start);
@@ -3529,9 +3626,10 @@ function renderFieldEvidenceDetails(field) {
     return `<article class="field-evidence-detail">
       <div><strong>引用 ${index + 1}</strong><span>${escapeHtml(sourceLabel)}</span></div>
       <p>${escapeHtml(quote || "引文未记录")}</p>
-      ${speaker ? `<small>说话人标注　${escapeHtml(speaker)}</small>` : ""}
+      ${speaker ? `<small>说话人标注　${escapeHtml(saved?.asr ? contextRole({segment}) : speaker)}</small>` : ""}
       ${confidenceRecorded ? `<small>${segment.role_confidence != null ? "角色" : "转写"}置信度　${Math.round(confidence * 100)}%</small>` : ""}
       ${segmentId ? `<small class="debug-only">片段 ID　${escapeHtml(segmentId)}</small>` : ""}
+      ${renderSourceContext(span, saved)}
     </article>`;
   }).join("")}</div>`;
 }
@@ -3741,42 +3839,65 @@ function renderFieldDetailContent(key) {
       : `<div class="empty-state">暂无候选诊断（待医生确认）。生成病历后会显示鉴别诊断参考摘要，需医生判断。</div>`;
   }
   const field = fields[key] || null;
-  const status = fieldStatus(field, key);
-  const isApprovedDisplay = ["approved", "exported"].includes(doctorDisplayState().key);
-  const isApprovedMissing = isApprovedDisplay && status.key === "missing" && !readableStoredText(field?.value)
-    && !["preliminary_diagnosis", "treatment_plan"].includes(key);
-  const displayValue = recordFieldDisplayValue(fields, key, isApprovedDisplay);
-  const statusLabel = isApprovedMissing
-    ? recordedMissingReason(field) || "历史病历已审核，字段无记录"
-    : status.label;
-  const confidence = key === "treatment_plan" ? null : field?.confidence;
-  const qualityItem = fieldQualityItem(key);
   let evidenceTitle = ({audio: "原始转写证据（只读）", text: "录入文本的原文证据（只读）"})[fieldEvidenceSourceKind()] || "问诊原文证据（只读）";
   if (appState.recordEditMode && appState.recordFieldResolutionModes[key] === "source_correction") {
     evidenceTitle = "本次选择的原话（未保存）";
   } else if (field?.doctor_review_note?.startsWith("manual_doctor_edit_v1:") && field.source_spans?.length) {
     evidenceTitle = "上版引用（只读对照，不作为医生修改的自动证据）";
   }
+  return detailSection(evidenceTitle, renderFieldEvidenceDetails(field, key))
+    + `<div data-field-review-details>${renderFieldReviewDetails(fields, key, title)}</div>`;
+}
+
+function refreshOpenFieldReview() {
+  const view = openFieldReview;
+  if (!view || view.drawerVersion !== detailDrawerVersion || !isCurrentRead(view.context)) return;
+  const target = $("detailDrawerContent")?.querySelector("[data-field-review-details]");
+  const fields = activeRecordFields();
+  if (target && fields) target.innerHTML = renderFieldReviewDetails(fields, view.key, view.title);
+}
+
+function renderFieldReviewDetails(fields, key, title) {
+  const field = fields[key] || null;
+  const status = fieldStatus(field, key);
+  const isApprovedDisplay = ["approved", "exported"].includes(doctorDisplayState().key);
+  const isApprovedMissing = isApprovedDisplay && status.key === "missing" && !readableStoredText(field?.value)
+    && !["preliminary_diagnosis", "treatment_plan"].includes(key);
+  const displayValue = recordFieldDisplayValue(fields, key, isApprovedDisplay);
+  const signed = currentRevisionIsSigned();
+  const receipt = appState.fieldReceiptRead;
+  const receiptState = receipt && isCurrentRead(receipt.context) ? receipt.state : "";
+  const awaitingReceipt = !signed && !appState.recordEditMode && status.key !== "conflicting"
+    && !exportReadinessMatches(appState.currentExportReadiness)
+    && (receiptState || appState.currentTask?.result_json?.approved === true);
+  const statusLabel = awaitingReceipt
+    ? (receiptState === "failed" ? "本版审核回执读取失败，请重新打开就诊" : "正在读取本版审核回执")
+    : isApprovedMissing
+    ? recordedMissingReason(field) || "历史病历已审核，字段无记录"
+    : signed ? fieldReviewPresentation(fields, key, true).label
+    : status.key === "confirmed" ? "待医生审核" : status.label;
+  const confidence = key === "treatment_plan" ? null : field?.confidence;
+  const qualityItem = fieldQualityItem(key);
+  const initialReview = (signed || awaitingReceipt) && qualityItem?.status === "needs_doctor_review";
   return `
-    ${detailSection(evidenceTitle, renderFieldEvidenceDetails(field))}
     ${detailSection(title, `
       <div class="detail-kv">
-        <span>状态</span>
+        <span>本版字段状态</span>
         <strong>${escapeHtml(statusLabel)}</strong>
       </div>
       <div class="detail-kv">
-        <span>置信度</span>
-        <strong>${escapeHtml(confidence == null ? "需医生复核" : `${Math.round(confidence * 100)}%`)}</strong>
+        <span>模型置信度</span>
+        <strong>${escapeHtml(confidence == null ? "未提供" : `${Math.round(confidence * 100)}%`)}</strong>
       </div>
       <div class="detail-text">${escapeHtml(displayValue)}</div>
     `)}
     ${isApprovedMissing && readableStoredText(field?.hint)
       ? detailSection("生成时提示（历史记录）", `<div class="detail-text">${escapeHtml(readableStoredText(field.hint))}</div><p>保留生成时的提示供追溯，不表示当前仍待审核。</p>`)
       : ""}
-    ${qualityItem ? detailSection("质量判断", `
-      <div class="detail-kv"><span>质量状态</span><strong>${escapeHtml(fieldQualityLabel(key))}</strong></div>
+    ${qualityItem ? detailSection("草稿生成时的自动检查", `
+      <div class="detail-kv"><span>生成时状态</span><strong>${escapeHtml(initialReview ? "需核对系统抽取内容" : fieldQualityLabel(key))}</strong></div>
       <div class="detail-kv"><span>证据数量</span><strong>${escapeHtml(String(qualityItem.evidence_count ?? 0))}</strong></div>
-      <div class="detail-text">${escapeHtml(qualityItem.reason || qualityItem.suggested_action || "暂无进一步说明。")}</div>
+      <div class="detail-text">${escapeHtml(initialReview ? `草稿生成时，系统提示医生核对${title}与引用原文。` : qualityItem.reason || qualityItem.suggested_action || "暂无进一步说明。")}</div>
     `) : ""}
     ${episodeMedicationGaps(key, field).length ? detailSection("需要补核的用药原话", episodeMedicationGaps(key, field)
       .map(item => `<p class="detail-text">${escapeHtml(item)}</p>`).join("")) : ""}
@@ -6822,6 +6943,7 @@ function openWorkbenchDetail(target = "") {
       || FIELD_DEFS.find(([key]) => key === value)?.[1]
       || "病历字段详情";
     openDetailDrawer(title, renderFieldDetailContent(value));
+    openFieldReview = { key: value, title, drawerVersion: detailDrawerVersion, context: captureReadContext() };
     return;
   }
   if (type === "fields") {

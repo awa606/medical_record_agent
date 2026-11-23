@@ -127,6 +127,31 @@ console.log(JSON.stringify({html,unchanged:JSON.stringify(fields)===before}));
         assert '>待补充<' in result['html']
 
 
+@pytest.mark.parametrize("signed,review,status,confidence,expected", [
+    (True, "content_confirmed", "complete", None, "内容已确认"),
+    (True, "pending", "complete", None, "未记录分项决定"),
+    (False, "pending", "complete", 0.81, "待医生审核"),
+    (False, "content_confirmed", "complete", None, "待医生审核"),
+    (True, "content_confirmed", "conflicting", None, "证据冲突 · 需修正"),
+    (False, "pending", "conflicting", None, "证据冲突"),
+])
+def test_field_detail_distinguishes_review_from_draft_quality(signed, review, status, confidence, expected):
+    field = {"value": "合成主诉", "missing": False, "status": status, "confidence": confidence,
+             "confirmed_by_doctor": review == "content_confirmed", "doctor_review_status": review}
+    setup = "const signed=" + json.dumps(signed) + ",field=" + json.dumps(field, ensure_ascii=False) + ";"
+    html = run_browser_logic(setup + r"""
+const quality={key:"chief_complaint",status:"needs_doctor_review",reason:"主诉来自系统抽取，尚未医生确认。"};
+activeRecordFields=()=>({chief_complaint:field}); currentRevisionIsSigned=()=>signed;
+doctorDisplayState=()=>({key:signed?"approved":"review"});
+activeQualityReport=()=>({field_quality:[quality]});
+console.log(JSON.stringify(renderFieldDetailContent('chief_complaint')));
+""")
+    assert "本版字段状态" in html and f">{expected}<" in html
+    assert "模型置信度" in html and (">未提供<" if confidence is None else ">81%<") in html
+    assert "草稿生成时的自动检查" in html
+    assert ("尚未医生确认" in html) is (not signed)
+
+
 @pytest.mark.parametrize("audio", [True, False])
 def test_real_transcript_renderer_preserves_text_timing_and_neutral_warning(audio):
     result=run_browser_logic("const audio=" + json.dumps(audio) + r""";

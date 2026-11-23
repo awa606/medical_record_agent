@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 
 from app.schemas import MedicalField, MedicalRecordFields
-from app.services.clinical_facts import _RESPIRATORY_SYMPTOMS, clinical_segment_contexts, extract_clinical_facts
+from app.services.clinical_facts import _RESPIRATORY_SYMPTOMS, clinical_segment_contexts, comparison_without_role, extract_clinical_facts
 from app.services.episode_medication_coverage import has_episode_medication_gap, refresh_episode_medication
 from app.services.field_grounding import (
     FIELD_KEYS, _doctor_negative_equivalent_clause, _explicitly_retracted_chief, compact,
@@ -104,11 +104,6 @@ def field_facts(key, text):
     if key == "previous_treatment":
         return [fact for fact in facts if fact.type == "treatment"]
     return []
-
-
-def comparison_without_role(text):
-    """Compare only: preserve all original values, source text and citations."""
-    return re.sub(r"^\s*(?:[\[【](?:患者|病人|医生|医师|家属|家长|patient|doctor)[\]】]\s*[:：]?|(?:患者|病人|医生|医师|家属|家长|patient|doctor)\s*[:：])\s*", "", text, flags=re.I)
 
 
 def explicit_unperformed_tests(text):

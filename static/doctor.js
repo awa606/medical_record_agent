@@ -3341,18 +3341,47 @@ function updateRecordFieldValue(key, value) {
 }
 
 function sourceCorrectionOptions() {
-  const segments = appState.currentAsrResult?.segments || [];
-  if (segments.length) return segments.map(segment => ({
-    text: String(segment.text || ""), index: null, segment_id: segment.segment_id || null,
-    start_time: segment.start_time ?? null, end_time: segment.end_time ?? null,
-  })).filter(span => span.text);
-  const source = appState.currentInputText || appState.currentTask?.input_text || appState.currentTask?.result_json?.conversation_text || "";
-  return String(source).split(/[。！？!?\n]+/).map(s => s.replace(/^[ ，,；;]+|[ ，,；;]+$/g, ""))
-    .filter(Boolean).map((text, index) => ({text, index}));
+  const task = appState.currentTask;
+  const source = task?.result_json?.asr_source || appState.currentAsrResult;
+  const text = task?.input_text || task?.result_json?.conversation_text || appState.currentInputText || "";
+  if (fieldEvidenceSourceKind() !== "audio") {
+    return String(text).split(/[。！？!?\n]+/).map(s => s.replace(/^[ ，,；;]+|[ ，,；;]+$/g, ""))
+      .filter(Boolean).map((quote, index) => ({
+        span: {text: quote, index},
+        label: [`第 ${index + 1} 句`, explicitTextRole(quote)?.label].filter(Boolean).join(" · "),
+      }));
+  }
+  const segments = source?.segments || [];
+  const sentences = evidenceSentences(source?.conversation_text || source?.text || text);
+  const parts = segments.map(segment => evidenceSentences(segment.text));
+  const flattened = parts.flat();
+  const aligned = sentences.length === flattened.length && sentences.every((row, i) => row.quote === flattened[i].quote);
+  const seen = new Set(), duplicate = new Set();
+  for (const segment of segments) {
+    const identity = segment.segment_id ? `id:${segment.segment_id}` : `quote:${evidenceQuote(segment.text)}`;
+    if (seen.has(identity)) duplicate.add(identity);
+    seen.add(identity);
+  }
+  let sentenceIndex = 0;
+  return segments.map((segment, turn) => {
+    const index = aligned && parts[turn].length === 1 ? sentenceIndex : null;
+    sentenceIndex += parts[turn].length;
+    const span = {text: String(segment.text || ""), index: segment.segment_id ? null : index,
+      segment_id: segment.segment_id || null, start_time: segment.start_time ?? segment.start ?? null,
+      end_time: segment.end_time ?? segment.end ?? null};
+    const start = formatEvidenceTime(span.start_time), end = formatEvidenceTime(span.end_time);
+    const clock = start && end ? `${start}–${end}` : start ? `起于 ${start}` : end ? `止于 ${end}` : "未记录音频时间";
+    const ambiguous = span.segment_id == null ? index == null && duplicate.has(`quote:${evidenceQuote(span.text)}`)
+      : duplicate.has(`id:${span.segment_id}`);
+    const label = [`第 ${turn + 1} 段`, segment.role || segment.speaker_id || segment.speaker, clock,
+      ambiguous && "无法唯一定位，仅供对照"].filter(Boolean).join(" · ");
+    return {span, label, ambiguous};
+  }).filter(option => option.span.text.trim());
 }
 
 function beginFieldResolution(key, method) {
   if (!["doctor_entry", "source_correction"].includes(method)) return;
+  if (appState.recordFieldResolutionModes[key] === method) return;
   beginRecordEdit(key);
   if (!appState.recordEditMode || !appState.currentRecordFields?.[key]) return;
   appState.recordFieldResolutionModes[key] = method;
@@ -3365,29 +3394,50 @@ function beginFieldResolution(key, method) {
   document.querySelector(`[data-record-field-input="${key}"]`)?.focus();
 }
 
-function updateFieldCorrectionSource(key, choice) {
+function updateFieldCorrectionSources(key, group) {
   const field = appState.currentRecordFields?.[key];
   if (!field || appState.recordFieldResolutionModes[key] !== "source_correction") return;
-  const span = sourceCorrectionOptions()[Number(choice)];
-  field.source_spans = choice !== "" && span ? [span] : [];
+  // Keep the identity displayed to the doctor even if a source refresh is in flight.
+  // The review endpoint rechecks each selected span against the task's stored input.
+  field.source_spans = [...group.querySelectorAll("input:checked")].map(input => JSON.parse(input.value));
+  group.querySelector("[data-source-count]").textContent = `已选 ${field.source_spans.length} 条`;
   appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
   renderFooter();
 }
 
+function correctionSpanKey(span) {
+  return JSON.stringify([span.text, span.index ?? null, span.segment_id ?? null, span.start_time ?? null, span.end_time ?? null]);
+}
+
+function correctionChoices(key, field) {
+  const selected = new Set((field.source_spans || []).map(correctionSpanKey));
+  const options = sourceCorrectionOptions();
+  const controls = options.map(({span, label, ambiguous}, i) => {
+    const id = `source-quote-${key}-${i}`;
+    return `<div class="source-choice"><label><input type="checkbox" data-record-source-field="${escapeHtml(key)}" value="${escapeHtml(JSON.stringify(span))}"
+        aria-describedby="${id}" ${ambiguous ? "disabled" : ""} ${!ambiguous && selected.has(correctionSpanKey(span)) ? "checked" : ""}> ${escapeHtml(label)}</label>
+        <p id="${id}">${escapeHtml(span.text)}</p></div>`;
+  }).join("");
+  return `<fieldset class="source-choices"><legend>本次核对的原话</legend>
+      <p>可勾选多条。保存时将核验原文，仍须审核修改后的内容。</p>
+      <div class="source-choice-list" role="region" aria-label="候选原话全文" tabindex="0">
+        ${controls || '<p>当前就诊没有可选择的原话。</p>'}</div>
+      <p data-source-count aria-live="polite">已选 ${selected.size} 条</p></fieldset>`;
+}
+
 function fieldResolutionMarkup(key, field, isEditing) {
   const original = appState.recordEditBaseline?.[key] || field;
-  if (original?.status !== "conflicting" && !appState.recordFieldResolutionModes[key]) return "";
+  if (original?.status !== "conflicting" && !(isEditing && REQUIRED_FIELD_DECISIONS.has(key))) return "";
   const mode = appState.recordFieldResolutionModes[key];
-  const sourceSelect = isEditing && mode === "source_correction" ? `
-    <label class="source-correction-select">选择本次输入的原文片段
-      <select data-record-source-field="${escapeHtml(key)}"><option value="">请选择原文，保存时重新校验</option>
-      ${sourceCorrectionOptions().map((span, i) => `<option value="${i}" ${JSON.stringify(span) === JSON.stringify(field?.source_spans?.[0]) ? "selected" : ""}>${escapeHtml(span.text)}</option>`).join("")}</select>
-    </label>` : "";
+  const oldSpans = original?.source_spans || [];
+  const previous = isEditing && mode && oldSpans.length ? `<details class="previous-source-quotes">
+    <summary>上版引用（只读对照）</summary><p>这些引文保留自上版，不作为本次修改的自动证据。</p>
+    ${renderFieldEvidenceDetails(original)}</details>` : "";
   return `<div class="field-resolution-controls">
     ${REQUIRED_FIELD_DECISIONS.has(key) ? `<button type="button" data-field-resolution="source_correction" data-resolution-key="${escapeHtml(key)}" aria-pressed="${mode === "source_correction"}">根据原文修正</button>` : ""}
     <button type="button" data-field-resolution="doctor_entry" data-resolution-key="${escapeHtml(key)}" aria-pressed="${mode === "doctor_entry"}">医生补录</button>
     ${isEditing && mode ? `<p>${mode === "doctor_entry" ? "请修改内容；本次以医生录入保存，原模型错误留在旧版本，保存后需重新审核。" : "请修改内容并选择正确原文；引用、主体、否定及数值仍须通过校验。"}</p>` : ""}
-    ${sourceSelect}</div>`;
+    ${previous}${isEditing && mode === "source_correction" ? correctionChoices(key, field) : ""}</div>`;
 }
 
 function evidenceQuote(text) {
@@ -3701,8 +3751,14 @@ function renderFieldDetailContent(key) {
     : status.label;
   const confidence = key === "treatment_plan" ? null : field?.confidence;
   const qualityItem = fieldQualityItem(key);
+  let evidenceTitle = ({audio: "原始转写证据（只读）", text: "录入文本的原文证据（只读）"})[fieldEvidenceSourceKind()] || "问诊原文证据（只读）";
+  if (appState.recordEditMode && appState.recordFieldResolutionModes[key] === "source_correction") {
+    evidenceTitle = "本次选择的原话（未保存）";
+  } else if (field?.doctor_review_note?.startsWith("manual_doctor_edit_v1:") && field.source_spans?.length) {
+    evidenceTitle = "上版引用（只读对照，不作为医生修改的自动证据）";
+  }
   return `
-    ${detailSection(({audio: "原始转写证据（只读）", text: "录入文本的原文证据（只读）"})[fieldEvidenceSourceKind()] || "问诊原文证据（只读）", renderFieldEvidenceDetails(field))}
+    ${detailSection(evidenceTitle, renderFieldEvidenceDetails(field))}
     ${detailSection(title, `
       <div class="detail-kv">
         <span>状态</span>
@@ -8072,6 +8128,16 @@ async function saveDraftReview() {
   try {
     appState.recordSaveNotice = "";
     if (!appState.currentTaskId || !appState.currentRecordFields) throw new Error("暂无可保存的病历字段");
+    const missingSource = EDITABLE_FIELD_DEFS.find(([key]) => appState.recordFieldResolutionModes[key] === "source_correction"
+      && !appState.currentRecordFields[key]?.source_spans?.length);
+    if (missingSource) {
+      const [key, label] = missingSource;
+      appState.recordSaveNotice = `请为“${label}”勾选本次使用的原话，或选择“医生补录”。`;
+      renderFooter();
+      showToast(appState.recordSaveNotice);
+      document.querySelector(`[data-record-source-field="${key}"]:not(:disabled)`)?.focus();
+      return;
+    }
     setBusy(true, "正在保存修改到 SQLite...");
     if (!appState.currentExportReadiness?.revision_id || !appState.currentExportReadiness?.content_hash) {
       await refreshExportReadiness();
@@ -10306,8 +10372,8 @@ function bindEvents() {
     }
   });
   $("recordFields").addEventListener("change", (event) => {
-    const select = event.target.closest("[data-record-source-field]");
-    if (select) updateFieldCorrectionSource(select.dataset.recordSourceField, select.value);
+    const checkbox = event.target.closest("[data-record-source-field]");
+    if (checkbox) updateFieldCorrectionSources(checkbox.dataset.recordSourceField, checkbox.closest("fieldset"));
   });
   $("recordFields").addEventListener("input", (event) => {
     const editor = event.target.closest("[data-record-field-input]");

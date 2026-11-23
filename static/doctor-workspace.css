@@ -221,8 +221,16 @@ body.doctor-mode .alpha51-workspace.recording-active .encounter-action-bar { dis
 .field-resolution-controls { margin: 12px 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .field-resolution-controls p { flex-basis: 100%; margin: 0; font-size: 14px; color: #526477; }
 .field-resolution-controls button[aria-pressed=true] { border-color: #1765a8; background: #eef6ff; }
-.source-correction-select { flex-basis: 100%; min-width: 0; font-size: 14px; }
-.source-correction-select select { display: block; width: 100%; min-width: 0; margin-top: 6px; }
+.source-choices, .previous-source-quotes { flex-basis: 100%; min-width: 0; overflow-wrap: anywhere; }
+.source-choices { padding: 8px 12px; border: 1px solid #b5c4cc; border-radius: 6px; }
+.source-choices legend, .source-choice label { font-weight: 600; }
+.source-choice-list { max-height: min(40vh, 24rem); overflow: auto; margin: 6px 0; }
+.source-choice { padding: 6px 4px; }
+.source-choice label { display: inline-flex; align-items: center; gap: 6px; }
+.source-choice input[type=checkbox] { flex: none; width: 1.1em; height: 1.1em; }
+.source-choice input:focus-visible, .previous-source-quotes summary:focus-visible,
+.source-choice-list:focus-visible { outline: 2px solid #1765a8; outline-offset: 2px; }
+.field-resolution-controls .source-choice p { color: #253b48; }
 .help-drawer { position: fixed; inset: 0 0 0 auto; width: min(680px, 100vw); height: 100dvh; max-width: 100vw; max-height: 100dvh; margin: 0; padding: 0; border: 0; background: white; color: #263c4d; }
 .help-drawer[open] { display: flex; flex-direction: column; }
 .help-drawer::backdrop { background: rgb(15 35 53 / 35%); }
@@ -310,7 +318,7 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   body.doctor-mode .alpha51-workspace .encounter-command-center { flex-wrap: wrap; }
   body.doctor-mode .alpha51-workspace .workflow-panel { flex-basis: 100%; }
   body.doctor-mode .alpha51-workspace .encounter-action-bar { flex-wrap: wrap; }
-  body.doctor-mode .alpha51-workspace .encounter-action-bar .button-group { flex-wrap: wrap; }
+  body.doctor-mode .alpha51-workspace .encounter-action-bar .button-group { flex-wrap: wrap; max-width: 100%; min-width: 0; }
 }
 @media (max-width: 760px) {
   body.doctor-mode .alpha51-workspace { height: auto; max-height: none; overflow: visible; }

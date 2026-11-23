@@ -669,11 +669,15 @@ def review_task(
     from app.services.privacy import anonymize_text
     coverage_source = anonymize_text(task.get("input_text") or result.get("conversation_text") or "")
     live_review = os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}
-    if live_review:
+    if live_review or trusted_source_corrections:
         from app.services.field_grounding import ground_fields
-        fields = ground_fields(fields, coverage_source,
-                               (result.get("asr_source") or {}).get("segments"),
-                               source_corrected_fields=trusted_source_corrections)
+        asr = result.get("asr_source") or {}
+        text_import = asr.get("audio_id") == "text-import" or asr.get("engine") == "text-import"
+        audio_origin = not text_import and (task.get("input_type") == "audio" or bool(asr))
+        # An empty list marks an audio source lacking its saved turns. None is plain text.
+        turns = (asr.get("segments") or []) if audio_origin else None
+        fields = ground_fields(fields, coverage_source, turns,
+                               source_corrected_fields=trusted_source_corrections, only_corrected=not live_review)
     if previous_fields:
         resolved = set(review_payload.manual_takeover_fields + review_payload.source_corrected_fields)
         for key, _label, field in _field_items(fields):
@@ -681,7 +685,9 @@ def review_task(
                 field.status = "conflicting"
                 field.hint = "原模型冲突尚未处置，请选择根据原文修正或医生补录后保存。"
     for key in review_payload.source_corrected_fields:
-        getattr(fields, key).doctor_review_note = "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。"
+        field = getattr(fields, key)
+        field.doctor_review_note = ("医生根据原文修正，所选证据存在冲突，需重新核对。" if field.status == "conflicting"
+                                    else "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。")
     fields = refresh_existing_coverage_hints(fields, source=coverage_source if live_review else None)
     if not live_review:
         # A doctor can remove a previously covered medication on a later edit.

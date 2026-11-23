@@ -53,7 +53,7 @@ def deployed(bundle, data_root):
                 proc.communicate(input=b"\n", timeout=25)
 
 
-def verify(bundle, actions, target, result):
+def verify(bundle, actions, target, result, *, multiple_sources=False):
     with TemporaryDirectory(prefix="medilisten-platform-") as temp:
         root = Path(temp)
         installed = root / "software"
@@ -73,6 +73,7 @@ def verify(bundle, actions, target, result):
                 return response
 
             result["startup_ms"] = startup
+            assert get("/api/auth/me").json()["role"] == "doctor"
             identity = get("/course/identity").json()
             manifest = (installed / "运行源/runtime-sha256.json").read_bytes()
             assert identity["runtime_sha256"] == sha(manifest) and identity["variant"] == "classroom-review-2"
@@ -119,19 +120,44 @@ def verify(bundle, actions, target, result):
             result["unsigned_export_http"] = blocked.status_code
             assert blocked.status_code == 400
             result["actions_http"] = []
-            for step in steps:
+            if multiple_sources:
+                sample = json.loads((installed / "冻结资产/fixtures/input.json").read_text(encoding="utf-8"))
+                lines = sample["text"].splitlines()
+                quotes = [{"index": i, "text": lines[i].split("：", 1)[1].rstrip("。")} for i in (1, 3)]
+                assert len(first["present_illness"]["source_spans"]) == 1
+                assert "布洛芬" not in first["present_illness"]["value"] and "布洛芬" in quotes[1]["text"]
+                result["verified_source_lines"] = []
+            for step_number, step in enumerate(steps):
                 body = step["json"]
                 if body is not None:
                     revision = get(task_path + "/export-readiness").json()
                     if step["route"].endswith("/review"):
                         assert body["expected_revision_id"] == revision["revision_id"]
                         body["expected_content_hash"] = revision["content_hash"]
+                        if multiple_sources:
+                            if step_number == 0:
+                                body["source_corrected_fields"] = ["present_illness"]
+                                body["fields"]["present_illness"]["source_spans"] = quotes
+                            else:
+                                saved = get(task_path).json()["result_json"]["fields"]
+                                body["fields"]["present_illness"] = saved["present_illness"]
                     if step["route"].endswith("/approve"):
                         assert body["revision_id"] == revision["revision_id"]
                         body["content_hash"] = revision["content_hash"]
                 response = api.post(base + step["route"], json=body, timeout=30)
                 result["actions_http"].append([step["route"], response.status_code])
                 response.raise_for_status()
+                if multiple_sources:
+                    current = get(task_path).json()["result_json"]["fields"]["present_illness"]
+                    assert current["status"] != "conflicting" and "布洛芬" in current["value"]
+                    assert current["doctor_review_note"].startswith("doctor_source_correction_v1:")
+                    assert [(s["index"], s["text"].rstrip("。")) for s in current["source_spans"]] == [
+                        (q["index"], q["text"]) for q in quotes]
+                    assert all(s.get(k) is None for s in current["source_spans"]
+                               for k in ("segment_id", "start_time", "end_time"))
+                    result["verified_source_lines"].append([s["index"] + 1 for s in current["source_spans"]])
+                    if step_number in (0, 1):
+                        assert api.post(base + task_path + "/export", timeout=15).status_code == 400
             final_fields = get(task_path).json()["result_json"]["fields"]
             assert final_fields != first and "布洛芬" in str(final_fields["present_illness"])
             result["final_field_hash"] = field_hash(final_fields)
@@ -151,6 +177,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("bundle", "actions", "output"):
         parser.add_argument(name, type=Path)
+    parser.add_argument("--multiple-sources", action="store_true",
+                        help="使用第 2 行与第 4 行修订现病史，并分别在重读、签署、导出后核对来源")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     result = {"status": "FAIL", "started_utc": datetime.now(timezone.utc).isoformat(),
@@ -158,7 +186,7 @@ def main():
               "dependencies": {k: metadata.version(k) for k in
                                ("requests", "fastapi", "uvicorn", "pydantic", "reportlab", "python-docx")}}
     try:
-        verify(args.bundle, args.actions, args.output, result)
+        verify(args.bundle, args.actions, args.output, result, multiple_sources=args.multiple_sources)
         result["status"] = "PASS"
     except Exception as error:
         result["error"] = f"{type(error).__name__}: {error}"

@@ -4,10 +4,10 @@
      <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
      <link rel="stylesheet" href="./doctor.css?v=20261102-continuous-record-r2" />
      <link rel="stylesheet" href="./doctor-ui-v2.css?v=20261102-continuous-record-r2" />
--    <link rel="stylesheet" href="./doctor-workspace.css?v=20261102-text-drawer-r1" />
+-    <link rel="stylesheet" href="./doctor-workspace.css?v=20261124-source-choices" />
 -  </head>
 -  <body class="doctor-mode standard-mode">
-+    <link rel="stylesheet" href="./doctor-workspace.css?v=20261103-episode-review" />
++    <link rel="stylesheet" href="./doctor-workspace.css?v=20261124-classroom-source-choices" />
 +    <link rel="stylesheet" href="./projector.css?v=20261124-review" />
 +    <link rel="stylesheet" href="./course-entry.css?v=20261124-import" />
 +  <style>.brand-copy p{display:block!important;font-size:13px!important;line-height:1.35!important;margin:0;color:#293f57} @media(max-width:1199px){.brand-copy p{font-size:12px!important}}</style></head>
@@ -146,8 +146,8 @@
        <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
      </dialog>
      <div id="toast" class="toast" role="status" aria-live="polite"></div>
--    <script src="./doctor.js?v=20261124-drawer-focus"></script>
-+    <script src="./doctor.js?v=20261124-import-focus"></script>
+-    <script src="./doctor.js?v=20261124-source-choices"></script>
++    <script src="./doctor.js?v=20261124-classroom-source-choices"></script>
    </body>
  </html>
 --- a/static/doctor.js

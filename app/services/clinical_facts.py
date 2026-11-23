@@ -96,6 +96,11 @@ _ALLERGY_CONCEPTS = tuple(
 )
 
 
+def comparison_without_role(text: str) -> str:
+    """Strip an explicit speaker prefix for comparison without changing the saved quote."""
+    return re.sub(r"^\s*(?:[\[【](?:患者|病人|医生|医师|家属|家长|patient|doctor)[\]】]\s*[:：]?|(?:患者|病人|医生|医师|家属|家长|patient|doctor)\s*[:：])\s*", "", text, flags=re.I)
+
+
 def split_clinical_segments(text: str) -> list[str]:
     parts = _SPLIT_RE.split(text)
     return [part.strip(" ，,；;") for part in parts if part.strip(" ，,；;")]

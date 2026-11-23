@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import math
 import os
-import re
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -15,9 +13,7 @@ from app.db import bind_task_to_encounter, can_retry_failed_encounter, get_encou
 from app.schemas import ASRResult, ASRSegment, MedicalRecordFields, SafetyCheckResult, SourceSpan
 from app.services import LLMProviderUnavailableError, create_llm_record_generator
 from app.services.asr.role_quality import build_speaker_role_quality
-from app.services.asr.speaker_role_policy import normalize_role
-from app.services.clinical_facts import clinical_segment_contexts, split_clinical_segments
-from app.services.field_alignment import comparison_without_role
+from app.services.audio_citations import AudioCitationIndex
 from app.services.record_quality import build_record_quality_report
 
 
@@ -184,80 +180,10 @@ def _treatment_plan(fields: MedicalRecordFields) -> dict[str, list[str]]:
     }
 
 
-def _quote_text(value: str) -> str:
-    return re.sub(r"[\s，。！？!?、,]+", "", comparison_without_role(value))
-
-
-def _audio_time(value: Any) -> float | None:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return None
-    return value if math.isfinite(value) and value >= 0 else None
-
-
-class _AudioCitations:
-    """Relate zero-based model sentence numbers to ASR turns only when their texts align."""
-
-    def __init__(self, conversation: str, segments: list[dict[str, Any]]):
-        self.sentences = clinical_segment_contexts(conversation)
-        self.rows = []
-        self.by_id = {}
-        owners = []
-        normalized_sentences = []
-        for index, segment in enumerate(segments):
-            text = str(segment.get("text") or "")
-            segment_id = str(segment.get("segment_id") or f"segment-{index}")
-            start = _audio_time(segment.get("start_time"))
-            end = _audio_time(segment.get("end_time"))
-            if start is not None and end is not None and end < start:
-                start = end = None
-            row = {"segment_id": segment_id, "index": index, "start_time": start, "end_time": end,
-                   "speaker_id": segment.get("speaker_id") or segment.get("speaker"),
-                   "role": segment.get("role"), "text": text}
-            self.rows.append(row)
-            self.by_id[segment_id] = None if segment_id in self.by_id else row
-            for sentence in split_clinical_segments(text):
-                owners.append(row)
-                normalized_sentences.append(_quote_text(sentence))
-        self.owners = owners if normalized_sentences == [_quote_text(s.text) for s in self.sentences] else []
-
+class _AudioCitations(AudioCitationIndex):
     def bind(self, span: SourceSpan) -> SourceSpan:
-        # Preserve the original quote and model index even when the proposed audio link is rejected.
-        unbound = span.model_copy(update={"segment_id": None, "start_time": None, "end_time": None})
-        quote = _quote_text(span.text)
-        if not quote:
-            return unbound
-        contexts = clinical_segment_contexts(span.text)
-        role = normalize_role(contexts[0].speaker) if contexts else None
-        candidates = self.rows
-        if span.index is not None:
-            if not 0 <= span.index < len(self.sentences):
-                return unbound
-            sentence = self.sentences[span.index]
-            if quote not in _quote_text(sentence.text):
-                return unbound
-            if self.owners:
-                candidates = [self.owners[span.index]]
-            sentence_role = normalize_role(sentence.speaker)
-            if role and sentence_role and role != sentence_role:
-                return unbound
-            role = role or sentence_role
-        matches = [row for row in candidates
-                   if quote in _quote_text(row["text"])
-                   and (span.segment_id is None or row["segment_id"] == span.segment_id)
-                   and (role is None or not row["role"] or normalize_role(row["role"]) == role)]
-        if len(matches) != 1 or self.by_id[matches[0]["segment_id"]] is None:
-            return unbound
-        row = matches[0]
-        start, end = row["start_time"], row["end_time"]
-        supplied = [v for v in (span.start_time, span.end_time) if v is not None]
-        if any(_audio_time(v) is None or (start is not None and v < start)
-               or (end is not None and v > end) for v in supplied):
-            return unbound
-        if span.start_time is not None and span.end_time is not None and span.start_time > span.end_time:
-            return unbound
-        return span.model_copy(update={"segment_id": row["segment_id"],
-            "start_time": span.start_time if span.start_time is not None and start is not None else start,
-            "end_time": span.end_time if span.end_time is not None and end is not None else end})
+        validated = self.resolve(span)
+        return validated or span.model_copy(update={"segment_id": None, "start_time": None, "end_time": None})
 
     def enrich(self, fields: MedicalRecordFields) -> MedicalRecordFields:
         enriched = fields.model_copy(deep=True)

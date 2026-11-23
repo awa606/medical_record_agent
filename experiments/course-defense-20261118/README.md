@@ -1,6 +1,17 @@
 # MediListen 课程演示候选
 
-## 11 月 26 日结课版
+## 当前课堂包的复制与复测
+
+当前现场包允许医生将症状及用药分别绑定到第 2、4 句。解压当前 ZIP 到新目录后，双击根目录的“双击启动课堂.cmd”。在 Windows 原生环境与隔离 Debian 中都可重建同一份 81,562,930 字节分发包；原课堂包锁仍保留。以下命令从已核对输入在新路径复现版本，重建需要本地已有冻结输入和运行依赖。
+
+```powershell
+python -B -X utf8 experiments/course-defense-20261118/windows-offline/build_portable.py <解压软件目录> <新输出.zip> --edition multisource
+python -B -X utf8 experiments/course-defense-20261118/verify_platform_replay.py <现场回放目录> <模拟核对动作.jsonl> <新结果目录> --multiple-sources
+```
+
+本版运行清单 `bd86d592`、分发文件 `05578ad5`。原版运行清单 `5cc24fe0`、分发文件 `cf726261`；其历史证据见下文，重建原 ZIP 时使用原始输入和 `--edition original`。[同一版的界面、签署及双平台证据](../../docs/evidence/20261124_multisource_review.md)
+
+## 原结课版的部署记录
 
 2026-11-24 的课堂包在 Windows 11 和 Debian 12 容器分别部署，两种操作系统共用一台物理电脑。最终运行清单 SHA-256 为 `5cc24fe0ff55c645447afbffe9adf3dbdf218f14b01482885e0fc7adce5128ee`。Linux 可直接用 Python 启动“课堂启动.py”。Windows 使用原双击入口。若同一端口的运行版本不同，启动器会提示使用对应版本的窗口或其他端口。
 

@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import NamedTuple
 from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile, ZipInfo
 
 TEMPLATES = Path(__file__).resolve().parent / "portable"
@@ -19,6 +20,22 @@ WHEELS_INDEX = "Windows314轮包核验.json"
 INDEX_SHA = "7b888ce0e432e39acc1a7dc4cc935f4073075e066f80b7f8ecbeb96bfb52116e"
 INVENTORY_SHA = "56541e6f8693a38429cda6214e66eb8f83550d24d1f3c356a6a96eef0ab9d076"
 ZIP_SHA = "cf726261e443369d43157573df31a4aa2194e40d83c21de2bee49942096e2ef5"
+
+
+class Edition(NamedTuple):
+    runtime: str
+    inventory: str
+    archive: str
+
+
+EDITIONS = {
+    "original": Edition(LAYERS["运行源"][1], INVENTORY_SHA, ZIP_SHA),
+    "multisource": Edition(
+        "bd86d5925847ad82593a0f3f679d11c91b686bfc81bc09f934fa9600834cb5d9",
+        "1a6c5a5611127690f11f9cf3550d7ddcd4762e73de382db392b273336e352ae4",
+        "05578ad5d92597585bd2ca91d687baea2bf4e5efa8881eae5a6ad74ae4085dfb",
+    ),
+}
 
 
 def digest(content):
@@ -43,9 +60,11 @@ def text_bytes(content, *, windows=False):
     return lf.replace(b"\n", b"\r\n") if windows else lf
 
 
-def collect(software):
+def collect(software, runtime_sha):
     entries = {}
     for layer, (name, expected) in LAYERS.items():
+        if layer == "运行源":
+            expected = runtime_sha
         prefix = f"现场回放/{layer}/"
         raw = verified(read_inside(software, prefix + name), expected, name)
         entries[prefix + name] = (raw, layer + "校验清单")
@@ -60,7 +79,15 @@ def collect(software):
     for name in ("windows_bootstrap.ps1", "windows_runtime.py", "双击启动专用课堂.cmd", WHEELS_INDEX,
                  "requirements-win314.lock"):
         key = "专用环境/" + name
-        entries[key] = (text_bytes(read_inside(software, key), windows=not name.endswith(".py")), "3.14 准备与启动")
+        data = text_bytes(read_inside(software, key), windows=not name.endswith(".py"))
+        if name == "windows_runtime.py" and runtime_sha != EDITIONS["original"].runtime:
+            # The bootstrap inside this archive accepts exactly its own pinned runtime.
+            marker = f'BUNDLE_SHA = "{EDITIONS["original"].runtime}"'.encode()
+            release_marker = f'BUNDLE_SHA = "{runtime_sha}"'.encode()
+            if data.count(marker) + data.count(release_marker) != 1:
+                raise ValueError("输入启动器缺少可识别的版本锁")
+            data = data.replace(marker, release_marker)
+        entries[key] = (data, "3.14 准备与启动")
 
     host = verified(read_inside(software, "专用环境/" + PYTHON_ARCHIVE), PYTHON_SHA, PYTHON_ARCHIVE)
     entries["专用环境/" + PYTHON_ARCHIVE] = (host, "Python 官方完整 ZIP")
@@ -83,25 +110,31 @@ def collect(software):
                   for name, (blob, kind) in sorted(entries.items())],
     }
     raw_inventory = (json.dumps(inventory, ensure_ascii=False, indent=2) + "\n").encode("utf8")
-    entries["分发清单.json"] = (verified(raw_inventory, INVENTORY_SHA, "分发清单"), "自身清单")
+    entries["分发清单.json"] = (raw_inventory, "自身清单")
     return entries
 
 
-def build(software, destination):
-    entries = collect(software.resolve(strict=True))
+def write_archive(entries, staging):
+    with ZipFile(staging, "w") as archive:
+        for name, (blob, _) in sorted(entries.items()):
+            member = ZipInfo(name, date_time=(2026, 11, 24, 0, 0, 0))
+            member.create_system = 0
+            member.external_attr = 0o100644 << 16
+            method = ZIP_STORED if name.endswith((".whl", ".zip", ".png", ".ico")) else ZIP_DEFLATED
+            archive.writestr(member, blob, compress_type=method, compresslevel=6 if method == ZIP_DEFLATED else None)
+
+
+def build(software, destination, edition="original"):
+    release = EDITIONS[edition]
+    entries = collect(software.resolve(strict=True), release.runtime)
+    verified(entries["分发清单.json"][0], release.inventory, "分发清单")
     destination.parent.mkdir(parents=True, exist_ok=True)
     with NamedTemporaryFile(dir=destination.parent, delete=False) as temp:
         staging = Path(temp.name)
     try:
-        with ZipFile(staging, "w") as archive:
-            for name, (blob, _) in sorted(entries.items()):
-                member = ZipInfo(name, date_time=(2026, 11, 24, 0, 0, 0))
-                member.create_system = 0  # Match the Windows release on other build hosts.
-                member.external_attr = 0o100644 << 16
-                method = ZIP_STORED if name.endswith((".whl", ".zip", ".png", ".ico")) else ZIP_DEFLATED
-                archive.writestr(member, blob, compress_type=method, compresslevel=6 if method == ZIP_DEFLATED else None)
+        write_archive(entries, staging)
         with staging.open("rb") as stream:
-            if hashlib.file_digest(stream, "sha256").hexdigest() != ZIP_SHA:
+            if hashlib.file_digest(stream, "sha256").hexdigest() != release.archive:
                 raise ValueError("生成的 ZIP 与已验证的分发文件摘要不同")
         # Both publication paths fail if a different build has already published.
         if os.name == "nt":
@@ -110,12 +143,13 @@ def build(software, destination):
             os.link(staging, destination)
     finally:
         staging.unlink(missing_ok=True)
-    return ZIP_SHA
+    return release.archive
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("software", type=Path, help="含专用环境和现场回放两个目录的软件目录")
     parser.add_argument("destination", type=Path, help="新的输出 ZIP 文件路径")
+    parser.add_argument("--edition", choices=EDITIONS, default="original")
     args = parser.parse_args()
-    print(build(args.software, args.destination), args.destination)
+    print(build(args.software, args.destination, args.edition), args.destination)

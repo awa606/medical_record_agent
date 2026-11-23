@@ -37,7 +37,10 @@ def build(frozen, destination):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(data)
 
-        for name in ("static/doctor.js", "static/doctor.html", "app/api/tasks.py", "app/services/exporter.py"):
+        for name in ("static/doctor.js", "static/doctor.html", "static/doctor-workspace.css", "static/doctor.css",
+                     "app/api/tasks.py", "app/api/records.py", "app/services/exporter.py",
+                     "app/services/audio_citations.py", "app/services/field_grounding.py",
+                     "app/services/field_alignment.py", "app/services/clinical_facts.py"):
             # A checkout may use platform-native line endings. The built files use UTF-8/LF.
             (work / name).write_bytes((REPO / name).read_text(encoding="utf-8").encode())
         subprocess.run(["git", "apply", "--whitespace=nowarn", str(HERE / "classroom-ui.patch"),

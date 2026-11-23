@@ -16,10 +16,11 @@ def prepare_reference_fixture(page) -> None:
       const s = window.__MRA_APP_STATE__;
       s.currentEncounter = {id: 'SIM-REF-001', patient_display_name: '模拟患者',
         patient_deidentified_id: 'SIM-REF-001', check_in_status: 'checked_in'};
+      const utterance = '今天发热三十八点二度，没有胸痛。';
       const base = s.currentRecordFields.candidate_diagnoses[0];
       s.currentRecordFields.candidate_diagnoses = ['上呼吸道感染', '流行性感冒', '社区获得性肺炎待排'].map((name, i) => ({
         ...base, name, reason: '合成依据：发热与咳嗽，仍需医生结合检查判断。'.repeat(8),
-        evidence: [{text: '合成原文：今天发热三十八点二度，没有胸痛。', segment_id: 'sim-segment-1'}],
+        evidence: [{text: utterance, segment_id: 'sim-segment-1'}],
         suggested_checks: ['合成检查提示：按临床需要评估'], medication_notes: ['合成用药提示：不得自动处方'],
         follow_up_questions: ['合成补问：症状持续多久？'], risk_warnings: ['合成风险：病情变化需医生复核'],
         references: [{title: '合成指南来源（展示测试）', publisher: '测试机构', version: 'fixture-v1',
@@ -30,7 +31,7 @@ def prepare_reference_fixture(page) -> None:
       s.currentKnowledgeEvidence = {results: [{title: '病例级合成资料', publisher: '测试机构', version: 'fixture-v1',
         section: '合成章节', page: 1, content_sha256: 'f'.repeat(64), chunk_id: 'fixture-chunk', document_id: 'fixture-doc',
         source_url: 'https://example.org/case-reference', excerpt: '病例级摘要，不与某一诊断自动关联'}]};
-      s.currentAsrResult = {segments: [{segment_id: 'sim-segment-1', text: '今天发热三十八点二度，没有胸痛。',
+      s.currentAsrResult = {segments: [{segment_id: 'sim-segment-1', text: utterance,
         role: 'patient', speaker: 'speaker_1', start: 0, end: 8}], role_quality: {status: 'passed'}};
       setProductView('encounter'); renderAll();
     }""")
@@ -68,7 +69,7 @@ def test_reference_names_open_full_details_without_losing_edits(page):
     row.click()
     drawer = page.locator('#drawer')
     expect(drawer).to_contain_text('合成依据')
-    expect(drawer).to_contain_text('合成原文')
+    expect(drawer.locator('.field-evidence-detail p')).to_have_text('今天发热三十八点二度，没有胸痛。')
     expect(drawer).to_contain_text('合成指南来源')
     expect(drawer).to_contain_text('病例级资料 · 未关联当前项目')
     expect(page.locator('#closeDrawerButton')).to_be_focused()

@@ -56,6 +56,24 @@ def test_detail_tabs_keyboard_traceability_score_and_edit_preservation(page):
     expect(page.locator('#exportButton')).to_be_disabled()
 
 
+def test_patient_evidence_keeps_unverified_quote_without_borrowing_the_segment_time(page):
+    prepare_reference_fixture(page)
+    page.evaluate("""() => {
+      const evidence = window.__MRA_APP_STATE__.currentRecordFields.candidate_diagnoses[0].evidence;
+      evidence.push({...evidence[0], text: '合成原文：' + evidence[0].text});
+    }""")
+    page.get_by_role('button', name='上呼吸道感染', exact=True).click()
+    cards = page.locator('#reference-panel-patient .field-evidence-detail')
+    expect(cards).to_have_count(2)
+    expect(cards.nth(0).locator('p')).to_have_text('今天发热三十八点二度，没有胸痛。')
+    expect(cards.nth(0)).to_contain_text('00:00.0–00:08.0')
+    expect(cards.nth(0)).to_contain_text('说话人标注')
+    expect(cards.nth(1).locator('p')).to_have_text('合成原文：今天发热三十八点二度，没有胸痛。')
+    expect(cards.nth(1)).to_contain_text('未记录音频时间')
+    expect(cards.nth(1)).not_to_contain_text('00:00.0–00:08.0')
+    expect(cards.nth(1)).not_to_contain_text('说话人标注')
+
+
 @pytest.mark.parametrize('status,message', [('idle','尚未加载'),('ready','本次知识检索无结果'),('failed','知识服务不可用')])
 def test_unlinked_no_results_and_failure_are_distinct(page, status, message):
     prepare_reference_fixture(page)

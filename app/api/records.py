@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import math
 import os
 import re
 from typing import Any
@@ -14,6 +15,9 @@ from app.db import bind_task_to_encounter, can_retry_failed_encounter, get_encou
 from app.schemas import ASRResult, ASRSegment, MedicalRecordFields, SafetyCheckResult, SourceSpan
 from app.services import LLMProviderUnavailableError, create_llm_record_generator
 from app.services.asr.role_quality import build_speaker_role_quality
+from app.services.asr.speaker_role_policy import normalize_role
+from app.services.clinical_facts import clinical_segment_contexts, split_clinical_segments
+from app.services.field_alignment import comparison_without_role
 from app.services.record_quality import build_record_quality_report
 
 
@@ -180,135 +184,98 @@ def _treatment_plan(fields: MedicalRecordFields) -> dict[str, list[str]]:
     }
 
 
-def _matching_source_segments(
-    source_text: str,
-    segments: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    def normalize(value: str) -> str:
-        without_role = re.sub(r"^\s*\[[^\]]+\]\s*", "", value or "")
-        return re.sub(r"[\s，。！？!?、,]+", "", without_role)
-
-    normalized_source = normalize(source_text)
-    if not normalized_source:
-        return []
-    matches: list[dict[str, Any]] = []
-    for index, segment in enumerate(segments):
-        segment_text = normalize(str(segment.get("text") or ""))
-        if not segment_text:
-            continue
-        overlap = (
-            normalized_source in segment_text
-            or segment_text in normalized_source
-            or (len(normalized_source) >= 6 and normalized_source[:6] in segment_text)
-        )
-        if not overlap:
-            continue
-        matches.append(
-            {
-                "segment_id": segment.get("segment_id") or f"segment-{index}",
-                "index": index,
-                "start_time": segment.get("start_time"),
-                "end_time": segment.get("end_time"),
-                "speaker_id": segment.get("speaker_id") or segment.get("speaker"),
-                "role": segment.get("role"),
-                "text": segment.get("text") or "",
-            }
-        )
-    return matches
+def _quote_text(value: str) -> str:
+    return re.sub(r"[\s，。！？!?、,]+", "", comparison_without_role(value))
 
 
-def _segment_lookup(segments: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    return {
-        str(segment.get("segment_id") or f"segment-{index}"): {
-            "segment_id": segment.get("segment_id") or f"segment-{index}",
-            "index": index,
-            "start_time": segment.get("start_time"),
-            "end_time": segment.get("end_time"),
-            "speaker_id": segment.get("speaker_id") or segment.get("speaker"),
-            "role": segment.get("role"),
-            "text": segment.get("text") or "",
-        }
-        for index, segment in enumerate(segments)
-    }
+def _audio_time(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return value if math.isfinite(value) and value >= 0 else None
 
 
-def _matches_for_span(
-    span: SourceSpan,
-    segments: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    if span.segment_id:
-        match = _segment_lookup(segments).get(str(span.segment_id))
-        if match:
-            return [match]
-    return _matching_source_segments(span.text, segments)
+class _AudioCitations:
+    """Relate zero-based model sentence numbers to ASR turns only when their texts align."""
+
+    def __init__(self, conversation: str, segments: list[dict[str, Any]]):
+        self.sentences = clinical_segment_contexts(conversation)
+        self.rows = []
+        self.by_id = {}
+        owners = []
+        normalized_sentences = []
+        for index, segment in enumerate(segments):
+            text = str(segment.get("text") or "")
+            segment_id = str(segment.get("segment_id") or f"segment-{index}")
+            start = _audio_time(segment.get("start_time"))
+            end = _audio_time(segment.get("end_time"))
+            if start is not None and end is not None and end < start:
+                start = end = None
+            row = {"segment_id": segment_id, "index": index, "start_time": start, "end_time": end,
+                   "speaker_id": segment.get("speaker_id") or segment.get("speaker"),
+                   "role": segment.get("role"), "text": text}
+            self.rows.append(row)
+            self.by_id[segment_id] = None if segment_id in self.by_id else row
+            for sentence in split_clinical_segments(text):
+                owners.append(row)
+                normalized_sentences.append(_quote_text(sentence))
+        self.owners = owners if normalized_sentences == [_quote_text(s.text) for s in self.sentences] else []
+
+    def bind(self, span: SourceSpan) -> SourceSpan:
+        # Preserve the original quote and model index even when the proposed audio link is rejected.
+        unbound = span.model_copy(update={"segment_id": None, "start_time": None, "end_time": None})
+        quote = _quote_text(span.text)
+        if not quote:
+            return unbound
+        contexts = clinical_segment_contexts(span.text)
+        role = normalize_role(contexts[0].speaker) if contexts else None
+        candidates = self.rows
+        if span.index is not None:
+            if not 0 <= span.index < len(self.sentences):
+                return unbound
+            sentence = self.sentences[span.index]
+            if quote not in _quote_text(sentence.text):
+                return unbound
+            if self.owners:
+                candidates = [self.owners[span.index]]
+            sentence_role = normalize_role(sentence.speaker)
+            if role and sentence_role and role != sentence_role:
+                return unbound
+            role = role or sentence_role
+        matches = [row for row in candidates
+                   if quote in _quote_text(row["text"])
+                   and (span.segment_id is None or row["segment_id"] == span.segment_id)
+                   and (role is None or not row["role"] or normalize_role(row["role"]) == role)]
+        if len(matches) != 1 or self.by_id[matches[0]["segment_id"]] is None:
+            return unbound
+        row = matches[0]
+        start, end = row["start_time"], row["end_time"]
+        supplied = [v for v in (span.start_time, span.end_time) if v is not None]
+        if any(_audio_time(v) is None or (start is not None and v < start)
+               or (end is not None and v > end) for v in supplied):
+            return unbound
+        if span.start_time is not None and span.end_time is not None and span.start_time > span.end_time:
+            return unbound
+        return span.model_copy(update={"segment_id": row["segment_id"],
+            "start_time": span.start_time if span.start_time is not None and start is not None else start,
+            "end_time": span.end_time if span.end_time is not None and end is not None else end})
+
+    def enrich(self, fields: MedicalRecordFields) -> MedicalRecordFields:
+        enriched = fields.model_copy(deep=True)
+        for key in FIELD_LABELS:
+            field = getattr(enriched, key)
+            field.source_spans = [self.bind(span) for span in field.source_spans]
+        for diagnosis in enriched.candidate_diagnoses:
+            diagnosis.evidence = [self.bind(span) for span in diagnosis.evidence]
+        return enriched
 
 
-def _source_segment_ids_for_span(span: SourceSpan, segments: list[dict[str, Any]]) -> list[str]:
-    return [
-        str(item["segment_id"])
-        for item in _matches_for_span(span, segments)
-        if item.get("segment_id")
-    ]
-
-
-def _source_segment_ids(source_text: str, segments: list[dict[str, Any]]) -> list[str]:
-    return [
-        str(item["segment_id"])
-        for item in _matching_source_segments(source_text, segments)
-        if item.get("segment_id")
-    ]
-
-
-def _enrich_span(span: SourceSpan, segments: list[dict[str, Any]]) -> SourceSpan:
-    if span.segment_id:
-        return span
-    matches = _matching_source_segments(span.text, segments)
-    if not matches:
-        return span
-    match = matches[0]
-    return span.model_copy(
-        update={
-            "segment_id": match.get("segment_id"),
-            "index": span.index if span.index is not None else match.get("index"),
-            "start_time": span.start_time if span.start_time is not None else match.get("start_time"),
-            "end_time": span.end_time if span.end_time is not None else match.get("end_time"),
-        }
-    )
-
-
-def _enrich_spans(spans: list[SourceSpan], segments: list[dict[str, Any]]) -> list[SourceSpan]:
-    return [_enrich_span(span, segments) for span in spans]
-
-
-def _enrich_field_evidence(
-    fields: MedicalRecordFields,
-    segments: list[dict[str, Any]],
-) -> MedicalRecordFields:
-    if not segments:
-        return fields
-    enriched = fields.model_copy(deep=True)
-    for key in FIELD_LABELS:
-        field = getattr(enriched, key)
-        field.source_spans = _enrich_spans(field.source_spans, segments)
-    for diagnosis in enriched.candidate_diagnoses:
-        diagnosis.evidence = _enrich_spans(diagnosis.evidence, segments)
-    return enriched
-
-
-def _structured_updates(
-    fields: MedicalRecordFields,
-    segments: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
+def _structured_updates(fields: MedicalRecordFields) -> list[dict[str, Any]]:
     updates: list[dict[str, Any]] = []
     for key, label in FIELD_LABELS.items():
         field = getattr(fields, key)
         value = field.value or ""
         source_text = field.source_spans[0].text if field.source_spans else ""
-        source_segment_ids = (
-            _source_segment_ids_for_span(field.source_spans[0], segments)
-            if field.source_spans
-            else []
-        )
+        source_segment_ids = [span.segment_id for span in field.source_spans[:1] if span.segment_id]
         updates.append(
             {
                 "key": key,
@@ -321,7 +288,7 @@ def _structured_updates(
                 "value_preview": value[:120],
                 "confidence": field.confidence,
                 "source_text": source_text,
-                "source_segment_ids": source_segment_ids or _source_segment_ids(source_text, segments),
+                "source_segment_ids": source_segment_ids,
                 "notice": "实时预览，需医生确认",
             }
         )
@@ -342,7 +309,7 @@ def _structured_updates(
                     default=None,
                 ),
                 "source_text": diagnosis_source,
-                "source_segment_ids": _source_segment_ids(diagnosis_source, segments),
+                "source_segment_ids": [span.segment_id for span in fields.candidate_diagnoses[0].evidence[:1] if span.segment_id],
                 "notice": "候选结果，需医生确认",
             }
         )
@@ -351,28 +318,19 @@ def _structured_updates(
 
 def _evidence_links(
     fields: MedicalRecordFields,
-    segments: list[dict[str, Any]],
+    citations: _AudioCitations,
 ) -> list[dict[str, Any]]:
     links: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
-    for key, label in FIELD_LABELS.items():
-        field = getattr(fields, key)
-        for span in field.source_spans:
-            for match in _matches_for_span(span, segments):
-                identity = (label, str(match.get("segment_id") or ""))
-                if identity in seen:
-                    continue
+    groups = [(label, getattr(fields, key).source_spans) for key, label in FIELD_LABELS.items()]
+    groups.extend((f"候选诊断：{d.name}", d.evidence) for d in fields.candidate_diagnoses)
+    for label, spans in groups:
+        for span in spans:
+            row = citations.by_id.get(span.segment_id)
+            identity = (label, span.segment_id)
+            if row is not None and identity not in seen:
                 seen.add(identity)
-                links.append({"label": label, "evidence": span.text, **match})
-    for diagnosis in fields.candidate_diagnoses:
-        for span in diagnosis.evidence:
-            for match in _matches_for_span(span, segments):
-                label = f"候选诊断：{diagnosis.name}"
-                identity = (label, str(match.get("segment_id") or ""))
-                if identity in seen:
-                    continue
-                seen.add(identity)
-                links.append({"label": label, "evidence": span.text, **match})
+                links.append({"label": label, "evidence": span.text, **row})
     return links[:12]
 
 
@@ -510,14 +468,14 @@ def _generation_owner_for_encounter(encounter_id: int, request: Request | None) 
 def _extract_fields_for_service(
     conversation_text: str,
     segments: list[dict[str, Any]],
-) -> tuple[MedicalRecordFields, dict[str, Any]]:
+) -> tuple[MedicalRecordFields, dict[str, Any], _AudioCitations]:
     generator = _record_generator_or_503()
     try:
         fields = generator.extract_fields(conversation_text)
     except LLMProviderUnavailableError as exc:
         raise _provider_unavailable_http(str(exc), generator.get_trace()) from exc
-    fields = _enrich_field_evidence(fields, _stable_segments_for_external_api(segments))
-    return fields, _extraction_info(generator.get_trace())
+    citations = _AudioCitations(conversation_text, segments)
+    return citations.enrich(fields), _extraction_info(generator.get_trace()), citations
 
 
 def _extraction_info(trace: dict[str, Any] | None) -> dict[str, Any]:
@@ -539,7 +497,7 @@ def _extraction_info(trace: dict[str, Any] | None) -> dict[str, Any]:
 def extract_fields(payload: ExtractFieldsRequest) -> ExtractFieldsResponse:
     stable_segments = _stable_segments_for_external_api(payload.segments)
     _require_segments_role_quality(payload.conversation_text, stable_segments)
-    fields, extraction_info = _extract_fields_for_service(payload.conversation_text, stable_segments)
+    fields, extraction_info, citations = _extract_fields_for_service(payload.conversation_text, stable_segments)
     quality_report = build_record_quality_report(fields)
     return ExtractFieldsResponse(
         status="fields_extracted",
@@ -553,7 +511,7 @@ def extract_fields(payload: ExtractFieldsRequest) -> ExtractFieldsResponse:
         ],
         treatment_plan=_treatment_plan(fields),
         diagnosis_evidence=_diagnosis_evidence(fields),
-        evidence_links=_evidence_links(fields, stable_segments),
+        evidence_links=_evidence_links(fields, citations),
         quality_report=quality_report,
         extraction_info=extraction_info,
     )
@@ -644,7 +602,8 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
         fields = generator.extract_fields(conversation_text)
     except LLMProviderUnavailableError as exc:
         raise _provider_unavailable_http(str(exc), generator.get_trace()) from exc
-    fields = _enrich_field_evidence(fields, stable_segments)
+    citations = _AudioCitations(conversation_text, stable_segments)
+    fields = citations.enrich(fields)
     extraction_info = _extraction_info(generator.get_trace())
     draft = generator.generate_draft(fields)
     draft_info = _extraction_info(generator.get_trace())
@@ -652,7 +611,7 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
     safety_info = _extraction_info(generator.get_trace())
     extraction_info["draft_generation"] = draft_info
     extraction_info["safety_check"] = safety_info
-    updates = _structured_updates(fields, stable_segments)
+    updates = _structured_updates(fields)
     quality_preview = build_record_quality_report(fields, safety, draft=draft)
 
     return PreviewRecordResponse(
@@ -672,7 +631,7 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
         ],
         treatment_plan=_treatment_plan(fields),
         diagnosis_evidence=_diagnosis_evidence(fields),
-        evidence_links=_evidence_links(fields, stable_segments),
+        evidence_links=_evidence_links(fields, citations),
         structured_updates=updates,
         missing_items=_missing_items(fields),
         safety_preview=safety.model_dump(mode="json"),

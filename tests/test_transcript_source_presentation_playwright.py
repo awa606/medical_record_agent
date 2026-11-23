@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import io
 import json
+import secrets
 import wave
 from urllib.parse import urlsplit
 
@@ -32,8 +33,8 @@ def _silent_wav(seconds: int = 65) -> bytes:
     return output.getvalue()
 
 
-def _saved_encounter(server, owner_id, patient_id, input_type, text, asr_source=None):
-    result = {"conversation_text": text, "fields": {}, "draft": ""}
+def _saved_encounter(server, owner_id, patient_id, input_type, text, asr_source=None, fields=None):
+    result = {"conversation_text": text, "fields": fields or {}, "draft": ""}
     if asr_source is not None:
         result["asr_source"] = asr_source
     with _server_database(server):
@@ -52,6 +53,65 @@ def _saved_encounter(server, owner_id, patient_id, input_type, text, asr_source=
         bind_task_to_encounter(task_id, encounter["id"], owner_user_id=owner_id)
         update_task(task_id, result_json=json.dumps(result, ensure_ascii=False))
     return encounter["id"]
+
+
+def test_historical_field_evidence_uses_clinical_sentence_and_discards_unverified_times():
+    server = RunningServer()
+    try:
+        with sync_playwright() as pw, pw.chromium.launch() as browser:
+            page = browser.new_page()
+            _login(page, server.base_url)
+            password = secrets.token_urlsafe(24)
+            users = server.base_url + "/api/auth/users"
+            assert page.request.post(users, data={
+                "username": "history-reader", "password": password, "role": "doctor",
+                "display_name": "模拟医生",
+            }).ok
+            assert page.request.post(server.base_url + "/api/auth/logout").ok
+            login = page.request.post(server.base_url + "/api/auth/login", data={
+                "username": "history-reader", "password": password,
+            }).json()["user"]
+            assert login["role"] == "doctor"
+            page.reload()
+            uploaded = page.request.post(server.base_url + "/api/audio/upload", multipart={
+                "file": {"name": "timing.wav", "mimeType": "audio/wav", "buffer": _silent_wav(15)},
+            })
+            assert uploaded.ok
+            repeated = "喝水后我头晕"
+            segments = [
+                {"segment_id": "d", "role": "医生", "text": "先听我说。" + repeated, "start": 1, "end": 4},
+                {"segment_id": "p", "role": "患者", "text": repeated, "start": 9, "end": 11},
+                {"segment_id": "n", "role": "患者", "text": "睡得不错"},
+            ]
+            transcript = "\n".join(f"[{row['role']}] {row['text']}" for row in segments)
+            unknown = "未记录音频时间"
+            cases = [
+                ({"text": repeated, "index": 1}, "00:01.0–00:04.0", "医生"),
+                ({"text": repeated, "index": 2}, "00:09.0–00:11.0", "患者"),
+                ({"text": repeated}, unknown, None),
+                ({"text": repeated, "index": "1"}, unknown, None),
+                ({"text": repeated, "index": 1, "segment_id": "p"}, unknown, None),
+                ({"text": "先听我说", "segment_id": "d", "start_time": 9}, unknown, None),
+                ({"text": "[患者] " + repeated, "segment_id": "p", "start_time": 9.5}, "00:09.5–00:11.0", "患者"),
+                ({"text": "睡得不错", "start_time": 0}, unknown, "患者"),
+            ]
+            source = {"audio_id": uploaded.json()["audio_id"], "engine": "mock",
+                      "conversation_text": transcript, "text": transcript, "segments": segments}
+            fields = {"present_illness": {"value": repeated, "status": "complete", "missing": False,
+                                          "source_spans": [span for span, _, _ in cases]}}
+            encounter = _saved_encounter(server, login["id"], "SIM-HISTORY", "text", transcript, source, fields)
+            _open_from_workbench(page, encounter)
+            page.locator('[data-open-detail="field:present_illness"]').first.click()
+            cards = page.locator("#detailDrawerContent .field-evidence-detail")
+            expect(cards).to_have_count(len(cases))
+            for i, (span, timing, role) in enumerate(cases):
+                body = cards.nth(i).inner_text()
+                assert span["text"] in body and timing in body, (span, body)
+                assert ("说话人标注" in body) == bool(role), (span, body)
+                if role:
+                    assert "说话人标注　" + role in body
+    finally:
+        server.close()
 
 
 def _open_from_workbench(page, encounter_id):

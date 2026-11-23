@@ -3390,17 +3390,54 @@ function fieldResolutionMarkup(key, field, isEditing) {
     ${sourceSelect}</div>`;
 }
 
-function sourceSpanSegment(span = {}) {
-  const segments = appState.currentAsrResult?.segments || [];
-  if (span.segment_id) {
-    const exact = segments.find((segment) => String(segment.segment_id || "") === String(span.segment_id));
-    if (exact) return exact;
+function evidenceQuote(text) {
+  const value = String(text || "");
+  return value.slice(explicitTextRole(value)?.prefixLength || 0).replace(/[\s，。！？!?、,]+/g, "");
+}
+
+function evidenceSentences(text) {
+  let speaker = null;
+  return String(text || "").split(/[。！？!?\n]+/).filter(part => part.trim()).map(part => {
+    speaker = explicitTextRole(part)?.label || speaker;
+    return { quote: evidenceQuote(part), speaker };
+  });
+}
+
+function sourceSpanEvidence(span, source) {
+  const segments = source?.segments || [];
+  const quote = evidenceQuote(span.text);
+  if (!quote || !segments.length) return null;
+  let speaker = explicitTextRole(span.text)?.label;
+  let candidates = segments;
+  if (span.index != null) {
+    // The model indexes clinical sentences. An ASR turn can contain several.
+    const sentences = evidenceSentences(source.conversation_text || source.text);
+    const sentence = Number.isInteger(span.index) ? sentences[span.index] : null;
+    if (!sentence?.quote.includes(quote) || (speaker && sentence.speaker && speaker !== sentence.speaker)) return null;
+    speaker = speaker || sentence.speaker;
+    const turns = segments.flatMap(segment =>
+      evidenceSentences(segment.text).map(part => ({ quote: part.quote, segment })));
+    if (turns.length === sentences.length && sentences.every((part, i) => part.quote === turns[i].quote)) {
+      candidates = [turns[span.index].segment];
+    }
   }
-  const matchesQuote = (segment) => Boolean(span.text && String(segment?.text || "").includes(span.text));
-  const indexed = Number.isInteger(span.index) ? segments[span.index] : null;
-  if (indexed && (!span.text || matchesQuote(indexed))) return indexed;
-  const matches = segments.filter(matchesQuote);
-  return matches.length === 1 ? matches[0] : null;
+  const matches = candidates.filter(segment => evidenceQuote(segment.text).includes(quote)
+    && (span.segment_id == null || segment.segment_id === span.segment_id)
+    && (!speaker || !segment.role || (explicitTextRole("[" + segment.role + "]")?.label || segment.role) === speaker));
+  if (matches.length !== 1) return null;
+  const segment = matches[0];
+  if (segment.segment_id != null && segments.filter(row => row.segment_id === segment.segment_id).length !== 1) return null;
+
+  const start = segment.start_time ?? segment.start;
+  const end = segment.end_time ?? segment.end;
+  const citedStart = span.start_time ?? span.start;
+  const citedEnd = span.end_time ?? span.end;
+  const bounds = [start, end, citedStart, citedEnd].filter(value => value != null);
+  if (bounds.some(value => !formatEvidenceTime(value)) || (start != null && end != null && Number(start) > Number(end))) return null;
+  const supplied = [citedStart, citedEnd].filter(value => value != null);
+  if (supplied.some(value => (start != null && Number(value) < Number(start)) || (end != null && Number(value) > Number(end)))
+      || (citedStart != null && citedEnd != null && Number(citedStart) > Number(citedEnd))) return null;
+  return { segment, start: start == null ? null : citedStart ?? start, end: end == null ? null : citedEnd ?? end };
 }
 
 function fieldEvidenceSourceKind() {
@@ -3411,7 +3448,7 @@ function fieldEvidenceSourceKind() {
 }
 
 function formatEvidenceTime(value) {
-  if (value == null || String(value).trim() === "") return "";
+  if (!["string", "number"].includes(typeof value) || String(value).trim() === "") return "";
   const number = Number(value);
   if (!Number.isFinite(number) || number < 0) return "";
   const tenths = Math.round(number * 10);
@@ -3428,16 +3465,17 @@ function renderFieldEvidenceDetails(field) {
   const kind = fieldEvidenceSourceKind();
   const audioSource = kind === "audio";
   return `<div class="detail-evidence-list">${spans.map((span, index) => {
-    const segment = sourceSpanSegment(span) || {};
+    const evidence = audioSource ? sourceSpanEvidence(span, appState.currentAsrResult) : null;
+    const segment = evidence?.segment || {};
     const quote = span.text || segment.text || "";
-    const start = audioSource && formatEvidenceTime(span.start_time ?? span.start ?? segment.start_time ?? segment.start);
-    const end = audioSource && formatEvidenceTime(span.end_time ?? span.end ?? segment.end_time ?? segment.end);
+    const start = formatEvidenceTime(evidence?.start);
+    const end = formatEvidenceTime(evidence?.end);
     const timing = start && end ? `${start}–${end}` : start ? `起于 ${start}` : end ? `止于 ${end}` : "未记录音频时间";
     const sourceLabel = audioSource ? `音频转写 · ${timing}` : kind === "text" ? "录入文本 · 无音频时间" : "保存的引文 · 来源类型未记录";
     const speaker = audioSource ? segment.role || segment.speaker_id || segment.speaker : "";
     const confidence = audioSource ? segment.role_confidence ?? segment.confidence : null;
     const confidenceRecorded = typeof confidence === "number" && confidence >= 0 && confidence <= 1;
-    const segmentId = span.segment_id || segment.segment_id;
+    const segmentId = segment.segment_id;
     return `<article class="field-evidence-detail">
       <div><strong>引用 ${index + 1}</strong><span>${escapeHtml(sourceLabel)}</span></div>
       <p>${escapeHtml(quote || "引文未记录")}</p>

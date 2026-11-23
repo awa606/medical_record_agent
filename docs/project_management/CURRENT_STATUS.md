@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-23T18:51:15.037Z`
-- Source hash: `5ecbb9dc3f068e48d0c19c47b9e6f3647ff4a90051687f0127f6739f8fb84d05`
+- Updated at: `2026-11-23T19:02:06.390Z`
+- Source hash: `84fa2a4f4e11bf3ab62ccb13546905f9bce3589b432f3713b88e9e5a0b1520eb`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@b9009718b3a174f2e78474b16e7c49759227c397`
+- Repo: `codex/ui-hospital-record-v1@e6551eebbfc39f5b3078bf5503bf7389b3219d2e`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 在获准的单科室配对样本上盲评首稿、医生修订及来源准确度；独立验证知识条文与真实语音角色。
+- Single next task: 评估跨句病程和主体的时间变化；为真实科室盲评及院内试点配对数据，并扩大指南片段定位复验。
 - Parallel waiting task: 继续项目内可复查的工程门禁；待正式教师评分、目标医生盲评与院方受控接口条件。
 
 ## Manual Actions

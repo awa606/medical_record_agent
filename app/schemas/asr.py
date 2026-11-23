@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ASRSegment(BaseModel):
@@ -122,6 +122,18 @@ class ASRResult(BaseModel):
     request_id: str | None = None
     started_at: str | None = None
     completed_at: str | None = None
+
+    def all_segments_reviewed(self) -> bool:
+        return bool(self.segments) and all(
+            segment.reviewed_by_doctor and not segment.provisional for segment in self.segments
+        )
+
+    @model_validator(mode="after")
+    def reconcile_review_summary(self) -> ASRResult:
+        # Older inference results used role confidence for this summary flag.
+        # Preserve the actual segment decisions when loading saved transcripts.
+        self.reviewed_by_doctor = self.all_segments_reviewed()
+        return self
 
 
 class AudioRecord(BaseModel):

@@ -1,5 +1,6 @@
 """Exercise presentation logic only; no real browser, ASR, model or API calls."""
 import json
+from html import unescape
 from pathlib import Path
 
 import pytest
@@ -150,6 +151,48 @@ console.log(JSON.stringify(renderFieldDetailContent('chief_complaint')));
     assert "模型置信度" in html and (">未提供<" if confidence is None else ">81%<") in html
     assert "草稿生成时的自动检查" in html
     assert ("尚未医生确认" in html) is (not signed)
+
+
+@pytest.mark.parametrize("note,origin", [
+    ("manual_doctor_edit_v1: 医生手工修改；原始转写证据仅供对照，不作为该修改的自动证据。", "医生已修改"),
+    ("manual_doctor_edit_v1: 医生补录；新内容为人工来源，原模型内容和错误引用保留在旧版本。", "医生补录"),
+    ("doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。", "医生根据原文修正"),
+])
+def test_revision_note_keeps_physician_words_and_original_for_debug(note, origin):
+    comment = " 医生补录是患者转述。\n  原句 <来源> & 标点；审核说明：保留。  "
+    result = run_browser_logic("const note=" + json.dumps(note) + ",comment=" + json.dumps(comment) + r""";
+const signed = [false,true].map(flag=>{
+  currentRevisionIsSigned=()=>flag; appState.viewMode="doctor";
+  return renderFieldRevisionNote(note+"；审核说明："+comment);
+});
+const paper=renderFieldRevisionNote(note); const origin=knownFieldRevisionNote(note+"；审核说明："+comment).origin;
+appState.viewMode="debug";
+console.log(JSON.stringify({signed,paper,origin,raw:renderFieldRevisionNote(note+"；审核说明："+comment)}));
+""")
+    assert result["origin"] == origin
+    assert "修订时的操作记录" in result["paper"] and "医生审核说明" not in result["paper"]
+    assert result["signed"][0] == result["signed"][1]
+    shown = result["signed"][0]
+    assert "医生审核说明" in shown and comment in unescape(shown) and "<来源>" not in shown
+    assert "_v1:" not in shown and "需审核当前版本" not in shown
+    assert note + "；审核说明：" + comment in unescape(result["raw"])
+
+
+@pytest.mark.parametrize("note", [
+    "医生根据原文修正，所选证据存在冲突，需重新核对。",
+    "manual_doctor_edit_v1: 医生自行输入的备注，提及医生补录。",
+    "doctor_source_correction_v1: 自由文本；审核说明：附注<保留>。",
+    "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。手写补述",
+    "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。；审核说明：",
+    " 原始备注\n  第二行 & 末尾空格  ",
+])
+def test_unrecognized_revision_note_is_preserved_without_inferred_origin(note):
+    result = run_browser_logic("const note=" + json.dumps(note) + r""";
+appState.viewMode="doctor";
+console.log(JSON.stringify({origin:knownFieldRevisionNote(note),html:renderFieldRevisionNote(note)}));
+""")
+    assert result["origin"] is None and "修订时的操作记录" not in result["html"]
+    assert note in unescape(result["html"])
 
 
 @pytest.mark.parametrize("audio", [True, False])

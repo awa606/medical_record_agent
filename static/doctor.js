@@ -3820,6 +3820,35 @@ function renderDiagnosisDetails(diagnosis = {}) {
   return details || `<div class="diagnosis-detail"><span>规则说明</span><strong>暂无扩展说明，需医生结合原始转写复核。</strong></div>`;
 }
 
+// The review endpoint appends physician comments after an exact, server-written note.
+const fieldRevisionNotes = new Map([
+  ["manual_doctor_edit_v1: 医生手工修改；原始转写证据仅供对照，不作为该修改的自动证据。",
+    { origin: "医生已修改", text: "医生在本次修订时手工修改了字段。上版转写引文仅供对照。" }],
+  ["manual_doctor_edit_v1: 医生补录；新内容为人工来源，原模型内容和错误引用保留在旧版本。",
+    { origin: "医生补录", text: "医生在本次修订时补录了字段。旧版本保留了原模型内容和错误引用。" }],
+  ["doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。",
+    { origin: "医生根据原文修正", text: "医生在本次修订时根据原文修正了字段，系统重新校验了所选证据。" }],
+]);
+
+function knownFieldRevisionNote(note) {
+  if (typeof note !== "string") return null;
+  const marker = "；审核说明：";
+  const split = note.indexOf(marker);
+  const template = fieldRevisionNotes.get(split < 0 ? note : note.slice(0, split));
+  const comment = split < 0 ? "" : note.slice(split + marker.length);
+  return template && (split < 0 || comment.length > 0) ? { ...template, comment } : null;
+}
+
+function renderFieldRevisionNote(note) {
+  if (!note) return "";
+  const known = knownFieldRevisionNote(note);
+  if (!known || appState.viewMode !== "doctor") {
+    return detailSection("医生修改记录", `<div class="detail-text">${escapeHtml(note)}</div>`);
+  }
+  return detailSection("修订时的操作记录", `<div class="detail-text">${escapeHtml(known.text)}</div>`)
+    + (known.comment ? detailSection("医生审核说明", `<div class="detail-text">${escapeHtml(known.comment)}</div>`) : "");
+}
+
 function renderFieldDetailContent(key) {
   const fields = activeRecordFields();
   if (!fields) return `<div class="empty-state">暂无病历字段。</div>`;
@@ -3842,7 +3871,7 @@ function renderFieldDetailContent(key) {
   let evidenceTitle = ({audio: "原始转写证据（只读）", text: "录入文本的原文证据（只读）"})[fieldEvidenceSourceKind()] || "问诊原文证据（只读）";
   if (appState.recordEditMode && appState.recordFieldResolutionModes[key] === "source_correction") {
     evidenceTitle = "本次选择的原话（未保存）";
-  } else if (field?.doctor_review_note?.startsWith("manual_doctor_edit_v1:") && field.source_spans?.length) {
+  } else if (knownFieldRevisionNote(field?.doctor_review_note)?.origin === "医生已修改" && field.source_spans?.length) {
     evidenceTitle = "上版引用（只读对照，不作为医生修改的自动证据）";
   }
   return detailSection(evidenceTitle, renderFieldEvidenceDetails(field, key))
@@ -3903,7 +3932,7 @@ function renderFieldReviewDetails(fields, key, title) {
       .map(item => `<p class="detail-text">${escapeHtml(item)}</p>`).join("")) : ""}
     ${field?.status === "conflicting" ? detailSection("未采纳的模型内容", `<p class="detail-text">${escapeHtml(field.value || "（无可用内容）")}</p><p>${escapeHtml(field.hint || "证据校验未通过")}</p>`) : ""}
     ${(appState.currentTask?.result_json?.llm_trace?.field_resolution_history || []).filter(item => item.field === key).map(item => detailSection("医生处置前的模型记录（只读对照）", `<p>原版本 ${escapeHtml(String(item.previous_revision_id))} · ${item.method === "doctor_entry" ? "医生补录" : "根据原文修正"}</p><p class="detail-text">${escapeHtml(item.previous_value || "（空）")}</p><p class="detail-text">${escapeHtml((item.previous_source_spans || []).map(s => s.text).join("\n") || "（无模型引用）")}</p>`)).join("")}
-    ${field?.doctor_review_note ? detailSection("医生修改记录", `<div class="detail-text">${escapeHtml(field.doctor_review_note)}</div>`) : ""}
+    ${renderFieldRevisionNote(field?.doctor_review_note)}
   `;
 }
 
@@ -4593,6 +4622,7 @@ function renderFields() {
       : appState.viewMode === "doctor" ? recordFieldDisplayValue(fields, key, isApprovedDisplay) : fieldValue(fields, key);
     const evidence = appState.viewMode === "doctor" ? draftFieldEvidence(fields, key) : fieldEvidence(fields?.[key] || null, key);
     const qualityLabel = fieldQualityLabel(key);
+    const editOrigin = knownFieldRevisionNote(fields?.[key]?.doctor_review_note)?.origin;
     const confidence = appState.viewMode === "doctor"
       ? draftFieldConfidence(fields, key)
       : key === "treatment_plan" ? "需医生复核" : fields?.[key]?.confidence == null ? "需医生复核" : `置信度 ${Math.round(fields[key].confidence * 100)}%`;
@@ -4601,7 +4631,7 @@ function renderFields() {
       ? appState.viewMode === "doctor"
         ? `
         <div class="field-meta compact-field-meta">
-          ${String(fields?.[key]?.doctor_review_note || "").startsWith("manual_doctor_edit_v1:") ? `<span class="doctor-edit-origin">${String(fields?.[key]?.doctor_review_note || "").includes("医生补录") ? "医生补录" : "医生已修改"}</span>` : String(fields?.[key]?.doctor_review_note || "").startsWith("doctor_source_correction_v1:") ? '<span class="doctor-edit-origin">医生根据原文修正</span>' : ""}
+          ${editOrigin ? `<span class="doctor-edit-origin">${escapeHtml(editOrigin)}</span>` : ""}
           ${detailButton(`field:${key}`, "查看原文证据")}
           ${!isPreview && !isEditing && EDITABLE_FIELD_DEFS.some(([item]) => item === key) ? `<button type="button" data-record-edit-field="${escapeHtml(key)}">修改</button>` : ""}
           ${key !== "preliminary_diagnosis" && key !== "treatment_plan" && !DEMOGRAPHIC_FIELD_KEYS.includes(key) ? `<button type="button" data-knowledge-field="${escapeHtml(key)}">查依据</button>` : ""}

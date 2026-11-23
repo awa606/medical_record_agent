@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-23T17:24:42.521Z`
-- Source hash: `a0c6527ba77f431f9cbf7e82bab453fcd6cca3e2795cc631ad7331a3d079bf7a`
+- Updated at: `2026-11-23T18:04:55.891Z`
+- Source hash: `1d0cade97940dfdb86e85d21deb3ac100bf55318252fc6c0eff29a4741eca7c4`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@179b84d1059963b8e0da3e0e9c91a782367928cb`
+- Repo: `codex/ui-hospital-record-v1@775e97fed291dec334f601e3c37c7168a0616bf3`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: 继续核验真实授权音频、目标医生操作和候选部署的三条主路径，按原任务逐项留证。
-- Parallel waiting task: 已验证固定课堂包 Windows 离线首次启动、双系统签署与跨系统冷备；待独立教师、医生、医院数据及真实接口审核。
+- Single next task: 继续核验真实授权门诊及独立医生操作，复查旧病历来源显示、知识范围拒答和音频门禁。
+- Parallel waiting task: 课程离线软件与医生合成案例盲评文件可交付；等待正式评分、目标医生结果和院内接口环境。
 
 ## Manual Actions
 

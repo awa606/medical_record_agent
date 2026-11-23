@@ -10020,6 +10020,18 @@ function bindEvents() {
     if (event.key === 'Escape') {
       event.preventDefault();
       closeDrawer();
+    } else if (event.target === $("closeDrawerButton") && $("detailPanel").classList.contains("active")
+        && ["PageDown", "PageUp", "Home", "End"].includes(event.key)
+        && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      const panel = $("detailPanel");
+      if (panel.scrollHeight <= panel.clientHeight) return;
+      event.preventDefault();
+      panel.focus({ preventScroll: true });
+      if (event.key === "Home" || event.key === "End") {
+        panel.scrollTop = event.key === "Home" ? 0 : panel.scrollHeight;
+      } else {
+        panel.scrollBy(0, (event.key === "PageDown" ? 1 : -1) * panel.clientHeight * 0.9);
+      }
     } else if (event.key === 'Tab') {
       const focusable = [...$("drawer").querySelectorAll('button, a[href], input, textarea, select, summary, [tabindex="0"]')]
         .filter(node => !node.disabled && !node.matches('[tabindex="-1"]') && node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden');

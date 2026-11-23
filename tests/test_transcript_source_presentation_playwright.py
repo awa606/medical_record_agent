@@ -110,6 +110,24 @@ def test_historical_field_evidence_uses_clinical_sentence_and_discards_unverifie
                 assert ("说话人标注" in body) == bool(role), (span, body)
                 if role:
                     assert "说话人标注　" + role in body
+            page.set_viewport_size({"width": 390, "height": 520})
+            panel = page.locator("#detailPanel")
+            expect(page.locator("#closeDrawerButton")).to_be_focused()
+            assert panel.evaluate("el => el.scrollHeight > el.clientHeight")
+            page.keyboard.press("Tab")
+            expect(panel).to_be_focused()
+            page.keyboard.press("Shift+Tab")
+            expect(page.locator("#closeDrawerButton")).to_be_focused()
+            page.keyboard.press("End")
+            expect(panel).to_be_focused()
+            page.wait_for_function("""() => {
+                const el = document.querySelector('#detailPanel');
+                return el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+            }""")
+            page.keyboard.press("Home")
+            page.wait_for_function("() => document.querySelector('#detailPanel').scrollTop === 0")
+            page.keyboard.press("Escape")
+            expect(page.locator('[data-open-detail="field:present_illness"]').first).to_be_focused()
     finally:
         server.close()
 

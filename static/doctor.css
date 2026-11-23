@@ -6051,6 +6051,11 @@ body.doctor-mode .assist-column .bottom-actions {
   min-height: 0;
 }
 
+#detailPanel:focus-visible {
+  outline: 3px solid #398bdd;
+  outline-offset: -3px;
+}
+
 @media (max-width: 900px) {
   .drawer {
     width: 100vw;

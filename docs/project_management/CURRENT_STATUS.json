@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-11-18T08:48:14.323Z",
-  "source_hash": "ba87d16a794915977a3bf61990340af9731ee720643da1c6b1536bca1c0806c0",
+  "updated_at": "2026-11-23T16:43:00.281Z",
+  "source_hash": "55705f83d7cce2dffe6d02475872352db499c030d6987680a0052128b1abdd66",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "ba5624270cbc654d42fc191820f2811dddfe76f9",
+  "repo_sha": "293f38e41b52e84ee4e081358c4a967f51308a7c",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/ui-hospital-record-v1",
   "active_pr": {
@@ -94,11 +94,11 @@
   },
   "purchase_decision": "DEFERRED",
   "next_task": "继续核验真实授权音频、目标医生操作和候选部署的三条主路径，按原任务逐项留证。",
-  "parallel_waiting_task": "课堂审核版完成合成病例全程走查及迁移恢复；临床独立评价、真实录音和院内系统联调待取得证据。",
+  "parallel_waiting_task": "结课包已按 15 分学校原表准备，并完成单机两类操作系统合成病例验证。科室签约、临床样本及信息科接口联调仍待落实。",
   "manual_actions": [
     "在实际教室投影并由授课教师或目标医生独立试用后登记意见。"
   ],
-  "forecast_alpha_exit": "5.1 仍为 VERIFY，5.3 为 BACKLOG。课堂工作台复验见同轮证据，正式 Alpha 门禁按原计划执行。",
+  "forecast_alpha_exit": "5.1 仍为 VERIFY，5.3 为 BACKLOG。结课双平台工程结果独立留证，正式 Alpha 与院内验收按既有标准执行。",
   "source_files": {
     ".obsidian/plugins/project-planner-engineering/main.js": "e4006974bdcc45cb5ab80aebc5b9fd721a24c451ea883fd7d7e5239676017cca",
     ".obsidian/plugins/project-planner-engineering/manifest.json": "23672403c65ab17af6d28d84bbd822fab00ceeac1961612eb5cf9d514befa979",
@@ -224,7 +224,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "bf7b20e1135b63f0f553eb7837e80b9f3b3e8e5b8f3ad0fb5d0b99cdd27b0682",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "b4b2cb038f14798c67d764af503e0ea873e5fb1556d3af3764de8c32cdfe56e0",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -301,7 +301,7 @@
   "extra_source_files": {
     ".artifacts/backend-improvement-20261106/hardware-gates.json": "80bc286c3f03a9cdc361ffa84e89f64bba265e7f3f0c0c067c2cf2c3d0142d26",
     "docs/evidence/20261106_backend_first_batch.md": "37f4371d4fdeea33c366fe7925e028abd0dcaf3a676f87e1a4aae0aeeb33dfa3",
-    "experiments/course-defense-20261118/README.md": "32ac120284b93f6dfe270ff9c8fd16217b0b933cfd38334c8d7871991bd96658",
+    "experiments/course-defense-20261118/README.md": "793f520829149e096c6ec77cc4745e1c9258ac8e015e6ea84a9750872b862991",
     "experiments/frontend-reference-workbench-20261106/design-qa.md": "c878612cb6b6fca753f783b5bc1eb72056e0ace7e64653d8b0c065990ab3bc88"
   },
   "snapshot_verification": {

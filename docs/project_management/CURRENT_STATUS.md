@@ -8,14 +8,14 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-18T08:48:14.323Z`
-- Source hash: `ba87d16a794915977a3bf61990340af9731ee720643da1c6b1536bca1c0806c0`
+- Updated at: `2026-11-23T16:43:00.281Z`
+- Source hash: `55705f83d7cce2dffe6d02475872352db499c030d6987680a0052128b1abdd66`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@ba5624270cbc654d42fc191820f2811dddfe76f9`
+- Repo: `codex/ui-hospital-record-v1@293f38e41b52e84ee4e081358c4a967f51308a7c`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
-- Forecast Alpha Exit: **5.1 仍为 VERIFY，5.3 为 BACKLOG。课堂工作台复验见同轮证据，正式 Alpha 门禁按原计划执行。**
+- Forecast Alpha Exit: **5.1 仍为 VERIFY，5.3 为 BACKLOG。结课双平台工程结果独立留证，正式 Alpha 与院内验收按既有标准执行。**
 
 ## Progress
 
@@ -55,7 +55,7 @@
 ## Next
 
 - Single next task: 继续核验真实授权音频、目标医生操作和候选部署的三条主路径，按原任务逐项留证。
-- Parallel waiting task: 课堂审核版完成合成病例全程走查及迁移恢复；临床独立评价、真实录音和院内系统联调待取得证据。
+- Parallel waiting task: 结课包已按 15 分学校原表准备，并完成单机两类操作系统合成病例验证。科室签约、临床样本及信息科接口联调仍待落实。
 
 ## Manual Actions
 

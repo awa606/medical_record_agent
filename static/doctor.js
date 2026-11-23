@@ -6018,6 +6018,7 @@ function applyLiveClinicalDraft(data = {}) {
     care_plan: (data.care_plan || []).slice(0, 3),
     next_questions: (data.next_questions || []).slice(0, 3),
     stable_segment_count: Number(data.stable_segment_count || 0),
+    unassigned_role_segment_count: Number(data.unassigned_role_segment_count || 0),
   };
   appState.liveClinicalStatus = "completed";
   appState.liveClinicalUpdatedAt = appState.liveClinicalDraft.updated_at;
@@ -6049,68 +6050,68 @@ function liveClinicalFieldRows(recordPatch = {}) {
 
 function renderLiveClinicalReferenceCard() {
   const draft = liveClinicalDraft();
-  if (!draft) {
-    return assistCard({
-      title: "实时临床参考",
-      badgeClass: appState.liveClinicalStatus === "failed" ? "missing" : "neutral",
-      badgeText: appState.liveClinicalStatus === "processing" ? "生成中" : "待转写",
-      body: appState.liveClinicalError
-        ? `<div class="empty-state">${escapeHtml(appState.liveClinicalError)}</div>`
-        : `<div class="empty-state">实时问诊开始后，稳定转写片段会生成临时病历和参考摘要。</div>`,
-    });
-  }
-  const alerts = draft.alerts || [];
-  const missing = draft.missing_items || [];
-  const differentials = draft.differentials || [];
-  const carePlan = draft.care_plan || [];
-  const fields = liveClinicalFieldRows(draft.record_patch);
+  if (!draft) return "";
+  const pending = draft.unassigned_role_segment_count;
+  if (!draft.stable_segment_count && !pending) return "";
   return assistCard({
-    title: "实时临床参考",
-    badgeClass: "candidate",
-    badgeText: `临时 v${draft.version}`,
+    title: "问诊原话",
     detailTarget: "assist:live-clinical",
-    detailLabel: "查看详情",
-    body: `
-      <div class="assist-plan-block">
-        <span>实时草稿</span>
-        <strong>${escapeHtml(fields[0]?.value || "稳定转写累积后更新")}</strong>
-      </div>
-      ${alerts.length ? `<div class="assist-check-row warning"><span></span><strong>${escapeHtml(alerts[0].summary || alerts[0].title || "存在风险提示")}</strong></div>` : ""}
-      <div class="assist-mini-grid">
-        <div><span>待补充</span><strong>${escapeHtml(missing.map((item) => item.summary).slice(0, 3).join("；") || "暂无")}</strong></div>
-        <div><span>鉴别参考</span><strong>${escapeHtml(differentials.map((item) => item.name).slice(0, 3).join("；") || "暂无")}</strong></div>
-        <div><span>诊疗参考</span><strong>${escapeHtml(carePlan.map((item) => item.title).slice(0, 3).join("；") || "暂无")}</strong></div>
-        <div><span>依据片段</span><strong>${escapeHtml(String(draft.stable_segment_count || 0))} 段</strong></div>
-      </div>
-      <div class="summary-note">实时草稿为临时内容，停止问诊并完成收敛后方可进入医生审核。</div>
-    `,
+    detailLabel: "查看原话",
+    body: pending
+      ? `<p class="live-source-count">${escapeHtml(String(pending))} 段转写的说话人待核对。</p>`
+      : `<p class="live-source-count">已收到 ${escapeHtml(String(draft.stable_segment_count))} 段稳定转写。</p>`,
   });
+}
+
+function liveSourceQuote(row) {
+  if (!row?.text) return '<p class="summary-note">这段转写尚未载入。</p>';
+  const quote = `<p>${escapeHtml(row.text)}</p>`;
+  if (row.startTime == null || !transcriptHasAudioSource() || !$("consultationAudio")?.getAttribute("src")) return quote;
+  return `${quote}<button type="button" class="detail-link" data-evidence-segment-id="${escapeHtml(row.segmentId)}">回听这段原话</button>`;
+}
+
+function renderLiveSourceContent() {
+  const draft = liveClinicalDraft();
+  if (!draft) return '<p class="empty-state">尚未收到实时转写。</p>';
+  const pending = draft.unassigned_role_segment_count;
+  const rows = transcriptRows().filter(row => !row.provisional && row.text);
+  const summary = pending
+    ? `${escapeHtml(String(pending))} 段转写的说话人待核对。`
+    : `已收到 ${escapeHtml(String(draft.stable_segment_count))} 段稳定转写。`;
+  return `<section class="live-source-review"><p class="live-source-count">${summary}</p>` + (rows.length
+    ? `<div class="detail-evidence-list">${rows.map(row => {
+      const label = row.needsReview || row.sourceSegment?.needs_review ? "说话人待核对" : row.label;
+      return `<article class="field-evidence-detail"><small>第 ${row.index + 1} 段 · ${escapeHtml(label)}</small>${liveSourceQuote(row)}</article>`;
+    }).join("")}</div>` : '<p class="empty-state">等待转写原文载入。</p>') + "</section>";
 }
 
 function renderLiveClinicalDetailContent() {
   const draft = liveClinicalDraft();
   if (!draft) return `<div class="empty-state">暂无实时临床参考。</div>`;
   const fields = liveClinicalFieldRows(draft.record_patch);
-  const evidenceButton = (segmentId) => segmentId
-    ? `<button type="button" class="assist-evidence-quote linked" data-evidence-segment-id="${escapeHtml(segmentId)}">${escapeHtml(segmentId)}<span>定位证据</span></button>`
-    : "";
+  const sourceRows = new Map(transcriptRows().filter(row => !row.provisional).map(row => [row.segmentId, row]));
+  const renderLiveQuote = (segmentId) => {
+    const row = sourceRows.get(segmentId);
+    return (row ? `<small>问诊原话 · 第 ${row.index + 1} 段</small>` : "") + liveSourceQuote(row);
+  };
   const listRows = (items, label, renderer) => detailSection(label, items.length
     ? `<div class="detail-evidence-list">${items.map(renderer).join("")}</div>`
     : `<div class="empty-state">暂无${escapeHtml(label)}。</div>`);
   return `
     ${detailSection("实时状态", `
       <div class="detail-kv"><span>版本</span><strong>${escapeHtml(String(draft.version))}</strong></div>
-      <div class="detail-kv"><span>基于片段序号</span><strong>${escapeHtml(String(draft.based_on_sequence))}</strong></div>
-      <div class="detail-kv"><span>状态</span><strong>临时结果，待医生确认</strong></div>
-      <div class="detail-kv"><span>更新时间</span><strong>${escapeHtml(draft.updated_at || "-")}</strong></div>
+      <div class="detail-kv"><span>稳定转写</span><strong>${escapeHtml(String(draft.stable_segment_count))} 段</strong></div>
+      <div class="detail-kv"><span>状态</span><strong>实时草稿为临时内容，待医生确认</strong></div>
+      ${draft.unassigned_role_segment_count ? `<div class="detail-kv"><span>说话人待核对</span><strong>${escapeHtml(String(draft.unassigned_role_segment_count))} 段</strong></div>` : ""}
+      <div class="detail-kv"><span>更新时间</span><strong>${escapeHtml(formatDateTime(draft.updated_at))}</strong></div>
     `)}
     ${listRows(fields, "实时病历字段", (item) => `
-      <div class="assist-evidence-quote">
-        <strong>${escapeHtml(item.label)}</strong><br>${escapeHtml(item.value)}
-        ${(item.evidence || []).map(evidenceButton).join("")}
-      </div>
+      <article class="field-evidence-detail">
+        <div><strong>${escapeHtml(item.label)}</strong></div><p>${escapeHtml(item.value)}</p>
+        ${(item.evidence || []).map(renderLiveQuote).join("")}
+      </article>
     `)}
-    ${listRows(draft.alerts || [], "危险征象", (item) => `<div class="assist-evidence-quote">${escapeHtml(item.title || "")}<br>${escapeHtml(item.summary || "")}</div>`)}
+    ${listRows(draft.alerts || [], "危险征象", (item) => `<article class="field-evidence-detail"><strong>${escapeHtml(item.title || "")}</strong><p>${escapeHtml(item.summary || "")}</p>${(item.evidence_segment_ids || []).map(renderLiveQuote).join("")}</article>`)}
     ${listRows(draft.missing_items || [], "待补充项", (item) => `<div class="assist-evidence-quote">${escapeHtml(item.summary || "")}</div>`)}
     ${listRows(draft.differentials || [], "鉴别诊断参考", (item) => `
       <div class="assist-evidence-quote">
@@ -6124,7 +6125,7 @@ function renderLiveClinicalDetailContent() {
       <div class="assist-evidence-quote">
         <strong>${escapeHtml(item.title || "")}</strong><br>${escapeHtml(item.summary || "")}
         <div>${escapeHtml(item.reason || "需医生确认")}</div>
-        ${(item.evidence_segment_ids || []).map(evidenceButton).join("")}
+        ${(item.evidence_segment_ids || []).map(renderLiveQuote).join("")}
       </div>
     `)}
     ${listRows(draft.next_questions || [], "建议继续询问", (item) => `<div class="assist-evidence-quote">${escapeHtml(item.question || "")}</div>`)}
@@ -6406,7 +6407,7 @@ function renderAssistDetailContent(section) {
   const errors = risk.errors;
 
   if (section === "live-clinical") {
-    return renderLiveClinicalDetailContent();
+    return renderLiveSourceContent();
   }
 
   if (section === "quality") {
@@ -6544,6 +6545,7 @@ function renderAssistDetailContent(section) {
 function renderDoctorAssistOverview({ fields, diagnoses, evidence }) {
   return `
     <div class="doctor-assist-overview">
+      ${!appState.currentRecordFields ? renderLiveClinicalReferenceCard() : ""}
       ${renderCandidateDiagnosisCard(diagnoses)}
       ${renderTreatmentRecommendationCard(fields, diagnoses)}
     </div>
@@ -6846,6 +6848,7 @@ function openWorkbenchDetail(target = "") {
       knowledge: "相关知识参考",
       quality: "病历质量摘要",
       safety: "安全校验结果详情",
+      "live-clinical": "问诊转写原话",
     };
     openDetailDrawer(titleMap[value] || "AI 辅助详情", value === "treatment" ? renderTreatmentReferenceDetail() : renderAssistDetailContent(value));
   }

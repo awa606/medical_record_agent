@@ -482,3 +482,13 @@ body.doctor-mode .alpha51-workspace .assist-panel { border: 0; border-bottom: 1p
 body.doctor-mode .alpha51-workspace .assist-panel h3 { font-size: 18px; }
 body.doctor-mode :focus-visible { outline: 2px solid #165d9c; outline-offset: 2px; }
 @media (max-width:1279px) { body.doctor-mode .product-nav-foot { display:none; } }
+body.doctor-mode [data-open-detail="assist:live-clinical"] { min-height: 32px; font-size: 13px; }
+.live-source-count { margin: 4px 0; color: #3d5267; font-size: 14px; line-height: 1.55; }
+.live-source-review { display: grid; align-self: start; gap: 12px; min-width: 0; }
+.live-source-review article { align-content: start; }
+.live-source-review small { color: #47647a; }
+.live-source-review p { line-height: 1.6; }
+.live-source-review button { justify-self: start; }
+@media (max-width:899px) {
+  body.doctor-mode [data-open-detail="assist:live-clinical"] { min-height: 44px; }
+}

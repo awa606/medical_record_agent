@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import pytest
 
-from app.services.live_clinical import build_live_clinical_snapshot
+from app.services.live_clinical import build_live_clinical_snapshot, normalize_live_segment
 
 
 def snapshot(*texts: str, role: str = "患者") -> dict:
@@ -119,3 +119,53 @@ def test_uncertain_sputum_description_still_needs_clarification():
 def test_unknown_exposure_is_not_treated_as_a_negative_answer():
     result = snapshot("我发热两天，最高体温38.2度，接触史不清楚。")
     assert any(item["id"] == "next-exposure" for item in result["next_questions"])
+
+
+def snapshot_segments(segments):
+    normalized = [normalize_live_segment(segment, sequence=i) for i, segment in enumerate(segments, 1)]
+    return build_live_clinical_snapshot(
+        session_id="role-review", version=1, based_on_sequence=len(segments),
+        updated_at="now", stable_segments=normalized,
+    )
+
+
+def test_proposed_roles_remain_in_transcript_and_out_of_live_fields_until_reviewed():
+    pending = [
+        {"segment_id": f"pending-{i}", "role": "患者" if i % 2 else "医生",
+         "text": "患者发热，同时有胸痛。", "needs_review": True}
+        for i in range(26)
+    ]
+    before = snapshot_segments(pending)
+    assert before["stable_segment_count"] == before["unassigned_role_segment_count"] == 26
+    assert before["record_patch"] == {}
+    assert before["alerts"] == []
+
+    confirmed = {"segment_id": "known", "role": "患者", "text": "我一直咳嗽，还有胸痛。",
+                 "needs_review": False, "reviewed_by_doctor": True}
+    after = snapshot_segments([*pending, confirmed])
+    assert after["stable_segment_count"] == 27
+    assert after["unassigned_role_segment_count"] == 26
+    assert after["record_patch"] == snapshot_segments([confirmed])["record_patch"]
+    assert after["record_patch"]["chief_complaint"]["value"] == "咳嗽"
+    assert after["record_patch"]["chief_complaint"]["evidence_segment_ids"] == ["known"]
+    assert [(a["id"], a["evidence_segment_ids"]) for a in after["alerts"]] == [("danger-breathing", ["known"])]
+
+
+@pytest.mark.parametrize("legacy_role", ["患者", "病人", "Patient"])
+def test_legacy_recognized_role_keeps_confirmed_fields_and_sources(legacy_role):
+    legacy = {"id": "old", "role": legacy_role, "text": "我咳嗽，还有胸痛。"}
+    confirmed = {**legacy, "needs_review": False, "reviewed_by_doctor": True}
+    assert normalize_live_segment(legacy)["needs_review"] is False
+    result = snapshot_segments([legacy])
+    assert result == snapshot_segments([confirmed])
+    assert result["unassigned_role_segment_count"] == 0
+    assert result["record_patch"]["chief_complaint"]["evidence_segment_ids"] == ["old"]
+    assert result["alerts"][0]["evidence_segment_ids"] == ["old"]
+
+
+def test_unknown_legacy_role_cannot_supply_clinical_facts():
+    unknown = {"segment_id": "unmapped", "text": "我咳嗽，还有胸痛。"}
+    result = snapshot_segments([unknown, {**unknown, "segment_id": "other", "role": "其他"}])
+    assert result["stable_segment_count"] == result["unassigned_role_segment_count"] == 2
+    assert result["record_patch"] == {}
+    assert result["alerts"] == []

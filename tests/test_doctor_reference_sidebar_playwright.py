@@ -113,7 +113,7 @@ def test_empty_live_and_failure_references_remain_compact_and_escaped(page):
       renderAssist();
     }""")
     expect(panel.locator('img')).to_have_count(0)
-    expect(panel.get_by_role('button')).to_have_count(2)
+    expect(panel.get_by_role('button')).to_have_count(3)
     expect(panel).not_to_contain_text('临时诊断说明')
     panel.get_by_role('button', name='<img src=x onerror=alert(1)>', exact=True).click()
     expect(page.locator('#drawer')).to_contain_text('临时诊断说明')
@@ -135,8 +135,33 @@ def test_live_reference_close_does_not_stop_recording_and_restores_replaced_trig
     page.locator('#dashboardEncounterList [data-encounter-action="start"]').first.click()
     page.wait_for_function('appState.currentEncounter && !appState.busy && document.body.dataset.productView === "encounter"')
     page.evaluate("""() => {
+      applyLiveClinicalDraft({version: 1, stable_segment_count: 2, unassigned_role_segment_count: 2});
+      renderAssist();
+    }""")
+    panel = page.locator('#assistPanels')
+    expect(panel).to_contain_text('2 段转写的说话人待核对')
+    expect(panel.locator('.live-source-count')).to_be_visible()
+    review = panel.get_by_role('button', name='查看原话')
+    review.focus()
+    page.keyboard.press('Enter')
+    expect(page.locator('#drawer')).to_contain_text('说话人待核对')
+    page.keyboard.press('Escape')
+    expect(review).to_be_focused()
+    page.evaluate("""() => {
+      appState.liveTranscriptSegments = [{segment_id: 'sim-cough', role: '患者', text: '现在只有咳嗽。'}];
+      applyLiveClinicalDraft({version: 2, stable_segment_count: 1,
+        record_patch: {chief_complaint: {value: '合成错误推断', evidence_segment_ids: ['sim-cough']}}});
+      renderAssist();
+    }""")
+    expect(panel).not_to_contain_text('说话人待核对')
+    review.click()
+    expect(page.locator('#drawer')).to_contain_text('现在只有咳嗽。')
+    expect(page.locator('#drawer')).not_to_contain_text('合成错误推断')
+    expect(page.locator('#drawer').get_by_role('button', name='回听这段原话')).to_have_count(0)
+    page.keyboard.press('Escape')
+    page.evaluate("""() => {
       setProductView('encounter');
-      applyLiveClinicalDraft({version: 1, differentials: [{name: '临时参考', summary: '合成说明'}]});
+      applyLiveClinicalDraft({version: 3, differentials: [{name: '临时参考', summary: '合成说明'}]});
       window.__MRA_APP_STATE__.browserRecordingStatus = 'recording';
       renderAssist();
     }""")

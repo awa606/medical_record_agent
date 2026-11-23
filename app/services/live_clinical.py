@@ -13,22 +13,20 @@ from app.services.privacy import anonymize_text
 
 LIVE_DRAFT_STATUS = "temporary"
 MAX_SUMMARY_ITEMS = 3
+_LIVE_ROLES = {
+    "患者": "患者", "病人": "患者", "patient": "患者",
+    "医生": "医生", "医师": "医生", "doctor": "医生",
+    "家属": "家属", "家长": "家属", "陪同人员": "家属",
+}
 
 
-def _patient_fact_text(segment: dict[str, Any]) -> str:
+def _patient_fact_text(segment: dict[str, Any], role: str) -> str:
     """Select source clauses before any live rule sees symptom keywords.
 
     Unresolved speakers remain in the transcript, but are not patient facts.
     Speaker identity alone is insufficient: a patient can describe a relative,
     and a family member can explicitly report the child's symptoms.
     """
-    role = {
-        "患者": "患者", "病人": "患者", "patient": "患者",
-        "医生": "医生", "医师": "医生", "doctor": "医生",
-        "家属": "家属", "家长": "家属", "陪同人员": "家属",
-    }.get(str(segment.get("role") or "").strip().lower())
-    if role is None:
-        return ""
     text = str(segment.get("text") or "")
     prefix = f"{role}："
     target = "child" if role == "家属" and re.search(r"孩子|儿子|女儿", text) else "unknown"
@@ -77,6 +75,7 @@ def normalize_live_segment(segment: dict[str, Any], *, sequence: int | None = No
         "text": text,
         "speaker": segment.get("speaker"),
         "role": segment.get("role"),
+        "needs_review": bool(segment.get("needs_review")),
         "start_time": segment.get("start_time"),
         "end_time": segment.get("end_time"),
     }
@@ -130,8 +129,13 @@ def build_live_clinical_snapshot(
 ) -> dict[str, Any]:
     usable_segments = [segment for segment in stable_segments if str(segment.get("text") or "").strip()]
     fact_segments = []
+    unassigned_count = 0
     for segment in usable_segments:
-        text = _patient_fact_text(segment)
+        role = _LIVE_ROLES.get(str(segment.get("role") or "").strip().lower())
+        if role is None or segment.get("needs_review"):
+            unassigned_count += 1
+            continue
+        text = _patient_fact_text(segment, role)
         if text:
             fact_segments.append({**segment, "text": text})
     # Keep each source attached while assembling temporary fields. Joining all
@@ -170,6 +174,7 @@ def build_live_clinical_snapshot(
         "care_plan": [],
         "next_questions": next_questions[:MAX_SUMMARY_ITEMS],
         "stable_segment_count": len(usable_segments),
+        "unassigned_role_segment_count": unassigned_count,
     }
 
 

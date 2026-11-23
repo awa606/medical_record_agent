@@ -1439,6 +1439,7 @@ def _append_live_clinical_events(
                 "care_plan": snapshot.get("care_plan") or [],
                 "next_questions": snapshot.get("next_questions") or [],
                 "stable_segment_count": snapshot.get("stable_segment_count") or 0,
+                "unassigned_role_segment_count": snapshot.get("unassigned_role_segment_count") or 0,
             },
         ),
     ]

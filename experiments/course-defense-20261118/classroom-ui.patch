@@ -8,8 +8,8 @@
 -  </head>
 -  <body class="doctor-mode standard-mode">
 +    <link rel="stylesheet" href="./doctor-workspace.css?v=20261103-episode-review" />
-+    <link rel="stylesheet" href="./projector.css?v=classroom-review-2" />
-+    <link rel="stylesheet" href="./course-entry.css?v=classroom-review-2" />
++    <link rel="stylesheet" href="./projector.css?v=20261124-review" />
++    <link rel="stylesheet" href="./course-entry.css?v=20261124-import" />
 +  <style>.brand-copy p{display:block!important;font-size:13px!important;line-height:1.35!important;margin:0;color:#293f57} @media(max-width:1199px){.brand-copy p{font-size:12px!important}}</style></head>
 +  <body class="doctor-mode standard-mode" data-course-replay="true">
  <a class="skip-link" href="#mainContent">跳到主要内容</a>
@@ -146,8 +146,8 @@
        <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
      </dialog>
      <div id="toast" class="toast" role="status" aria-live="polite"></div>
--    <script src="./doctor.js?v=20261103-compact-review"></script>
-+    <script src="./doctor.js?v=classroom-review-2"></script>
+-    <script src="./doctor.js?v=20261124-drawer-focus"></script>
++    <script src="./doctor.js?v=20261124-import-focus"></script>
    </body>
  </html>
 --- a/static/doctor.js

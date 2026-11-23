@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
 
 import pymupdf
+import pytest
 
 from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, SafetyCheckResult
 from app.services.exporter import (
@@ -159,6 +160,51 @@ def test_pdf_uses_follow_up_visit_title(tmp_path):
         text = "".join(document[0].get_text().split())
     assert "复诊病历记录" in text
     assert "就诊类型" in text
+
+
+@pytest.mark.parametrize(("encounter_at", "exported_at", "expected_visit", "expected_export"), [
+    ("2026-11-23T16:29:00Z", datetime(2026, 11, 23, 16, 35, tzinfo=timezone.utc),
+     "2026-11-2400:29UTC+08:00", "2026-11-2400:35UTC+08:00"),
+    ("2026-11-24T07:00:00+09:00", datetime(2026, 11, 24, 12, 0),
+     "2026-11-2406:00UTC+08:00", "2026-11-2412:00（时区未注明）"),
+    ("2026-10-31T09:00:12", datetime(2026, 11, 24, 12, 0),
+     "2026-10-3109:00（时区未注明）", "2026-11-2412:00（时区未注明）"),
+    ("日期待核", datetime(2026, 11, 24, 12, 0),
+     "日期待核", "2026-11-2412:00（时区未注明）"),
+])
+def test_pdf_displays_clinic_time_and_preserves_legacy_wall_times(
+    tmp_path, encounter_at, exported_at, expected_visit, expected_export,
+):
+    target = tmp_path / "times.pdf"
+    render_pdf(
+        target, MedicalRecordFields(), SafetyCheckResult(passed=True),
+        approved=True, task_id=1, encounter_created_at=encounter_at, generated_at=exported_at,
+    )
+    with pymupdf.open(target) as document:
+        text = "".join(document[0].get_text().split())
+    assert "就诊时间" + expected_visit in text
+    assert "导出时间" + expected_export in text
+
+
+def test_pdf_default_export_clock_and_age_use_the_clinic_date_on_a_utc_host(tmp_path, monkeypatch):
+    class UtcHostClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            instant = cls(2026, 11, 23, 16, 35, tzinfo=timezone.utc)
+            return instant.astimezone(tz) if tz else instant.replace(tzinfo=None)
+
+    monkeypatch.setattr("app.services.exporter.datetime", UtcHostClock)
+    target = tmp_path / "midnight.pdf"
+    render_pdf(
+        target, MedicalRecordFields(patient_birth_date=MedicalField(value="2000-11-24")),
+        SafetyCheckResult(passed=True), approved=True, task_id=1,
+        encounter_created_at="2026-11-23T16:29:00+00:00",
+    )
+    with pymupdf.open(target) as document:
+        text = "".join(document[0].get_text().split())
+    assert "就诊时间2026-11-2400:29UTC+08:00" in text
+    assert "导出时间2026-11-2400:35UTC+08:00" in text
+    assert "26岁" in text
 
 
 def test_pdf_renders_empty_record_and_hospital_name(tmp_path, monkeypatch):

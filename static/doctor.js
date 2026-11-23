@@ -2701,7 +2701,7 @@ function renderTranscriptionFailurePanel() {
   }
 }
 
-let detailReturnFocus = null;
+let drawerReturnFocus = null;
 let detailDrawerVersion = 0;
 let helpReturnFocus = null;
 let helpPushedState = false;
@@ -2829,6 +2829,13 @@ function openWorkspaceAuxiliary(kind) {
 function openDrawer(panelId, title) {
   detailDrawerVersion += 1;
   closeWorkspaceAuxiliary();
+  if (panelId === "textImportPanel") clearToast();
+  if (!drawerReturnFocus) {
+    const opener = document.activeElement;
+    if (opener.closest("#inputMethodMenu")) drawerReturnFocus = $("inputMethodButton");
+    else if (opener.closest("#displaySettingsMenu")) drawerReturnFocus = $("displaySettingsButton");
+    else drawerReturnFocus = opener;
+  }
   closeInputMethodMenu();
   closeDisplaySettingsMenu();
   $("drawer").classList.remove("reference-detail-mode");
@@ -2839,10 +2846,13 @@ function openDrawer(panelId, title) {
   $("drawer").inert = false;
   document.querySelectorAll(".drawer-panel").forEach((panel) => panel.classList.remove("active"));
   $(panelId).classList.add("active");
+  $("closeDrawerButton").focus({ preventScroll: true });
+  document.querySelector(".doctor-app").inert = true;
 }
 
 function closeDrawer() {
-  if (!detailReturnFocus && $("drawer").contains($("recordingPanel")) && (appState.browserRecordingStatus === "recording" || appState.browserRecordingStatus === "requesting")) {
+  const viewingDetail = $("drawer").classList.contains("active") && $("detailPanel").classList.contains("active");
+  if (!viewingDetail && $("drawer").contains($("recordingPanel")) && (appState.browserRecordingStatus === "recording" || appState.browserRecordingStatus === "requesting")) {
     appState.browserRecordingMessage = "录音正在进行。请先点击“停止”完成试听，或点击“取消”放弃本次录音。";
     renderBrowserRecordingPanel();
     showToast("录音进行中，请先停止或取消录音");
@@ -2854,14 +2864,15 @@ function closeDrawer() {
   $("drawer").classList.remove("active");
   $("drawer").setAttribute("aria-hidden", "true");
   $("drawer").inert = true;
-  if (detailReturnFocus) {
+  if (drawerReturnFocus) {
     document.querySelector('.doctor-app').inert = false;
-    const target = detailReturnFocus;
-    detailReturnFocus = null;
+    const target = drawerReturnFocus;
+    drawerReturnFocus = null;
     const replacement = target.dataset?.openDetail
       ? [...document.querySelectorAll('.doctor-app [data-open-detail]')].find(node => node.dataset.openDetail === target.dataset.openDetail)
       : null;
-    (target.isConnected ? target : replacement)?.focus({ preventScroll: true });
+    const returnTo = target.isConnected && target.getClientRects().length ? target : replacement;
+    (returnTo || $("inputMethodButton")).focus({ preventScroll: true });
   }
   return true;
 }
@@ -2870,12 +2881,9 @@ function openDetailDrawer(title, html) {
   closeWorkspaceAuxiliary();
   const content = $("detailDrawerContent");
   if (!content) return;
-  if (!detailReturnFocus) detailReturnFocus = document.activeElement;
   content.innerHTML = html;
   openDrawer("detailPanel", title);
   $("drawer").classList.toggle("reference-detail-mode", Boolean(content.querySelector(".reference-detail")));
-  document.querySelector('.doctor-app').inert = true;
-  $("closeDrawerButton").focus({ preventScroll: true });
 }
 
 function renderPatientBar() {
@@ -9966,13 +9974,13 @@ function bindEvents() {
   $("closeDrawerButton").addEventListener("click", closeDrawer);
   $("drawerBackdrop").addEventListener("click", closeDrawer);
   $("drawer").addEventListener("keydown", (event) => {
-    if (!detailReturnFocus || !$("drawer").classList.contains('active')) return;
+    if (!$("drawer").classList.contains('active')) return;
     if (event.key === 'Escape') {
       event.preventDefault();
       closeDrawer();
     } else if (event.key === 'Tab') {
       const focusable = [...$("drawer").querySelectorAll('button, a[href], input, textarea, select, summary, [tabindex="0"]')]
-        .filter(node => !node.disabled && node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden');
+        .filter(node => !node.disabled && !node.matches('[tabindex="-1"]') && node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden');
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (event.shiftKey && document.activeElement === first) {

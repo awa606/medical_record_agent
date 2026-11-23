@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -38,6 +38,7 @@ WORD_NOTICE = "AI 辅助生成，病历内容以医生审核确认为准"
 PDF_FONT_PATH = PROJECT_ROOT / "assets" / "fonts" / "NotoSansSC-Regular.ttf"
 PDF_FONT_NAME = "NotoSansSC"
 PDF_FALLBACK_FONT = "STSong-Light"
+OUTPATIENT_TIMEZONE = timezone(timedelta(hours=8))
 
 
 def _register_pdf_font() -> str:
@@ -243,6 +244,23 @@ def _pdf_text(value: str) -> str:
     return escape(str(value)).replace("\n", "<br/>")
 
 
+def _pdf_time(value: str | datetime) -> str:
+    """Print offset-aware instants in the clinic zone; preserve legacy wall time."""
+    if isinstance(value, str):
+        try:
+            timestamp = datetime.fromisoformat(value)
+        except ValueError:
+            return value
+        if timestamp.utcoffset() is None:
+            # Some historical entries have only a date or free-form local time.
+            return value[:16].replace("T", " ") + "（时区未注明）"
+    else:
+        timestamp = value
+    if timestamp.utcoffset() is None:
+        return timestamp.strftime("%Y-%m-%d %H:%M（时区未注明）")
+    return timestamp.astimezone(OUTPATIENT_TIMEZONE).strftime("%Y-%m-%d %H:%M UTC+08:00")
+
+
 def _pdf_meta_rows(
     fields: MedicalRecordFields,
     *,
@@ -274,7 +292,8 @@ def _pdf_meta_rows(
             birth = datetime.strptime(digits[:8], "%Y%m%d").date()
         except ValueError:
             return ""
-        today = generated_at.date()
+        today = (generated_at.astimezone(OUTPATIENT_TIMEZONE)
+                 if generated_at.utcoffset() is not None else generated_at).date()
         age = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
         return f"{age}岁" if 0 <= age <= 150 else ""
 
@@ -304,11 +323,11 @@ def _pdf_meta_rows(
     rows.append(("接诊医师", doctor_name or "____________________"))
     rows.append(("门诊病历号", f"E-{encounter_id}" if encounter_id is not None else "未关联就诊"))
     if encounter_created_at:
-        rows.append(("就诊时间", str(encounter_created_at)[:16].replace("T", " ")))
+        rows.append(("就诊时间", _pdf_time(encounter_created_at)))
     rows.extend(
         [
             ("任务编号", str(task_id)),
-            ("导出时间", generated_at.strftime("%Y-%m-%d %H:%M")),
+            ("导出时间", _pdf_time(generated_at)),
             ("审核状态", "已完成医生分项审核" if approved else "未完成医生分项审核"),
         ]
     )
@@ -406,7 +425,7 @@ def render_pdf(
 ) -> Path:
     """Hospital-style outpatient record: meta header, sections, signature block."""
     styles = _pdf_styles()
-    generated_at = generated_at or datetime.now()
+    generated_at = generated_at or datetime.now(OUTPATIENT_TIMEZONE)
     doc = SimpleDocTemplate(
         str(path),
         pagesize=A4,

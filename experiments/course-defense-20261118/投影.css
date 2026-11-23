@@ -69,7 +69,9 @@ body.doctor-mode .alpha51-workspace .approval-disclosure .approval-entry-label {
   color: #375950; background: transparent; border: 0; box-shadow: none;
 }
 @media (max-width: 700px) {
-  body.doctor-mode .review-issue-card .issue-comparison { grid-template-columns: 1fr; }
+  body.doctor-mode .review-issue-card .issue-comparison {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  }
 }
 @media (max-width: 560px) {
   body.doctor-mode .topbar {

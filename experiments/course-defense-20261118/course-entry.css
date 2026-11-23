@@ -10,6 +10,17 @@ body[data-course-replay] .encounter-worklist-meta {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* The frozen workspace predates the text form's content-sized grid rows. */
+body[data-course-replay] #textImportPanel.active {
+  align-content: start;
+}
+
+body[data-course-replay] #conversationInput[readonly] {
+  field-sizing: content;
+  min-height: min(8rem, 38dvh);
+  max-height: 48dvh;
+}
+
 body[data-course-replay] .encounter-worklist-meta b {
   color: #526578;
   font-size: .75rem;

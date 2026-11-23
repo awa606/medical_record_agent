@@ -1,5 +1,6 @@
 """Start the synthetic classroom replay under the current user's local app-data folder."""
 import argparse
+import hashlib
 import json
 import os
 import secrets
@@ -19,16 +20,25 @@ SOURCE = HERE / "冻结资产"
 
 def cli():
     parser = argparse.ArgumentParser(description="MediListen 课程演示 · 已保存首响应回放")
-    parser.add_argument("--data-root", type=Path, default=Path(os.environ["LOCALAPPDATA"])/"MediListen课程现场")
+    parser.add_argument("--data-root", type=Path, help="本机课堂数据目录")
     parser.add_argument("--port", type=int, default=26418)
     parser.add_argument("--no-browser", action="store_true")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.data_root is None:
+        if os.name == "nt":
+            base = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+        else:
+            xdg = Path(os.environ.get("XDG_DATA_HOME", ""))
+            base = xdg if xdg.is_absolute() else Path.home() / ".local" / "share"
+        args.data_root = base / "MediListen课程现场"
+    return args
 
 
 def read_account(runtime):
     path = runtime/"本机账户.json"
     if not path.exists():
-        with path.open("x", encoding="utf-8") as stream:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
             json.dump({"admin_username":"course-maintainer", "admin_password":secrets.token_urlsafe(24),
                        "username":"course-doctor", "password":"K"+secrets.token_hex(5)}, stream)
     return json.loads(path.read_text(encoding="utf-8"))
@@ -89,12 +99,15 @@ def main():
                 raise RuntimeError("选定的端口已被其他程序占用。")
             if identity.get("variant") != "classroom-review-2":
                 raise RuntimeError("旧版课堂回放仍在此端口运行。请在原启动窗口按回车结束，再启动当前版本。已保存病历会保留。")
+            manifest = HERE / "运行源" / "runtime-sha256.json"
+            if identity.get("runtime_sha256") != hashlib.sha256(manifest.read_bytes()).hexdigest():
+                raise RuntimeError("此端口运行的是另一个版本的工作台。请回到原窗口结束该版本，或指定其他课程端口。")
             print("课堂回放已经启动，登录信息在原启动窗口。")
             if not args.no_browser:
                 webbrowser.open(base+"/static/doctor.html")
             return
     runtime = args.data_root.resolve()
-    runtime.mkdir(parents=True, exist_ok=True)
+    runtime.mkdir(mode=0o700, parents=True, exist_ok=True)
     account = read_account(runtime)
     env = os.environ.copy()
     env.update(COURSE_RUNTIME=str(runtime), COURSE_PORT=str(args.port), PYTHONDONTWRITEBYTECODE="1")

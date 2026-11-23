@@ -37,10 +37,11 @@ def build(frozen, destination):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(data)
 
-        for name in ("static/doctor.js", "static/doctor.html", "app/api/tasks.py"):
+        for name in ("static/doctor.js", "static/doctor.html", "app/api/tasks.py", "app/services/exporter.py"):
             # A checkout may use platform-native line endings. The built files use UTF-8/LF.
             (work / name).write_bytes((REPO / name).read_text(encoding="utf-8").encode())
-        subprocess.run(["git", "apply", "--whitespace=nowarn", str(HERE / "classroom-ui.patch")],
+        subprocess.run(["git", "apply", "--whitespace=nowarn", str(HERE / "classroom-ui.patch"),
+                        str(HERE / "classroom-identity-read.patch")],
                        cwd=work, env={**os.environ, "GIT_CEILING_DIRECTORIES": str(work.parent.resolve())},
                        check=True)
         html_path = work / "static/doctor.html"

@@ -1,0 +1,83 @@
+--- a/app/services/privacy.py
++++ b/app/services/privacy.py
+@@ -6,10 +6,12 @@
+ import re
+ import sqlite3
+ import uuid
+ import logging
+ import traceback
++from contextlib import ExitStack, closing, nullcontext
++from functools import cache
+ from pathlib import Path
+ from starlette.concurrency import run_in_threadpool
+
+
+ # These values route ASR resources; an ID-like digit run is not patient prose.
+@@ -97,32 +99,41 @@
+             connection.execute("INSERT OR IGNORE INTO identities VALUES (?,?,?)", (value, alias, kind))
+             return connection.execute("SELECT alias FROM identities WHERE original=?", (value,)).fetchone()[0]
+     finally:
+         connection.close()
+
+-def anonymize_text(text: str) -> str:
++def anonymize_text(text: str, *, read_connection=None) -> str:
+     if not enabled() or not isinstance(text, str) or not text:
+         return text
+     for match in re.finditer(r"(?:姓名[是为：:\s]*|我叫|患者叫|患者姓名[：:\s]*)([\u4e00-\u9fff]{2,4})(?=[，,。；;\s]|$)", text):
+         register_identity(match.group(1))
+     for match in re.finditer(r"(?<!\d)(?:\d{17}[\dXx]|1[3-9]\d{9})(?!\d)", text):
+         value = match.group(0)
+         register_identity(value, "身份证" if len(value) == 18 else "联系方式")
+     for match in re.finditer(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", text):
+         register_identity(match.group(0), "联系方式")
+-    connection = _connection()
+-    try:
++    # Use the current identity table for every string. Only the SQLite handle is shared.
++    lookup = nullcontext(read_connection) if read_connection is not None else closing(_connection())
++    with lookup as connection:
+         identities = connection.execute("SELECT original,alias FROM identities ORDER BY length(original) DESC").fetchall()
+-    finally:
+-        connection.close()
+     for original, alias in identities:
+         text = text.replace(original, alias)
+     return text
+
+ def anonymize_payload(value):
+     if not enabled():
+         return value
++    with ExitStack() as resources:
++        # Empty values and opaque routing metadata do not need an identity database.
++        @cache
++        def read_connection():
++            return resources.enter_context(closing(_connection()))
++
++        return _anonymize_payload(value, read_connection)
++
++
++def _anonymize_payload(value, read_connection):
+     if isinstance(value, dict):
+         for key in ("patient_display_name", "patient_name"):
+             if isinstance(value.get(key), str):
+                 register_identity(value[key])
+         # Revision and citation digests are opaque integrity values, not prose.
+@@ -130,17 +141,17 @@
+         digest_keys = {"content_hash", "current_content_hash", "expected_content_hash", "content_sha256"}
+         return {
+             key: item if (
+                 key in digest_keys and isinstance(item, str)
+                 and re.fullmatch(r"[0-9a-fA-F]{64}", item)
+-            ) or _is_asr_routing_value(key, item) else anonymize_payload(item)
++            ) or _is_asr_routing_value(key, item) else _anonymize_payload(item, read_connection)
+             for key, item in value.items()
+         }
+     if isinstance(value, list):
+-        return [anonymize_payload(item) for item in value]
++        return [_anonymize_payload(item, read_connection) for item in value]
+     if isinstance(value, str):
+-        return anonymize_text(value)
++        return anonymize_text(value, read_connection=read_connection()) if value else value
+     return value
+
+
+ def anonymous_sse_frame(frame: bytes) -> bytes:
+     text = frame.decode("utf-8")

@@ -28,7 +28,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from app.schemas import MedicalRecordFields, SafetyCheckResult
+from app.schemas import MedicalField, MedicalRecordFields, SafetyCheckResult
 from app.services.privacy import anonymize_text
 
 
@@ -283,18 +283,23 @@ def _pdf_meta_rows(
 
     def age_text() -> str:
         raw = field_text("patient_birth_date")
-        if not raw:
+        if not raw or not encounter_created_at:
             return ""
-        digits = "".join(character for character in raw if character.isdigit())
-        if len(digits) < 8:
-            return ""
+        birth_text = raw.replace("年", "-").replace("月", "-").removesuffix("日")
+        birth_text = birth_text.replace("/", "-").replace(".", "-")
+        birth_format = "%Y%m%d" if len(birth_text) == 8 and birth_text.isdecimal() else "%Y-%m-%d"
         try:
-            birth = datetime.strptime(digits[:8], "%Y%m%d").date()
+            if raw[10:11] in ("T", " "):
+                birth = datetime.fromisoformat(raw).date()
+            else:
+                birth = datetime.strptime(birth_text, birth_format).date()
+            encounter = datetime.fromisoformat(encounter_created_at)
         except ValueError:
             return ""
-        today = (generated_at.astimezone(OUTPATIENT_TIMEZONE)
-                 if generated_at.utcoffset() is not None else generated_at).date()
-        age = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
+        if encounter.utcoffset() is not None:
+            encounter = encounter.astimezone(OUTPATIENT_TIMEZONE)
+        visit = encounter.date()
+        age = visit.year - birth.year - ((visit.month, visit.day) < (birth.month, birth.day))
         return f"{age}岁" if 0 <= age <= 150 else ""
 
     rows.append(("姓名", patient_label))
@@ -313,9 +318,8 @@ def _pdf_meta_rows(
         value = field_text(key)
         if value:
             rows.append((label, value))
-    allergy = fields.allergy_history
-    allergy_text = str(allergy.value).strip() if allergy.value and not allergy.missing else "未提及/待补充"
-    rows.append(("药物过敏史", allergy_text))
+    allergy_text = field_text("allergy_history") or _pdf_missing_field_text(fields.allergy_history)
+    rows.append(("药物或其他过敏史", allergy_text))
     rows.append(("科别", department or "未关联科室"))
     visit_type = field_text("visit_type")
     if visit_type:
@@ -334,6 +338,14 @@ def _pdf_meta_rows(
     return rows
 
 
+def _pdf_missing_field_text(field: MedicalField) -> str:
+    if field.confirmed_by_doctor and field.doctor_review_status == "not_asked_confirmed":
+        return "未询问（医生确认）；本项信息未采集"
+    if field.confirmed_by_doctor and field.doctor_review_status == "missing_accepted":
+        return "信息缺失（医生已接受本次缺失）；不代表否认或正常"
+    return "未提及/待补充"
+
+
 def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | None]]:
     def value_of(name: str) -> str:
         field = getattr(fields, name)
@@ -345,11 +357,7 @@ def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | Non
             if field.status == "conflicting":
                 return f"证据冲突，需医生复核：{field.hint or '请核对原始转写'}"
             return None
-        if field.confirmed_by_doctor and field.doctor_review_status == "not_asked_confirmed":
-            return "未询问（医生确认）；本项信息未采集"
-        if field.confirmed_by_doctor and field.doctor_review_status == "missing_accepted":
-            return "信息缺失（医生已接受本次缺失）；不代表否认或正常"
-        return "未提及/待补充"
+        return _pdf_missing_field_text(field)
 
     chief = value_of("chief_complaint")
     present = value_of("present_illness")

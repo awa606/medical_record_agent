@@ -138,6 +138,7 @@ def test_pdf_includes_extended_patient_and_clinical_fields(tmp_path):
         approved=True,
         task_id=3,
         encounter_id=4,
+        encounter_created_at="2026-10-30T12:00:00+08:00",
         generated_at=datetime(2026, 10, 31, 12, 0),
         doctor_name="李医生",
     )
@@ -160,6 +161,50 @@ def test_pdf_uses_follow_up_visit_title(tmp_path):
         text = "".join(document[0].get_text().split())
     assert "复诊病历记录" in text
     assert "就诊类型" in text
+
+
+@pytest.mark.parametrize(("field", "expected"), [
+    (MedicalField(value="对花粉过敏"), "对花粉过敏"),
+    (MedicalField(value="花生过敏，未询问药物过敏史"), "花生过敏，未询问药物过敏史"),
+    (MedicalField(value="青霉素过敏"), "青霉素过敏"),
+    (MedicalField(value="医生记录：否认药物过敏"), "医生记录：否认药物过敏"),
+    (MedicalField(missing=True, confirmed_by_doctor=True, doctor_review_status="missing_accepted"),
+     "信息缺失（医生已接受本次缺失）；不代表否认或正常"),
+    (MedicalField(missing=True, confirmed_by_doctor=True, doctor_review_status="not_asked_confirmed"),
+     "未询问（医生确认）；本项信息未采集"),
+])
+def test_pdf_preserves_allergy_scope_and_review_disposition(tmp_path, field, expected):
+    target = tmp_path / "allergies.pdf"
+    render_pdf(target, MedicalRecordFields(allergy_history=field), SafetyCheckResult(passed=True),
+               approved=True, task_id=1)
+    with pymupdf.open(target) as document:
+        text = "".join(document[0].get_text().split())
+    assert "药物或其他过敏史" + expected + "科别" in text
+
+
+@pytest.mark.parametrize(("birth", "visit", "expected"), [
+    ("2000-06-10", "2024-06-09T08:30:00+08:00", "23岁"),
+    ("2000-06-10", "2024-06-09T16:30:00Z", "24岁"),
+    ("2000年6月10日", "2024-06-09", "23岁"),
+    ("2000-06-10T00:00:00+08:00", "2024-06-09", "23岁"),
+    ("20000610", "2024-06-10", "24岁"),
+    ("2000-06-10", "2024-06-10T00:01:00", "24岁"),
+    ("2000-06-10", None, "________"),
+    ("2000-06-10", "日期待核", "________"),
+    ("2000-06-10或2001-06-10", "2024-06-09", "________"),
+    ("20000610", "1999-01-01", "________"),
+])
+def test_pdf_reprints_age_at_visit(tmp_path, birth, visit, expected):
+    target = tmp_path / "reprint.pdf"
+    fields = MedicalRecordFields(patient_birth_date=MedicalField(value=birth))
+    for printed in (datetime(2024, 6, 9, 12), datetime(2026, 7, 1, 12)):
+        render_pdf(
+            target, fields, SafetyCheckResult(passed=True), approved=True, task_id=1,
+            encounter_created_at=visit, generated_at=printed,
+        )
+        with pymupdf.open(target) as document:
+            text = "".join(document[0].get_text().split())
+        assert "性别/年龄________/" + expected + "出生日期" in text
 
 
 @pytest.mark.parametrize(("encounter_at", "exported_at", "expected_visit", "expected_export"), [

@@ -5713,7 +5713,13 @@ function renderTranscriptStatusPanel({ rows, asr, isStreaming, reviewable, unrev
 function transcriptRowPresentation(row = {}) {
   const role = ["doctor", "patient", "other"].includes(row.speaker) ? row.speaker : "unknown";
   if (row.provisional) return { role, state: "provisional", warning: "临时转写" };
-  if (row.roleWarning) return { role, state: "inferred", warning: "系统推定，待核对" };
+  const segment = row.sourceSegment;
+  const priorAutoWarning = row.roleWarning === "系统自动推定说话人角色，最终病历字段仍需医生审核。"
+    || row.roleWarning === "系统自动推定";
+  const manuallyResolved = priorAutoWarning && role !== "unknown" && row.roleTrusted === true
+    && segment?.reviewed_by_doctor === true && segment.needs_review === false
+    && ["manual", "manual_speaker_map"].includes(segment.role_source);
+  if (row.roleWarning && !manuallyResolved) return { role, state: "inferred", warning: "系统推定，待核对" };
   if (row.needsReview) return { role, state: "pending", warning: "角色待核对" };
   if (role === "unknown") return { role, state: "unknown", warning: "" };
   if (row.roleTrusted === true) return { role, state: "confirmed", warning: "" };

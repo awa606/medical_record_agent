@@ -57,6 +57,29 @@ console.log(JSON.stringify({presentation:transcriptRowPresentation(row), unchang
     assert result["presentation"]["state"] == expected_state
 
 
+@pytest.mark.parametrize("overrides, expected", [
+    ({}, "confirmed"),
+    ({"role_source": "manual_speaker_map", "role_warning": "系统自动推定"}, "confirmed"),
+    ({"reviewed_by_doctor": False}, "inferred"),
+    ({"reviewed_by_doctor": "false"}, "inferred"),
+    ({"needs_review": True}, "inferred"),
+    ({"role_source": "automatic"}, "inferred"),
+    ({"role_warning": "需重新核实音段来源"}, "inferred"),
+])
+def test_saved_asr_role_uses_explicit_review_with_historical_warning(overrides, expected):
+    segment = {
+        "text": "昨天没有这个感觉。", "speaker_id": "spk0", "role": "患者",
+        "role_source": "manual", "reviewed_by_doctor": True, "needs_review": False,
+        "role_warning": "系统自动推定说话人角色，最终病历字段仍需医生审核。", **overrides,
+    }
+    result = run_browser_logic("const segment=" + json.dumps(segment, ensure_ascii=False) + r""";
+appState.currentAsrResult={segments:[segment]}; appState.liveTranscriptSegments=[];
+const before=JSON.stringify(segment); const display=transcriptRowPresentation(transcriptRows()[0]);
+console.log(JSON.stringify({state:display.state, unchanged:JSON.stringify(segment)===before}));
+""")
+    assert result == {"state": expected, "unchanged": True}
+
+
 @pytest.mark.parametrize("approved, review, expected", [
     (True, "not_asked_confirmed", "本次未询问（医生已确认）"),
     (True, "missing_accepted", "本次资料缺失（医生已接受）"),

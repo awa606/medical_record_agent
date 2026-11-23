@@ -1303,7 +1303,7 @@ function renderExportReadinessDetail(readiness = appState.currentExportReadiness
   let rows = ["正在核对当前版本的审核状态。"];
   if (exportReadinessMatches(readiness)) {
     const version = readiness.revision_number ? `R${readiness.revision_number}` : "当前版本";
-    rows = file ? [`${version} 的已审核 PDF 已导出。`]
+    rows = file ? [`${version} 已有 PDF 导出记录。`]
       : readiness.ready ? [`${version} 已审核，待导出 PDF。`]
       : ["当前版本暂不可导出。", ...(readiness.errors || [])];
   }
@@ -2147,7 +2147,7 @@ function renderStepPrompt() {
     text = currentFailureDetail().reason;
     tone = "danger";
   } else if (workflowState === "exported") {
-    text = "本版本 PDF 已导出，可再次下载。";
+    text = "本版本已有 PDF 导出记录。";
   } else if (workflowState === "approved") {
     text = "医生已完成审核，下一步可导出本版本 PDF。";
   } else if (hasActiveSession() && risk.hasRisk) {
@@ -2440,7 +2440,7 @@ function nextActionState() {
     const exported = Boolean(currentExportFile());
     return {
       tone: "warning",
-      title: exported ? "PDF 已导出，下载未完成" : "本次导出未完成",
+      title: exported ? "PDF 下载未完成" : "本次导出未完成",
       detail: appState.exportIssue.message,
       actions: singlePrimaryAction({ key: "export-record", label: exported ? "重试下载 PDF" : "重试导出 PDF" }),
     };
@@ -2572,7 +2572,7 @@ function nextActionState() {
     return {
       tone: "ready",
       title: "导出已完成",
-      detail: "本版本的已审核 PDF 已保存，可再次下载同一份文件。",
+      detail: "本版本已有 PDF 导出记录。",
       actions: singlePrimaryAction({ key: "export-record", label: "再次下载 PDF" }),
     };
   }
@@ -6712,7 +6712,7 @@ function renderFooter() {
     pending_review: "等待医生审核；完成医生审核后方可导出。",
     failed: "流程中断；请先重新转写或改用文本输入。",
     approved: "本版本已审核，待导出 PDF。",
-    exported: "本版本 PDF 已导出，可再次下载。",
+    exported: "本版本已有 PDF 导出记录。",
   };
   $("currentTaskLabel").textContent = "操作区";
   $("currentTaskHint").textContent = footerHints[displayState.key] || displayState.taskHint;
@@ -8406,9 +8406,9 @@ async function exportRecord({ regenerate = false } = {}) {
     if (!isCurrentRead(context)) return;
     let message = downloading ? "下载未完成，可重试下载本版本的 PDF。" : "本次导出未完成，请重试。";
     const available = currentExportFile();
-    if (available && !downloading) message = "服务器已保存本版本的 PDF，可重试下载。";
+    if (available && !downloading) message = "本版本已有 PDF 导出记录，可重试下载。";
     const fileUnavailable = Boolean(available && downloading && [404, 409].includes(error.status));
-    if (fileUnavailable) message = "原 PDF 无法读取，可重新生成当前已审核版本的 PDF。";
+    if (fileUnavailable) message = "原 PDF 无法读取。如需原件，请联系运维从对应备份恢复原 PDF 到导出目录，再重试下载。重新生成会创建新的导出记录。";
     appState.exportIssue = { context, message, fileUnavailable };
     openDetailDrawer(available ? "PDF 下载未完成" : "导出未完成", renderExportReadinessDetail());
     showToast(message);

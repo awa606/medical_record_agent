@@ -183,6 +183,15 @@ def test_export_uses_authenticated_download_endpoint_not_server_paths() -> None:
     assert '?sha256=${encodeURIComponent(sha256)}' in js
 
 
+def test_export_receipt_copy_distinguishes_restoring_original_from_regenerating() -> None:
+    js = read_static("doctor.js")
+    for view in ("renderFooter", "renderStepPrompt", "nextActionState", "renderExportReadinessDetail"):
+        assert "PDF 导出记录" in function_body(js, view), view
+    retry = function_body(js, "exportRecord")
+    assert "从对应备份恢复原 PDF 到导出目录" in retry
+    assert "重新生成会创建新的导出记录" in retry
+
+
 def test_admin_and_reference_copy_hide_debug_values() -> None:
     js = read_static("doctor.js")
 

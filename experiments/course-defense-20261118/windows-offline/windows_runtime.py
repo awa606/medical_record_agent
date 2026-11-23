@@ -125,8 +125,13 @@ def main():
     if hashlib.sha256((BUNDLE / "运行源/runtime-sha256.json").read_bytes()).hexdigest() != BUNDLE_SHA:
         raise RuntimeError("相邻课堂包的运行清单与本次实测不一致。")
     local = Path(os.environ["LOCALAPPDATA"]) / "MediListen课堂专用"
-    release = HERE.parents[3] / ".artifacts/20261124-release"
-    default_env = (release if release.is_dir() else local) / f"Windows-CPython{abi}-专用"
+    env_home = local
+    if HERE.parts[-4:] == ("output", "20261124_企业与结课验收", "软件", "专用环境"):
+        release = HERE.parents[3] / ".artifacts/20261124-release"
+        marker = release / ".medilisten-workspace-root.txt"
+        if marker.is_file() and marker.read_text(encoding="utf-8").strip().casefold() == str(HERE.parents[3]).casefold():
+            env_home = release
+    default_env = env_home / f"Windows-CPython{abi}-专用"
     python = (args.env_path or default_env).resolve() / "Scripts/python.exe"
     rows = manifest["rows"]
     if args.action == "prepare":

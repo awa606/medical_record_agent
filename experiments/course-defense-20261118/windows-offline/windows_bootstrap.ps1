@@ -4,10 +4,22 @@
     [ValidateRange(1024,65535)][int]$Port=26428, [switch]$NoBrowser, [switch]$Online
 )
 $ErrorActionPreference = 'Stop'
-$release = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..\..\.artifacts\20261124-release'))
+$release = $null
+$layout = [IO.Path]::Combine('output','20261124_企业与结课验收','软件','专用环境')
+if ($PSScriptRoot.EndsWith(('\' + $layout),[StringComparison]::OrdinalIgnoreCase)) {
+    $release = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..\..\.artifacts\20261124-release'))
+}
+$workspaceLayout = $false
+if ($release) {
+    $marker = [IO.Path]::Combine($release,'.medilisten-workspace-root.txt')
+    $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..\..'))
+    if ([IO.File]::Exists($marker)) {
+        $workspaceLayout = [string]::Equals([IO.File]::ReadAllText($marker).Trim(),$projectRoot,[StringComparison]::OrdinalIgnoreCase)
+    }
+}
 $appData = Join-Path $env:LOCALAPPDATA 'MediListen课堂专用'
 if (-not $HostRoot) {
-    if (Test-Path -LiteralPath $release -PathType Container) {
+    if ($workspaceLayout) {
         $HostRoot = Join-Path $release 'Windows主宿主-3.14.10'
     } else {
         $HostRoot = Join-Path $appData 'CPython-3.14.10-amd64'
@@ -15,7 +27,7 @@ if (-not $HostRoot) {
 }
 $HostRoot = [IO.Path]::GetFullPath($HostRoot)
 if (-not $EnvPath) {
-    if (Test-Path -LiteralPath $release -PathType Container) {
+    if ($workspaceLayout) {
         $EnvPath = Join-Path $release 'Windows-CPython314-专用'
     } else {
         $EnvPath = Join-Path $appData 'Windows-CPython314-专用'

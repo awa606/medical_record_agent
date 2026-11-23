@@ -143,7 +143,8 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
         server.close()
 
 
-def test_stale_revision_keeps_local_edit_until_doctor_loads_latest() -> None:
+@pytest.mark.parametrize("receipt", ["original", "unavailable", "newer"])
+def test_stale_revision_keeps_local_edit_until_doctor_loads_latest(receipt: str) -> None:
     server = RunningServer()
     try:
         with sync_playwright() as playwright:
@@ -171,6 +172,12 @@ def test_stale_revision_keeps_local_edit_until_doctor_loads_latest() -> None:
                   });
                 }"""
             )
+            if receipt == "unavailable":
+                page.route("**/export-readiness", lambda route: route.fulfill(status=503))
+                assert page.evaluate("refreshExportReadiness()") is None
+                page.unroute("**/export-readiness")
+            elif receipt == "newer":
+                page.evaluate("refreshExportReadiness()")
             page.click("#saveDraftButton")
             expect(page.locator(".record-edit-notice.conflict")).to_be_visible(timeout=15000)
             expect(page.locator('[data-record-field-input="chief_complaint"]')).to_have_value("本地尚未保存的医生修改")

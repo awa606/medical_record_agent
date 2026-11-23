@@ -173,6 +173,7 @@ const appState = {
   recordEditMode: false,
   recordEditDirty: false,
   recordEditBaseline: null,
+  recordEditRevision: null,
   recordEditConflict: null,
   recordEditRecovery: null,
   recordFieldResolutionModes: {},
@@ -3271,6 +3272,7 @@ function resetRecordEditState() {
   appState.recordEditMode = false;
   appState.recordEditDirty = false;
   appState.recordEditBaseline = null;
+  appState.recordEditRevision = null;
   appState.recordEditConflict = null;
   appState.recordFieldResolutionModes = {};
 }
@@ -3281,6 +3283,17 @@ function beginRecordEdit(fieldKey) {
     return;
   }
   if (!appState.recordEditMode) {
+    const revision = currentRevisionInfo(null);
+    if (!revision.revisionId) {
+      showToast("当前草稿缺少版本信息，请重新打开就诊后再修改。");
+      return;
+    }
+    const receipt = appState.currentExportReadiness;
+    appState.recordEditRevision = {
+      taskId: appState.currentTaskId,
+      revisionId: revision.revisionId,
+      contentHash: revision.contentHash || (exportReadinessMatches(receipt) ? receipt.content_hash : ""),
+    };
     appState.recordEditBaseline = cloneRecordFields(appState.currentRecordFields);
     appState.currentRecordFields = cloneRecordFields(appState.currentRecordFields);
     appState.recordEditMode = true;
@@ -8300,12 +8313,24 @@ async function saveDraftReview() {
       return;
     }
     setBusy(true, "正在保存修改到 SQLite...");
-    if (!appState.currentExportReadiness?.revision_id || !appState.currentExportReadiness?.content_hash) {
-      await refreshExportReadiness();
+    const revision = appState.recordEditRevision;
+    if (!revision?.revisionId || revision.taskId !== appState.currentTaskId) {
+      throw new Error("无法核实开始修改时的病历版本，请重新打开就诊。");
     }
-    const revision = appState.currentExportReadiness;
-    if (!revision?.revision_id || !revision?.content_hash) {
-      throw new Error("Unable to verify the current record revision; refresh and retry.");
+    if (!revision.contentHash) {
+      const receipt = await refreshExportReadiness();
+      if (appState.recordEditRevision !== revision || appState.currentTaskId !== revision.taskId) return;
+      if (!receipt?.content_hash || String(receipt.task_id) !== String(revision.taskId)) {
+        throw new Error("未取得本次修改的版本信息，请稍后重试。");
+      }
+      if (String(receipt.revision_id) !== String(revision.revisionId)) {
+        appState.recordEditConflict = { error_code: "stale_record_revision" };
+        appState.recordSaveNotice = "开始修改后病历已更新，请加载最新版本核对本地修改。";
+        setBusy(false);
+        renderAll();
+        return;
+      }
+      revision.contentHash = receipt.content_hash;
     }
     const submittedFields = cloneRecordFields(appState.currentRecordFields);
     appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/review`, {
@@ -8313,8 +8338,8 @@ async function saveDraftReview() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         fields: submittedFields,
-        expected_revision_id: revision.revision_id,
-        expected_content_hash: revision.content_hash,
+        expected_revision_id: revision.revisionId,
+        expected_content_hash: revision.contentHash,
         manual_takeover_fields: Object.entries(appState.recordFieldResolutionModes).filter(([, mode]) => mode === "doctor_entry").map(([key]) => key),
         source_corrected_fields: Object.entries(appState.recordFieldResolutionModes).filter(([, mode]) => mode === "source_correction").map(([key]) => key),
       }),
@@ -8358,7 +8383,7 @@ async function reloadLatestRecordRevision() {
   const taskId = appState.currentTaskId;
   const keys = ["currentRecordFields", "currentTask", "currentExportReadiness", "currentSteps",
     "currentDraft", "currentSafetyCheck", "currentQualityReport", "taskStatus",
-    "recordEditMode", "recordEditDirty", "recordEditBaseline", "recordEditConflict", "recordFieldResolutionModes",
+    "recordEditMode", "recordEditDirty", "recordEditBaseline", "recordEditRevision", "recordEditConflict", "recordFieldResolutionModes",
     "approvalRevisionId", "approvalRegularFieldsConfirmed", "approvalMissingDecisions",
     "approvalDiagnosisDecisions", "approvalHighRiskConfirmations"];
   const local = Object.fromEntries(keys.map((key) => [key, structuredClone(appState[key])]));
@@ -8389,6 +8414,7 @@ function reapplyLocalRecordChanges() {
   const recovery = appState.recordEditRecovery;
   if (!recovery || recovery.taskId !== appState.currentTaskId || appState.busy) return;
   beginRecordEdit();
+  if (!appState.recordEditMode) return;
   EDITABLE_FIELD_DEFS.forEach(([key]) => {
     if (recovery.resolutions?.[key]) appState.recordFieldResolutionModes[key] = recovery.resolutions[key];
     const value = recovery.fields[key]?.value || "";

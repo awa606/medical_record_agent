@@ -281,16 +281,10 @@ def test_itemized_approval_invalidates_after_edit_and_downloads_docx() -> None:
             page.wait_for_function("window.__MRA_APP_STATE__?.currentTask?.current_stage === 'approved'", timeout=15000)
             first_revision = int(stale_payload["revision_id"])
 
-            page.evaluate(
-                """
-                async () => {
-                  const fields = window.__MRA_APP_STATE__.currentRecordFields;
-                  fields.chief_complaint.value = `${fields.chief_complaint.value}，医生补充记录`;
-                  await saveDraftReview();
-                  await refreshExportReadiness();
-                }
-                """
-            )
+            page.click("#editRecordButton")
+            chief = page.locator('[data-record-field-input="chief_complaint"]')
+            chief.fill(chief.input_value() + "，医生补充记录")
+            page.click("#saveDraftButton")
             page.wait_for_function(
                 "(oldRevision) => Boolean(window.__MRA_APP_STATE__?.currentExportReadiness?.revision_id) && Number(window.__MRA_APP_STATE__.currentExportReadiness.revision_id) !== oldRevision",
                 arg=first_revision,

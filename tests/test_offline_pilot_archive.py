@@ -17,6 +17,15 @@ from scripts.alpha51_release_archive import COMPOSE
 
 
 class OfflineDeliveryTests(unittest.TestCase):
+    def test_offline_open_uses_restored_build_version(self):
+        from scripts.offline_pilot_archive import main
+
+        version = "ce240aba" * 5
+        write_json(self.root / "restore.private.json", {"port": 18123, "app_sha": version})
+        with patch("sys.argv", ["offline", "open", "--target", str(self.root)]), patch("webbrowser.open") as opened:
+            main()
+        opened.assert_called_once_with(f"http://127.0.0.1:18123/static/doctor.html?v={version}")
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

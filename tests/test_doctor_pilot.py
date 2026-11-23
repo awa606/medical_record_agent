@@ -185,7 +185,9 @@ def test_missing_ancillary_entry_does_not_claim_product_ready(registered, tmp_pa
     monkeypatch.setattr(pilot, "data_browser_status", lambda: {"available": False, "phase": "STOPPED"})
     result = pilot.entrypoint_status(config, {"phase": "MODEL_NOT_READY", "web_available": True, "model_ready": False})
     assert result["entrypoints"]["doctor"]["available"]
-    assert result["entrypoints"]["knowledge"]["url"].endswith("#admin")
+    url = f"http://127.0.0.1:{config['port']}/static/doctor.html?v={config['app_git_sha']}"
+    assert result["entrypoints"]["doctor"]["url"] == url
+    assert result["entrypoints"]["knowledge"]["url"] == url + "#admin"
     assert not result["entrypoints"]["data_browser"]["available"]
     assert not result["entrypoints"]["manual"]["available"]
     assert not result["model_ready"]

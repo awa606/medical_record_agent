@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api import (
@@ -87,6 +88,14 @@ app.include_router(security_router, prefix="/api")
 app.include_router(speaker_profiles_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
 app.include_router(runtime_router)
+
+
+@app.api_route("/static/doctor.html", methods=["GET", "HEAD"], include_in_schema=False)
+def doctor_workbench() -> FileResponse:
+    # Return the shell even when an older installation sends its validators.
+    return FileResponse(STATIC_DIR / "doctor.html", headers={"Cache-Control": "no-store"})
+
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

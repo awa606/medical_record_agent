@@ -317,6 +317,10 @@ def compose_command(target, state):
     return ('docker', 'compose', '-p', state['project'], '-f', str(target / 'compose.offline.yml'))
 
 
+def restored_workbench_url(state):
+    return f'http://127.0.0.1:{state["port"]}/static/doctor.html?v={state["app_sha"]}'
+
+
 def start(target):
     state = json.loads((target / 'restore.private.json').read_text(encoding='utf-8'))
     project = state['project']
@@ -325,7 +329,7 @@ def start(target):
     if not running:
         free_port(state['port'])
     run(*compose_command(target, state), 'up', '-d', '--no-build', '--pull', 'never', cwd=target)
-    print(f'医生入口：http://127.0.0.1:{state["port"]}/static/doctor.html（模型预热期间禁止生成）')
+    print(f'医生入口：{restored_workbench_url(state)}（模型预热期间禁止生成）')
 
 
 def restore(args):
@@ -503,8 +507,10 @@ def main():
                 webbrowser.open((a.target.resolve() / 'handbook' / 'manual.html').as_uri())
                 return
         state = json.loads((a.target / 'restore.private.json').read_text(encoding='utf-8'))
-        page = '/static/help/index.html' if a.action == 'help' else '/static/doctor.html'
-        webbrowser.open(f'http://127.0.0.1:{state["port"]}{page}')
+        if a.action == 'help':
+            webbrowser.open(f'http://127.0.0.1:{state["port"]}/static/help/index.html')
+        else:
+            webbrowser.open(restored_workbench_url(state))
 
 
 if __name__ == '__main__':

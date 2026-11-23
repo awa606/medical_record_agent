@@ -6,6 +6,7 @@ import sqlite3
 import pytest
 from playwright.sync_api import expect, sync_playwright
 
+from app.services.knowledge_store import DEFAULT_DISCLAIMER
 from tests.test_doctor_itemized_approval_playwright import (
     RunningServer,
     _login,
@@ -124,6 +125,19 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(detail).to_contain_text(document_id)
             expect(detail).to_contain_text("内容校验值（SHA256）")
             expect(detail.locator('a[href^="https://www.nhc.gov.cn/"]')).to_have_count(1)
+            expect(detail.get_by_role("note")).to_have_text(DEFAULT_DISCLAIMER)
+            # Older responses can omit the notice, and a source-specific notice
+            # can include literal angle brackets. Both must survive an empty result.
+            for response, expected_notice in (
+                ({"results": [], "disclaimer": "请核验来源 <测试>。"}, "请核验来源 <测试>。"),
+                ({"results": []}, DEFAULT_DISCLAIMER),
+            ):
+                page.click("#closeDrawerButton")
+                page.route("**/api/knowledge/retrieve", lambda route: route.fulfill(json=response))
+                page.locator('[data-knowledge-field="chief_complaint"]').first.press("Enter")
+                expect(detail.get_by_role("note")).to_have_text(expected_notice)
+                expect(detail).to_contain_text("没有找到")
+                page.unroute("**/api/knowledge/retrieve")
             browser.close()
     finally:
         server.close()

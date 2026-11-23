@@ -3477,9 +3477,12 @@ function renderFieldKnowledgeSearch(key) {
   if (state.status === "loading") return `<div class="empty-state">正在查询“${escapeHtml(title)}”相关依据...</div>`;
   if (state.status === "failed") return `<div class="empty-state">${escapeHtml(state.error || "知识查询失败")}</div>`;
   const results = state.results || [];
-  return results.length
-    ? results.map((item) => detailSection(item.title || item.source_id || "知识来源", renderKnowledgeResultDetails(item))).join("")
-    : `<div class="empty-state">没有找到与“${escapeHtml(title)}”匹配的已启用知识来源。</div>`;
+  const disclaimer = state.disclaimer || "相关知识参考仅用于医生人工核验，不作为自动诊断或治疗建议。";
+  const notice = `<p class="safety-strip" role="note">${escapeHtml(disclaimer)}</p>`;
+  if (!results.length) {
+    return `<div>${notice}<div class="empty-state">没有找到与“${escapeHtml(title)}”匹配的已启用知识来源。</div></div>`;
+  }
+  return notice + results.map((item) => detailSection(item.title || item.source_id || "知识来源", renderKnowledgeResultDetails(item))).join("");
 }
 
 async function retrieveKnowledgeForField(key) {
@@ -3503,6 +3506,7 @@ async function retrieveKnowledgeForField(key) {
     appState.fieldKnowledgeSearch[key] = {
       status: "ready",
       results: payload.results || [],
+      disclaimer: (payload.disclaimer || "").trim(),
       error: "",
       retrievalMode: payload.retrieval_mode || "",
     };

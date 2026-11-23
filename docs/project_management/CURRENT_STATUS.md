@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-23T18:17:17.050Z`
-- Source hash: `d754f346c778fbc7a3ec964f4bf8c054b970bb9efec0100534bd81a58ae55dda`
+- Updated at: `2026-11-23T18:51:15.037Z`
+- Source hash: `5ecbb9dc3f068e48d0c19c47b9e6f3647ff4a90051687f0127f6739f8fb84d05`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@0131464d8828559edd38001938b70538c62da61b`
+- Repo: `codex/ui-hospital-record-v1@b9009718b3a174f2e78474b16e7c49759227c397`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: 继续核验真实授权门诊及独立医生操作，复查旧病历来源显示、知识范围拒答和音频门禁。
-- Parallel waiting task: 课程离线软件与医生合成案例盲评文件可交付；等待正式评分、目标医生结果和院内接口环境。
+- Single next task: 在获准的单科室配对样本上盲评首稿、医生修订及来源准确度；独立验证知识条文与真实语音角色。
+- Parallel waiting task: 继续项目内可复查的工程门禁；待正式教师评分、目标医生盲评与院方受控接口条件。
 
 ## Manual Actions
 

@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-23T16:53:56.405Z`
-- Source hash: `1e3a27bd3ad15b12ac6c64f300eb9e51637ebededed0e9fe6ca1e4347f7f1528`
+- Updated at: `2026-11-23T17:13:14.906Z`
+- Source hash: `2a280610e3eb59d8634797f5904ec0b79197680d1c4c7ce2c772bfa7bc217df0`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@4de8ff18dd72d73c91174006294f16ae4b8ad385`
+- Repo: `codex/ui-hospital-record-v1@c34618183f3bdfd6ee972b932a17b05979daffde`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -55,7 +55,7 @@
 ## Next
 
 - Single next task: 继续核验真实授权音频、目标医生操作和候选部署的三条主路径，按原任务逐项留证。
-- Parallel waiting task: 结课包完成单机两类操作系统合成病例回放和跨系统冷备复验。语音首稿存在时间失真，科室数据授权、独立医生审阅及院内联调待落实。
+- Parallel waiting task: 已验证固定课堂包 Windows 离线首次启动、双系统签署与跨系统冷备；待独立教师、医生、医院数据及真实接口审核。
 
 ## Manual Actions
 

@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-23T20:27:29.817Z`
-- Source hash: `5ffb7946ac5477eaf16867baed76cf87de7090729a7f973a9421d1efe7a73920`
+- Updated at: `2026-11-23T21:15:16.614Z`
+- Source hash: `8ae1606687d6c9ebb8e1fcb936c7331b2a3cd1b8eefc2fc4c18c1bf5e50008a0`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@50638f2dbbcd9fb2f84ecc2114a661df3a1ed693`
+- Repo: `codex/ui-hospital-record-v1@81472ef977b5fae7d1dc72aa032aa4c6a98b64f0`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 复核病程时序、主体和不确定性对首稿的影响，收回目标医生独立评审和获权单科室配对素材。
+- Single next task: 以首稿的主诉、病程与原话作为重点，回收单科室医生独立事实记录和首稿盲评，并核定真实配对数据授权。
 - Parallel waiting task: 继续项目内可复查的工程门禁；待正式教师评分、目标医生盲评与院方受控接口条件。
 
 ## Manual Actions

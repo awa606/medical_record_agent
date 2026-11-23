@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-11-23T20:27:29.817Z",
-  "source_hash": "5ffb7946ac5477eaf16867baed76cf87de7090729a7f973a9421d1efe7a73920",
+  "updated_at": "2026-11-23T21:15:16.614Z",
+  "source_hash": "8ae1606687d6c9ebb8e1fcb936c7331b2a3cd1b8eefc2fc4c18c1bf5e50008a0",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "50638f2dbbcd9fb2f84ecc2114a661df3a1ed693",
+  "repo_sha": "81472ef977b5fae7d1dc72aa032aa4c6a98b64f0",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/ui-hospital-record-v1",
   "active_pr": {
@@ -93,7 +93,7 @@
     }
   },
   "purchase_decision": "DEFERRED",
-  "next_task": "复核病程时序、主体和不确定性对首稿的影响，收回目标医生独立评审和获权单科室配对素材。",
+  "next_task": "以首稿的主诉、病程与原话作为重点，回收单科室医生独立事实记录和首稿盲评，并核定真实配对数据授权。",
   "parallel_waiting_task": "继续项目内可复查的工程门禁；待正式教师评分、目标医生盲评与院方受控接口条件。",
   "manual_actions": [
     "在实际教室投影并由授课教师或目标医生独立试用后登记意见。"
@@ -224,7 +224,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "5de250a9cff1e58bdab9ab743d96c1387032029cb8d88f29e543889fde4389ad",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "608e3d3afec2ff454fecccb70a6de99162dd531027139e3c30b479ab1071dbae",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -307,6 +307,7 @@
     "docs/evidence/20261124_multisource_review.md": "4562f3aabc8c101ccb3998af6173dfbeba4e1849cb7a48b48399688bbddc6822",
     "docs/evidence/20261124_original_pdf_restore.md": "d24cfade5e09baafda13a045620977dfa31a926ec4d6fdc8da8bf9b830d2c0e4",
     "docs/evidence/20261124_six_first_responses.md": "66e1c223d5638cf6c9577341a57757a5bf4ca29fcde22f0fd98cf97aabc9dbe3",
+    "docs/evidence/20261124_temporal_source_review.md": "9a63ca12c3fef4f20d9ed40ed0878a62aeed1cf14a3d9d8e3614cb6716b2442c",
     "docs/evidence/20261124_two_voice_review.md": "0d2841f6f2d95678009c34a36ad2c621b7a5a9e559fe397f36b6709005e6595a",
     "experiments/course-defense-20261118/README.md": "b5ff5851ae9d5afefd982e0fc5052033551500ffef2853c1b39a5846299dd86f",
     "experiments/course-defense-20261118/verify_cold_transfer.py": "bbca787cf04ee2f3237f9fab3ca2849f97897c8d2267c767abc2a3a717c51ad4",

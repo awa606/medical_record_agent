@@ -4598,6 +4598,24 @@ async function buildTaskApprovalPayload() {
   return payload;
 }
 
+function renderRecoveryFieldChanges(recovery, savedFields) {
+  return EDITABLE_FIELD_DEFS.map(([key, title]) => {
+    const originalField = recovery.baseline?.[key];
+    const original = String(originalField?.value ?? "");
+    const local = String(recovery.fields[key]?.value ?? "");
+    if (local === original) return "";
+    const savedField = savedFields?.[key];
+    const saved = String(savedField?.value ?? "");
+    const label = escapeHtml(title);
+    const localText = escapeHtml(local || "（留空）");
+    if (originalField && savedField && Object.hasOwn(originalField, "value") && Object.hasOwn(savedField, "value")
+        && saved !== original && saved !== local) {
+      return `<div><strong>${label}</strong><dl class="reference-prose"><dt>最新已存</dt><dd class="reference-prose">${escapeHtml(saved || "（留空）")}</dd><dt>本地未保存</dt><dd class="reference-prose">${localText}</dd></dl></div>`;
+    }
+    return `<p><strong>${label}</strong>：${localText}</p>`;
+  }).join("");
+}
+
 function renderFields() {
   const fields = activeRecordFields();
   const isPreview = isRecordPreviewActive();
@@ -4741,7 +4759,7 @@ function renderFields() {
     ? `<div class="record-version"><span role="status">当前版本 ${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"}${isEditing ? " · 编辑中，尚未保存" : ""}</span>${detailButton("history:record", "历史版本")}${appState.recordSaveNotice ? `<span>${escapeHtml(appState.recordSaveNotice)}</span>` : ""}</div>` : "";
   const recovery = appState.recordEditRecovery;
   const recoveryNotice = recovery && recovery.taskId === appState.currentTaskId
-    ? `<details class="record-recovery" ${isEditing ? "open" : ""}><summary>本次冲突前的本地修改 · 尚未保存</summary><p>${isEditing ? "诊断或编码已发生变化，请对照以下本地内容手动核对。" : "当前显示服务器最新版本。请先核对原有修改。"}</p>${EDITABLE_FIELD_DEFS.filter(([key]) => String(recovery.fields[key]?.value || "") !== String(recovery.baseline?.[key]?.value || "")).map(([key, title]) => `<p><strong>${escapeHtml(title)}</strong>：${escapeHtml(recovery.fields[key]?.value || "（留空）")}</p>`).join("")}${changedDiagnosisCodes(recovery.fields, recovery.baseline).map(item => `<p>${escapeHtml(item.name)} ICD-10：${escapeHtml(item.from || "未填写")} → ${escapeHtml(item.to || "未填写")}</p>`).join("")}${isEditing ? "" : '<button type="button" data-record-reapply>将这些修改带入当前版本继续编辑</button>'}</details>` : "";
+    ? `<details class="record-recovery" ${isEditing ? "open" : ""}><summary>本次冲突前的本地修改 · 尚未保存</summary><p>${isEditing ? "诊断或编码已发生变化，请对照以下本地内容手动核对。" : "当前显示服务器最新版本。请先核对原有修改。"}</p>${renderRecoveryFieldChanges(recovery, appState.currentTask?.result_json?.fields)}${changedDiagnosisCodes(recovery.fields, recovery.baseline).map(item => `<p>${escapeHtml(item.name)} ICD-10：${escapeHtml(item.from || "未填写")} → ${escapeHtml(item.to || "未填写")}</p>`).join("")}${isEditing ? "" : '<button type="button" data-record-reapply>将这些修改带入当前版本继续编辑</button>'}</details>` : "";
   const review = recordReviewSummary(fields, isApprovedDisplay);
   const clinicalSections = [
     ["history", "病史", ["chief_complaint", "present_illness", "accompanying_symptoms"]],

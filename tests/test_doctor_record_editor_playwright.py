@@ -156,11 +156,13 @@ def test_stale_revision_keeps_local_edit_until_doctor_loads_latest(receipt: str)
             editor = page.locator('[data-record-field-input="chief_complaint"]')
             editor.fill("本地尚未保存的医生修改")
 
+            saved_chief = "另一窗口已保存 <span>核对</span>" if receipt == "newer" else None
             page.evaluate(
-                """async () => {
+                """async (savedChief) => {
                   const taskId = window.__MRA_APP_STATE__.currentTaskId;
                   const task = await fetch(`/api/tasks/${taskId}`).then((response) => response.json());
                   const readiness = await fetch(`/api/tasks/${taskId}/export-readiness`).then((response) => response.json());
+                  if (savedChief) task.result_json.fields.chief_complaint.value = savedChief;
                   await api(`/api/tasks/${taskId}/review`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -170,7 +172,8 @@ def test_stale_revision_keeps_local_edit_until_doctor_loads_latest(receipt: str)
                       expected_content_hash: readiness.content_hash
                     })
                   });
-                }"""
+                }""",
+                saved_chief,
             )
             if receipt == "unavailable":
                 page.route("**/export-readiness", lambda route: route.fulfill(status=503))
@@ -195,7 +198,14 @@ def test_stale_revision_keeps_local_edit_until_doctor_loads_latest(receipt: str)
             page.wait_for_function("!window.__MRA_APP_STATE__.recordEditMode", timeout=15000)
             expect(page.locator("[data-record-field-input]")).to_have_count(0)
             page.locator(".record-recovery summary").click()
-            expect(page.locator(".record-recovery")).to_contain_text("本地尚未保存的医生修改")
+            recovery = page.locator(".record-recovery")
+            expect(recovery).to_contain_text("本地尚未保存的医生修改")
+            if saved_chief:
+                expect(recovery.locator("dt")).to_have_text(["最新已存", "本地未保存"])
+                expect(recovery.locator("dd")).to_have_text([saved_chief, "本地尚未保存的医生修改"])
+                expect(recovery.locator("dd span")).to_have_count(0)
+            else:
+                expect(recovery.locator("dt")).to_have_count(0)
             page.click("[data-record-reapply]")
             expect(page.locator('[data-record-field-input="chief_complaint"]')).to_have_value("本地尚未保存的医生修改")
             expect(page.locator("#confirmFieldsButton")).to_be_disabled()

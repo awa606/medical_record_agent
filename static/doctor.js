@@ -4580,7 +4580,7 @@ function recordHistoryMarkup(view) {
     ${rows}${assessmentRow}
     ${unchangedRows.length ? `<details class="history-unchanged history-evidence"><summary>展开 ${unchangedRows.length} 项内容与采集状态相同的字段</summary>${unchangedRows.join("")}</details>` : ""}
     ${diagnoses.length ? `<details class="history-evidence"><summary>该版本候选诊断（历史记录）</summary><ul>${diagnoses.map(item => `<li>${escapeHtml(item.name || "未命名候选")}</li>`).join("")}</ul><p>历史候选不等于已确认诊断，未从当前病历补写。</p></details>` : ""}
-    ${selected.draft_text ? `<details class="history-evidence"><summary>该版本保存的病历全文</summary><p class="history-value">${escapeHtml(selected.draft_text)}</p></details>` : ""}
+    ${selected.draft_text ? `<details class="history-evidence"><summary>查看保存时的病历正文</summary><p>各栏记录和原文引用可在上方逐项核对。</p><p class="history-value">${escapeHtml(selected.draft_text)}</p></details>` : ""}
   </div>`;
 }
 

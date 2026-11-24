@@ -6,6 +6,17 @@ from app.schemas import MedicalField, MedicalRecordFields, SafetyCheckResult
 PATIENT_FIELD_KEYS = ("chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms", "past_history", "allergy_history", "physical_exam")
 
 
+# These optional clinical sections have their own fields in the doctor's editor.
+# Suggested treatment and patient registration details are outside the clinical draft.
+OPTIONAL_CLINICAL_FIELDS = (
+    ("personal_history", "个人史"),
+    ("marital_history", "婚育史"),
+    ("family_history", "家族史"),
+    ("auxiliary_exam", "辅助检查"),
+    ("treatment_notes", "医生处理意见"),
+)
+
+
 def supported_field_keys(fields: MedicalRecordFields) -> list[str]:
     """Count supported draft fields, never rejected nonempty model values."""
     return [key for key in PATIENT_FIELD_KEYS
@@ -25,6 +36,12 @@ def _field_text(field: MedicalField, *, physical_exam: bool = False) -> str:
         missing = "、".join(field.missing_elements or ["待补充信息"])
         return f"{field.value}（部分完成，仍需补充：{missing}）"
     return field.value or "未提及，待补充"
+
+
+def _optional_section(label: str, field: MedicalField) -> str:
+    # Continuation lines stay inside the same clinical section.
+    content = "\n  ".join(_field_text(field).splitlines())
+    return f"{label}：{content}"
 
 
 def _items_text(items: list[str]) -> str:
@@ -55,6 +72,12 @@ def render_draft(fields: MedicalRecordFields | dict) -> str:
 
     candidate_text = "\n".join(diagnosis_lines) if diagnosis_lines else "未提及，待医生确认"
 
+    optional_lines = []
+    for key, label in OPTIONAL_CLINICAL_FIELDS:
+        field = getattr(record, key)
+        if field.status == "conflicting" or (not field.missing and str(field.value or "").strip()):
+            optional_lines.append(_optional_section(label, field))
+
     return "\n".join(
         [
             "门诊病历草稿",
@@ -65,6 +88,7 @@ def render_draft(fields: MedicalRecordFields | dict) -> str:
             f"既往史：{_field_text(record.past_history)}",
             f"过敏史：{_field_text(record.allergy_history)}",
             f"查体：{_field_text(record.physical_exam, physical_exam=True)}",
+            *optional_lines,
             "候选诊断：",
             candidate_text,
         ]
@@ -122,6 +146,24 @@ def allergy_treatment_errors(record: MedicalRecordFields) -> list[str]:
     return errors
 
 
+def _contains_unsupported_exam(draft: str, auxiliary: MedicalField) -> bool:
+    if "生命体征平稳" in draft or "查体无异常" in draft:
+        return True
+    if "无明显异常" not in draft:
+        return False
+
+    # Only a negative report recorded in its own structured section can account
+    # for this otherwise ambiguous phrase. Free text elsewhere is still checked.
+    section = _optional_section("辅助检查", auxiliary)
+    physical_context = re.search(r"查体|体格|体征|体检(?!中心|机构|报告|资料)|听诊|触诊|叩诊|视诊", section)
+    if auxiliary.status in {"complete", "partial"} and not physical_context:
+        # Match complete lines exactly, including indented report continuations.
+        # If the text occurs elsewhere as well, that occurrence stays visible to the check.
+        bounded = "\n" + draft + "\n"
+        return "无明显异常" in bounded.replace("\n" + section + "\n", "\n", 1)
+    return True
+
+
 def check_draft_safety(
     draft_text: str,
     fields: MedicalRecordFields | dict,
@@ -132,7 +174,7 @@ def check_draft_safety(
     errors: list[str] = []
     warnings: list[str] = []
 
-    for key in ("chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms", "past_history", "allergy_history", "physical_exam"):
+    for key in PATIENT_FIELD_KEYS + tuple(key for key, _ in OPTIONAL_CLINICAL_FIELDS):
         if getattr(record, key).status == "conflicting":
             errors.append(f"{key}存在证据冲突，必须先修正。")
 
@@ -149,8 +191,7 @@ def check_draft_safety(
     if re.search(r"诊断为|确诊为|最终诊断", draft_text):
         errors.append("草稿存在把候选诊断写成最终诊断的风险。")
 
-    fabricated_phrases = ["生命体征平稳", "查体无异常", "无明显异常"]
-    if record.physical_exam.missing and any(phrase in draft_text for phrase in fabricated_phrases):
+    if record.physical_exam.missing and _contains_unsupported_exam(draft_text, record.auxiliary_exam):
         errors.append("查体未提及时不得编造体征或阴性结果。")
 
     if allow_export:

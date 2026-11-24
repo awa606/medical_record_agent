@@ -76,6 +76,7 @@ const appState = {
   roleReviewSaving: false,
   speakerRoleCorrections: {},
   segmentReviewCorrections: {},
+  sessionRoleReview: null,
   speakerAssignments: [],
   speakerMappingRequired: false,
   lastSpeakerMergeSnapshot: null,
@@ -5548,11 +5549,18 @@ function roleQualityReasonText(asr = appState.currentAsrResult) {
   return "说话人角色已自动识别。";
 }
 
+function currentRoleReviewSource() {
+  const live = appState.sessionRoleReview;
+  return live && live.sessionId === appState.currentAsrSessionId && live.audioId === appState.currentAudioId
+    ? live : appState.currentAsrResult;
+}
+
 function pendingSpeakerAssignments() {
-  const assignments = appState.currentAsrResult?.speaker_assignments || appState.speakerAssignments || [];
+  const source = currentRoleReviewSource();
+  const assignments = source?.speaker_assignments || appState.speakerAssignments || [];
   const pending = assignments.filter((item) => speakerAssignmentNeedsReview(item));
   const pendingBySpeaker = new Map(pending.map((item) => [item.speaker_id, item]));
-  const quality = appState.currentAsrResult?.role_quality || {};
+  const quality = source?.role_quality || {};
   [
     ...(quality.pending_confirmation || []),
     ...(quality.unresolved_assignments || []),
@@ -6077,7 +6085,9 @@ async function restoreAsrSession(sessionId, context) {
   if (appState.currentTaskId && (!appState.currentAudioId || String(appState.currentAudioId) !== String(session.audio_id))) {
     throw new Error("录音与当前病历不对应。已保留病历，请从工作台重新打开该就诊。");
   }
-    appState.currentAsrSessionId = session.session_id;
+    const hasSavedResult = ["stream_ready", "reviewed"].includes(session.status);
+    // A historical draft can render before the live session's role review arrives.
+    if (!appState.currentTaskId || !hasSavedResult) appState.currentAsrSessionId = session.session_id;
     appState.currentAudioId = session.audio_id;
     appState.uploadedFilename = session.filename || "已恢复音频";
     appState.selectedEngine = session.engine || appState.selectedEngine;
@@ -6087,13 +6097,23 @@ async function restoreAsrSession(sessionId, context) {
       audio.src = appState.audioMediaUrl;
       audio.load();
     }
-    if (["stream_ready", "reviewed"].includes(session.status)) {
+    if (hasSavedResult) {
       const result = await readApi(`/api/asr/sessions/${encodeURIComponent(sessionId)}/result`);
       if (!current()) return;
+      appState.currentAsrSessionId = session.session_id;
       // A saved task carries the evidence bound to its revision, including roles.
-      if (!appState.currentTaskId) {
+      if (appState.currentTaskId) {
+        // Only the editable speaker controls follow the current audio review.
+        appState.sessionRoleReview = { sessionId, audioId: session.audio_id,
+          speaker_assignments: result.speaker_assignments, role_quality: result.role_quality };
+      } else {
         appState.currentAsrResult = result;
         appState.liveTranscriptSegments = result.segments || [];
+      }
+      if ($("drawer")?.getAttribute?.("aria-hidden") === "false" && !$("detailPanel")?.hidden && !appState.roleReviewDirty) {
+        const content = $("detailDrawerContent");
+        const review = content?.querySelector("[data-transcript-review-target]");
+        if (review) content.innerHTML = renderTranscriptDetailContent(review.dataset.transcriptReviewTarget);
       }
       appState.audioDurationSeconds = Number(result.duration || 0);
       appState.asrAudioDurationSeconds = Number(result.duration || 0);
@@ -6455,6 +6475,11 @@ function renderTranscriptDetailContent(target = "all") {
   const speakerGroups = transcriptSpeakerGroups(rows);
   const pendingSpeakerIds = new Set(pendingSpeakerAssignments().map((item) => item.speaker_id));
   const needsChoice = (group) => pendingSpeakerIds.has(group.speakerId) || group.reviewConflict || !group.role;
+  const selectedRole = (group) => {
+    if (Object.hasOwn(appState.speakerRoleCorrections, group.speakerId)) return appState.speakerRoleCorrections[group.speakerId];
+    if (group.savedPending) return "待确认";
+    return needsChoice(group) ? "" : group.role;
+  };
   const visibleSpeakerGroups = identityReviewMode ? speakerGroups.filter(needsChoice) : speakerGroups;
   const speakerAliases = buildSpeakerAliasMap(rows);
   const reviewHint = canEdit
@@ -6486,10 +6511,10 @@ function renderTranscriptDetailContent(target = "all") {
       <div class="speaker-role-groups">
         ${visibleSpeakerGroups.map((group) => `
           <div class="speaker-role-group">
-            <span><strong>${escapeHtml(group.displayName)}</strong><small>${escapeHtml(group.speakerId)} · ${group.count} 段</small></span>
+            <span><strong>${escapeHtml(group.displayName)}</strong><small>${escapeHtml(group.speakerId)} · ${group.count} 段${group.savedPending ? " · 已登记待核" : ""}</small></span>
             <select data-speaker-role-select data-speaker-id="${escapeHtml(group.speakerId)}" aria-label="设置${escapeHtml(group.displayName)}角色"
               ${group.reviewedRoles.size > 1 ? "disabled" : ""}>
-              ${renderRoleOptions(appState.speakerRoleCorrections[group.speakerId] ?? (needsChoice(group) ? "" : group.role), group.reviewedRoles.keys().next().value)}
+              ${renderRoleOptions(selectedRole(group), group.reviewedRoles.keys().next().value)}
             </select>
             ${speakerReviewEvidence(group)}
             <div class="speaker-merge-controls">
@@ -6503,7 +6528,7 @@ function renderTranscriptDetailContent(target = "all") {
       </div>
     `) : identityReviewMode ? detailSection("身份确认", `<div class="empty-state">当前没有需要人工确认的说话人。</div>`) : ""}
     ${detailSection(identityReviewMode ? "更正转写（可选）" : "身份与文本更正", `
-      <div class="transcript-review-list">
+      <div class="transcript-review-list" data-transcript-review-target="${escapeHtml(String(target))}">
         ${rows.map((item) => `
           <div class="transcript-review-row ${Number.isFinite(selectedIndex) && selectedIndex === item.index ? "focus" : ""}" data-segment-index="${item.index}">
             <div class="transcript-review-meta">
@@ -7672,6 +7697,7 @@ function resetRoleReviewState() {
   appState.pendingGenerateAfterRoleReview = false;
   appState.speakerRoleCorrections = {};
   appState.segmentReviewCorrections = {};
+  appState.sessionRoleReview = null;
   appState.speakerAssignments = [];
   appState.speakerMappingRequired = false;
 }
@@ -8389,6 +8415,7 @@ function updateSpeakerRole(speakerId, role) {
     return;
   }
   appState.speakerRoleCorrections[speakerId] = role;
+  if (role === "待确认") appState.pendingGenerateAfterRoleReview = false;
   appState.roleReviewDirty = true;
   resetRecordPreview();
   renderAll();
@@ -8407,11 +8434,13 @@ function speakerMergeSnapshot() {
     speakerMappingRequired: appState.speakerMappingRequired,
     speakerRoleCorrections: cloneStateValue(appState.speakerRoleCorrections),
     segmentReviewCorrections: cloneStateValue(appState.segmentReviewCorrections),
+    sessionRoleReview: cloneStateValue(appState.sessionRoleReview),
     roleReviewDirty: appState.roleReviewDirty,
   };
 }
 
 function applyAsrResultUpdate(asrResult = {}) {
+  appState.sessionRoleReview = null;
   appState.currentAsrResult = asrResult;
   appState.currentAudioId = asrResult.audio_id || appState.currentAudioId;
   appState.liveTranscriptSegments = asrResult.segments || [];
@@ -8477,6 +8506,7 @@ function undoLastSpeakerMerge() {
   appState.speakerMappingRequired = Boolean(snapshot.speakerMappingRequired);
   appState.speakerRoleCorrections = cloneStateValue(snapshot.speakerRoleCorrections) || {};
   appState.segmentReviewCorrections = cloneStateValue(snapshot.segmentReviewCorrections) || {};
+  appState.sessionRoleReview = cloneStateValue(snapshot.sessionRoleReview);
   appState.roleReviewDirty = Boolean(snapshot.roleReviewDirty);
   appState.lastSpeakerMergeSnapshot = null;
   resetRecordPreview();
@@ -8486,7 +8516,7 @@ function undoLastSpeakerMerge() {
 
 function transcriptSpeakerGroups(rows = transcriptRows()) {
   const groups = new Map();
-  const assignments = new Map((appState.currentAsrResult?.speaker_assignments || []).map((item) => [item.speaker_id, item.role]));
+  const assignments = new Map((currentRoleReviewSource()?.speaker_assignments || []).map((item) => [item.speaker_id, item]));
   rows.forEach((row) => {
     if (!row.speakerId) return;
     const current = groups.get(row.speakerId) || {
@@ -8509,11 +8539,13 @@ function transcriptSpeakerGroups(rows = transcriptRows()) {
     const role = Object.entries(roleCounts)
       .filter(([name]) => FINAL_CLINICAL_ROLES.includes(name))
       .sort((left, right) => right[1] - left[1])[0]?.[0] || "";
+    const assignment = assignments.get(group.speakerId);
     return {
       ...group,
       role,
-      reviewConflict: group.reviewedRoles.size > 1 || (group.reviewedRoles.size > 0 && isClinicalRole(assignments.get(group.speakerId))
-        && !group.reviewedRoles.has(assignments.get(group.speakerId))),
+      savedPending: assignment?.source === "manual_draft" && assignment.role === "待确认" && assignment.requires_confirmation,
+      reviewConflict: group.reviewedRoles.size > 1 || (group.reviewedRoles.size > 0 && isClinicalRole(assignment?.role)
+        && !group.reviewedRoles.has(assignment.role)),
       displayName: `说话人 ${String.fromCharCode(65 + Math.min(index, 25))}`,
     };
   });
@@ -8538,7 +8570,8 @@ function speakerReviewEvidence(group) {
 
 function roleReviewRequired() {
   if (!appState.currentAsrResult) return false;
-  return roleQualityNeedsIdentityReview(appState.currentAsrResult)
+  return Object.values(appState.speakerRoleCorrections).includes("待确认")
+    || roleQualityNeedsIdentityReview(currentRoleReviewSource())
     || (roleQualityStatus() === "passed" && !speakerRolesComplete())
     || pendingSpeakerAssignments().length > 0;
 }
@@ -8562,10 +8595,10 @@ function focusNextActionPanel() {
 }
 
 function speakerRolesForReviewSave() {
-  return Object.entries(appState.speakerRoleCorrections).filter(([, role]) => isClinicalRole(role)).map(([speakerId, role]) => ({
+  return Object.entries(appState.speakerRoleCorrections).filter(([, role]) => isClinicalRole(role) || role === "待确认").map(([speakerId, role]) => ({
     speaker_id: speakerId,
     role,
-    reviewed_by_doctor: Boolean(role),
+    reviewed_by_doctor: isClinicalRole(role),
   }));
 }
 
@@ -8578,25 +8611,29 @@ async function saveRoleReview({ silent = false } = {}) {
   const pendingIds = new Set(pendingSpeakerAssignments().map((item) => item.speaker_id));
   const groups = transcriptSpeakerGroups();
   const speakerRoles = speakerRolesForReviewSave();
+  const savingPending = speakerRoles.some((item) => !item.reviewed_by_doctor);
   const edits = Object.entries(appState.segmentReviewCorrections);
   const conflict = groups.find((group) => {
     const role = appState.speakerRoleCorrections[group.speakerId];
     return isClinicalRole(role)
       ? [...group.reviewedRoles.keys()].some((reviewed) => reviewed !== role)
-      : group.reviewedRoles.size > 1 && !edits.length;
+      : group.reviewedRoles.size > 1 && !edits.length && !savingPending;
   });
-  const unresolved = groups.filter((group) => pendingIds.has(group.speakerId) && !isClinicalRole(appState.speakerRoleCorrections[group.speakerId]));
+  const unresolved = groups.filter((group) => pendingIds.has(group.speakerId) && !group.savedPending && !isClinicalRole(appState.speakerRoleCorrections[group.speakerId]));
   if (conflict) {
     if (!silent) showToast(`${conflict.displayName} 的段级身份存在冲突，请回听对应音段。`);
     return appState.currentAsrResult;
   }
-  if (!edits.length && (unresolved.length || !speakerRoles.length)) {
+  if (!edits.length && ((!savingPending && unresolved.length) || !speakerRoles.length)) {
     if (!silent) showToast(unresolved.length ? `请明确选择 ${unresolved.length} 位说话人的身份。` : "没有待保存的更正。");
     return appState.currentAsrResult;
   }
 
   syncAsrTextFromSegments();
   appState.roleReviewSaving = true;
+  const context = captureReadContext();
+  const sessionId = appState.currentAsrSessionId;
+  const current = () => isCurrentRead(context) && appState.currentAsrSessionId === sessionId;
   renderAll();
   let savedResult = appState.currentAsrResult;
   let pendingCount = 0;
@@ -8606,10 +8643,11 @@ async function saveRoleReview({ silent = false } = {}) {
     const segments = edits.map(([index, patch]) => {
       const segment = appState.currentAsrResult.segments[Number(index)];
       const groupRole = appState.speakerRoleCorrections[segmentSpeakerId(segment)];
-      return { index: Number(index), ...patch, reviewed_by_doctor: Boolean(segment.reviewed_by_doctor || isClinicalRole(groupRole)) };
+      const reviewed = groupRole === "待确认" ? individuallyReviewedRole(segment) : segment.reviewed_by_doctor || isClinicalRole(groupRole);
+      return { index: Number(index), ...patch, reviewed_by_doctor: Boolean(reviewed) };
     });
 
-    const response = await api(`/api/asr/sessions/${appState.currentAsrSessionId}/result`, {
+    const response = await api(`/api/asr/sessions/${sessionId}/result`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -8618,7 +8656,9 @@ async function saveRoleReview({ silent = false } = {}) {
         speaker_roles: speakerRoles,
       }),
     });
+    if (!current()) return appState.currentAsrResult;
     appState.currentAsrResult = response.asr_result;
+    appState.sessionRoleReview = null;
     appState.speakerAssignments = response.asr_result.speaker_assignments || [];
     appState.speakerMappingRequired = appState.speakerAssignments.some(
       (item) => item.requires_confirmation || !item.role,
@@ -8629,10 +8669,15 @@ async function saveRoleReview({ silent = false } = {}) {
     appState.speakerRoleCorrections = {};
     appState.segmentReviewCorrections = {};
     savedResult = response.asr_result;
+    if (speakerRoles.length && context.taskId && context.revisionId) {
+      await refreshExportReadiness();
+      if (!current()) return appState.currentAsrResult;
+    }
     pendingCount = roleReviewPendingCount();
     qualityPassed = roleQualityPassed(savedResult);
     shouldAutoGenerate = Boolean(
       !silent
+        && !savingPending
         && appState.pendingGenerateAfterRoleReview
         && !pendingCount
         && qualityPassed

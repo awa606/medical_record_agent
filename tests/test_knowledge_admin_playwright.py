@@ -64,14 +64,26 @@ def test_admin_import_test_search_and_enable_use_live_api() -> None:
 
                 row = page.locator('[data-knowledge-document*="nhc-record-ui"]')
                 expect(row).to_be_visible()
-                expect(row).to_contain_text("停用")
+                expect(row).to_contain_text("未启用")
+                page.set_viewport_size({"width": 390, "height": 844})
+                actions = row.locator(".knowledge-document-actions").bounding_box()
+                assert actions and 0 <= actions["x"] < actions["x"] + actions["width"] <= 390
+                assert page.locator(".knowledge-table-wrap").evaluate("el => el.scrollWidth === el.clientWidth")
+                row.locator('[data-knowledge-action="edit"]').focus()
+                page.keyboard.press("Enter")
+                expect(page.locator("#knowledgeDetailDialog")).to_contain_text("ui-v1")
+                page.keyboard.press("Escape")
+                expect(row.locator('[data-knowledge-action="edit"]')).to_be_focused()
+                page.set_viewport_size({"width": 1440, "height": 1000})
                 row.locator('[data-knowledge-action="detail"]').click()
                 expect(page.locator("#knowledgeDetailDialog")).to_contain_text("使用 / 索引范围")
+                expect(page.locator("#knowledgeDetailDialog")).to_contain_text("导入此版本时单独登记")
                 page.keyboard.press("Escape")
                 expect(row.locator('[data-knowledge-action="detail"]')).to_be_focused()
 
                 row.locator('[data-knowledge-action="edit"]').click()
-                expect(page.locator("#knowledgeDetailDialog")).to_contain_text("同来源的所有版本")
+                expect(page.locator("#knowledgeDetailDialog")).to_contain_text("ui-v1")
+                expect(page.locator("#knowledgeDetailDialog")).to_contain_text("此版本当前仅供管理者查看")
                 page.fill("#knowledgeEditScope", "通用病历书写，工程演示")
                 page.route("**/api/knowledge/admin/documents/*", lambda route: route.fulfill(
                     status=503, content_type="application/json", body='{"detail":"save unavailable"}'

@@ -15,7 +15,10 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from app.services.knowledge_store import _search_tokens  # noqa: E402
+from app.services.knowledge_store import (  # noqa: E402
+    _search_tokens, index_knowledge_chunk, init_knowledge_schema, refresh_published_knowledge,
+)
+from scripts.knowledge_package_projection import copy_document_sources, read_document_sources  # noqa: E402
 
 TABLE_KEYS = {
     "knowledge_source": ("source_id",),
@@ -51,6 +54,7 @@ def import_package(source: Path, target: Path, expected_sha: str,
             raise ValueError("source integrity failure")
         rows = {table: [dict(r) for r in src.execute(f"SELECT * FROM {table}")]
                 for table in TABLE_KEYS}
+        snapshots = read_document_sources(src, rows["knowledge_document"], rows["knowledge_source"])
     documents = rows["knowledge_document"]
     if ({r["source_id"] for r in rows["knowledge_source"]} != set(expected)
             or len(documents) != len(expected)
@@ -60,8 +64,8 @@ def import_package(source: Path, target: Path, expected_sha: str,
     document_ids = {r["document_id"] for r in documents}
     chunks = rows["knowledge_chunk"]
     chunk_ids = {r["chunk_id"] for r in chunks}
-    if (not chunks or any(r["document_id"] not in document_ids or
-            hashlib.sha256(r["content"].encode("utf-8")).hexdigest() != r["content_sha256"]
+    if (not chunks or {r["document_id"] for r in chunks} != document_ids or
+            any(hashlib.sha256(r["content"].encode("utf-8")).hexdigest() != r["content_sha256"]
             for r in chunks) or any(r["chunk_id"] not in chunk_ids
                                    for r in rows["knowledge_embedding"])):
         raise ValueError("invalid chunk content hash or package lineage")
@@ -83,6 +87,10 @@ def import_package(source: Path, target: Path, expected_sha: str,
         with closing(sqlite3.connect(backup)) as copy:
             dst.backup(copy)
         dst.execute("BEGIN IMMEDIATE")
+        # A verified pre-versioning target is migrated inside the import transaction.
+        init_knowledge_schema(dst)
+        changed_sources = set()
+        document_sources = {row["document_id"]: row["source_id"] for row in documents}
         for table, keys in TABLE_KEYS.items():
             for row in rows[table]:
                 where = " AND ".join(f"{key}=?" for key in keys)
@@ -92,27 +100,37 @@ def import_package(source: Path, target: Path, expected_sha: str,
                     if dict(old) != row:
                         raise ValueError(f"existing {table} differs; refusing to overwrite")
                     continue
-                if table == "knowledge_document" and dst.execute(
-                    "SELECT 1 FROM knowledge_document WHERE source_id=? AND is_current=1",
-                    (row["source_id"],),
-                ).fetchone():
-                    raise ValueError("another current document already exists; administrator review required")
+                if table == "knowledge_document":
+                    if dst.execute(
+                        "SELECT 1 FROM knowledge_document WHERE content_sha256=? OR (source_id=? AND version=?)",
+                        (row["content_sha256"], row["source_id"], row["version"]),
+                    ).fetchone():
+                        raise ValueError("package document identity conflicts with an existing source, version or hash")
+                    if dst.execute(
+                        "SELECT 1 FROM knowledge_document WHERE source_id=? AND is_current=1", (row["source_id"],)
+                    ).fetchone():
+                        raise ValueError("another current document already exists; administrator review required")
+                    changed_sources.add(row["source_id"])
                 columns = tuple(row)
                 dst.execute(f"INSERT INTO {table} ({','.join(columns)}) VALUES "
                             f"({','.join('?' for _ in columns)})", tuple(row.values()))
                 inserted[table] += 1
                 if table == "knowledge_chunk":
-                    dst.execute("INSERT INTO knowledge_chunk_fts(chunk_id,section,content) VALUES (?,?,?)",
-                                (row["chunk_id"], row["section"], row["content"]))
-                    dst.execute("INSERT INTO knowledge_chunk_terms_fts(chunk_id,terms) VALUES (?,?)",
-                                (row["chunk_id"], _search_tokens(f'{row["section"]} {row["content"]}')))
+                    index_knowledge_chunk(dst, row["chunk_id"], row["section"], row["content"])
+                    changed_sources.add(document_sources[row["document_id"]])
+        inserted["knowledge_document_source"] = copy_document_sources(dst, snapshots)
+        for source_id in sorted(changed_sources):
+            refresh_published_knowledge(dst, source_id)
         for row in chunks:
             actual = dst.execute("SELECT section,content FROM knowledge_chunk_fts WHERE chunk_id=?",
                                  (row["chunk_id"],)).fetchall()
             terms = dst.execute("SELECT terms FROM knowledge_chunk_terms_fts WHERE chunk_id=?",
                                 (row["chunk_id"],)).fetchall()
+            published = dst.execute("SELECT terms FROM knowledge_published_terms_fts WHERE chunk_id=?",
+                                    (row["chunk_id"],)).fetchall()
+            expected_terms = [_search_tokens(f'{row["section"]} {row["content"]}')]
             if ([tuple(r) for r in actual] != [(row["section"], row["content"])] or
-                    [r[0] for r in terms] != [_search_tokens(f'{row["section"]} {row["content"]}')]):
+                    [r[0] for r in terms] != expected_terms or [r[0] for r in published] != expected_terms):
                 raise ValueError("FTS index mismatch; refusing a partial deployment")
         dst.commit()
     return {"source_sha256": expected_sha, "backup_sha256": digest(backup),

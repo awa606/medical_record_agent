@@ -31,12 +31,68 @@ def utc_now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+SOURCE_FIELDS = ("title", "publisher", "source_url", "download_url", "published_at",
+                 "usage_scope", "document_type", "disease_scope")
+_SOURCE_COLUMNS = ", ".join(SOURCE_FIELDS)
+_FTS_TABLES = ("knowledge_chunk_fts", "knowledge_chunk_terms_fts", "knowledge_published_terms_fts")
+
+
+def knowledge_fts_available(conn: sqlite3.Connection) -> bool:
+    return conn.execute("SELECT 1 FROM pragma_module_list WHERE name = 'fts5'").fetchone() is not None
+
+
+def register_knowledge_writer(conn: sqlite3.Connection) -> None:
+    """Mark this connection as understanding version snapshots and the publication index."""
+    try:
+        conn.execute("SELECT mra_versioned_knowledge_writer()").fetchone()
+    except sqlite3.OperationalError as exc:
+        if "no such function" not in str(exc).lower():
+            raise
+        conn.create_function("mra_versioned_knowledge_writer", 0, lambda: 1, deterministic=True)
+
+
+def _begin_write(conn: sqlite3.Connection) -> None:
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
+
+
+def _publication_schema_ready(conn: sqlite3.Connection, fts: bool) -> bool:
+    if not conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='trigger' AND name='versioned_knowledge_admin_audit_insert' "
+        "AND EXISTS(SELECT 1 FROM sqlite_master WHERE name='knowledge_publication_schema')"
+    ).fetchone():
+        return False
+    row = conn.execute("SELECT fts_ready FROM knowledge_publication_schema WHERE singleton=1").fetchone()
+    return row is not None and bool(row[0]) == fts
+
+
 def init_knowledge_schema(connection: sqlite3.Connection | None = None) -> None:
     owns = connection is None
     conn = connection or get_connection()
+    outer_transaction = conn.in_transaction
     try:
-        conn.executescript(
-            """
+        register_knowledge_writer(conn)
+        fts = knowledge_fts_available(conn)
+        if _publication_schema_ready(conn, fts):
+            return
+        # Readers take no write lock once initialized. Recheck after waiting for a concurrent migration.
+        _begin_write(conn)
+        if not _publication_schema_ready(conn, fts):
+            _migrate_knowledge_schema(conn, fts)
+        if not outer_transaction:
+            conn.commit()
+    except Exception:
+        if not outer_transaction:
+            conn.rollback()
+        raise
+    finally:
+        if owns:
+            conn.close()
+
+
+def _migrate_knowledge_schema(conn: sqlite3.Connection, fts: bool) -> None:
+    # executescript commits an existing transaction, including a bulk import in progress.
+    ddl = """
             CREATE TABLE IF NOT EXISTS knowledge_source (
                 source_id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
@@ -99,6 +155,44 @@ def init_knowledge_schema(connection: sqlite3.Connection | None = None) -> None:
                 FOREIGN KEY(document_id) REFERENCES knowledge_document(document_id)
             );
 
+            CREATE TABLE IF NOT EXISTS knowledge_document_source (
+                document_id TEXT PRIMARY KEY REFERENCES knowledge_document(document_id),
+                title TEXT NOT NULL, publisher TEXT NOT NULL, source_url TEXT NOT NULL,
+                download_url TEXT, published_at TEXT, usage_scope TEXT NOT NULL,
+                document_type TEXT NOT NULL, disease_scope TEXT NOT NULL,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                metadata_origin TEXT NOT NULL CHECK (metadata_origin IN ('version_import','legacy_observed'))
+            );
+
+            CREATE TABLE IF NOT EXISTS knowledge_publication_schema (
+                singleton INTEGER PRIMARY KEY CHECK(singleton = 1), fts_ready INTEGER NOT NULL
+            );
+    """
+    for statement in ddl.split(";"):
+        if statement.strip():
+            conn.execute(statement)
+    _ensure_column(conn, "knowledge_source", "document_type", "TEXT NOT NULL DEFAULT 'clinical-reference'")
+    _ensure_column(conn, "knowledge_source", "disease_scope", "TEXT NOT NULL DEFAULT ''")
+    _ensure_column(conn, "knowledge_document", "effective_date", "TEXT")
+    _ensure_column(conn, "knowledge_document", "is_active", "INTEGER NOT NULL DEFAULT 1")
+    _ensure_column(conn, "knowledge_document", "original_filename", "TEXT")
+    _ensure_column(conn, "knowledge_document", "content_format", "TEXT NOT NULL DEFAULT 'pdf'")
+
+    # A legacy shared source is only a migration-time observation, even on the current edition.
+    conn.execute(f"""
+        INSERT INTO knowledge_document_source(document_id, {_SOURCE_COLUMNS}, created_at, updated_at, metadata_origin)
+        SELECT d.document_id, {", ".join("s." + field for field in SOURCE_FIELDS)},
+               s.created_at, s.updated_at, 'legacy_observed'
+        FROM knowledge_document d JOIN knowledge_source s ON s.source_id=d.source_id
+        WHERE NOT EXISTS (SELECT 1 FROM knowledge_document_source m WHERE m.document_id=d.document_id)
+    """)
+    if fts:
+        indexed_before = {row[0] for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name IN (?,?,?)", _FTS_TABLES
+        )}
+        before = conn.execute("SELECT fts_ready FROM knowledge_publication_schema WHERE singleton=1").fetchone()
+        restored_engine = before is not None and not before[0]
+        fts_ddl = """
             CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_chunk_fts USING fts5(
                 chunk_id UNINDEXED,
                 section,
@@ -111,18 +205,44 @@ def init_knowledge_schema(connection: sqlite3.Connection | None = None) -> None:
                 terms,
                 tokenize='unicode61'
             );
-            """
-        )
-        _ensure_column(conn, "knowledge_source", "document_type", "TEXT NOT NULL DEFAULT 'clinical-reference'")
-        _ensure_column(conn, "knowledge_source", "disease_scope", "TEXT NOT NULL DEFAULT ''")
-        _ensure_column(conn, "knowledge_document", "effective_date", "TEXT")
-        _ensure_column(conn, "knowledge_document", "is_active", "INTEGER NOT NULL DEFAULT 1")
-        _ensure_column(conn, "knowledge_document", "original_filename", "TEXT")
-        _ensure_column(conn, "knowledge_document", "content_format", "TEXT NOT NULL DEFAULT 'pdf'")
-        conn.commit()
-    finally:
-        if owns:
-            conn.close()
+            CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_published_terms_fts USING fts5(
+                chunk_id UNINDEXED, terms, tokenize='unicode61'
+            );
+        """
+        for statement in fts_ddl.split(";"):
+            if statement.strip():
+                conn.execute(statement)
+        # A database may have collected new chunks while running on SQLite without FTS5.
+        for table in _FTS_TABLES[:2]:
+            if restored_engine or table not in indexed_before:
+                conn.execute(f"DELETE FROM {table}")
+                if table == "knowledge_chunk_fts":
+                    conn.execute(f"INSERT INTO {table}(chunk_id,section,content) SELECT chunk_id,section,content FROM knowledge_chunk")
+                else:
+                    rows = conn.execute("SELECT chunk_id, section, content FROM knowledge_chunk")
+                    conn.executemany(f"INSERT INTO {table}(chunk_id,terms) VALUES (?,?)", (
+                        (r["chunk_id"], _search_tokens(f'{r["section"]} {r["content"]}')) for r in rows
+                    ))
+        conn.execute("DELETE FROM knowledge_published_terms_fts")
+        conn.execute("""
+            INSERT INTO knowledge_published_terms_fts(chunk_id,terms)
+            SELECT t.chunk_id,t.terms FROM knowledge_chunk_terms_fts t
+            JOIN knowledge_chunk c ON c.chunk_id=t.chunk_id
+            JOIN knowledge_document d ON d.document_id=c.document_id
+            WHERE d.is_active=1 AND d.is_current=1
+        """)
+    # Old binaries also UPDATE columns in place. An INSERT-only row protocol would allow
+    # their enable, disable and PATCH calls to leave stale names or stale BM25 membership.
+    for table in ("knowledge_source", "knowledge_document", "knowledge_chunk", "knowledge_embedding", "knowledge_admin_audit"):
+        for action in ("INSERT", "UPDATE", "DELETE"):
+            conn.execute(f"""
+                CREATE TRIGGER IF NOT EXISTS versioned_{table}_{action.lower()} BEFORE {action} ON {table}
+                BEGIN
+                    SELECT CASE WHEN mra_versioned_knowledge_writer() != 1
+                        THEN RAISE(ABORT, 'Use a version-aware writer for this knowledge database') END;
+                END
+            """)
+    conn.execute("INSERT OR REPLACE INTO knowledge_publication_schema(singleton,fts_ready) VALUES (1,?)", (int(fts),))
 
 
 def _ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
@@ -179,6 +299,65 @@ def _search_tokens(text: str) -> str:
     return " ".join(tokens)
 
 
+def insert_document_source(
+    conn: sqlite3.Connection, document_id: str, source: dict[str, Any], *, metadata_origin: str
+) -> None:
+    """Insert the version's own source record inside the caller's transaction."""
+    now = utc_now()
+    values = {**{"document_type": "clinical-reference", "disease_scope": ""}, **source}
+    conn.execute(
+        f"INSERT INTO knowledge_document_source(document_id, {_SOURCE_COLUMNS}, created_at, updated_at, metadata_origin) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (document_id, *(values.get(field) for field in SOURCE_FIELDS),
+         source.get("created_at", now), source.get("updated_at", now), metadata_origin),
+    )
+
+
+def index_knowledge_chunk(conn: sqlite3.Connection, chunk_id: str, section: str, content: str) -> None:
+    """Append one canonical chunk to the two all-edition indexes, if supported."""
+    if knowledge_fts_available(conn):
+        conn.execute("INSERT INTO knowledge_chunk_fts(chunk_id,section,content) VALUES (?,?,?)",
+                     (chunk_id, section, content))
+        conn.execute("INSERT INTO knowledge_chunk_terms_fts(chunk_id,terms) VALUES (?,?)",
+                     (chunk_id, _search_tokens(f"{section} {content}")))
+
+
+def _publish_source_metadata(conn: sqlite3.Connection, source_id: str) -> None:
+    # Keep the legacy row readable by older tools, using the active version's observed timestamp.
+    current = conn.execute("""
+        SELECT s.* FROM knowledge_document_source s JOIN knowledge_document d USING(document_id)
+        WHERE d.source_id=? AND d.is_current=1 AND d.is_active=1
+    """, (source_id,)).fetchone()
+    if current is not None:
+        assignments = ", ".join(f"{key}=?" for key in (*SOURCE_FIELDS, "updated_at"))
+        conn.execute(f"UPDATE knowledge_source SET {assignments} WHERE source_id=?",
+                     (*(current[key] for key in (*SOURCE_FIELDS, "updated_at")), source_id))
+
+
+def refresh_published_knowledge(conn: sqlite3.Connection, source_id: str) -> None:
+    """Replace only this source's published projection, inside the caller's write transaction."""
+    _publish_source_metadata(conn, source_id)
+    if not knowledge_fts_available(conn):
+        return
+    conn.execute("""
+        DELETE FROM knowledge_published_terms_fts WHERE chunk_id IN (
+            SELECT c.chunk_id FROM knowledge_chunk c JOIN knowledge_document d USING(document_id)
+            WHERE d.source_id=?
+        )
+    """, (source_id,))
+    conn.execute("""
+        INSERT INTO knowledge_published_terms_fts(chunk_id,terms)
+        SELECT t.chunk_id,t.terms FROM knowledge_chunk_terms_fts t
+        JOIN knowledge_chunk c ON c.chunk_id=t.chunk_id
+        JOIN knowledge_document d ON d.document_id=c.document_id
+        WHERE d.source_id=? AND d.is_current=1 AND d.is_active=1
+    """, (source_id,))
+
+
+class KnowledgeIdentityConflict(ValueError):
+    """These bytes already belong to a different document identity."""
+
+
 def ingest_pages(
     *,
     source: dict[str, Any],
@@ -193,21 +372,29 @@ def ingest_pages(
 ) -> dict[str, Any]:
     owns = connection is None
     conn = connection or get_connection()
-    init_knowledge_schema(conn)
     now = utc_now()
     sha = _sha256_bytes(document_bytes)
-    source_id = _safe_id(str(source["source_id"]))
+    # The API permits case and dots in source identifiers. A display/file slug cannot
+    # establish that "A.B" and "a-b" are the same publisher's entry.
+    submitted_id = str(source["source_id"]).strip()
+    source_id = submitted_id if re.fullmatch(r"[A-Za-z0-9._-]+", submitted_id) else _safe_id(submitted_id)
     version = str(source["version"]).strip()
-    document_id = f"{source_id}-{_safe_id(version)}-{sha[:12]}"
+    document_id = f"{_safe_id(source_id)}-{_safe_id(version)}-{sha[:12]}"
     try:
+        _begin_write(conn)
+        init_knowledge_schema(conn)
         existing = conn.execute(
-            "SELECT document_id, page_count, is_active, is_current FROM knowledge_document WHERE content_sha256 = ?",
-            (sha,),
+            "SELECT document_id,source_id,version,page_count,is_active,is_current "
+            "FROM knowledge_document WHERE content_sha256=?", (sha,),
         ).fetchone()
         if existing is not None:
+            if (existing["source_id"], existing["version"]) != (source_id, version):
+                raise KnowledgeIdentityConflict("identical content already belongs to a different source or version")
             chunk_count = conn.execute(
                 "SELECT COUNT(*) FROM knowledge_chunk WHERE document_id = ?", (existing["document_id"],)
             ).fetchone()[0]
+            if commit:
+                conn.commit()
             return {
                 "source_id": source_id,
                 "document_id": existing["document_id"],
@@ -234,16 +421,7 @@ def ingest_pages(
                 published_at, usage_scope, document_type, disease_scope,
                 created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(source_id) DO UPDATE SET
-                title=excluded.title,
-                publisher=excluded.publisher,
-                source_url=excluded.source_url,
-                download_url=excluded.download_url,
-                published_at=excluded.published_at,
-                usage_scope=excluded.usage_scope,
-                document_type=excluded.document_type,
-                disease_scope=excluded.disease_scope,
-                updated_at=excluded.updated_at
+            ON CONFLICT(source_id) DO NOTHING
             """,
             (
                 source_id,
@@ -290,6 +468,8 @@ def ingest_pages(
                 now,
             ),
         )
+        insert_document_source(conn, document_id, {**source, "created_at": now, "updated_at": now},
+                               metadata_origin="version_import")
         for index, page in enumerate(flattened, start=1):
             chunk_sha = _sha256_bytes(page.content.encode("utf-8"))
             chunk_id = f"{document_id}-p{page.page:03d}-c{index:03d}"
@@ -300,14 +480,9 @@ def ingest_pages(
                 """,
                 (chunk_id, document_id, page.section, page.page, page.content, chunk_sha, now),
             )
-            conn.execute(
-                "INSERT INTO knowledge_chunk_fts(chunk_id, section, content) VALUES (?, ?, ?)",
-                (chunk_id, page.section, page.content),
-            )
-            conn.execute(
-                "INSERT INTO knowledge_chunk_terms_fts(chunk_id, terms) VALUES (?, ?)",
-                (chunk_id, _search_tokens(f"{page.section} {page.content}")),
-            )
+            index_knowledge_chunk(conn, chunk_id, page.section, page.content)
+        if activate:
+            refresh_published_knowledge(conn, source_id)
         if commit:
             conn.commit()
         return {
@@ -349,21 +524,6 @@ def _fts_expression(query: str) -> str:
     if not grams:
         raise ValueError("knowledge query has no searchable terms")
     return " OR ".join(grams)
-
-
-def _base_chunk_query() -> str:
-    return """
-        SELECT c.chunk_id, c.document_id, c.section, c.page, c.content,
-               c.content_sha256, d.version, s.source_id, s.title, s.publisher,
-               s.source_url, bm25(knowledge_chunk_terms_fts) AS bm25_score
-        FROM knowledge_chunk_terms_fts
-        JOIN knowledge_chunk c ON c.chunk_id = knowledge_chunk_terms_fts.chunk_id
-        JOIN knowledge_document d ON d.document_id = c.document_id
-        JOIN knowledge_source s ON s.source_id = d.source_id
-        WHERE knowledge_chunk_terms_fts MATCH ? AND d.is_current = 1 AND d.is_active = 1
-        ORDER BY bm25_score ASC
-        LIMIT ?
-    """
 
 
 def _cosine(left: list[float], right: list[float]) -> float:
@@ -443,69 +603,53 @@ def retrieve_knowledge(
             expression = _fts_expression(query)
         except ValueError:
             expression = None
-        if expression is not None:
-            if document_id is None and not include_inactive:
-                rows = conn.execute(_base_chunk_query(), (expression, max(limit * 8, 20))).fetchall()
-            else:
-                clauses = ["knowledge_chunk_terms_fts MATCH ?"]
-                params: list[Any] = [expression]
-                if document_id is not None:
-                    clauses.append("d.document_id = ?")
-                    params.append(document_id)
-                if not include_inactive:
-                    clauses.extend(["d.is_current = 1", "d.is_active = 1"])
-                params.append(max(limit * 8, 20))
-                rows = conn.execute(
-                    f"""
-                    SELECT c.chunk_id, c.document_id, c.section, c.page, c.content,
-                           c.content_sha256, d.version, s.source_id, s.title, s.publisher,
-                           s.source_url, bm25(knowledge_chunk_terms_fts) AS bm25_score
-                    FROM knowledge_chunk_terms_fts
-                    JOIN knowledge_chunk c ON c.chunk_id = knowledge_chunk_terms_fts.chunk_id
-                    JOIN knowledge_document d ON d.document_id = c.document_id
-                    JOIN knowledge_source s ON s.source_id = d.source_id
-                    WHERE {' AND '.join(clauses)}
-                    ORDER BY bm25_score ASC
-                    LIMIT ?
-                    """,
-                    tuple(params),
-                ).fetchall()
+        fts = knowledge_fts_available(conn)
+        # Global administrative search follows the public corpus. A named version is required
+        # to include historical/draft chunks in the preview.
+        history = document_id is not None and include_inactive
+        if expression is not None and fts:
+            table = "knowledge_chunk_terms_fts" if history else "knowledge_published_terms_fts"
+            from_chunks = f"{table} JOIN knowledge_chunk c ON c.chunk_id={table}.chunk_id"
+            clauses = [f"{table} MATCH ?"]
+            params: list[Any] = [expression]
+            rank = f"bm25({table})"
         else:
+            from_chunks = "knowledge_chunk c"
             clauses = ["c.content LIKE ?"]
             params = [f"%{query.strip()}%"]
-            if document_id is not None:
-                clauses.append("d.document_id = ?")
-                params.append(document_id)
-            if not include_inactive:
-                clauses.extend(["d.is_current = 1", "d.is_active = 1"])
-            params.append(max(limit * 8, 20))
-            rows = conn.execute(
-                f"""
-                SELECT c.chunk_id, c.document_id, c.section, c.page, c.content,
-                       c.content_sha256, d.version, s.source_id, s.title, s.publisher,
-                       s.source_url, -1.0 AS bm25_score
-                FROM knowledge_chunk c
-                JOIN knowledge_document d ON d.document_id = c.document_id
-                JOIN knowledge_source s ON s.source_id = d.source_id
-                WHERE {' AND '.join(clauses)}
-                ORDER BY c.chunk_id
-                LIMIT ?
-                """,
-                tuple(params),
-            ).fetchall()
+            rank = "-1.0"
+        if document_id is not None:
+            clauses.append("d.document_id = ?")
+            params.append(document_id)
+        if not history:
+            clauses.extend(["d.is_current=1", "d.is_active=1"])
+        params.append(max(limit * 8, 20))
+        rows = conn.execute(f"""
+            SELECT c.chunk_id, c.document_id, c.section, c.page, c.content, c.content_sha256,
+                   d.version, d.source_id, s.title, s.publisher, s.source_url, s.metadata_origin,
+                   {rank} AS bm25_score
+            FROM {from_chunks}
+            JOIN knowledge_document d ON d.document_id=c.document_id
+            JOIN knowledge_document_source s ON s.document_id=d.document_id
+            WHERE {" AND ".join(clauses)}
+            ORDER BY bm25_score, c.chunk_id
+            LIMIT ?
+        """, params).fetchall()
+        mode = "fts5_v1" if fts else "like_v1"
         if not rows:
-            return {"results": [], "retrieval_mode": "fts5_v1"}
+            return {"results": [], "retrieval_mode": mode}
         lexical_values = [-float(row["bm25_score"]) for row in rows]
         lexical_max = max(lexical_values) or 1.0
+        chunk_ids = [row["chunk_id"] for row in rows]
+        placeholders = ",".join("?" for _ in chunk_ids)
         embeddings = {
             row["chunk_id"]: json.loads(row["vector_json"])
             for row in conn.execute(
-                "SELECT chunk_id, vector_json FROM knowledge_embedding WHERE model_id = ?",
-                (model_id,),
-            ).fetchall()
+                f"SELECT chunk_id, vector_json FROM knowledge_embedding WHERE model_id=? AND chunk_id IN ({placeholders})",
+                (model_id, *chunk_ids),
+            )
         }
         query_vector: list[float] | None = None
-        mode = "fts5_v1"
         if embeddings:
             try:
                 model = _embedding_model(model_id, True)
@@ -538,6 +682,7 @@ def retrieve_knowledge(
                     "document_id": row["document_id"],
                     "chunk_id": row["chunk_id"],
                     "publisher": row["publisher"],
+                    "metadata_origin": row["metadata_origin"],
                     "version": row["version"],
                     "section": row["section"],
                     "page": row["page"],
@@ -566,13 +711,13 @@ def list_knowledge_sources(connection: sqlite3.Connection | None = None) -> list
             dict(row)
             for row in conn.execute(
                 """
-                SELECT s.*, d.document_id, d.version, d.content_sha256,
+                SELECT s.*, d.source_id, d.version, d.content_sha256,
                        d.retrieved_at, d.page_count, d.extraction_method,
                        d.effective_date, d.is_active, d.original_filename, d.content_format,
                        (SELECT COUNT(*) FROM knowledge_chunk c WHERE c.document_id = d.document_id) AS chunk_count
-                FROM knowledge_source s
-                JOIN knowledge_document d ON d.source_id = s.source_id AND d.is_current = 1 AND d.is_active = 1
-                ORDER BY s.source_id
+                FROM knowledge_document_source s JOIN knowledge_document d USING(document_id)
+                WHERE d.is_current=1 AND d.is_active=1
+                ORDER BY d.source_id
                 """
             ).fetchall()
         ]
@@ -687,8 +832,9 @@ def import_text_document(
     pages = parse_text_document(content, content_format)
     owns = connection is None
     conn = connection or get_connection()
-    init_knowledge_schema(conn)
     try:
+        _begin_write(conn)
+        init_knowledge_schema(conn)
         payload = {
             **source,
             "original_filename": Path(filename).name,
@@ -729,14 +875,14 @@ def _list_knowledge_documents_rows(conn: sqlite3.Connection) -> list[dict[str, A
     rows = conn.execute(
         """
         SELECT d.*, s.title, s.publisher, s.source_url, s.download_url,
-               s.published_at, s.usage_scope, s.document_type, s.disease_scope,
+               s.published_at, s.usage_scope, s.document_type, s.disease_scope, s.metadata_origin,
                (SELECT COUNT(*) FROM knowledge_chunk c WHERE c.document_id = d.document_id) AS chunk_count,
                (SELECT COUNT(*) FROM knowledge_embedding e
                 JOIN knowledge_chunk c ON c.chunk_id = e.chunk_id
                 WHERE c.document_id = d.document_id) AS embedding_count
         FROM knowledge_document d
-        JOIN knowledge_source s ON s.source_id = d.source_id
-        ORDER BY s.source_id, d.created_at DESC, d.document_id
+        JOIN knowledge_document_source s ON s.document_id = d.document_id
+        ORDER BY d.source_id, d.created_at DESC, d.document_id
         """
     ).fetchall()
     return [{**dict(row), "is_active": bool(row["is_active"]), "is_current": bool(row["is_current"])} for row in rows]
@@ -778,28 +924,22 @@ def update_knowledge_document_metadata(
     actor_user_id: int,
     connection: sqlite3.Connection | None = None,
 ) -> dict[str, Any]:
-    source_fields = {
-        "title",
-        "publisher",
-        "source_url",
-        "download_url",
-        "published_at",
-        "usage_scope",
-        "document_type",
-        "disease_scope",
-    }
+    source_fields = set(SOURCE_FIELDS)
     document_fields = {"effective_date", "original_filename"}
     unexpected = set(metadata) - source_fields - document_fields
     if unexpected:
         raise ValueError(f"immutable or unsupported metadata fields: {', '.join(sorted(unexpected))}")
+    if any(metadata.get(field, "") is None for field in ("title", "publisher", "source_url", "usage_scope", "document_type", "disease_scope")):
+        raise ValueError("required source metadata cannot be null")
     if "original_filename" in metadata and metadata["original_filename"]:
         filename = str(metadata["original_filename"])
         if Path(filename).name != filename:
             raise ValueError("original_filename must not contain a path")
     owns = connection is None
     conn = connection or get_connection()
-    init_knowledge_schema(conn)
     try:
+        _begin_write(conn)
+        init_knowledge_schema(conn)
         current = _get_knowledge_document_row(conn, document_id)
         if current is None:
             raise KeyError(document_id)
@@ -808,9 +948,11 @@ def update_knowledge_document_metadata(
         if source_updates:
             assignments = ", ".join(f"{key} = ?" for key in source_updates)
             conn.execute(
-                f"UPDATE knowledge_source SET {assignments}, updated_at = ? WHERE source_id = ?",
-                (*source_updates.values(), utc_now(), current["source_id"]),
+                f"UPDATE knowledge_document_source SET {assignments}, updated_at=? WHERE document_id=?",
+                (*source_updates.values(), utc_now(), document_id),
             )
+            if current["is_active"] and current["is_current"]:
+                _publish_source_metadata(conn, current["source_id"])
         if document_updates:
             assignments = ", ".join(f"{key} = ?" for key in document_updates)
             conn.execute(
@@ -824,10 +966,10 @@ def update_knowledge_document_metadata(
             document_id=document_id,
             detail={"fields": sorted(metadata)},
         )
-        conn.commit()
         updated = _get_knowledge_document_row(conn, document_id)
         if updated is None:
             raise KeyError(document_id)
+        conn.commit()
         return updated
     except Exception:
         conn.rollback()
@@ -846,8 +988,9 @@ def set_knowledge_document_active(
 ) -> dict[str, Any]:
     owns = connection is None
     conn = connection or get_connection()
-    init_knowledge_schema(conn)
     try:
+        _begin_write(conn)
+        init_knowledge_schema(conn)
         current = _get_knowledge_document_row(conn, document_id)
         if current is None:
             raise KeyError(document_id)
@@ -859,6 +1002,7 @@ def set_knowledge_document_active(
             )
         else:
             conn.execute("UPDATE knowledge_document SET is_active = 0 WHERE document_id = ?", (document_id,))
+        refresh_published_knowledge(conn, current["source_id"])
         _record_admin_audit(
             conn,
             actor_user_id=actor_user_id,
@@ -866,10 +1010,10 @@ def set_knowledge_document_active(
             document_id=document_id,
             detail={"active": active, "source_id": current["source_id"]},
         )
-        conn.commit()
         updated = _get_knowledge_document_row(conn, document_id)
         if updated is None:
             raise KeyError(document_id)
+        conn.commit()
         return updated
     except Exception:
         conn.rollback()

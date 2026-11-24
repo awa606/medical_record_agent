@@ -77,9 +77,13 @@ def verify(package):
 
 def fingerprints(db):
     with closing(sqlite3.connect(f'file:{Path(db).as_posix()}?mode=ro', uri=True)) as c:
+        # Legacy archives predate the per-edition sources and published search index.
+        available = {row[0] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        versioned = [table for table in ('knowledge_document_source', 'knowledge_published_terms_fts')
+                     if table in available]
         return {t: {'rows': len(rows), 'sha256': hashlib.sha256(
                     json.dumps(rows, ensure_ascii=False, default=str).encode()).hexdigest()}
-                for t in TABLES
+                for t in (*TABLES, *versioned)
                 for rows in [[list(r) for r in c.execute(f'SELECT * FROM {t} ORDER BY rowid')]]}
 
 
@@ -96,6 +100,11 @@ def sanitize_database(source, target, allowlist):
             src.backup(dst)
     before = fingerprints(target)
     with closing(sqlite3.connect(target)) as c:
+        if c.execute("SELECT 1 FROM sqlite_master WHERE name='knowledge_publication_schema'").fetchone():
+            # This step runs only when creating a package from the application checkout.
+            sys.path.insert(0, str(ROOT))
+            from app.services.knowledge_store import register_knowledge_writer
+            register_knowledge_writer(c)
         c.execute('DELETE FROM auth_session')
         users = list(c.execute('SELECT id,role FROM auth_user ORDER BY id'))
         for uid, role in users:

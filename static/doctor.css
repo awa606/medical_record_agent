@@ -6215,6 +6215,7 @@ body.doctor-mode .input-method-popover button {
 .admin-knowledge-panel input, .admin-knowledge-panel select { min-height: 40px; width: 100%; border: 1px solid #cdd8e5; border-radius: 6px; padding: 9px 12px; background: #fff; color: #152b40; font-size: 15px; box-sizing: border-box; }
 .knowledge-result-count, .knowledge-note { color: #52627a; font-size: 14px; line-height: 1.65; margin: 12px 0; }
 .knowledge-table-wrap { overflow-x: auto; }
+.knowledge-mobile-label { display: none; }
 .knowledge-catalog-table { width: 100%; border-collapse: collapse; font-size: 15px; table-layout: fixed; }
 .knowledge-catalog-table th { padding: 12px; text-align: left; background: #f5f8fb; color: #52627a; font-size: 14px; font-weight: 600; border-bottom: 1px solid #dbe4ee; }
 .knowledge-catalog-table td { padding: 18px 12px; border-bottom: 1px solid #e4eaf1; vertical-align: top; line-height: 1.6; overflow-wrap: anywhere; }
@@ -6252,6 +6253,35 @@ body.doctor-mode .input-method-popover button {
   .knowledge-health-list, .knowledge-metadata { grid-template-columns: 1fr; gap: 6px; }
   .knowledge-metadata dd { margin-bottom: 12px; }
   .knowledge-tabs { gap: 16px; }
+}
+@media (max-width: 640px) {
+  .admin-knowledge-panel { grid-template-columns: minmax(0, 1fr); }
+  .admin-knowledge-panel > .panel-header { flex-wrap: wrap; }
+  .admin-knowledge-panel > .panel-header > div { flex-basis: 100%; }
+  .knowledge-catalog-table { display: block; min-width: 0; }
+  .knowledge-catalog-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .knowledge-catalog-table tbody { display: block; }
+  .knowledge-catalog-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    padding: 15px 12px;
+    border-top: 1px solid #dbe4ee;
+  }
+  .knowledge-catalog-table td { padding: 0; border: 0; }
+  .knowledge-catalog-table td:nth-child(1),
+  .knowledge-catalog-table td:nth-child(2),
+  .knowledge-catalog-table td:nth-child(5) { grid-column: 1 / -1; }
+  .knowledge-catalog-table small { margin-top: 2px; }
+  .knowledge-mobile-label { display: inline; color: #475569; }
+  .knowledge-catalog-table td:nth-child(2) .knowledge-mobile-label { margin-right: 6px; }
+  .knowledge-document-actions button { min-height: 44px; }
 }
 
 

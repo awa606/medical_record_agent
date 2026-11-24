@@ -109,6 +109,7 @@ def test_runtime_falls_back_to_fts_when_local_embedding_model_is_missing(monkeyp
             )
             connection = get_connection()
             try:
+                knowledge_store.register_knowledge_writer(connection)
                 chunk_id = connection.execute(
                     "SELECT chunk_id FROM knowledge_chunk WHERE document_id = ?", (imported["document_id"],)
                 ).fetchone()[0]

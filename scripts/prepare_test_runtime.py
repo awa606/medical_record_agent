@@ -8,6 +8,9 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 def prepare(source: Path, target: Path) -> dict:
@@ -25,11 +28,15 @@ def prepare(source: Path, target: Path) -> dict:
         raise ValueError("Use a closed consistent backup, not a live WAL database")
     os.environ["MEDICAL_RECORD_AGENT_DB"] = str(target)
     from app.db.sqlite import init_db, create_encounter, create_user
-    from app.services.knowledge_store import init_knowledge_schema, _search_tokens
+    from app.services.knowledge_store import (
+        init_knowledge_schema, index_knowledge_chunk, knowledge_fts_available, refresh_published_knowledge,
+    )
+    from scripts.knowledge_package_projection import read_document_sources, copy_document_sources
     init_db()
     init_knowledge_schema()
     with closing(sqlite3.connect(source.resolve().as_uri() + "?mode=ro", uri=True)) as src, closing(sqlite3.connect(target)) as dst:
         src.row_factory = sqlite3.Row
+        dst.row_factory = sqlite3.Row
         if src.execute("PRAGMA quick_check").fetchone()[0] != "ok":
             raise ValueError("Source integrity check failed")
         documents = list(src.execute("SELECT * FROM knowledge_document WHERE is_current=1 AND is_active=1"))
@@ -38,7 +45,9 @@ def prepare(source: Path, target: Path) -> dict:
         doc_ids = {row["document_id"] for row in documents}
         source_ids = {row["source_id"] for row in documents}
         chunks = [row for row in src.execute("SELECT * FROM knowledge_chunk") if row["document_id"] in doc_ids]
-        if not chunks or any(hashlib.sha256(row["content"].encode("utf8")).hexdigest() != row["content_sha256"] for row in chunks):
+        if {row["document_id"] for row in chunks} != doc_ids or any(
+            hashlib.sha256(row["content"].encode("utf8")).hexdigest() != row["content_sha256"] for row in chunks
+        ):
             raise ValueError("Knowledge chunk hash mismatch")
         chunk_ids = {row["chunk_id"] for row in chunks}
         projection = {
@@ -47,21 +56,29 @@ def prepare(source: Path, target: Path) -> dict:
             "knowledge_chunk": chunks,
             "knowledge_embedding": [row for row in src.execute("SELECT * FROM knowledge_embedding") if row["chunk_id"] in chunk_ids],
         }
+        snapshots = read_document_sources(src, documents, projection["knowledge_source"])
         with dst:
             dst.execute("PRAGMA foreign_keys=ON")
+            init_knowledge_schema(dst)
+            if not knowledge_fts_available(dst):
+                raise ValueError("FTS5 required to prepare a searchable test runtime")
             for table, rows in projection.items():
                 columns = [row[1] for row in dst.execute(f'PRAGMA table_info("{table}")')]
                 if rows and set(columns) != set(rows[0].keys()):
                     raise ValueError("Knowledge schema differs; no silent migration allowed")
                 dst.executemany(f'INSERT INTO "{table}" VALUES ({",".join("?" for _ in columns)})',
                                 [[row[column] for column in columns] for row in rows])
+            copy_document_sources(dst, snapshots)
             for row in chunks:
-                dst.execute("INSERT INTO knowledge_chunk_fts(chunk_id,section,content) VALUES(?,?,?)",
-                            (row["chunk_id"], row["section"], row["content"]))
-                dst.execute("INSERT INTO knowledge_chunk_terms_fts(chunk_id,terms) VALUES(?,?)",
-                            (row["chunk_id"], _search_tokens(row["section"] + " " + row["content"])))
-        assert not dst.execute("PRAGMA foreign_key_check").fetchall()
-        admin_id = dst.execute("SELECT id FROM auth_user WHERE username='admin'").fetchone()[0]
+                index_knowledge_chunk(dst, row["chunk_id"], row["section"], row["content"])
+            for source_id in sorted(source_ids):
+                refresh_published_knowledge(dst, source_id)
+            if dst.execute("PRAGMA foreign_key_check").fetchone():
+                raise ValueError("Broken knowledge reference; copy rolled back")
+            published = [r[0] for r in dst.execute("SELECT chunk_id FROM knowledge_published_terms_fts")]
+            if len(published) != len(chunks) or set(published) != chunk_ids:
+                raise ValueError("Published knowledge projection mismatch; copy rolled back")
+        projection["knowledge_document_source"] = snapshots
         assert dst.execute("SELECT count(*) FROM auth_session").fetchone()[0] == 0
         assert dst.execute("SELECT count(*) FROM agent_task").fetchone()[0] == 0
     doctor_id = create_user(username="doctor", password=os.environ["MRA_TEST_DOCTOR_PASSWORD"],

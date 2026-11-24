@@ -1842,6 +1842,11 @@ function renderAdminHome() {
 function knowledgeDocumentEnabled(doc) {
   return Boolean(doc.is_active && doc.is_current);
 }
+function knowledgeMetadataDescription(origin) {
+  if (origin === "version_import") return "导入此版本时单独登记";
+  if (origin === "legacy_observed") return "取自旧库共用登记，原版本出处待核对";
+  return "缺少逐版本登记记录，请核对原始资料";
+}
 function knowledgeTypeLabel(value) {
   return ({ "clinical-reference": "临床参考", "record-standard": "病历规范" })[value] || (value ? technicalLabel(value) : "未分类");
 }
@@ -1897,9 +1902,9 @@ function renderAdminKnowledge() {
       '<thead><tr><th scope="col">资料 / 发布机构</th><th scope="col">版本 / 适用范围</th><th scope="col">状态</th><th scope="col">片段</th><th scope="col">操作</th></tr></thead><tbody>' +
       filtered.map((doc) => '<tr data-knowledge-document="' + escapeHtml(doc.document_id) + '">' +
         '<td><button class="knowledge-title-button" type="button" data-knowledge-action="detail">' + escapeHtml(doc.title) + '</button><small>' + escapeHtml(doc.publisher) + ' · ' + escapeHtml(knowledgeTypeLabel(doc.document_type)) + '</small></td>' +
-        '<td>' + escapeHtml(doc.version) + '<small>' + escapeHtml(doc.disease_scope || "适用范围未登记，请核对原文") + '</small></td>' +
-        '<td><span class="status-badge ' + (knowledgeDocumentEnabled(doc) ? "ready" : "neutral") + '">' + (knowledgeDocumentEnabled(doc) ? "已启用" : doc.is_current ? "停用候选" : "历史版本") + '</span></td>' +
-        '<td>' + Number(doc.chunk_count || 0) + '</td><td><div class="knowledge-document-actions"><button type="button" data-knowledge-action="test">验证</button><button type="button" data-knowledge-action="edit">编辑</button><button type="button" data-knowledge-action="' + (knowledgeDocumentEnabled(doc) ? "disable" : "enable") + '">' + (knowledgeDocumentEnabled(doc) ? "停用" : "启用") + '</button></div></td></tr>').join("") + '</tbody></table></div>';
+        '<td><span class="knowledge-mobile-label" aria-hidden="true">版本</span>' + escapeHtml(doc.version) + '<small>' + escapeHtml(doc.disease_scope || "适用范围未登记，请核对原文") + '</small></td>' +
+        '<td><span class="status-badge ' + (knowledgeDocumentEnabled(doc) ? "ready" : "neutral") + '">' + (knowledgeDocumentEnabled(doc) ? "已启用" : "未启用") + '</span></td>' +
+        '<td>' + Number(doc.chunk_count || 0) + '<span class="knowledge-mobile-label" aria-hidden="true"> 个片段</span></td><td><div class="knowledge-document-actions"><button type="button" data-knowledge-action="test">验证</button><button type="button" data-knowledge-action="edit">编辑</button><button type="button" data-knowledge-action="' + (knowledgeDocumentEnabled(doc) ? "disable" : "enable") + '">' + (knowledgeDocumentEnabled(doc) ? "停用" : "启用") + '</button></div></td></tr>').join("") + '</tbody></table></div>';
   }
   const search = appState.adminKnowledgeSearch;
   const searchPanel = $("adminKnowledgeSearchResult");
@@ -1926,16 +1931,18 @@ function renderAdminKnowledge() {
 }
 function openKnowledgeDocument(doc, edit = false) {
   const dialog = $("knowledgeDetailDialog");
-  $("knowledgeDetailTitle").textContent = edit ? "编辑资料元数据" : "资料详情";
+  $("knowledgeDetailTitle").textContent = edit ? "编辑此版本的资料说明" : "资料详情";
   $("knowledgeDetailContent").innerHTML = edit
-    ? '<p class="safety-strip warning">标题与适用范围属于来源级元数据，保存将影响同来源的所有版本。内容、版本与校验值（SHA）不可在此改写。</p>' +
+    ? '<p class="knowledge-note">编辑 <strong>' + escapeHtml(doc.title) + ' · ' + escapeHtml(doc.version) + '</strong> 的资料说明。' +
+      (knowledgeDocumentEnabled(doc) ? '保存后医生会看到更新。' : '此版本当前仅供管理者查看。') + '</p>' +
       '<form id="knowledgeMetadataForm" class="knowledge-admin-form" data-document-id="' + escapeHtml(doc.document_id) + '">' +
       '<label class="span-2">资料标题<input id="knowledgeEditTitle" required value="' + escapeHtml(doc.title) + '"></label>' +
       '<label class="span-2">适用范围<input id="knowledgeEditScope" value="' + escapeHtml(doc.disease_scope || "") + '"></label>' +
-      '<p id="knowledgeMetadataError" class="span-2" role="alert"></p><button type="submit" class="primary-action">保存元数据</button></form>'
+      '<p id="knowledgeMetadataError" class="span-2" role="alert"></p><button type="submit" class="primary-action">保存资料说明</button></form>'
     : '<h3>' + escapeHtml(doc.title) + '</h3><p class="knowledge-note">' + escapeHtml(doc.version) + ' · ' + (knowledgeDocumentEnabled(doc) ? "当前启用" : "停用／历史版本") + '</p>' +
       '<dl class="knowledge-metadata"><dt>发布机构</dt><dd>' + escapeHtml(doc.publisher) + '</dd><dt>类型</dt><dd>' + escapeHtml(knowledgeTypeLabel(doc.document_type)) + '</dd>' +
       '<dt>适用范围</dt><dd>' + escapeHtml(doc.disease_scope || "未登记，请核对原文") + '</dd><dt>使用 / 索引范围</dt><dd>' + escapeHtml(doc.usage_scope || "未登记") + '</dd>' +
+      '<dt>出处登记</dt><dd>' + knowledgeMetadataDescription(doc.metadata_origin) + '</dd>' +
       '<dt>已索引页数 / 片段数</dt><dd>' + doc.page_count + ' / ' + doc.chunk_count + '（索引页数不是原始文档总页数）</dd></dl><p>' + knowledgeSourceLink(doc.source_url) + '</p>' +
       '<details><summary>来源与索引技术详情</summary><dl class="knowledge-metadata"><dt>来源 ID</dt><dd>' + escapeHtml(doc.source_id) + '</dd><dt>文档 ID</dt><dd>' + escapeHtml(doc.document_id) +
       '</dd><dt>内容校验值（SHA256）</dt><dd>' + escapeHtml(doc.content_sha256) + '</dd><dt>提取方式</dt><dd>' + escapeHtml(technicalLabel(doc.extraction_method)) + '</dd><dt>语义向量索引数量</dt><dd>' + (doc.embedding_count || 0) + '</dd></dl></details>' +
@@ -1955,7 +1962,7 @@ async function saveKnowledgeMetadata(event) {
     });
     $("knowledgeDetailDialog").close();
     await refreshAdminHome();
-    showToast("来源元数据已保存；历史内容与版本保持不变");
+    showToast("已保存此版本的资料说明");
   } catch (error) {
     $("knowledgeMetadataError").textContent = userFacingError(error.message || "保存失败，输入已保留，请重试。");
   } finally { button.disabled = false; }
@@ -2007,7 +2014,7 @@ async function handleKnowledgeAdminAction(event) {
     await api("/api/knowledge/admin/documents/" + encodeURIComponent(id) + "/" + action, { method: "POST" });
     appState.adminKnowledgeSearch = null;
     await refreshAdminHome();
-    showToast("知识资料状态已更新；历史内容未删除");
+    showToast(doc.version + (action === "enable" ? " 已进入医生检索范围" : " 已从医生检索范围移出"));
   } catch (error) { reportActionError(error); }
   finally { button.disabled = false; }
 }
@@ -3965,6 +3972,7 @@ function renderKnowledgeResultDetails(result = {}) {
   return `
     <div class="detail-kv"><span>发布机构</span><strong>${escapeHtml(result.publisher || "未标注")}</strong></div>
     <div class="detail-kv"><span>版本</span><strong>${escapeHtml(result.version || "-")}</strong></div>
+    <div class="detail-kv"><span>出处登记</span><strong>${knowledgeMetadataDescription(result.metadata_origin)}</strong></div>
     <div class="detail-kv"><span>章节 / 页码</span><strong>${escapeHtml(result.section || "-")} / ${escapeHtml(result.page ?? "-")}</strong></div>
     <div class="detail-kv"><span>文档 / 片段</span><strong>${escapeHtml(result.document_id || "-")} / ${escapeHtml(result.chunk_id || "-")}</strong></div>
     <div class="detail-kv"><span>内容校验值（SHA256）</span><strong class="hash-value">${escapeHtml(result.content_sha256 || "-")}</strong></div>

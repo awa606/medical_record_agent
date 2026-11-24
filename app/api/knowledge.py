@@ -20,6 +20,7 @@ from app.services.demo_knowledge import (
 from app.services.privacy import anonymize_text
 from app.services.knowledge_store import (
     DEFAULT_DISCLAIMER,
+    KnowledgeIdentityConflict,
     get_knowledge_source,
     get_knowledge_document,
     import_text_document,
@@ -260,9 +261,11 @@ def import_admin_knowledge_document(
             content=payload.content,
             actor_user_id=admin.id,
         )
+    except KnowledgeIdentityConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return {**result, "activation_required": True}
+    return {**result, "activation_required": not (result["is_active"] and result["is_current"])}
 
 
 @router.patch("/knowledge/admin/documents/{document_id}")

@@ -674,9 +674,12 @@ async function refreshAuth() {
   const generation = authGeneration;
   const previousUser = appState.authUser;
   const activeDialog = previousUser && document.querySelector("dialog[open]");
-  const dialogFocus = activeDialog && document.activeElement;
+  // The public help pages contain no encounter content. Closing this dialog
+  // between pointerdown and click swallows its navigation controls.
+  const clinicalDialog = activeDialog?.id === "helpDialog" ? null : activeDialog;
+  const dialogFocus = clinicalDialog && document.activeElement;
   if (previousUser) {
-    activeDialog?.close();
+    clinicalDialog?.close();
     appState.authStatus = "checking_active";
     appState.authMessage = "";
     renderAuthPanel();
@@ -714,12 +717,12 @@ async function refreshAuth() {
     renderAuthPanel();
     if (activeDialog && generation === authGeneration) {
       if (previousUser === appState.authUser && appState.authStatus === "authenticated") {
-        activeDialog.showModal();
+        clinicalDialog?.showModal();
         dialogFocus?.focus({ preventScroll: true });
       } else {
         closeWorkspaceAuxiliary();
         closeManualFirstDialog();
-        if (activeDialog.id === "helpDialog") closeEmbeddedHelp({ fromHistory: true });
+        if (activeDialog.id === "helpDialog" && activeDialog.open) closeEmbeddedHelp({ fromHistory: true });
       }
     }
   }
@@ -3132,31 +3135,19 @@ let helpReturnFocus = null;
 let helpPushedState = false;
 let returningFromHelpFrame = false;
 
+// The embedded pages share browser session history with the surrounding workbench.
+const embeddedHelpTrail = [];
+
 function updateHelpBackState() {
   const button = $("helpBackButton");
-  if (!button) return;
-  let canGoBack = false;
-  try {
-    const win = $("embeddedHelpFrame")?.contentWindow;
-    canGoBack = Boolean(win && win.history && win.history.length > 1);
-  } catch {
-    canGoBack = false;
-  }
-  button.disabled = !canGoBack;
+  if (button) button.disabled = embeddedHelpTrail.length === 0;
 }
 
 function helpGoBack() {
-  const frame = $("embeddedHelpFrame");
-  try {
-    if (frame?.contentWindow?.history?.length > 1) {
-      frame.contentWindow.history.back();
-      window.setTimeout(updateHelpBackState, 200);
-      return;
-    }
-  } catch {
-    // Cross-origin or detached frame: fall back to closing the drawer.
-  }
-  closeEmbeddedHelp();
+  const previous = embeddedHelpTrail.pop();
+  if (!previous) return;
+  $("embeddedHelpFrame").contentWindow.location.replace(previous);
+  updateHelpBackState();
 }
 
 function openEmbeddedHelp() {
@@ -3222,7 +3213,16 @@ function wireEmbeddedHelp() {
       if (url.hash === "#admin") setProductView("admin");
       return;
     }
-    if (!url.pathname.startsWith("/static/help/")) event.preventDefault();
+    if (!url.pathname.startsWith("/static/help/")) {
+      event.preventDefault();
+      return;
+    }
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || link.target === "_blank") return;
+    event.preventDefault();
+    if (url.href === doc.location.href) return;
+    embeddedHelpTrail.push(doc.location.href);
+    frame.contentWindow.location.replace(url.href);
+    updateHelpBackState();
   });
   doc.addEventListener("keydown", (event) => {
     if (event.key === "Escape") { event.preventDefault(); closeEmbeddedHelp(); return; }

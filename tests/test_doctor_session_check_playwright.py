@@ -311,3 +311,34 @@ def test_mobile_open_dialog_restores_focus_or_releases_keyboard_for_retry(doctor
         expect(page.locator(".doctor-app")).to_be_visible()
         page.locator("#showTranscriptButton").click()
         expect(dialog).to_be_visible()
+
+
+def test_embedded_help_can_go_back_while_checking_session(doctor_links):
+    password, links = doctor_links
+    with sync_playwright() as pw, pw.chromium.launch() as browser:
+        page = browser.new_page()
+        open_doctor_visit(page, password, links[0])
+        page.locator("#openEmbeddedHelpButton").click()
+        frame = page.frame_locator("#embeddedHelpFrame")
+        back = page.locator("#helpBackButton")
+        expect(back).to_be_disabled()
+        frame.locator('a[href="manual.html"]').first.click()
+        expect(frame.locator("h1")).to_contain_text("手册")
+        expect(back).to_be_enabled()
+
+        # Revocation is discovered by the focus-triggered check, after the
+        # iframe gives up focus but before the parent finishes the click.
+        assert page.request.post(page.url.split("/static/")[0] + "/api/auth/logout").ok
+        pending = []
+        page.route("**/api/auth/me", lambda route: pending.append(route), times=1)
+        with page.expect_request("**/api/auth/me"):
+            back.click()
+        expect(frame.locator("h1")).to_have_text("使用帮助")
+        expect(back).to_be_disabled()
+        assert_locked(page)
+        with page.expect_response("**/api/auth/me") as response:
+            pending[0].continue_()
+        assert response.value.status == 401
+        expect(page.locator("#helpDialog")).not_to_be_visible()
+        expect(page.locator("#loginUsername")).to_be_visible()
+        expect(page.locator(".doctor-app")).not_to_be_visible()

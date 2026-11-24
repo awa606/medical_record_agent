@@ -64,3 +64,26 @@ states.push(bound({})); // Legacy metadata, protected download will look up the 
 console.log(JSON.stringify(states));
 ''')
     assert observed == [True, False, False, False, False, False, False, False, True]
+
+def test_withdrawn_audio_review_preserves_signed_download_without_offering_new_export():
+    observed = run_browser_logic(r"""
+Object.assign(appState, {
+  currentTaskId: 9,
+  currentTask: {id:9, current_record_revision_id:19, result_json:{
+    record_revision:{id:19,content_hash:'hash19'},export_event:{revision_id:19,approval_id:2}
+  }}
+});
+const ready = {task_id:9, ready:true, approval_id:2, revision_id:19, content_hash:'hash19',
+  current_stage:'EXPORTED',exports:{pdf_path:'original.pdf'},can_create_export:false,
+  audio_source_issue:{reason_code:'source_under_review',message:'录音身份待重新核对。'}};
+const ctx = captureReadContext();
+appState.exportIssue = {context:ctx,message:'文件暂时不可用。',fileUnavailable:true};
+const html = renderExportReadinessDetail(ready);
+console.log(JSON.stringify({
+  notice:html.includes('录音身份待重新核对。'), download:html.includes('再次下载 PDF'),
+  generate:html.includes('重新生成本版本 PDF'),
+  ordinary:renderExportReadinessDetail({...ready, audio_source_issue:null, can_create_export:true}).includes('重新生成本版本 PDF'),
+  unrelated:currentAudioSourceNotice({...ready,task_id:10})
+}));
+""")
+    assert observed == {'notice': True, 'download': True, 'generate': False, 'ordinary': True, 'unrelated': ''}

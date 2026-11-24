@@ -1492,6 +1492,10 @@ function currentExportFile(readiness = appState.currentExportReadiness) {
   return readiness.exports;
 }
 
+function currentAudioSourceNotice(readiness = appState.currentExportReadiness) {
+  return exportReadinessMatches(readiness) ? readiness.audio_source_issue?.message || "" : "";
+}
+
 function renderExportReadinessDetail(readiness = appState.currentExportReadiness) {
   const file = currentExportFile(readiness);
   let rows = ["正在核对当前版本的审核状态。"];
@@ -1502,11 +1506,13 @@ function renderExportReadinessDetail(readiness = appState.currentExportReadiness
       : ["当前版本暂不可导出。", ...(readiness.errors || [])];
   }
   const retry = appState.exportIssue && isCurrentRead(appState.exportIssue.context) ? appState.exportIssue : null;
-  if (retry) rows.push(retry.message);
+  const audioNotice = currentAudioSourceNotice(readiness);
+  if (audioNotice && !rows.includes(audioNotice)) rows.push(audioNotice);
+  if (retry && !rows.includes(retry.message)) rows.push(retry.message);
   const binding = `data-export-task="${escapeHtml(String(appState.currentTaskId || ""))}" data-export-revision="${escapeHtml(String(currentRevisionInfo(null).revisionId || ""))}"`;
   const action = file || (retry && (!readiness || readiness.ready))
     ? `<button type="button" class="secondary-action" data-export-download-format="pdf" ${binding}>${file ? "再次下载 PDF" : "重试导出 PDF"}</button>` : "";
-  const regenerate = file && retry?.fileUnavailable
+  const regenerate = file && retry?.fileUnavailable && readiness.can_create_export !== false
     ? `<button type="button" class="secondary-action" data-export-download-format="regenerate" ${binding}>重新生成本版本 PDF</button>` : "";
   return detailSection("导出状态与文件", `
     <div class="detail-evidence-list">
@@ -4988,6 +4994,7 @@ function focusRecordTarget(key, section = false) {
 }
 
 function renderApprovalChecklist(fields) {
+  const audioNotice = currentAudioSourceNotice();
   if (!fields || isRecordPreviewActive() || !appState.currentTaskId) return "";
   syncApprovalReviewStateWithRevision();
   const revision = currentRevisionInfo();
@@ -5062,6 +5069,7 @@ function renderApprovalChecklist(fields) {
   }).join("");
   return `
     <section class="approval-checklist" aria-label="分项审核">
+      ${audioNotice ? `<p role="status" class="reference-notice">${escapeHtml(audioNotice)}${currentExportFile() ? " 可下载本版本已签的 PDF 原件。" : ""}</p>` : ""}
       <details class="approval-disclosure" ${appState.approvalDisclosureOpen ? "open" : ""}>
       <summary class="approval-checklist-head" aria-label="医生分项审核 · 版本 ${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"} · ${escapeHtml(reviewLabel)}">
         <strong>医生分项审核</strong>
@@ -5099,6 +5107,8 @@ async function buildTaskApprovalPayload() {
   }
   if (historicalRecordQuality(fields).incomplete) throw new Error("历史病历内容不完整，请核对原文并补录后重新审核。");
   const readiness = await refreshExportReadiness();
+  const audioNotice = currentAudioSourceNotice(readiness);
+  if (audioNotice) throw new Error(audioNotice);
   const revision = currentRevisionInfo(readiness);
   syncApprovalReviewStateWithRevision(readiness);
   if (!revision.revisionId || !revision.contentHash) {
@@ -9194,7 +9204,7 @@ async function exportRecord({ regenerate = false } = {}) {
       if (await reloadExportVersion(context)) showToast("病历版本已变化，请核对最新版本后再导出。");
       return;
     }
-    if (!isApprovedForExport()) {
+    if (!isApprovedForExport() || (regenerate && readiness.can_create_export === false)) {
       openDetailDrawer("暂不可导出", renderExportReadinessDetail(readiness));
       return;
     }
@@ -9241,6 +9251,11 @@ async function exportRecord({ regenerate = false } = {}) {
     if (available && !downloading) message = "本版本已有 PDF 导出记录，可重试下载。";
     const fileUnavailable = Boolean(available && downloading && [404, 409].includes(error.status));
     if (fileUnavailable) message = "原 PDF 无法读取。如需原件，请联系运维从对应备份恢复原 PDF 到导出目录，再重试下载。重新生成会创建新的导出记录。";
+    const audioNotice = currentAudioSourceNotice();
+    if (audioNotice && !downloading) message = audioNotice;
+    if (fileUnavailable && appState.currentExportReadiness?.can_create_export === false) {
+      message = "原 PDF 无法读取，请联系运维恢复对应的已签原件。";
+    }
     appState.exportIssue = { context, message, fileUnavailable };
     openDetailDrawer(available ? "PDF 下载未完成" : "导出未完成", renderExportReadinessDetail());
     showToast(message);

@@ -677,6 +677,7 @@ async function refreshAuth() {
       return null;
     }
     const user = await response.json();
+    syncManualFirstAccount(user.id);
     appState.authUser = user;
     appState.authStatus = "authenticated";
     appState.authMessage = "";
@@ -732,6 +733,7 @@ async function submitLogin(event) {
         : (detail && detail.message) || "用户名或密码错误。";
       throw new Error(message);
     }
+    syncManualFirstAccount(data.user.id);
     // A cookie can expire while a patient is on screen. A different doctor
     // logging into the same tab starts at their own worklist.
     if (appState.currentEncounter && appState.currentEncounter.doctor_user_id !== data.user.id) {
@@ -770,7 +772,8 @@ async function logout() {
   try {
     await fetch("/api/auth/logout", { method: "POST" });
   } finally {
-    clearManualFirstDrafts(departingUserId);
+    discardManualFirstDrafts(owner => owner === String(departingUserId));
+    syncManualFirstAccount(null);
     beginEncounterRead();
     resetTaskState();
     appState.encounterWorklist = [];
@@ -1482,6 +1485,26 @@ const manualFirstDrafts = new Map();
 const manualFirstWrites = new Map();
 let manualFirstEditor = null;
 let manualFirstSessionEpoch = 0;
+const manualFirstAccountKey = "mra-manual-first:tab-account:v1";
+let manualFirstAccountId = null;
+
+function syncManualFirstAccount(userId) {
+  let previous = manualFirstAccountId;
+  const next = userId == null ? null : String(userId);
+  try { previous ||= sessionStorage.getItem(manualFirstAccountKey); } catch (_) { /* In-memory session. */ }
+  if (previous && next && previous !== next) {
+    manualFirstSessionEpoch++;
+    discardManualFirstDrafts(owner => owner === previous);
+  } else if (!previous && next) {
+    // Pre-marker tabs can still hold drafts from more than one authenticated doctor.
+    discardManualFirstDrafts(owner => owner !== next);
+  }
+  manualFirstAccountId = next;
+  try {
+    if (next) sessionStorage.setItem(manualFirstAccountKey, next);
+    else sessionStorage.removeItem(manualFirstAccountKey);
+  } catch (_) { /* In-memory session. */ }
+}
 
 function manualFirstKey() {
   const user = appState.authUser;
@@ -1507,13 +1530,15 @@ function storeManualFirst(key, draft) {
   }
 }
 
-function clearManualFirstDrafts(userId) {
-  if (userId == null) return;
-  const prefix = `mra-manual-first:v1:${userId}:`;
-  const keys = new Set(manualFirstDrafts.keys());
+function discardManualFirstDrafts(matchesOwner) {
+  const keys = new Set([...manualFirstDrafts.keys(), ...manualFirstWrites.keys()]);
   try { Object.keys(sessionStorage).forEach(key => keys.add(key)); } catch (_) { /* Private browsing. */ }
-  for (const key of keys) if (key.startsWith(prefix)) storeManualFirst(key, null);
-  for (const key of manualFirstWrites.keys()) if (key.startsWith(prefix)) manualFirstWrites.delete(key);
+  for (const key of keys) {
+    const owner = /^mra-manual-first:v1:(\d+):\d+:\d+$/.exec(key)?.[1];
+    if (!owner || !matchesOwner(owner)) continue;
+    storeManualFirst(key, null);
+    manualFirstWrites.delete(key);
+  }
 }
 
 function readManualFirst(key) {

@@ -139,19 +139,23 @@ def test_handwritten_r1_draft_recovery_and_lost_ack(width):
         server.close()
 
 
-@pytest.mark.parametrize("after_commit", ["refresh", "logout", "expired", "timeout"])
+@pytest.mark.parametrize("after_commit", ["refresh", "logout", "expired", "expired-same", "legacy", "timeout"])
 def test_first_draft_late_receipt_does_not_expose_or_resurrect_draft(after_commit):
     server = RunningServer()
     try:
         with sync_playwright() as pw, pw.chromium.launch() as browser:
-            page = browser.new_page(viewport={"width": 390, "height": 844})
+            context = browser.new_context(viewport={"width": 390, "height": 844})
+            page = context.new_page()
             _login(page, server.base_url)
             password = secrets.token_urlsafe(24)
+            doctor_ids = {}
             for username in ("first-writer", "next-writer"):
                 created = page.request.post(server.base_url + "/api/auth/users", data={
                     "username": username, "password": password, "role": "doctor", "display_name": username,
                 })
                 assert created.ok
+                created_user = created.json()
+                doctor_ids[username] = created_user.get("id") or created_user["user"]["id"]
             page.locator("#logoutButton").click()
             login_doctor(page, "first-writer", password)
             doctor = page.request.get(server.base_url + "/api/auth/me").json()["id"]
@@ -160,14 +164,50 @@ def test_first_draft_late_receipt_does_not_expose_or_resurrect_draft(after_commi
             page.get_by_role("button", name="手写病历", exact=True).press("Enter")
             dialog = page.get_by_role("dialog", name="手写病历")
             dialog.get_by_label("主诉", exact=True).fill("本次由医生记录来意。")
-            if after_commit == "expired":
-                assert page.request.post(server.base_url + "/api/auth/logout").ok
+            if after_commit == "legacy":
+                next_owner = doctor_ids["next-writer"]
+                other, other_task = failed_encounter(server, next_owner, "SYN-LEGACY-TAB")
+                other_key = f"mra-manual-first:v1:{next_owner}:{other}:{other_task}"
+                page.evaluate("""k => {
+                    sessionStorage.removeItem("mra-manual-first:tab-account:v1");
+                    sessionStorage.setItem(k, JSON.stringify({chief:"乙的历史暂存", illness:"", requestId:"", attempted:false}));
+                    sessionStorage.setItem("unrelated-legacy-key","keep");
+                }""", other_key)
+                login_tab = context.new_page()
+                login_tab.goto(server.base_url + "/static/doctor.html")
+                login_tab.locator("#logoutButton").click()
+                login_doctor(login_tab, "next-writer", password)
+                login_tab.close()
+                page.reload()
+                expect(page.locator("#authUserLabel")).to_contain_text("next-writer")
+                _open_from_workbench(page, other)
+                page.get_by_role("button", name="手写病历", exact=True).press("Enter")
+                expect(dialog.get_by_label("主诉", exact=True)).to_have_value("乙的历史暂存")
+                key = f"mra-manual-first:v1:{doctor}:{encounter}:{task}"
+                assert page.evaluate("k => sessionStorage.getItem(k)", key) is None
+                assert page.evaluate("sessionStorage.getItem('unrelated-legacy-key')") == "keep"
+                return
+            if after_commit in ("expired", "expired-same"):
+                other_tab = page.context.new_page()
+                other_tab.goto(server.base_url + "/static/doctor.html")
+                other_tab.locator("#logoutButton").click()
+                expect(other_tab.locator("#loginPanel")).to_be_visible()
+                other_tab.close()
                 dialog.get_by_role("button", name="保存手写首稿").press("Enter")
                 expect(page.locator("#loginPanel")).to_be_visible()
+                if after_commit == "expired-same":
+                    login_doctor(page, "first-writer", password)
+                    _open_from_workbench(page, encounter)
+                    page.get_by_role("button", name="手写病历", exact=True).press("Enter")
+                    expect(dialog.get_by_label("主诉", exact=True)).to_have_value("本次由医生记录来意。")
+                    return
                 login_doctor(page, "next-writer", password)
                 expect(page.locator("body")).to_have_attribute("data-product-view", "workbench")
                 expect(page.locator("#patientName")).to_have_text("未选择患者")
                 expect(page.locator("#manualFirstChief")).to_have_value("")
+                key = f"mra-manual-first:v1:{doctor}:{encounter}:{task}"
+                assert page.evaluate("k => sessionStorage.getItem(k)", key) is None
+                assert not page.evaluate("k => manualFirstDrafts.has(k) || manualFirstWrites.has(k)", key)
                 return
             held = []
             if after_commit == "timeout":

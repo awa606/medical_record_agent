@@ -8602,6 +8602,17 @@ function speakerRolesForReviewSave() {
   }));
 }
 
+function hasRequestedRoleGeneration() {
+  return appState.pendingGenerateAfterRoleReview && !appState.currentTaskId && !appState.currentRecordFields;
+}
+
+async function resumeRequestedRoleGeneration() {
+  appState.pendingGenerateAfterRoleReview = false;
+  closeDrawer();
+  showToast("身份已确认，正在生成病历");
+  await regenerateRecord();
+}
+
 async function saveRoleReview({ silent = false } = {}) {
   if (!appState.currentAsrSessionId || !appState.currentAsrResult?.segments?.length) {
     if (!silent) showToast("暂无可保存的身份确认结果");
@@ -8625,6 +8636,11 @@ async function saveRoleReview({ silent = false } = {}) {
     return appState.currentAsrResult;
   }
   if (!edits.length && ((!savingPending && unresolved.length) || !speakerRoles.length)) {
+    if (!silent && !unresolved.length && !speakerRoles.length && hasRequestedRoleGeneration()
+        && !roleReviewRequired() && roleQualityPassed()) {
+      await resumeRequestedRoleGeneration();
+      return appState.currentAsrResult;
+    }
     if (!silent) showToast(unresolved.length ? `请明确选择 ${unresolved.length} 位说话人的身份。` : "没有待保存的更正。");
     return appState.currentAsrResult;
   }
@@ -8678,11 +8694,9 @@ async function saveRoleReview({ silent = false } = {}) {
     shouldAutoGenerate = Boolean(
       !silent
         && !savingPending
-        && appState.pendingGenerateAfterRoleReview
+        && hasRequestedRoleGeneration()
         && !pendingCount
-        && qualityPassed
-        && !appState.currentTaskId
-        && !appState.currentRecordFields,
+        && qualityPassed,
     );
     if (!silent && !shouldAutoGenerate && !pendingCount && qualityPassed) {
       scheduleRecordPreview({ force: true });
@@ -8701,10 +8715,7 @@ async function saveRoleReview({ silent = false } = {}) {
     return savedResult;
   }
   if (shouldAutoGenerate) {
-    appState.pendingGenerateAfterRoleReview = false;
-    closeDrawer();
-    showToast("身份确认已保存，正在生成病历");
-    await regenerateRecord();
+    await resumeRequestedRoleGeneration();
     return savedResult;
   }
   appState.pendingGenerateAfterRoleReview = false;

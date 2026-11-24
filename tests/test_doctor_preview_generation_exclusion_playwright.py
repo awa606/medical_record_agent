@@ -33,11 +33,11 @@ def preview_page():
 
 def test_visible_role_save_starts_one_formal_task_without_paid_preview(preview_page):
     page, calls = preview_page
-    asr_result = page.evaluate("window.__MRA_APP_STATE__.currentAsrResult")
-    page.route(
-        "**/api/asr/sessions/role-session/result",
-        lambda route: route.fulfill(json={"audio_id": "role-audio", "asr_result": asr_result}),
-    )
+    # The prior review is already saved. Continuing a requested generation
+    # should not turn suggested speaker values into a second manual decision.
+    speaker_writes = []
+    page.on("request", lambda request: speaker_writes.append(request.url)
+            if request.method == "PATCH" and "/asr/sessions/" in request.url else None)
     failed_task = {
         "id": 2301, "status": "FAILED", "current_stage": "FIELD_EXTRACTION",
         "input_text": "患者：发热。", "result_json": {},
@@ -60,6 +60,7 @@ def test_visible_role_save_starts_one_formal_task_without_paid_preview(preview_p
     page.locator("[data-save-role-review]").click()
     page.wait_for_function("window.__MRA_APP_STATE__.currentTaskId === 2301 && !window.__MRA_APP_STATE__.eventSource")
     assert calls == {"preview": 0, "generate": 1}
+    assert speaker_writes == []
     # A late ASR result or a queued callback must not become a second inference.
     page.evaluate("scheduleRecordPreview({ force: true }); fetchRecordPreview('患者：发热。', [])")
     page.wait_for_timeout(2200)

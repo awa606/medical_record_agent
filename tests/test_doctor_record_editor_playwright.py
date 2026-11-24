@@ -259,6 +259,16 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(detail.get_by_text("仅用于自动化测试中的医生人工参考。", exact=True)).to_be_visible()
             expect(detail.get_by_role("link", name="打开登记来源（需联网）")).to_be_visible()
             expect(detail.get_by_text("选择来源核对原文", exact=False)).to_have_count(0)
+            first_card = detail.locator(".detail-section").first
+            expect(first_card.locator(".detail-kv").first).to_contain_text("章节 / 页码")
+            expect(first_card.locator(".detail-kv + .detail-text")).to_be_visible()
+            identifiers = first_card.locator("details").filter(has_text="文档编号与校验值")
+            expect(identifiers.locator(".hash-value")).to_be_hidden()
+            identifiers.locator("summary").press("Enter")
+            expect(identifiers.locator(".hash-value")).to_be_visible()
+            expect(identifiers).to_contain_text(document_id)
+            identifiers.locator("summary").press("Space")
+            expect(identifiers.locator(".hash-value")).to_be_hidden()
 
             # Two passages in one version share an original; a new version is a second source.
             original = {"document_id": "record-rule", "version": "2024", "title": "文书示例",
@@ -274,6 +284,10 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             directory.locator("summary").press("Enter")
             expect(directory.get_by_role("link")).to_have_text(["文书示例 · 2024", "文书示例 · 2025"])
             expect(directory.get_by_role("link").last).to_have_attribute("href", revised["source_url"])
+            partial_ids = detail.locator(".detail-section").first.locator("details")
+            partial_ids.locator("summary").press("Enter")
+            expect(partial_ids).to_contain_text("record-rule / 未登记")
+            expect(partial_ids.locator(".hash-value")).to_have_text("未登记")
             page.unroute("**/api/knowledge/retrieve")
 
             page.click("#closeDrawerButton")
@@ -283,20 +297,96 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(directory).to_contain_text("2 个片段")
             expect(directory).to_contain_text("部分片段缺少文档标识或版本，无法核定资料总数")
             expect(directory.locator("details")).to_have_count(0)
+            legacy_card = detail.locator(".detail-section").last
+            expect(legacy_card.get_by_text("此片段未登记文档编号、片段编号和校验值。")).to_be_visible()
+            expect(legacy_card.locator("summary")).to_have_count(0)
             page.unroute("**/api/knowledge/retrieve")
 
             # Older responses can omit the notice, and a source-specific notice
             # can include literal angle brackets. Both must survive an empty result.
+            page.click("#closeDrawerButton")
             for response, expected_notice in (
                 ({"results": [], "disclaimer": "请核验来源 <测试>。"}, "请核验来源 <测试>。"),
                 ({"results": []}, DEFAULT_DISCLAIMER),
             ):
-                page.click("#closeDrawerButton")
                 page.route("**/api/knowledge/retrieve", lambda route: route.fulfill(json=response))
                 page.locator('[data-knowledge-field="chief_complaint"]').first.press("Enter")
                 expect(detail.get_by_role("note")).to_have_text(expected_notice)
                 expect(detail).to_contain_text("没有找到")
+                detail.get_by_role("button", name="返回主诉继续核对").press("Enter")
+                expect(chief.get_by_role("button", name="查知识资料")).to_be_focused()
                 page.unroute("**/api/knowledge/retrieve")
+            browser.close()
+    finally:
+        server.close()
+
+
+@pytest.mark.parametrize("width,height", [(320, 640), (650, 500)])
+def test_short_touch_viewport_can_open_record_fields_and_edit(width: int, height: int) -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": width, "height": height}, has_touch=True)
+            _login(page, server.base_url)
+            _prepare_review_fixture(page)
+            fields = page.locator("#recordFields")
+            for key, title in [("chief_complaint", "主诉"), ("allergy_history", "过敏史")]:
+                button = fields.locator(f'[data-knowledge-field="{key}"]')
+                button.tap(timeout=5000)
+                expect(page.locator("#drawerTitle")).to_have_text(f"查知识资料 · {title}")
+                page.locator("#closeDrawerButton").tap()
+                expect(button).to_be_focused()
+            page.locator("#editRecordButton").tap()
+            expect(fields.locator('[data-record-field-input="chief_complaint"]')).to_be_visible()
+            page.locator("#cancelRecordEditButton").tap()
+            expect(fields.locator("[data-record-field-input]")).to_have_count(0)
+            browser.close()
+    finally:
+        server.close()
+
+
+def test_field_search_retry_ignores_a_late_response_for_previous_edit() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page()
+            _login(page, server.base_url)
+            _prepare_review_fixture(page)
+            page.click("#editRecordButton")
+            field = page.locator('#recordFields [data-field="chief_complaint"]')
+            editor = field.locator('[data-record-field-input="chief_complaint"]')
+            lookup = field.get_by_role("button", name="查知识资料")
+            drawer = page.locator("#detailDrawerContent")
+            held = []
+            page.route("**/api/knowledge/retrieve", lambda route: held.append(route))
+
+            def send(action):
+                with page.expect_request(lambda req: req.url.endswith("/api/knowledge/retrieve")):
+                    action.press("Enter")
+
+            editor.fill("先前录入的主诉")
+            send(lookup)
+            page.keyboard.press("Escape")
+            editor.fill("当前录入的主诉")
+            send(lookup)
+            held[1].fulfill(status=503, json={"detail": "资料服务暂时不可用"})
+            expect(drawer.get_by_role("alert")).to_contain_text("资料服务暂时不可用")
+            send(drawer.get_by_role("button", name="重新查询主诉资料"))
+            assert [r.request.post_data_json["query"] for r in held] == [
+                "主诉：先前录入的主诉", "主诉：当前录入的主诉", "主诉：当前录入的主诉",
+            ]
+            held[2].fulfill(json={"results": [{"title": "当前查询的资料", "excerpt": "当前字段摘录"}]})
+            expect(drawer.get_by_text("当前字段摘录", exact=True)).to_be_visible()
+            with page.expect_event("requestfinished", predicate=lambda req: req == held[0].request):
+                held[0].fulfill(json={"results": [{"title": "旧查询的资料"}]})
+            page.evaluate("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))")
+            expect(drawer.get_by_text("当前字段摘录", exact=True)).to_be_visible()
+            assert page.evaluate("window.__MRA_APP_STATE__.fieldKnowledgeSearch.chief_complaint.results[0].title") == "当前查询的资料"
+            page.keyboard.press("Escape")
+            expect(lookup).to_be_focused()
+            expect(editor).to_have_value("当前录入的主诉")
             browser.close()
     finally:
         server.close()

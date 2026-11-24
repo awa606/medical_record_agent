@@ -621,8 +621,8 @@ async function api(path, options = {}) {
   return data;
 }
 
-// History reads are bounded independently of model generation and writes.
-async function readApi(path, { signal = appState.encounterReadController?.signal } = {}) {
+// Reads (including a field search with a POST body) share the encounter deadline.
+async function readApi(path, { signal = appState.encounterReadController?.signal, ...options } = {}) {
   const controller = new AbortController();
   let timer;
   let onAbort;
@@ -636,7 +636,7 @@ async function readApi(path, { signal = appState.encounterReadController?.signal
     }, 15000);
   });
   try {
-    return await Promise.race([api(path, { signal: controller.signal }), deadline]);
+    return await Promise.race([api(path, { ...options, signal: controller.signal }), deadline]);
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener("abort", onAbort);
@@ -4186,15 +4186,24 @@ function renderKnowledgeResultDetails(result = {}) {
   const sourceUrl = safeKnowledgeUrl(result.source_url || result.url);
   const scope = typeof result.usage_scope === "string" ? result.usage_scope.trim() : "";
   const scopeLabel = result.metadata_origin === "legacy_observed" ? "旧库共用用途登记" : "登记用途";
+  const [documentId, chunkId, checksum] = [result.document_id, result.chunk_id, result.content_sha256].map(value => {
+    const id = readableStoredText(value).trim();
+    return id === "-" ? "" : id;
+  });
+  const identifiers = documentId || chunkId || checksum
+    ? `<details class="reference-metadata"><summary>文档编号与校验值</summary>
+        <div class="detail-kv"><span>文档 / 片段</span><strong>${escapeHtml(documentId || "未登记")} / ${escapeHtml(chunkId || "未登记")}</strong></div>
+        <div class="detail-kv"><span>内容校验值（SHA256）</span><strong class="hash-value">${escapeHtml(checksum || "未登记")}</strong></div>
+      </details>`
+    : '<p class="reference-meta">此片段未登记文档编号、片段编号和校验值。</p>';
   return `
+    <div class="detail-kv"><span>章节 / 页码</span><strong>${escapeHtml(result.section || "-")} / ${escapeHtml(result.page ?? "-")}</strong></div>
+    <div class="detail-text">${escapeHtml(result.excerpt || result.match_reason || "暂无摘要。")}</div>
     <div class="detail-kv"><span>发布机构</span><strong>${escapeHtml(result.publisher || "未标注")}</strong></div>
     <div class="detail-kv"><span>版本</span><strong>${escapeHtml(result.version || "-")}</strong></div>
     <div class="detail-kv"><span>出处登记</span><strong>${knowledgeMetadataDescription(result.metadata_origin)}</strong></div>
     ${scope ? `<div class="detail-kv"><span>${scopeLabel}</span><strong>${escapeHtml(scope)}</strong></div>` : ""}
-    <div class="detail-kv"><span>章节 / 页码</span><strong>${escapeHtml(result.section || "-")} / ${escapeHtml(result.page ?? "-")}</strong></div>
-    <div class="detail-kv"><span>文档 / 片段</span><strong>${escapeHtml(result.document_id || "-")} / ${escapeHtml(result.chunk_id || "-")}</strong></div>
-    <div class="detail-kv"><span>内容校验值（SHA256）</span><strong class="hash-value">${escapeHtml(result.content_sha256 || "-")}</strong></div>
-    <div class="detail-text">${escapeHtml(result.excerpt || result.match_reason || "暂无摘要。")}</div>
+    ${identifiers}
     ${sourceUrl ? `<a class="knowledge-source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">打开登记来源（需联网）</a>` : ""}
   `;
 }
@@ -4242,36 +4251,40 @@ function renderFieldKnowledgeSearch(key) {
   const state = appState.fieldKnowledgeSearch[key] || {};
   const title = FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1] || "病历字段";
   if (state.status === "loading") return `<div class="empty-state">正在查询“${escapeHtml(title)}”相关依据...</div>`;
-  if (state.status === "failed") return `<div class="empty-state">${escapeHtml(state.error || "知识查询失败")}</div>`;
+  if (state.status === "failed") {
+    return `<div class="empty-state"><p role="alert">本次资料查询未完成。${escapeHtml(state.error || "")}</p>
+      <button type="button" class="secondary-action" data-retry-field-knowledge="${escapeHtml(key)}">重新查询${escapeHtml(title)}资料</button></div>`;
+  }
   const results = state.results || [];
   const disclaimer = state.disclaimer || "相关知识参考仅用于医生人工核验，不作为自动诊断或治疗建议。";
   const notice = `<p class="safety-strip" role="note">${escapeHtml(disclaimer)}</p>`;
   if (!results.length) {
-    return `<div>${notice}<div class="empty-state">没有找到与“${escapeHtml(title)}”匹配的已启用知识来源。</div></div>`;
+    return `<div>${notice}<div class="empty-state"><p>没有找到与“${escapeHtml(title)}”匹配的已启用资料片段。</p>
+      <button type="button" class="secondary-action" data-return-to-knowledge-field>返回${escapeHtml(title)}继续核对</button></div></div>`;
   }
   return renderKnowledgeSourceIndex(results) + notice +
     results.map((item) => detailSection(item.title || item.source_id || "知识来源", renderKnowledgeResultDetails(item))).join("");
 }
 
 async function retrieveKnowledgeForField(key) {
-  const taskId = appState.currentTaskId;
+  const context = captureReadContext();
   const title = FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1] || key;
   const value = appState.currentRecordFields?.[key]?.value || "";
   appState.fieldKnowledgeSearch[key] = { status: "loading", results: [], error: "" };
   openDetailDrawer(`查知识资料 · ${title}`, renderFieldKnowledgeSearch(key));
   const drawerVersion = detailDrawerVersion;
+  let result;
   try {
-    const payload = await api("/api/knowledge/retrieve", {
+    const payload = await readApi("/api/knowledge/retrieve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        task_id: taskId,
+        task_id: context.taskId,
         query: [title, value].filter(Boolean).join("："),
         related_fields: [key],
       }),
     });
-    if (taskId !== appState.currentTaskId) return;
-    appState.fieldKnowledgeSearch[key] = {
+    result = {
       status: "ready",
       results: payload.results || [],
       disclaimer: (payload.disclaimer || "").trim(),
@@ -4279,16 +4292,15 @@ async function retrieveKnowledgeForField(key) {
       retrievalMode: payload.retrieval_mode || "",
     };
   } catch (error) {
-    if (taskId !== appState.currentTaskId) return;
-    appState.fieldKnowledgeSearch[key] = {
+    result = {
       status: "failed",
       results: [],
       error: doctorSafeErrorMessage(error),
     };
   }
-  if (drawerVersion === detailDrawerVersion && $("drawer").classList.contains("active")) {
-    openDetailDrawer(`查知识资料 · ${title}`, renderFieldKnowledgeSearch(key));
-  }
+  if (!isCurrentRead(context) || drawerVersion !== detailDrawerVersion || !$("drawer").classList.contains("active")) return;
+  appState.fieldKnowledgeSearch[key] = result;
+  openDetailDrawer(`查知识资料 · ${title}`, renderFieldKnowledgeSearch(key));
 }
 
 function diagnosisList(items) {
@@ -11723,6 +11735,15 @@ function bindEvents() {
     selectReferenceTab(tabs[index]); tabs[index].focus();
   });
   $("detailDrawerContent").addEventListener("click", async (event) => {
+    if (event.target.closest("[data-return-to-knowledge-field]")) {
+      closeDrawer();
+      return;
+    }
+    const retryField = event.target.closest("[data-retry-field-knowledge]");
+    if (retryField) {
+      await retrieveKnowledgeForField(retryField.dataset.retryFieldKnowledge);
+      return;
+    }
     if (event.target.closest("[data-history-retry]")) {
       await openRecordHistory();
       return;

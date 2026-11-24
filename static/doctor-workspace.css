@@ -356,6 +356,13 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   body.doctor-mode .topbar .brand-block { max-width: 100%; flex-wrap: wrap; }
   body.doctor-mode .product-main { grid-area: main; min-width: 0; }
   body.doctor-mode .alpha51-workspace { height: calc(100dvh - 150px); max-height: calc(100dvh - 150px); }
+  /* Let wrapped headings grow while keeping the record list large enough to scroll by touch. */
+  body.doctor-mode .alpha51-workspace.has-record { height: auto; max-height: none; }
+  body.doctor-mode .alpha51-workspace.has-record .workbench { flex: none; grid-template-rows: auto; }
+  body.doctor-mode .alpha51-workspace.has-record .field-column {
+    height: auto; max-height: none;
+    grid-template-rows: auto auto auto clamp(13rem, 50dvh, 32rem);
+  }
   body.doctor-mode .alpha51-workspace .encounter-review-cell { display: none; }
   body.doctor-mode .alpha51-workspace .workflow-step { font-size: 14px; gap: 4px; padding-inline: 2px; }
 }

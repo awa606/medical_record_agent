@@ -77,7 +77,7 @@ def test_readable_uncovered_medication_requires_saved_correction_to_sign(tmp_pat
                 assert db.execute("select count(*) from approval").fetchone() == (0,)
                 assert db.execute("select count(*) from export_event").fetchone() == (0,)
 
-            card.get_by_role("button", name="修改", exact=True).click()
+            card.get_by_role("button", name="修改 现病史", exact=True).click()
             card.get_by_role("textbox").fill(symptom + "；" + medication)
             page.click("#saveDraftButton")
             expect(card.locator(".field-coverage-notice")).to_have_count(0)

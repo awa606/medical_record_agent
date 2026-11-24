@@ -62,9 +62,9 @@ def test_partial_draft_visible_resolution_save_and_embedded_help(method):
             if method == "source_correction":
                 choice = field.get_by_role("checkbox", name="第 2 句 · 患者")
                 choice.check()
-                expect(field.get_by_role("button", name="查看已选原话", exact=True)).to_be_visible()
+                expect(field.get_by_role("button", name="查看已选原话 过敏史", exact=True)).to_be_visible()
                 choice.uncheck()
-                expect(field.get_by_role("button", name="查看字段记录", exact=True)).to_be_visible()
+                expect(field.get_by_role("button", name="查看字段记录 过敏史", exact=True)).to_be_visible()
                 choice.check()
             page.click("#openEmbeddedHelpButton")
             expect(page.locator("#helpDialog")).to_be_visible()
@@ -87,7 +87,7 @@ def test_partial_draft_visible_resolution_save_and_embedded_help(method):
             assert stored["llm_trace"]["field_resolution_history"][-1]["method"] == method
             assert not stored["approved"]
             action = "查看字段记录" if method == "doctor_entry" else "查看问诊原文"
-            field.get_by_role("button", name=action, exact=True).click()
+            field.get_by_role("button", name=f"{action} 过敏史", exact=True).click()
             expect(page.locator("#detailDrawerContent")).to_contain_text("错误模型过敏内容")
             if method == "doctor_entry":
                 expect(page.locator("#detailDrawerContent")).to_contain_text("此字段没有保存原文引用")
@@ -111,7 +111,7 @@ def test_multispan_editor_keeps_only_explicit_choices_after_failed_save(width):
             source = "患者：发热两天。医生：请继续。患者：昨天吃过一次布洛芬，" + "那天出门前又核对了记录，" * 8 + "之后把时间写下。"
             task = seed_partial(page, server, source)
             card = page.locator('article[data-field="chief_complaint"]')
-            card.get_by_role("button", name="修改", exact=True).click()
+            card.get_by_role("button", name="修改 主诉", exact=True).click()
             resolve = card.get_by_role("button", name="根据原文修正")
             resolve.press("Enter")
             group = card.get_by_role("group", name="本次核对的原话")
@@ -165,7 +165,7 @@ def test_multispan_editor_keeps_only_explicit_choices_after_failed_save(width):
             resolve.click()
             expect(group).to_contain_text("已选 0 条")
             page.locator("#cancelRecordEditButton").click()
-            card.get_by_role("button", name="修改", exact=True).click()
+            card.get_by_role("button", name="修改 主诉", exact=True).click()
             expect(card.locator("textarea")).to_have_value("发热两天")
             resolve.click()
             expect(group).to_contain_text("已选 0 条")

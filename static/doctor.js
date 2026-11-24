@@ -571,8 +571,14 @@ function encounterSwitchBlocked(action = "切换就诊") {
   return false;
 }
 
-function detailButton(target, label = "查看详情") {
-  return `<button type="button" class="detail-link" data-open-detail="${escapeHtml(target)}">${escapeHtml(label)}</button>`;
+function fieldActionLabel(field, action) {
+  const key = escapeHtml(field);
+  const id = `record-field-${action}-${key}`;
+  return ` id="${id}" aria-labelledby="${id} record-field-heading-${key}"`;
+}
+
+function detailButton(target, label = "查看详情", field = "") {
+  return `<button type="button" class="detail-link" data-open-detail="${escapeHtml(target)}"${field ? fieldActionLabel(field, "detail") : ""}>${escapeHtml(label)}</button>`;
 }
 
 function detailSection(title, body) {
@@ -5522,9 +5528,9 @@ function renderFields() {
         ? `
         <div class="field-meta compact-field-meta">
           ${editOrigin ? `<span class="doctor-edit-origin">${escapeHtml(editOrigin)}</span>` : ""}
-          ${detailButton(`field:${key}`, key === "preliminary_diagnosis" ? "查看候选诊断" : fieldEvidencePresentation(fields[key], key).action)}
-          ${!isPreview && !isEditing && EDITABLE_FIELD_DEFS.some(([item]) => item === key) ? `<button type="button" data-record-edit-field="${escapeHtml(key)}">修改</button>` : ""}
-          ${key !== "preliminary_diagnosis" && key !== "treatment_plan" && !DEMOGRAPHIC_FIELD_KEYS.includes(key) ? `<button type="button" data-knowledge-field="${escapeHtml(key)}">查知识资料</button>` : ""}
+          ${detailButton(`field:${key}`, key === "preliminary_diagnosis" ? "查看候选诊断" : fieldEvidencePresentation(fields[key], key).action, key)}
+          ${!isPreview && !isEditing && EDITABLE_FIELD_DEFS.some(([item]) => item === key) ? `<button type="button" data-record-edit-field="${escapeHtml(key)}"${fieldActionLabel(key, "edit")}>修改</button>` : ""}
+          ${key !== "preliminary_diagnosis" && key !== "treatment_plan" && !DEMOGRAPHIC_FIELD_KEYS.includes(key) ? `<button type="button" data-knowledge-field="${escapeHtml(key)}"${fieldActionLabel(key, "knowledge")}>查知识资料</button>` : ""}
         </div>
         `
         : `

@@ -186,15 +186,15 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             editor = page.locator('[data-record-field-input="chief_complaint"]')
             chief = page.locator('[data-field="chief_complaint"]')
             original_chief = editor.input_value()
-            expect(chief.get_by_role("button", name="查看上版引文", exact=True)).to_be_visible()
+            expect(chief.get_by_role("button", name="查看上版引文 主诉", exact=True)).to_be_visible()
             editor.fill("患者发热39度，医生补充记录")
-            expect(chief.get_by_role("button", name="查看字段记录", exact=True)).to_be_visible()
+            expect(chief.get_by_role("button", name="查看字段记录 主诉", exact=True)).to_be_visible()
             expect(editor).to_be_focused()
             editor.fill(original_chief)
-            expect(chief.get_by_role("button", name="查看上版引文", exact=True)).to_be_visible()
+            expect(chief.get_by_role("button", name="查看上版引文 主诉", exact=True)).to_be_visible()
             editor.fill("患者发热39度，医生补充记录")
             with page.expect_response(lambda response: response.url.endswith("/api/knowledge/retrieve")) as lookup:
-                chief.get_by_role("button", name="查知识资料", exact=True).press("Enter")
+                chief.get_by_role("button", name="查知识资料 主诉", exact=True).press("Enter")
             assert lookup.value.ok
             assert lookup.value.request.post_data_json == {
                 "task_id": task_id, "query": "主诉：患者发热39度，医生补充记录", "related_fields": ["chief_complaint"],
@@ -240,7 +240,7 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
                     "SELECT * FROM record_revision WHERE id = ?", (revision_before,)
                 ).fetchone() == original_revision
             expect(page.locator('[data-field="chief_complaint"] .doctor-edit-origin')).to_have_text("医生已修改")
-            expect(chief.get_by_role("button", name="查看上版引文", exact=True)).to_be_visible()
+            expect(chief.get_by_role("button", name="查看上版引文 主诉", exact=True)).to_be_visible()
 
             page.click('[data-field="chief_complaint"] [data-knowledge-field="chief_complaint"]')
             page.wait_for_function(

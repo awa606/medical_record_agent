@@ -1,0 +1,150 @@
+{
+  "type": "原创合成书面工程夹具，无患者资料、无医学评分或治疗建议",
+  "created_utc": "2026-11-24T06:25:03.879379+00:00",
+  "rows": [
+    {
+      "id": "F01",
+      "group": "只有未完成",
+      "conversation": "医生：体温单还没送到，等收到再抄。",
+      "speaker": "医生",
+      "field": "physical_exam",
+      "value": "体温单还没送到，等收到再抄",
+      "quoted_text": "体温单还没送到，等收到再抄",
+      "index": 0,
+      "expected": "不能作本次查体所见",
+      "justification": "只有等待记录；没有读数。"
+    },
+    {
+      "id": "F02",
+      "group": "只有未完成",
+      "conversation": "医生：我稍后再听胸部，现在还没有听诊。",
+      "speaker": "医生",
+      "field": "physical_exam",
+      "value": "我稍后再听胸部，现在还没有听诊",
+      "quoted_text": "我稍后再听胸部，现在还没有听诊",
+      "index": 0,
+      "expected": "不能作本次查体所见",
+      "justification": "未来操作及尚未进行。"
+    },
+    {
+      "id": "F03",
+      "group": "只有未完成",
+      "conversation": "医生：血压测了，数值仍未传回来。",
+      "speaker": "医生",
+      "field": "physical_exam",
+      "value": "血压测了，数值仍未传回来",
+      "quoted_text": "血压测了，数值仍未传回来",
+      "index": 0,
+      "expected": "不能作本次查体所见",
+      "justification": "明确做过测量，但说话人未得到数值。"
+    },
+    {
+      "id": "F04",
+      "group": "只有未完成",
+      "conversation": "患者：护士说这次的记录要下午才能领。",
+      "speaker": "患者",
+      "field": "physical_exam",
+      "value": "这次的记录要下午才能领",
+      "quoted_text": "护士说这次的记录要下午才能领",
+      "index": 0,
+      "expected": "不能作本次查体所见",
+      "justification": "患者转述文件未来可取，不是体征。"
+    },
+    {
+      "id": "F05",
+      "group": "只有未完成",
+      "conversation": "女儿：给我爸爸做的这张检查还没出结果。",
+      "speaker": "家属",
+      "field": "physical_exam",
+      "value": "给我爸爸做的这张检查还没出结果",
+      "quoted_text": "给我爸爸做的这张检查还没出结果",
+      "index": 0,
+      "expected": "不能作本次查体所见",
+      "justification": "家属说明本人检查待回；没有已见结果。"
+    },
+    {
+      "id": "F06",
+      "group": "保护已检查",
+      "conversation": "医生：我测了，站位心率 104 次/分。",
+      "speaker": "医生",
+      "field": "physical_exam",
+      "value": "站位心率 104 次/分",
+      "quoted_text": "我测了，站位心率 104 次/分",
+      "index": 0,
+      "expected": "保留本次查体所见",
+      "justification": "医生明确给出本次结果，保留数字和单位。"
+    },
+    {
+      "id": "F07",
+      "group": "保护已检查",
+      "conversation": "医生：我按过右下腹，没发现压痛。",
+      "speaker": "医生",
+      "field": "physical_exam",
+      "value": "我按过右下腹，没发现压痛",
+      "quoted_text": "我按过右下腹，没发现压痛",
+      "index": 0,
+      "expected": "保留本次查体所见",
+      "justification": "阴性所见是检查结果，保留没发现压痛。"
+    },
+    {
+      "id": "F08",
+      "group": "保护已检查",
+      "conversation": "医生：我看了双侧瞳孔，等大等圆。",
+      "speaker": "医生",
+      "field": "physical_exam",
+      "value": "我看了双侧瞳孔，等大等圆",
+      "quoted_text": "我看了双侧瞳孔，等大等圆",
+      "index": 0,
+      "expected": "保留本次查体所见",
+      "justification": "无数字的检查所见；等大等圆中的等不是等待。"
+    },
+    {
+      "id": "F09",
+      "group": "保护同句另有待回",
+      "conversation": "医生：我听到双肺呼吸音清，另送的影像回报还没有取到。",
+      "speaker": "医生",
+      "field": "physical_exam",
+      "value": "双肺呼吸音清",
+      "quoted_text": "我听到双肺呼吸音清，另送的影像回报还没有取到",
+      "index": 0,
+      "expected": "保留本次查体所见",
+      "justification": "候选字段只引已完成听诊，另一份影像在等。"
+    },
+    {
+      "id": "F10",
+      "group": "保护同句另有待回",
+      "conversation": "医生：化验结果待回，但我现在看到结膜颜色正常。",
+      "speaker": "医生",
+      "field": "physical_exam",
+      "value": "结膜颜色正常",
+      "quoted_text": "化验结果待回，但我现在看到结膜颜色正常",
+      "index": 0,
+      "expected": "保留本次查体所见",
+      "justification": "待回事项在前，限定不应牵连后方具体所见。"
+    },
+    {
+      "id": "F11",
+      "group": "另测归属",
+      "conversation": "患者：我昨晚在家量的脉搏是 88 次/分。",
+      "speaker": "患者",
+      "field": "physical_exam",
+      "value": "昨晚在家量的脉搏是 88 次/分",
+      "quoted_text": "我昨晚在家量的脉搏是 88 次/分",
+      "index": 0,
+      "expected": "不能作本次查体所见",
+      "justification": "是本人在家的既往自测，有数值但没有本次医生查体。"
+    },
+    {
+      "id": "F12",
+      "group": "另测归属",
+      "conversation": "母亲：这是我上周体检时的脉搏 70 次/分。",
+      "speaker": "家属",
+      "field": "physical_exam",
+      "value": "上周体检时的脉搏 70 次/分",
+      "quoted_text": "这是我上周体检时的脉搏 70 次/分",
+      "index": 0,
+      "expected": "不能作本次查体所见",
+      "justification": "家属自己的既往体检值，不属于本次患者。"
+    }
+  ]
+}

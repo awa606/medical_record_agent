@@ -1,0 +1,115 @@
+{
+  "commit": "c06e48d1706385300cb40bcfe1c3265c538654bf",
+  "archive_sha256": "e79e69376a66a127e94457fd3d71c2feac722273916d723160a0793ec8c9d0fd",
+  "bytes": 73202282,
+  "source_git_blobs": 156,
+  "query_history": [
+    {
+      "status": 200,
+      "task": 1,
+      "fields": [
+        "chief_complaint"
+      ],
+      "result_count": 2,
+      "returned": true,
+      "versions": [
+        "国卫办医政发〔2024〕16号 · 项目释义v2"
+      ],
+      "source_ids": [
+        "mra-review-outpatient-info-2024"
+      ]
+    },
+    {
+      "status": 200,
+      "task": 1,
+      "fields": [
+        "allergy_history"
+      ],
+      "result_count": 2,
+      "returned": true,
+      "versions": [
+        "国卫办医政发〔2024〕16号 · 项目释义v2"
+      ],
+      "source_ids": [
+        "mra-review-outpatient-info-2024"
+      ]
+    }
+  ],
+  "status_of_original_empty_database": 503,
+  "keyboard_returns": [
+    {
+      "field": "chief_complaint",
+      "action": "查看问诊原文",
+      "content": "这两天右手腕有点疼",
+      "returned": true
+    },
+    {
+      "field": "past_history",
+      "action": "核对冲突引文",
+      "content": "我上个月也碰过左腕",
+      "returned": true
+    },
+    {
+      "field": "auxiliary_exam",
+      "action": "查看字段记录",
+      "content": "此字段没有保存原文引用",
+      "returned": true
+    },
+    {
+      "field": "chief_complaint",
+      "action": "查看上版引文",
+      "content": "上版引用",
+      "returned": true
+    }
+  ],
+  "doctor_query_hits": [
+    2,
+    0,
+    0,
+    2,
+    2
+  ],
+  "source_status": [
+    200,
+    404,
+    404,
+    200,
+    200
+  ],
+  "cold_and_restart_seconds": [
+    36.59,
+    6.97
+  ],
+  "pdf_bytes": 41244,
+  "pdf_sha256": "a42c56701e5d2b2a22a3c3881123edd8bbe8e85fdf8c7f10cb7c5f2eb77b0804",
+  "same_pdf_on_restart": true,
+  "delivery": [
+    {
+      "width": 320,
+      "sha256": "e79e69376a66a127e94457fd3d71c2feac722273916d723160a0793ec8c9d0fd",
+      "bytes": 73202282,
+      "comparison": true,
+      "external_requests": 0,
+      "page_errors": []
+    },
+    {
+      "width": 390,
+      "sha256": "e79e69376a66a127e94457fd3d71c2feac722273916d723160a0793ec8c9d0fd",
+      "bytes": 73202282,
+      "comparison": true,
+      "external_requests": 0,
+      "page_errors": []
+    },
+    {
+      "width": 1366,
+      "sha256": "e79e69376a66a127e94457fd3d71c2feac722273916d723160a0793ec8c9d0fd",
+      "bytes": 73202282,
+      "comparison": true,
+      "external_requests": 0,
+      "page_errors": []
+    }
+  ],
+  "independent_lifecycle_receipt_sha256": "72830db501c79f24731f4a2204561fdd22f96c0be645c8ad6d42cfdef59933f9",
+  "model_inferences": 0,
+  "clinical_reviewers": 0
+}

@@ -236,10 +236,15 @@ def test_closed_knowledge_search_does_not_reopen_over_edit_and_help():
             page = browser.new_page(viewport={"width": 1440, "height": 900})
             _login(page, server.base_url)
             seed_partial(page, server)
+            requests = []
+            page.on("request", lambda req: requests.append(req.url)
+                    if req.url.endswith("/api/knowledge/retrieve") else None)
             page.route("**/api/knowledge/retrieve", lambda route: route.fulfill(
-                status=200, content_type="application/json", body='{"results": []}'))
-            # Hold the response at the page boundary to reproduce delayed retrieval.
+                json={"results": [{"title": "已关闭抽屉的旧结果"}]}))
+            # Wait for the actual UI action, including its choice to discard a closed drawer's response.
             page.evaluate("""() => {
+              const lookup = window.retrieveKnowledgeForField;
+              window.retrieveKnowledgeForField = (...args) => (window.pendingFieldLookup = lookup(...args));
               const original = window.fetch;
               window.fetch = async (...args) => {
                 const response = await original(...args);
@@ -250,14 +255,15 @@ def test_closed_knowledge_search_does_not_reopen_over_edit_and_help():
               };
             }""")
             page.locator('[data-field="chief_complaint"] [data-knowledge-field]').click()
-            page.wait_for_function("Boolean(window.releaseKnowledgeResponse)")
+            page.wait_for_function("Boolean(window.releaseKnowledgeResponse) && window.pendingFieldLookup instanceof Promise")
             page.click("#closeDrawerButton")
             page.locator('[data-field="allergy_history"] [data-field-resolution="doctor_entry"]').click()
             editor = page.locator('[data-record-field-input="allergy_history"]')
             editor.fill("没有药物过敏")
             page.click("#openEmbeddedHelpButton")
-            page.evaluate("window.releaseKnowledgeResponse()")
-            page.wait_for_function("window.__MRA_APP_STATE__.fieldKnowledgeSearch.chief_complaint.status === 'ready'")
+            page.evaluate("async () => { window.releaseKnowledgeResponse(); await window.pendingFieldLookup; }")
+            assert len(requests) == 1
+            assert page.evaluate("appState.fieldKnowledgeSearch.chief_complaint.results") == []
             expect(page.locator("#drawer")).to_have_attribute("aria-hidden", "true")
             expect(page.locator("#helpDialog")).to_be_visible()
             page.click("#closeEmbeddedHelpButton")

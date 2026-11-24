@@ -49,3 +49,9 @@ Windows 演练从“字段条文阅读试用／试用与核验”进入。下载
 ```powershell
 python experiments/course-defense-20261118/field-review-trial/build.py --r4-2 --base "MediListen_同就诊来源修订_Windows-x64_d231e1c_r3.zip" --output "field-reading-r4.2" --commit 963439b389e07cf31791dbfac030f825ab951a35
 ```
+
+## 全套回归中的迟到响应
+
+首轮远端全套回归有 2,067 项通过、1 项失败、4 项跳过，另有 38 个子测试通过。失败发生在已关闭资料抽屉、修改过敏史并打开帮助的测试。测试用“已关闭查询写回 ready”作为网络处理完毕的信号，而新版只接受仍属当前抽屉的结果，其他产品路径没有消费已关闭抽屉的缓存。[保留首轮失败运行](https://github.com/awa606/medical_record_agent/actions/runs/45462245967)
+
+修订后的测试截住同一次真实 UI 查询的 Promise，释放旧应答并等待该操作完成。独立确认只有一次请求、旧结果没有写回、抽屉保持关闭、帮助可读，返回后医生填入的过敏史仍在。这个测试调整没有更改 r4.2 的应用文件或 ZIP 指纹。

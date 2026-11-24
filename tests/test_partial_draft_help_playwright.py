@@ -53,14 +53,19 @@ def test_partial_draft_visible_resolution_save_and_embedded_help(method):
             field = page.locator('[data-field="allergy_history"]')
             expect(field).not_to_contain_text("错误模型过敏内容")
             expect(field).to_contain_text("待核对")
-            field.get_by_role("button", name="查看原文证据").click()
+            field.locator('[data-open-detail="field:allergy_history"]').click()
             expect(page.locator("#detailDrawerContent")).to_contain_text("错误模型过敏内容")
             page.locator("#closeDrawerButton").click()
             field.locator(f'[data-field-resolution="{method}"]').click()
             editor = page.locator('[data-record-field-input="allergy_history"]')
             editor.fill("没有药物过敏")
             if method == "source_correction":
-                field.get_by_role("checkbox", name="第 2 句 · 患者").check()
+                choice = field.get_by_role("checkbox", name="第 2 句 · 患者")
+                choice.check()
+                expect(field.get_by_role("button", name="查看已选原话", exact=True)).to_be_visible()
+                choice.uncheck()
+                expect(field.get_by_role("button", name="查看字段记录", exact=True)).to_be_visible()
+                choice.check()
             page.click("#openEmbeddedHelpButton")
             expect(page.locator("#helpDialog")).to_be_visible()
             frame = page.frame_locator("#embeddedHelpFrame")
@@ -81,8 +86,11 @@ def test_partial_draft_visible_resolution_save_and_embedded_help(method):
             assert stored["fields"]["allergy_history"]["status"] != "conflicting"
             assert stored["llm_trace"]["field_resolution_history"][-1]["method"] == method
             assert not stored["approved"]
-            page.locator('[data-field="allergy_history"]').get_by_role("button", name="查看原文证据").click()
+            action = "查看字段记录" if method == "doctor_entry" else "查看问诊原文"
+            field.get_by_role("button", name=action, exact=True).click()
             expect(page.locator("#detailDrawerContent")).to_contain_text("错误模型过敏内容")
+            if method == "doctor_entry":
+                expect(page.locator("#detailDrawerContent")).to_contain_text("此字段没有保存原文引用")
             page.locator("#closeDrawerButton").click()
             out = Path(".artifacts/partial-draft-20261012")
             out.mkdir(parents=True, exist_ok=True)

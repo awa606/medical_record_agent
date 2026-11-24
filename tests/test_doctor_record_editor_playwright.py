@@ -184,7 +184,24 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             page.click("#editRecordButton")
             expect(page.locator('[data-record-field-input="past_history"]')).to_have_value(original_past_history)
             editor = page.locator('[data-record-field-input="chief_complaint"]')
+            chief = page.locator('[data-field="chief_complaint"]')
+            original_chief = editor.input_value()
+            expect(chief.get_by_role("button", name="查看上版引文", exact=True)).to_be_visible()
             editor.fill("患者发热39度，医生补充记录")
+            expect(chief.get_by_role("button", name="查看字段记录", exact=True)).to_be_visible()
+            expect(editor).to_be_focused()
+            editor.fill(original_chief)
+            expect(chief.get_by_role("button", name="查看上版引文", exact=True)).to_be_visible()
+            editor.fill("患者发热39度，医生补充记录")
+            with page.expect_response(lambda response: response.url.endswith("/api/knowledge/retrieve")) as lookup:
+                chief.get_by_role("button", name="查知识资料", exact=True).press("Enter")
+            assert lookup.value.ok
+            assert lookup.value.request.post_data_json == {
+                "task_id": task_id, "query": "主诉：患者发热39度，医生补充记录", "related_fields": ["chief_complaint"],
+            }
+            stored = page.request.get(server.base_url + f"/api/tasks/{task_id}").json()["result_json"]["fields"]
+            assert stored["chief_complaint"]["value"] == original_chief
+            page.click("#closeDrawerButton")
             edited_field = page.evaluate("window.__MRA_APP_STATE__.currentRecordFields.chief_complaint")
             assert edited_field["status"] == "partial"
             assert edited_field["source_spans"] == []
@@ -223,6 +240,7 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
                     "SELECT * FROM record_revision WHERE id = ?", (revision_before,)
                 ).fetchone() == original_revision
             expect(page.locator('[data-field="chief_complaint"] .doctor-edit-origin')).to_have_text("医生已修改")
+            expect(chief.get_by_role("button", name="查看上版引文", exact=True)).to_be_visible()
 
             page.click('[data-field="chief_complaint"] [data-knowledge-field="chief_complaint"]')
             page.wait_for_function(

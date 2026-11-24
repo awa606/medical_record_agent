@@ -4258,7 +4258,7 @@ async function retrieveKnowledgeForField(key) {
   const title = FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1] || key;
   const value = appState.currentRecordFields?.[key]?.value || "";
   appState.fieldKnowledgeSearch[key] = { status: "loading", results: [], error: "" };
-  openDetailDrawer(`查依据 · ${title}`, renderFieldKnowledgeSearch(key));
+  openDetailDrawer(`查知识资料 · ${title}`, renderFieldKnowledgeSearch(key));
   const drawerVersion = detailDrawerVersion;
   try {
     const payload = await api("/api/knowledge/retrieve", {
@@ -4287,7 +4287,7 @@ async function retrieveKnowledgeForField(key) {
     };
   }
   if (drawerVersion === detailDrawerVersion && $("drawer").classList.contains("active")) {
-    openDetailDrawer(`查依据 · ${title}`, renderFieldKnowledgeSearch(key));
+    openDetailDrawer(`查知识资料 · ${title}`, renderFieldKnowledgeSearch(key));
   }
 }
 
@@ -4431,6 +4431,24 @@ function renderFieldRevisionNote(note) {
     + (known.comment ? detailSection("医生审核说明", `<div class="detail-text">${escapeHtml(known.comment)}</div>`) : "");
 }
 
+function fieldEvidencePresentation(field, key) {
+  const hasQuotes = Boolean(field?.source_spans?.length);
+  if (appState.recordEditMode && appState.recordFieldResolutionModes[key] === "source_correction") {
+    return { action: hasQuotes ? "查看已选原话" : "查看字段记录", heading: "本次选择的原话（未保存）" };
+  }
+  if (hasQuotes && knownFieldRevisionNote(field?.doctor_review_note)?.origin === "医生已修改") {
+    return { action: "查看上版引文", heading: "上版引用（只读对照，不作为医生修改的自动证据）" };
+  }
+  const heading = ({audio: "原始转写证据（只读）", text: "录入文本的原文证据（只读）"})[fieldEvidenceSourceKind()] || "问诊原文证据（只读）";
+  if (hasQuotes && field.status === "conflicting") return { action: "核对冲突引文", heading };
+  return { action: hasQuotes ? "查看问诊原文" : "查看字段记录", heading };
+}
+
+function refreshFieldEvidenceAction(control, key) {
+  const action = control.closest("[data-field]")?.querySelector(".compact-field-meta [data-open-detail]");
+  if (action) action.textContent = fieldEvidencePresentation(appState.currentRecordFields?.[key], key).action;
+}
+
 function renderFieldDetailContent(key) {
   const fields = activeRecordFields();
   if (!fields) return `<div class="empty-state">暂无病历字段。</div>`;
@@ -4450,13 +4468,7 @@ function renderFieldDetailContent(key) {
       : `<div class="empty-state">暂无候选诊断（待医生确认）。生成病历后会显示鉴别诊断参考摘要，需医生判断。</div>`;
   }
   const field = fields[key] || null;
-  let evidenceTitle = ({audio: "原始转写证据（只读）", text: "录入文本的原文证据（只读）"})[fieldEvidenceSourceKind()] || "问诊原文证据（只读）";
-  if (appState.recordEditMode && appState.recordFieldResolutionModes[key] === "source_correction") {
-    evidenceTitle = "本次选择的原话（未保存）";
-  } else if (knownFieldRevisionNote(field?.doctor_review_note)?.origin === "医生已修改" && field.source_spans?.length) {
-    evidenceTitle = "上版引用（只读对照，不作为医生修改的自动证据）";
-  }
-  return detailSection(evidenceTitle, renderFieldEvidenceDetails(field, key))
+  return detailSection(fieldEvidencePresentation(field, key).heading, renderFieldEvidenceDetails(field, key))
     + `<div data-field-review-details>${renderFieldReviewDetails(fields, key, title)}</div>`;
 }
 
@@ -5487,9 +5499,9 @@ function renderFields() {
         ? `
         <div class="field-meta compact-field-meta">
           ${editOrigin ? `<span class="doctor-edit-origin">${escapeHtml(editOrigin)}</span>` : ""}
-          ${detailButton(`field:${key}`, "查看原文证据")}
+          ${detailButton(`field:${key}`, key === "preliminary_diagnosis" ? "查看候选诊断" : fieldEvidencePresentation(fields[key], key).action)}
           ${!isPreview && !isEditing && EDITABLE_FIELD_DEFS.some(([item]) => item === key) ? `<button type="button" data-record-edit-field="${escapeHtml(key)}">修改</button>` : ""}
-          ${key !== "preliminary_diagnosis" && key !== "treatment_plan" && !DEMOGRAPHIC_FIELD_KEYS.includes(key) ? `<button type="button" data-knowledge-field="${escapeHtml(key)}">查依据</button>` : ""}
+          ${key !== "preliminary_diagnosis" && key !== "treatment_plan" && !DEMOGRAPHIC_FIELD_KEYS.includes(key) ? `<button type="button" data-knowledge-field="${escapeHtml(key)}">查知识资料</button>` : ""}
         </div>
         `
         : `
@@ -11581,7 +11593,10 @@ function bindEvents() {
       return;
     }
     const checkbox = event.target.closest("[data-record-source-field]");
-    if (checkbox) updateFieldCorrectionSources(checkbox.dataset.recordSourceField, checkbox.closest("fieldset"));
+    if (checkbox) {
+      updateFieldCorrectionSources(checkbox.dataset.recordSourceField, checkbox.closest("fieldset"));
+      refreshFieldEvidenceAction(checkbox, checkbox.dataset.recordSourceField);
+    }
   });
   $("recordFields").addEventListener("input", (event) => {
     if (event.target.id === "clinicianAssessmentText" && appState.assessmentDraft && canWriteAssessment()) {
@@ -11593,6 +11608,7 @@ function bindEvents() {
     const editor = event.target.closest("[data-record-field-input]");
     if (!editor) return;
     updateRecordFieldValue(editor.dataset.recordFieldInput, editor.value);
+    refreshFieldEvidenceAction(editor, editor.dataset.recordFieldInput);
   });
   $("recordFields").addEventListener("input", (event) => {
     const input = event.target.closest("[data-diagnosis-code-index]");

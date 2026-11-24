@@ -155,6 +155,13 @@ body.doctor-mode .alpha51-workspace .approval-checklist-head p { font-size: 14px
 .approval-confirm-scope { margin: 8px 0 0; color: #526477; font-size: 14px; line-height: 1.6; }
 body.doctor-mode .alpha51-workspace .compact-field-meta button,
 body.doctor-mode .alpha51-workspace .approval-item-actions button { min-height: 36px; font-size: 14px; }
+body.doctor-mode .alpha51-workspace .compact-field-meta { flex-wrap: wrap; }
+body.doctor-mode .alpha51-workspace .compact-field-meta .detail-link {
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-weight: 600;
+}
+body.doctor-mode .alpha51-workspace .compact-field-meta [data-knowledge-field] { color: var(--ws-muted); }
 body.doctor-mode .alpha51-workspace .approval-primary-action { font-size: 16px; min-height: 40px; }
 .approval-entry-label { flex: none; color: #145d9c; font-size: 14px; font-weight: 600; }
 .approval-disclosure > .approval-section, .approval-disclosure > .review-completed { margin: 0 12px 12px; }

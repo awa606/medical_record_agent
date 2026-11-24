@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-24T10:59:05.179Z`
-- Source hash: `b384fc9fef3569e1a0ede01812e6308779c3dbbf16954dabba2d37da06356ed1`
+- Updated at: `2026-11-24T11:20:54.603Z`
+- Source hash: `6bcce54ad6e19ce2d4d1b638cdffff569f3cda1f5945416a00b04358f1a1ccf9`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@2f6b042ef1a06dbf1bf45138dcdeb08c8328b4e2`
+- Repo: `codex/ui-hospital-record-v1@5741ba4db47c31d1f5d5cfd2639aec9660395c10`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 继续核对合成就诊的事实归属和已签病历在两端的完整读取；按同一标准保留首次失败和修订记录。
+- Single next task: 在三人合成问诊中核查误指、重开和处理多人同段的实际路径，保留首答与人工订正记录。
 - Parallel waiting task: 继续项目内可复查的工程门禁；待正式教师评分、目标医生盲评与院方受控接口条件。
 
 ## Manual Actions

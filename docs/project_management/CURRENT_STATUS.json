@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-11-24T10:59:05.179Z",
-  "source_hash": "b384fc9fef3569e1a0ede01812e6308779c3dbbf16954dabba2d37da06356ed1",
+  "updated_at": "2026-11-24T11:20:54.603Z",
+  "source_hash": "6bcce54ad6e19ce2d4d1b638cdffff569f3cda1f5945416a00b04358f1a1ccf9",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "2f6b042ef1a06dbf1bf45138dcdeb08c8328b4e2",
+  "repo_sha": "5741ba4db47c31d1f5d5cfd2639aec9660395c10",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/ui-hospital-record-v1",
   "active_pr": {
@@ -93,7 +93,7 @@
     }
   },
   "purchase_decision": "DEFERRED",
-  "next_task": "继续核对合成就诊的事实归属和已签病历在两端的完整读取；按同一标准保留首次失败和修订记录。",
+  "next_task": "在三人合成问诊中核查误指、重开和处理多人同段的实际路径，保留首答与人工订正记录。",
   "parallel_waiting_task": "继续项目内可复查的工程门禁；待正式教师评分、目标医生盲评与院方受控接口条件。",
   "manual_actions": [
     "在实际教室投影并由授课教师或目标医生独立试用后登记意见。"
@@ -224,7 +224,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "00ad31ded90184a260d9f4ab8fee9739347f3f4460d7325f7a7a0a8f6dbecdef",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "cebfa094aea4cb620224ce124ba421730b292ddebc4358b535cd07f2d6a9b4db",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -314,6 +314,7 @@
     "docs/evidence/20261124_outpatient_print_and_audio.md": "c9006ea5928907d9389450aa5ef2de5c3d6196700b8e0266b5dc4bf3ba219654",
     "docs/evidence/20261124_patient_subject_readback.md": "6ed1bea200280996b1ad87cfee334739ebaadce6e886d20c7c463aa798cdf3cd",
     "docs/evidence/20261124_portable_session_review.md": "530ebe8799daa57c6bbd478a47e8ef99c6dcffd29ad2711f8f45bd4d4baf6c86",
+    "docs/evidence/20261124_reviewed_speaker_groups.md": "65c9a8a2ea8d045d38d249630d7477cee76f79d6a7a6fc905af97362e663c83f",
     "docs/evidence/20261124_saved_review_and_intake.md": "8ecf9638b264525e2ea5b3404688eb6490b0f9d6a5013eaeff791827407dddfc",
     "docs/evidence/20261124_six_first_responses.md": "66e1c223d5638cf6c9577341a57757a5bf4ca29fcde22f0fd98cf97aabc9dbe3",
     "docs/evidence/20261124_subject_scope_and_concurrent_visits.md": "0818ca480028e911abcd72f96bbb116484e06b8f63029c635ef7cbc3eddac039",

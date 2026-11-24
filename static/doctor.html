@@ -7,12 +7,12 @@
     <link rel="icon" href="./brand/medilisten-v1.ico" sizes="any" />
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
     <link rel="stylesheet" href="./doctor.css?v=9e08b0b9c2bdd9e2" />
-    <link rel="stylesheet" href="./doctor-ui-v2.css?v=d862fb3374b2be79" />
+    <link rel="stylesheet" href="./doctor-ui-v2.css?v=e54cc5c3d1902782" />
     <link rel="stylesheet" href="./doctor-workspace.css?v=a8b231c288aca7eb" />
   </head>
   <body class="doctor-mode standard-mode">
-<a class="skip-link" href="#mainContent">跳到主要内容</a>
-    <div class="doctor-app">
+<a class="skip-link" href="#mainContent" inert>跳到主要内容</a>
+    <div class="doctor-app" hidden>
       <header class="topbar">
         <div class="brand-block">
           <img class="brand-mark" src="./brand/medilisten-v1.png" alt="" aria-hidden="true" />
@@ -604,8 +604,13 @@
       </section>
     </aside>
 
-    <section id="loginPanel" class="login-panel" aria-live="polite">
-      <div class="login-shell">
+    <section id="loginPanel" class="login-panel" aria-label="医生工作台访问">
+      <div id="sessionCheck" class="login-card session-check">
+        <h2 id="sessionCheckTitle">登录状态核对</h2>
+        <p id="sessionCheckMessage" role="status">正在核对登录状态，请稍候。</p>
+        <button type="button" id="retrySessionCheck" class="primary-action" hidden>重新核对</button>
+      </div>
+      <div id="loginShell" class="login-shell" hidden inert>
         <aside class="login-brand-pane">
           <div class="login-brand-lockup">
             <img class="brand-mark" src="./brand/medilisten-v1.png" alt="" aria-hidden="true" />
@@ -640,8 +645,8 @@
             <span>密码</span>
             <input id="loginPassword" type="password" autocomplete="current-password" required />
           </label>
-          <button type="submit" class="primary-action login-submit">进入工作台</button>
-          <div id="loginMessage" class="login-message"></div>
+          <button type="submit" class="primary-action login-submit" disabled>进入工作台</button>
+          <div id="loginMessage" class="login-message" role="status"></div>
           <p class="login-help">登录问题请联系试点环境管理员。<button type="button" id="loginHelpButton">使用帮助</button></p>
         </form>
       </div>
@@ -669,6 +674,6 @@
       <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=870048d9622208fb"></script>
+    <script src="./doctor.js?v=ad315626d65dae7a"></script>
   </body>
 </html>

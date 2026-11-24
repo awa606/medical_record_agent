@@ -511,7 +511,7 @@ let deployment = { mode: "development", label: "开发候选", version: "unregis
 
 async function loadDeployment() {
   try {
-    const response = await fetch("./deployment.json", { cache: "no-store" });
+    const response = await fetch("./deployment.json", { cache: "no-store", signal: AbortSignal.timeout(8000) });
     if (!response.ok) throw new Error("配置加载失败");
     const value = await response.json();
     if (!["development", "showcase", "test"].includes(value.mode)) throw new Error("环境无效");
@@ -597,10 +597,11 @@ function friendlyUserName(user) {
 }
 
 async function api(path, options = {}) {
+  const requestingUser = appState.authUser;
   const response = await fetch(path, options);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && requestingUser && requestingUser === appState.authUser) {
       appState.authUser = null;
       appState.authStatus = "required";
       appState.authMessage = "登录已失效，请重新登录。";
@@ -668,27 +669,57 @@ function beginEncounterRead() {
 }
 
 async function refreshAuth() {
+  const generation = authGeneration;
+  const previousUser = appState.authUser;
+  const activeDialog = previousUser && document.querySelector("dialog[open]");
+  const dialogFocus = activeDialog && document.activeElement;
+  if (previousUser) {
+    activeDialog?.close();
+    appState.authStatus = "checking_active";
+    appState.authMessage = "";
+    renderAuthPanel();
+  }
   try {
-    const response = await fetch("/api/auth/me");
-    if (!response.ok) {
+    const response = await fetch("/api/auth/me", { cache: "no-store", signal: AbortSignal.timeout(8000) });
+    if (syncSharedLogout() || generation !== authGeneration) return null;
+    if (response.status === 401) {
       appState.authUser = null;
       appState.authStatus = "required";
       appState.authMessage = "";
       return null;
     }
+    if (!response.ok) throw new Error();
     const user = await response.json();
+    if (syncSharedLogout() || generation !== authGeneration) return null;
+    if (!Number.isInteger(user?.id) || !user.username || !user.role) throw new Error();
+    if (previousUser && previousUser.id !== user.id) {
+      clearDoctorSession();
+      appState.authStatus = "required";
+      appState.authMessage = "浏览器账号已变更，请重新登录此工作台。";
+      return null;
+    }
     syncManualFirstAccount(user.id);
-    appState.authUser = user;
+    appState.authUser = previousUser || user;
     appState.authStatus = "authenticated";
     appState.authMessage = "";
     return user;
   } catch (_error) {
-    appState.authUser = null;
-    appState.authStatus = "required";
-    appState.authMessage = "无法连接登录服务。";
+    if (syncSharedLogout() || generation !== authGeneration) return null;
+    appState.authStatus = "unavailable";
+    appState.authMessage = "暂时无法核对登录状态，请检查连接后重试。";
     return null;
   } finally {
     renderAuthPanel();
+    if (activeDialog && generation === authGeneration) {
+      if (previousUser === appState.authUser && appState.authStatus === "authenticated") {
+        activeDialog.showModal();
+        dialogFocus?.focus({ preventScroll: true });
+      } else {
+        closeWorkspaceAuxiliary();
+        closeManualFirstDialog();
+        if (activeDialog.id === "helpDialog") closeEmbeddedHelp({ fromHistory: true });
+      }
+    }
   }
 }
 
@@ -704,12 +735,29 @@ function renderAuthPanel() {
       : "未登录";
   }
   if (logoutButton) logoutButton.hidden = !appState.authUser;
-  if (panel) panel.hidden = appState.authStatus === "authenticated";
-  if (message) message.textContent = appState.authMessage || "";
+  const authenticated = appState.authStatus === "authenticated";
+  const loginRequired = appState.authStatus === "required";
+  const unavailable = appState.authStatus === "unavailable";
+  const signingOut = appState.authStatus === "signing_out";
+  const logoutUnconfirmed = appState.authStatus === "logout_unconfirmed";
+  if (panel) panel.hidden = authenticated;
+  document.querySelector(".doctor-app").hidden = !authenticated;
+  document.querySelector(".skip-link").inert = !authenticated;
+  $("loginShell").hidden = !loginRequired;
+  $("loginShell").inert = !loginRequired;
+  $("loginForm").querySelector("[type=submit]").disabled = !loginRequired;
+  $("sessionCheck").hidden = authenticated || loginRequired;
+  $("sessionCheckTitle").textContent = signingOut || logoutUnconfirmed ? "退出登录" : "登录状态核对";
+  $("sessionCheckMessage").textContent = appState.authMessage || "正在核对登录状态，请稍候。";
+  $("retrySessionCheck").hidden = !(unavailable || logoutUnconfirmed);
+  $("retrySessionCheck").textContent = logoutUnconfirmed ? "重试退出" : "重新核对";
+  if (message) message.textContent = loginRequired ? appState.authMessage : "";
 }
 
 async function submitLogin(event) {
   event.preventDefault();
+  if (syncSharedLogout() || appState.authStatus !== "required") return;
+  const generation = authGeneration;
   const username = $("loginUsername")?.value?.trim();
   const password = $("loginPassword")?.value || "";
   if (!username || !password) {
@@ -726,6 +774,7 @@ async function submitLogin(event) {
       body: JSON.stringify({ username, password }),
     });
     const data = await response.json().catch(() => ({}));
+    if (syncSharedLogout() || generation !== authGeneration) return;
     if (!response.ok) {
       const detail = data.detail;
       const message = typeof detail === "string"
@@ -754,6 +803,7 @@ async function submitLogin(event) {
     showToast("登录成功");
     await restoreAsrSessionFromUrl({ afterLogin: true });
   } catch (error) {
+    if (syncSharedLogout() || generation !== authGeneration) return;
     appState.authUser = null;
     appState.authStatus = "required";
     appState.authMessage = error?.message || "登录失败。";
@@ -761,28 +811,142 @@ async function submitLogin(event) {
   }
 }
 
+// Same-origin tabs share only the exit phase and a random event ID.
+const sharedLogoutKey = "mra-logout-event:v1";
+const logoutPendingKey = "mra-logout-pending:v1";
+let authGeneration = 0;
+let focusedCheck = null;
+
+function readSharedLogout() {
+  try { return localStorage.getItem(sharedLogoutKey) || ""; }
+  catch (_) { return ""; }
+}
+
+let observedLogout = readSharedLogout();
+
+function publishLogout(phase) {
+  const eventId = phase === "confirmed" && observedLogout.startsWith("pending:")
+    ? observedLogout.slice(8) : sessionEventId();
+  try {
+    localStorage.setItem(sharedLogoutKey, phase + ":" + eventId);
+    observedLogout = phase + ":" + eventId;
+  } catch (_) { /* This tab still retains its pending intent. */ }
+}
+
+function syncSharedLogout() {
+  const current = readSharedLogout();
+  if (!current || current === observedLogout) return false;
+  observedLogout = current;
+  authGeneration++;
+  const pending = current.startsWith("pending:");
+  rememberPendingLogout(pending);
+  clearDoctorSession();
+  if (pending) {
+    confirmLogout(false);
+  } else {
+    appState.authStatus = "required";
+    appState.authMessage = "已退出登录。";
+    renderAuthPanel();
+  }
+  return true;
+}
+
+function recheckVisibleSession() {
+  if (document.visibilityState === "hidden" || syncSharedLogout() || focusedCheck) return;
+  if (appState.authUser && ["authenticated", "checking_active", "unavailable"].includes(appState.authStatus)) {
+    focusedCheck = refreshAuth().finally(() => { focusedCheck = null; });
+  } else if (appState.authStatus === "logout_unconfirmed") {
+    confirmLogout(false);
+  }
+}
+
+function tabLogoutPending() {
+  if (observedLogout) return observedLogout.startsWith("pending:");
+  if (window.name === logoutPendingKey) return true;
+  try { return sessionStorage.getItem(logoutPendingKey) === "1"; }
+  catch (_) { return false; }
+}
+
+function rememberPendingLogout(pending) {
+  try {
+    if (pending) sessionStorage.setItem(logoutPendingKey, "1");
+    else sessionStorage.removeItem(logoutPendingKey);
+  } catch (_) {
+    if (pending) window.name = logoutPendingKey;
+  }
+  if (!pending && window.name === logoutPendingKey) window.name = "";
+}
+
+async function confirmLogout(sendRequest) {
+  const generation = authGeneration;
+  appState.authStatus = "signing_out";
+  appState.authMessage = "工作台已锁定，正在确认退出。";
+  renderAuthPanel();
+  let confirmed = false;
+  if (sendRequest) {
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST", signal: AbortSignal.timeout(8000) });
+      confirmed = response.ok && (await response.json()).status === "logged_out";
+    } catch (_) { /* A dropped response may still have revoked the session. */ }
+  }
+  if (!confirmed) {
+    try {
+      const response = await fetch("/api/auth/me", { cache: "no-store", signal: AbortSignal.timeout(8000) });
+      confirmed = response.status === 401;
+    } catch (_) { /* Keep the tab locked until the server confirms. */ }
+  }
+  if (syncSharedLogout() || generation !== authGeneration) return;
+  if (confirmed) {
+    rememberPendingLogout(false);
+    if (observedLogout.startsWith("pending:")) publishLogout("confirmed");
+  }
+  appState.authStatus = confirmed ? "required" : "logout_unconfirmed";
+  appState.authMessage = confirmed ? "已退出登录。" : "工作台已锁定，服务尚未确认退出。请检查连接后重试。";
+  renderAuthPanel();
+}
+
+function clearDoctorSession() {
+  const departingUserId = appState.authUser?.id;
+  appState.authUser = null;
+  appState.authStatus = "signing_out";
+  appState.authMessage = "工作台已锁定，正在确认退出。";
+  renderAuthPanel();
+  clearToast();
+  manualFirstSessionEpoch++;
+  discardManualFirstDrafts(owner => owner === String(departingUserId));
+  syncManualFirstAccount(null);
+  beginEncounterRead();
+  closeWorkspaceAuxiliary();
+  if ($("helpDialog").open) closeEmbeddedHelp({ fromHistory: true });
+  if (appState.browserRecordingStatus !== "idle") {
+    appState.browserRecordingRequestId++;
+    cleanupBrowserRecordingCapture();
+    releaseBrowserRecordingPreview();
+    appState.browserRecordingStatus = "idle";
+  }
+  closeDrawer();
+  resetTaskState();
+  appState.encounterWorklist = [];
+  appState.encounterWorklistStatus = "idle";
+  appState.encounterSelectionNotice = "";
+  $("conversationInput").value = "";
+  $("detailDrawerContent").textContent = "";
+  $("loginForm").reset();
+  renderAll();
+}
+
 async function logout() {
+  if (appState.authStatus !== "authenticated") return;
   if (appState.busy) {
     showToast("当前操作尚未完成，请等待完成后再退出登录。");
     return;
   }
   if (encounterSwitchBlocked("退出登录")) return;
-  const departingUserId = appState.authUser?.id;
-  manualFirstSessionEpoch++;
-  try {
-    await fetch("/api/auth/logout", { method: "POST" });
-  } finally {
-    discardManualFirstDrafts(owner => owner === String(departingUserId));
-    syncManualFirstAccount(null);
-    beginEncounterRead();
-    resetTaskState();
-    appState.encounterWorklist = [];
-    appState.encounterSelectionNotice = "";
-    appState.authUser = null;
-    appState.authStatus = "required";
-    appState.authMessage = "已退出登录。";
-    renderAll();
-  }
+  authGeneration++;
+  rememberPendingLogout(true);
+  publishLogout("pending");
+  clearDoctorSession();
+  await confirmLogout(true);
 }
 
 async function refreshExportReadiness({ raiseOnError = false } = {}) {
@@ -1385,6 +1549,7 @@ function clearActionError() {
 }
 
 function showToast(text) {
+  if (appState.authStatus === "signing_out" || appState.authStatus === "logout_unconfirmed") return;
   const toast = $("toast");
   toast.textContent = text;
   toast.classList.add("active");
@@ -1592,7 +1757,7 @@ function rememberManualFirstInput() {
   updateManualFirstControls(stored ? "尚未提交。刷新后可在本次就诊继续填写。" : "浏览器未允许暂存。请在刷新或离开之前保存首稿。");
 }
 
-function manualFirstRequestId() {
+function sessionEventId() {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
   // getRandomValues also works on an HTTP intranet where randomUUID is unavailable.
   const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -1616,7 +1781,7 @@ async function submitManualFirst(event) {
     $("manualFirstChief").focus();
     return;
   }
-  if (!draft.requestId) draft.requestId = manualFirstRequestId();
+  if (!draft.requestId) draft.requestId = sessionEventId();
   draft.attempted = true;
   storeManualFirst(editor.key, draft);
   editor.sending = true;
@@ -11247,15 +11412,36 @@ function bindEvents() {
   $("saveDraftButton").addEventListener("click", saveDraftReview);
   $("confirmFieldsButton").addEventListener("click", confirmFields);
   $("exportButton").addEventListener("click", exportRecord);
+  $("retrySessionCheck").addEventListener("click", () => {
+    if (appState.authStatus === "logout_unconfirmed") confirmLogout(true);
+    else if (appState.authStatus === "unavailable" && appState.authUser) recheckVisibleSession();
+    else if (appState.authStatus === "unavailable") window.location.reload();
+  });
   $("loginForm").addEventListener("submit", submitLogin);
   $("logoutButton").addEventListener("click", logout);
 }
 
 async function init() {
   appState.productView = productViewFromHash() || "workbench";
-  await loadDeployment();
   bindEvents();
-  await refreshAuth();
+  window.addEventListener("storage", event => {
+    if (event.key === sharedLogoutKey) syncSharedLogout();
+  });
+  window.addEventListener("focus", recheckVisibleSession);
+  document.addEventListener("visibilitychange", recheckVisibleSession);
+  window.addEventListener("pagehide", event => {
+    if (event.persisted && appState.authStatus === "authenticated") {
+      appState.authStatus = "checking_active";
+      renderAuthPanel();
+    }
+  });
+  window.addEventListener("pageshow", event => { if (event.persisted) recheckVisibleSession(); });
+  if (tabLogoutPending()) {
+    await Promise.all([loadDeployment(), confirmLogout(false)]);
+    return;
+  }
+  await Promise.all([loadDeployment(), refreshAuth()]);
+  if (!["authenticated", "required"].includes(appState.authStatus)) return;
   renderAll();
   if (window.location.hash === "#help") openEmbeddedHelp();
   if (appState.authUser) {

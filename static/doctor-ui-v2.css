@@ -2252,6 +2252,38 @@ body.doctor-mode .encounter-action-bar.pending-review #exportButton:disabled {
   box-shadow: none;
 }
 
+body.doctor-mode .doctor-app[hidden],
+body:has(.doctor-app[hidden]) :is(#drawer, #workspaceAuxDialog, #manualFirstDialog, #toast) {
+  display: none;
+}
+
+.login-shell[hidden],
+.session-check[hidden],
+#retrySessionCheck[hidden] {
+  display: none;
+}
+
+.login-card.session-check {
+  width: min(100%, 28rem);
+  padding: clamp(24px, 5vw, 40px);
+  gap: 12px;
+  border-radius: 16px;
+  box-shadow: 0 20px 64px rgba(4, 22, 40, 0.2);
+}
+
+.login-card.session-check h2 {
+  margin: 0;
+}
+
+.login-card.session-check p {
+  font-size: 15px;
+}
+
+#retrySessionCheck {
+  justify-self: start;
+  min-height: 44px;
+}
+
 .login-card-heading {
   margin-bottom: 8px;
 }

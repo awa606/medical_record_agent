@@ -662,6 +662,7 @@ function isCurrentRead(context) {
 }
 
 function beginEncounterRead() {
+  closeAudioRevision();
   closeManualFirstDialog();
   document.querySelectorAll(".field-source-context").forEach(node => node.remove());
   appState.encounterReadController?.abort();
@@ -679,6 +680,7 @@ async function refreshAuth() {
   const clinicalDialog = activeDialog?.id === "helpDialog" ? null : activeDialog;
   const dialogFocus = clinicalDialog && document.activeElement;
   if (previousUser) {
+    if (clinicalDialog?.id === "audioRevisionDialog") $("audioRevisionPlayer").pause();
     clinicalDialog?.close();
     appState.authStatus = "checking_active";
     appState.authMessage = "";
@@ -729,6 +731,7 @@ async function refreshAuth() {
 }
 
 function renderAuthPanel() {
+  if (!["authenticated", "checking_active"].includes(appState.authStatus)) closeAudioRevision();
   if (!appState.authUser) closeManualFirstDialog();
   const panel = $("loginPanel");
   const label = $("authUserLabel");
@@ -1859,6 +1862,18 @@ function manualOrigin(result = appState.currentTask?.result_json) {
   return origin?.kind === "doctor_manual_first" ? origin : null;
 }
 
+function audioRevisionOrigin(result = appState.currentTask?.result_json) {
+  return result?.audio_source_revision || null;
+}
+
+function audioRevisionOriginMarkup(origin) {
+  if (!origin) return "";
+  return `<details class="audio-revision-proof"><summary>录音修订依据 · 医生逐项选入</summary>
+    <p>本版依照订正后的说话人和分段建立。历史版本保留当时的依据。</p>
+    <dl><dt>原录音依据摘要</dt><dd>${escapeHtml(origin.previous_source_sha256 || "未记录")}</dd>
+    <dt>订正后依据摘要</dt><dd>${escapeHtml(origin.source_sha256 || "未记录")}</dd></dl></details>`;
+}
+
 function manualOriginMarkup(origin) {
   if (!origin) return "";
   const reason = { no_supported_facts: "未找到可用于生成病历的事实", generation_failed: "病历生成失败" }[origin.failure_category] || "失败分类未记录";
@@ -2763,7 +2778,7 @@ function doctorDisplayState() {
       title: "病历草稿已生成，可编辑",
       taskHint: "病历草稿已生成，可编辑",
       reviewLabel: "病历草稿已生成",
-      dataStatus: manualOrigin() ? "手写首稿已保存" : "AI草稿待保存",
+      dataStatus: audioRevisionOrigin() ? "录音修订版已保存" : manualOrigin() ? "手写首稿已保存" : "AI草稿待保存",
       inputStatus,
     };
   }
@@ -3020,6 +3035,7 @@ function nextActionState() {
     }
     const missingText = risk.missing.length
       ? `当前草稿仍有 ${risk.missing.length} 项待补充；请先保存修改，再进入医生审核。`
+      : audioRevisionOrigin() ? "医生已按订正录音修订，请核对本版内容。"
       : manualOrigin() ? "医生手写首稿已保存，可核对并修改。" : "AI 已生成病历草稿，请先保存修改后再完成医生审核。";
     return {
       tone: risk.hasError ? "danger" : risk.hasRisk ? "warning" : "ready",
@@ -4692,7 +4708,7 @@ function savedRevisionFields(revision) {
 }
 
 function revisionSourceLabel(source) {
-  return { generation: "系统生成", doctor_review: "医生修改保存", doctor_manual_first: "医生手写首稿" }[source]
+  return { generation: "系统生成", doctor_review: "医生修改保存", doctor_manual_first: "医生手写首稿", doctor_audio_source_revision: "医生按订正录音修订" }[source]
     || (source ? `其他来源（${source}）` : "来源未记录");
 }
 
@@ -4780,6 +4796,7 @@ function recordHistoryMarkup(view) {
     <label class="history-version-select">选择保存版本<select data-history-version>${options}</select></label>
     <p class="history-meta">就诊 E-${escapeHtml(view.encounterId)} · ${escapeHtml(revisionSourceLabel(selected.source))} · 保存于 ${escapeHtml(formatDateTime(selected.created_at))}</p>
     ${manualOriginMarkup(manualOrigin(savedRevisionResult(selected) || null))}
+    ${audioRevisionOriginMarkup(audioRevisionOrigin(savedRevisionResult(selected) || null))}
     <p class="history-compare-summary" role="status">${isCurrent ? "正在查看当前已保存版本。" : comparing ? `与当前已保存版本 ${escapeHtml(current.revision_no)} 相比，${changedKeys.size}项字段内容或采集状态不同。` : "当前已保存版本不可用，暂不能对照。"}${versions.length === 1 ? " 本次就诊目前只有一个版本。" : ""}</p>
     ${rows}${assessmentRow}
     ${unchangedRows.length ? `<details class="history-unchanged history-evidence"><summary>展开 ${unchangedRows.length} 项内容与采集状态相同的字段</summary>${unchangedRows.join("")}</details>` : ""}
@@ -5016,6 +5033,209 @@ function focusRecordTarget(key, section = false) {
   target.focus({ preventScroll: true });
 }
 
+let audioRevisionReview = null;
+
+function closeAudioRevision() {
+  const dialog = $("audioRevisionDialog");
+  if (!dialog || !audioRevisionReview) return;
+  audioRevisionReview = null;
+  if (dialog.open) dialog.close();
+  const player = $("audioRevisionPlayer");
+  if (player.hasAttribute("src")) {
+    player.pause();
+    player.removeAttribute("src");
+    player.load();
+  }
+  player.hidden = true;
+  $("audioRevisionForm").reset();
+  $("audioRevisionBody").hidden = true;
+  $("audioRevisionBody").disabled = false;
+  $("closeAudioRevision").disabled = false;
+  for (const id of ["audioRevisionSources", "audioRevisionChoices", "audioRevisionAdd",
+    "audioRevisionContext", "audioRevisionStatus"]) $(id).replaceChildren();
+}
+
+function cancelAudioRevision() {
+  if (audioRevisionReview?.saving) return;
+  if (audioRevisionReview?.dirty && !window.confirm("关闭后将清除本次尚未保存的选择。要关闭吗？")) return;
+  closeAudioRevision();
+}
+
+function audioRevisionFieldLabel(key) {
+  if (key === "clinician_assessment") return "医生独立评估";
+  if (key === "candidate_diagnoses") return "候选诊断";
+  return FIELD_DEFS.find(([name]) => name === key)?.[1] || key;
+}
+
+function audioRevisionSegment(segment) {
+  return (segment.role || "身份待核") + " · " + segment.text;
+}
+
+function addAudioRevisionField(preview, key) {
+  const existing = Object.hasOwn(preview.previous_values, key);
+  const previous = preview.previous_values[key];
+  const row = document.createElement("div");
+  row.className = "audio-revision-field";
+  const label = document.createElement("label");
+  label.htmlFor = "audio-revision-choice-" + key;
+  label.textContent = audioRevisionFieldLabel(key);
+  const select = document.createElement("select");
+  select.id = label.htmlFor;
+  select.dataset.revisionKey = key;
+  select.required = existing;
+  select.add(new Option(existing ? "选择本版处理方式" : "本版不补充", ""));
+  row.append(label);
+  if (existing) {
+    const value = document.createElement("p");
+    value.textContent = Array.isArray(previous) ? previous.map(d => d.name || d.diagnosis || String(d)).join("、") : previous;
+    row.append(value);
+    if (key !== "candidate_diagnoses") select.add(new Option("由医生确认并保留原文字", "retain_as_doctor"));
+    select.add(new Option("仅留在历史版本", "history_only"));
+  }
+  if (!["candidate_diagnoses", "clinician_assessment"].includes(key)) {
+    preview.new_segments.forEach((segment, i) => {
+      select.add(new Option("引用第 " + (i + 1) + " 段 · " + audioRevisionSegment(segment), "quote:" + i));
+    });
+  }
+  row.append(select);
+  $("audioRevisionChoices").append(row);
+  return select;
+}
+
+function renderAudioRevision(preview) {
+  $("audioRevisionContext").textContent = "原版本 R" + preview.revision_number + " 将保存在本次就诊，新版本需重新审核。";
+  const player = $("audioRevisionPlayer");
+  if (preview.audio_id) {
+    player.src = "/api/audio/" + encodeURIComponent(preview.audio_id) + "/media";
+    player.hidden = false;
+  }
+  for (const [title, segments, previous] of [
+    ["原版本引用", preview.old_segments, null], ["订正后转写", preview.new_segments, preview.old_segments],
+  ]) {
+    const oldById = new Map((previous || []).filter(s => s.segment_id).map(s => [s.segment_id, s]));
+    const section = document.createElement("section");
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+    const list = document.createElement("ol");
+    for (const segment of segments) {
+      const line = document.createElement("li");
+      const old = oldById.get(segment.segment_id);
+      if (old && (old.role !== segment.role || old.speaker_id !== segment.speaker_id)) {
+        const marker = document.createElement("strong");
+        marker.className = "audio-revision-changed";
+        marker.textContent = "身份已订正";
+        line.append(marker);
+      }
+      line.append(document.createTextNode(audioRevisionSegment(segment)));
+      if (previous && preview.audio_id && Number.isFinite(segment.start_time) && segment.start_time >= 0) {
+        const play = document.createElement("button");
+        play.type = "button";
+        play.className = "detail-link";
+        play.dataset.audioRevisionStart = String(segment.start_time);
+        play.textContent = "回听第 " + (list.children.length + 1) + " 段";
+        line.append(play);
+      }
+      list.append(line);
+    }
+    section.append(heading, list);
+    $("audioRevisionSources").append(section);
+  }
+  for (const key of Object.keys(preview.previous_values)) addAudioRevisionField(preview, key);
+  const add = $("audioRevisionAdd");
+  add.replaceChildren();
+  add.add(new Option("选择字段", ""));
+  for (const key of preview.field_keys) {
+    if (!Object.hasOwn(preview.previous_values, key)) add.add(new Option(audioRevisionFieldLabel(key), key));
+  }
+  $("audioRevisionAddLabel").hidden = add.options.length <= 1;
+  $("audioRevisionBody").hidden = false;
+  $("audioRevisionStatus").textContent = "";
+}
+
+async function openAudioRevision() {
+  if (!exportReadinessMatches(appState.currentExportReadiness) || !appState.currentExportReadiness.can_recover_audio_source) return;
+  if (appState.recordEditMode || appState.roleReviewDirty) {
+    showToast("请先保存或取消当前修改，再核对录音依据。");
+    return;
+  }
+  closeAudioRevision();
+  const context = captureReadContext();
+  const review = { context, path: "/api/tasks/" + encodeURIComponent(context.taskId) + "/audio-source-revision" };
+  audioRevisionReview = review;
+  $("consultationAudio")?.pause();
+  $("audioRevisionStatus").textContent = "正在读取当前版本及两次录音转写。";
+  $("audioRevisionDialog").showModal();
+  try {
+    const preview = await readApi(review.path);
+    if (audioRevisionReview !== review) return;
+    if (!isCurrentRead(context) || String(preview.revision_id) !== String(context.revisionId)) {
+      $("audioRevisionStatus").textContent = "当前病历版本已变化，请关闭并重新打开本次就诊。";
+      return;
+    }
+    review.preview = preview;
+    renderAudioRevision(preview);
+  } catch (error) {
+    if (audioRevisionReview === review) $("audioRevisionStatus").textContent = error.message;
+  }
+}
+
+async function saveAudioRevision(event) {
+  event.preventDefault();
+  const review = audioRevisionReview;
+  if (!review?.preview || review.saving) return;
+  if (!isCurrentRead(review.context) || appState.recordEditMode || appState.roleReviewDirty) {
+    $("audioRevisionStatus").textContent = "就诊或编辑状态已变化，本次选择尚未提交。请关闭并重新核对。";
+    return;
+  }
+  const preview = review.preview;
+  const choices = {};
+  for (const input of $("audioRevisionChoices").querySelectorAll("select[data-revision-key]")) {
+    if (!input.value) continue;
+    const [action, index] = input.value.split(":");
+    choices[input.dataset.revisionKey] = action === "quote" ? { action, segment: Number(index) } : { action };
+  }
+  const payload = { revision_id: preview.revision_id, revision_hash: preview.revision_hash,
+    source_hash: preview.source_hash, reviewed: $("audioRevisionConfirmed").checked, choices };
+  const signature = JSON.stringify(payload);
+  if (review.signature !== signature) {
+    review.requestId = sessionEventId();
+    review.signature = signature;
+  }
+  review.saving = true;
+  $("audioRevisionBody").disabled = true;
+  $("closeAudioRevision").disabled = true;
+  $("audioRevisionStatus").textContent = "正在保存新版本。";
+  let receipt;
+  try {
+    receipt = await api(review.path, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...payload, request_id: review.requestId }), signal: AbortSignal.timeout(20000) });
+  } catch (error) {
+    if (audioRevisionReview === review) {
+      $("audioRevisionStatus").focus();
+      $("audioRevisionStatus").textContent = error.name === "TimeoutError" || error.name === "TypeError"
+        ? "尚未收到保存回执。可以按原选择重试，或重开就诊核对当前版本。" : error.message;
+    }
+    return;
+  } finally {
+    if (audioRevisionReview === review) {
+      review.saving = false;
+      $("audioRevisionBody").disabled = false;
+      $("closeAudioRevision").disabled = false;
+    }
+  }
+  if (audioRevisionReview !== review || !isCurrentRead(review.context)) return;
+  closeAudioRevision();
+  try {
+    await refreshTask(review.context.taskId);
+    if (String(appState.currentTaskId) === String(review.context.taskId)) {
+      showToast("已保存 R" + receipt.revision.revision_no + "，请重新审核本版。");
+      document.querySelector("#recordFields .approval-disclosure > summary")?.focus();
+    }
+  } catch (_error) {
+    showToast("新版本已保存。页面未能刷新，请重开本次就诊查看。");
+  }
+}
+
 function renderApprovalChecklist(fields) {
   const audioNotice = currentAudioSourceNotice();
   if (!fields || isRecordPreviewActive() || !appState.currentTaskId) return "";
@@ -5093,12 +5313,14 @@ function renderApprovalChecklist(fields) {
   return `
     <section class="approval-checklist" aria-label="分项审核">
       ${audioNotice ? `<p role="status" class="reference-notice">${escapeHtml(audioNotice)}${currentExportFile() ? " 可下载本版本已签的 PDF 原件。" : ""}</p>` : ""}
+      ${exportReadinessMatches(appState.currentExportReadiness) && appState.currentExportReadiness?.can_recover_audio_source
+        ? '<button type="button" class="secondary-action" data-review-audio-revision>按订正录音建立新版本</button>' : ""}
       <details class="approval-disclosure" ${appState.approvalDisclosureOpen ? "open" : ""}>
       <summary class="approval-checklist-head" aria-label="医生分项审核 · 版本 ${revision.revisionNumber ? `#${escapeHtml(revision.revisionNumber)}` : "待核验"} · ${escapeHtml(reviewLabel)}">
         <strong>医生分项审核</strong>
         <span class="approval-entry-label">${escapeHtml(reviewLabel)}</span>
       </summary>
-      <details class="review-instructions"><summary>审核说明</summary><p>${manualOrigin() ? "本病历由医生手写起草，签署前仍需核对本版内容。" : "AI 生成草稿，仅供医生审核；"}原审核已失效或尚未完成时，审核通过后方可导出。普通内容可集中确认，缺失、候选诊断和风险须分别处理；勾选不能消除证据冲突。已签署版本的决定在审核记录中查看。</p></details>
+      <details class="review-instructions"><summary>审核说明</summary><p>${audioRevisionOrigin() ? "本版由医生按订正录音逐项修订。" : manualOrigin() ? "本病历由医生手写起草，签署前仍需核对本版内容。" : "AI 生成草稿，仅供医生审核；"}原审核已失效或尚未完成时，审核通过后方可导出。普通内容可集中确认，缺失、候选诊断和风险须分别处理；勾选不能消除证据冲突。已签署版本的决定在审核记录中查看。</p></details>
       ${approved ? `<div class="approval-readonly-record">${fieldItems.map(({title,field}) => `<div><strong>${escapeHtml(title)}</strong><span>${escapeHtml({content_confirmed:"内容已确认",not_asked_confirmed:"确认本次未询问",missing_accepted:"接受本次缺失"}[field?.doctor_review_status] || "未记录分项确认")}</span></div>`).join("")}${diagnoses.map(d => `<div><strong>${escapeHtml(d.name)}</strong><span>${escapeHtml({candidate_confirmed:"候选已确认",ai_candidate_deleted:"已移除AI候选"}[d.doctor_review_status] || "未确认")}</span></div>`).join("")}</div>` : `
       ${outstanding(`<div class="approval-section">
         <div class="approval-section-title">
@@ -5216,7 +5438,8 @@ function renderFields() {
     if (pending && (String(pending.savedTaskId) === String(appState.currentTaskId)
         || (confirmedId && pending.attempted && pending.requestId === confirmedId))) storeManualFirst(key, null);
   }
-  if ($("recordFieldsHelp")) $("recordFieldsHelp").textContent = manualOrigin()
+  if ($("recordFieldsHelp")) $("recordFieldsHelp").textContent = audioRevisionOrigin()
+    ? "核对医生留存的文字和本版引用的录音原话。" : manualOrigin()
     ? "核对医生手写病历和后续修订，逐项处理缺失内容。" : "核对 AI 提取字段，缺失和低置信内容会单独标记。";
   const fields = activeRecordFields();
   const isPreview = isRecordPreviewActive();
@@ -5402,7 +5625,7 @@ function renderFields() {
     return `<section class="record-section" data-record-section="${id}" tabindex="-1" aria-label="${title}"><header class="record-section-head"><h3>${title}</h3>${statusMarkup}</header><div class="record-section-body">${inner}${extra}</div></section>`;
   }).join("");
   const leftover = [...cardHtmlByKey.entries()].filter(([key]) => !usedKeys.has(key)).map(([, html]) => html).join("");
-  $("recordFields").innerHTML = previewNotice + historicalNotice + manualOriginMarkup(manualOrigin())
+  $("recordFields").innerHTML = previewNotice + historicalNotice + manualOriginMarkup(manualOrigin()) + audioRevisionOriginMarkup(audioRevisionOrigin())
     + `<div class="record-review-toolbar">${versionNotice}${isEditing ? "" : renderApprovalChecklist(fields)}</div>`
     + editNotice + recoveryNotice + sections + leftover + summaryFooter + draftLegend;
 
@@ -11245,7 +11468,39 @@ function bindEvents() {
       return;
     }
   });
+  $("closeAudioRevision").addEventListener("click", cancelAudioRevision);
+  $("audioRevisionDialog").addEventListener("cancel", event => { event.preventDefault(); cancelAudioRevision(); });
+  $("audioRevisionForm").addEventListener("submit", saveAudioRevision);
+  $("audioRevisionSources").addEventListener("click", async event => {
+    const button = event.target.closest("[data-audio-revision-start]");
+    if (!button || !audioRevisionReview) return;
+    const review = audioRevisionReview;
+    const player = $("audioRevisionPlayer");
+    try {
+      player.currentTime = Number(button.dataset.audioRevisionStart);
+      await player.play();
+    } catch (_error) {
+      if (audioRevisionReview === review) $("audioRevisionStatus").textContent = "原声暂时无法播放，请核对本次录音是否可读取。";
+    }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && audioRevisionReview) $("audioRevisionPlayer").pause();
+  });
+  $("audioRevisionForm").addEventListener("change", () => { if (audioRevisionReview) audioRevisionReview.dirty = true; });
+  $("audioRevisionAdd").addEventListener("change", event => {
+    const add = event.target;
+    if (!add.value || !audioRevisionReview?.preview) return;
+    const select = addAudioRevisionField(audioRevisionReview.preview, add.value);
+    add.selectedOptions[0].remove();
+    add.selectedIndex = 0;
+    $("audioRevisionAddLabel").hidden = add.options.length <= 1;
+    select.focus();
+  });
   $("recordFields").addEventListener("click", (event) => {
+    if (event.target.closest("[data-review-audio-revision]")) {
+      void openAudioRevision();
+      return;
+    }
     if (event.target.closest("[data-edit-assessment]") && canWriteAssessment()) {
       beginRecordEdit("clinician_assessment");
       return;

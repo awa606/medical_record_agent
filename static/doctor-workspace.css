@@ -530,3 +530,31 @@ body.doctor-mode [data-open-detail="assist:live-clinical"] { min-height: 32px; f
   body.doctor-mode .top-actions .auth-status { display: inline-flex; padding: 0; border: 0; }
 }
 .manual-first-origin { margin: 8px 0; line-height: 1.55; overflow-wrap: anywhere; }
+.audio-revision-dialog { width: min(54rem, calc(100vw - 24px)); }
+.audio-revision-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.audio-revision-dialog :is(button, select) { min-height: 44px; }
+.audio-revision-dialog button { flex-shrink: 0; }
+.audio-revision-dialog fieldset { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
+.audio-revision-dialog h3 { font-size: 1rem; margin: 18px 0 4px; }
+.audio-revision-dialog summary { cursor: pointer; padding: 8px 0; font-weight: 650; }
+.audio-revision-sources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.audio-revision-sources section { border-inline-start: 3px solid #b8c9d2; padding-inline: 12px 4px; overflow-wrap: anywhere; }
+.audio-revision-sources section:last-child { border-color: #28756d; }
+.audio-revision-sources h3 { margin-top: 0; }
+.audio-revision-sources ol { margin: 6px 0; padding-inline-start: 1.7em; }
+.audio-revision-sources li + li { margin-top: 5px; }
+.audio-revision-field { padding: 12px 0; border-bottom: 1px solid #d6e1e6; }
+.audio-revision-field p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.audio-revision-dialog select { display: block; width: 100%; min-width: 0; font: inherit; }
+#audioRevisionAddLabel, .audio-revision-confirm { display: block; margin: 16px 0; }
+#audioRevisionStatus:empty { display: none; }
+@media (max-width: 600px) {
+  .audio-revision-sources { grid-template-columns: minmax(0, 1fr); }
+}
+.audio-revision-dialog [hidden] { display: none !important; }
+.audio-revision-dialog audio { display: block; width: 100%; margin: 8px 0; }
+.audio-revision-sources li button { display: block; }
+.audio-revision-changed { color: #225f56; margin-inline-end: .5em; }
+.audio-revision-proof { margin-block: 6px 12px; overflow-wrap: anywhere; }
+.audio-revision-proof summary { cursor: pointer; font-weight: 600; }
+.audio-revision-proof dd { margin-inline: 0; font-family: monospace; }

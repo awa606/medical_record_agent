@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
     <link rel="stylesheet" href="./doctor.css?v=ffaf35a62038f8aa" />
     <link rel="stylesheet" href="./doctor-ui-v2.css?v=e54cc5c3d1902782" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=a8b231c288aca7eb" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=42a6ffdeea9bf460" />
   </head>
   <body class="doctor-mode standard-mode">
 <a class="skip-link" href="#mainContent" inert>跳到主要内容</a>
@@ -652,6 +652,33 @@
       </div>
     </section>
 
+    <dialog id="audioRevisionDialog" class="manual-first-dialog audio-revision-dialog" aria-labelledby="audioRevisionTitle">
+      <form id="audioRevisionForm">
+        <div class="audio-revision-head">
+          <h2 id="audioRevisionTitle">按订正录音建立新版本</h2>
+          <button type="button" id="closeAudioRevision" aria-label="关闭录音修订">关闭</button>
+        </div>
+        <p id="audioRevisionContext"></p>
+        <p id="audioRevisionStatus" role="status" aria-live="polite" tabindex="-1"></p>
+        <fieldset id="audioRevisionBody" hidden>
+          <legend class="sr-only">核对录音与病历</legend>
+          <audio id="audioRevisionPlayer" controls preload="metadata" aria-label="本次就诊原声" hidden></audio>
+          <details open>
+            <summary>对照两次录音转写</summary>
+            <div class="audio-revision-sources" id="audioRevisionSources"></div>
+          </details>
+          <h3>逐项处理原病历</h3>
+          <p>保留的文字将记为医生确认。选择引用时，新版会写入所选分段的原话。</p>
+          <div id="audioRevisionChoices"></div>
+          <label id="audioRevisionAddLabel">补充空字段
+            <select id="audioRevisionAdd"><option value="">选择字段</option></select>
+          </label>
+          <label class="audio-revision-confirm"><input type="checkbox" id="audioRevisionConfirmed" required>我已对照订正后的录音转写，确认以上选择。</label>
+          <button type="submit" class="primary-action" id="saveAudioRevision">保存新版本</button>
+        </fieldset>
+      </form>
+    </dialog>
+
     <dialog id="manualFirstDialog" class="manual-first-dialog" aria-labelledby="manualFirstTitle">
       <form id="manualFirstForm">
         <h2 id="manualFirstTitle">手写病历</h2>
@@ -674,6 +701,6 @@
       <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=42c51353c8889edf"></script>
+    <script src="./doctor.js?v=f3bb67e2686c9797"></script>
   </body>
 </html>

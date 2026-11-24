@@ -1473,7 +1473,7 @@ body.screenshot-mode .debug-tools {
   background: #fff;
   color: #1d4ed8;
   box-shadow: 0 14px 28px rgba(17, 24, 39, 0.14);
-  transition: 0.18s ease;
+  transition: transform 0.18s ease;
 }
 
 .toast.active {

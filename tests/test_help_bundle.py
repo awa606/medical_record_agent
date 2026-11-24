@@ -27,6 +27,29 @@ def test_launcher_opens_help_for_its_own_environment(monkeypatch):
     assert result["phase"] == "HELP_OPENED"
 
 
+def test_public_manual_distinguishes_field_actions_from_reference_tabs(tmp_path):
+    build(tmp_path)
+    manual = (tmp_path / "manual.html").read_text(encoding="utf8")
+    landing = (ROOT / "static/help/index.html").read_text(encoding="utf8")
+    for anchor in ("field-knowledge", "reference-detail"):
+        assert f'href="manual.html#{anchor}"' in landing
+        assert manual.count(f'id="{anchor}"') == 1
+
+    field = manual.split('id="field-knowledge"', 1)[1].split("</li>", 1)[0]
+    reference = manual.split('id="reference-detail"', 1)[1].split("</li>", 1)[0]
+    assert "查知识资料" in field and "登记用途" in field
+    for tab in ("患者依据", "指南资料", "待核对事项"):
+        assert tab in reference and tab not in field
+
+    role = manual.split('<section id="role">', 1)[1].split("</section>", 1)[0]
+    edit = manual.split('<section id="edit">', 1)[1].split("</section>", 1)[0]
+    assert "查看问诊原文" in role and "查看字段记录" in role
+    for action in ("核对冲突引文", "查看上版引文", "查看已选原话"):
+        assert action in edit
+    assert "查看原文证据" not in role + edit
+    assert "“查依据”" not in manual
+
+
 def test_launcher_reports_offline_help_explicitly(tmp_path, monkeypatch):
     (tmp_path / "manual.html").write_text("offline")
     opened = []

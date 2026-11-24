@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-24T18:40:23.072Z`
-- Source hash: `32ae7e374f557bc65892920142f68b1de3d6dbed27877b4f39dea92553a6a9f0`
+- Updated at: `2026-11-24T18:54:28.056Z`
+- Source hash: `6e926a9af7ef01e4fa1912bff8ca8eb0e756f909458d96a205a6e6cbb166b9c6`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@f3b45c5e784e29f3827dfc9825f3be48bf9c0278`
+- Repo: `codex/ui-hospital-record-v1@9b3828c5ebfd27fa9479d1a5be79fd299c79c4d4`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -55,7 +55,7 @@
 ## Next
 
 - Single next task: 在 5.1 的普通医生工作台，用合成盲例核对陪同者的报告与患者本人明确未做的检查能否区分，记录医生查错和修订结果。
-- Parallel waiting task: 继续项目内可复查的工程门禁；待正式教师评分、目标医生盲评与院方受控接口条件。
+- Parallel waiting task: 修订测试的第二次远端全套回归待验。授课教师、目标医生和院方接口仍待现场核验。
 
 ## Manual Actions
 

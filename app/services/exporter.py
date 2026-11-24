@@ -451,8 +451,8 @@ def render_pdf(
         pagesize=A4,
         leftMargin=20 * mm,
         rightMargin=20 * mm,
-        topMargin=18 * mm,
-        bottomMargin=18 * mm,
+        topMargin=(16 if clinician_assessment else 18) * mm,
+        bottomMargin=(15 if clinician_assessment else 18) * mm,
         title=f"门诊病历 E-{encounter_id}" if encounter_id is not None else "门诊病历",
         author="MediListen",
     )
@@ -504,32 +504,43 @@ def render_pdf(
     )
     story.extend([meta_table, Spacer(1, 3 * mm), HRFlowable(width="100%", color=colors.HexColor("#c9d4e3"))])
 
-    for heading, body, note in _pdf_sections(fields, clinician_assessment):
+    sections = _pdf_sections(fields, clinician_assessment)
+    signing_section = []
+    for index, (heading, body, note) in enumerate(sections):
         # Long sections must flow across pages. Keeping the whole block
         # together leaves a nearly empty page when one field exceeds a page.
         # A conditional break keeps the heading from being stranded alone.
         story.append(CondPageBreak(25 * mm))
-        story.append(Paragraph(_pdf_text(heading), styles["heading"]))
-        story.append(Paragraph(_pdf_text(body), styles["body"]))
+        block = signing_section if clinician_assessment and index == len(sections) - 1 else story
+        block.append(Paragraph(_pdf_text(heading), styles["heading"]))
+        block.append(Paragraph(_pdf_text(body), styles["body"]))
         if note:
-            story.append(Paragraph(_pdf_text(note), styles["note"]))
-        story.append(Spacer(1, 2 * mm))
+            block.append(Paragraph(_pdf_text(note), styles["note"]))
+        block.append(Spacer(1, (1 if clinician_assessment else 2) * mm))
 
-    story.append(KeepTogether([
+    signature = [
+        *signing_section,
         Spacer(1, 2 * mm),
         HRFlowable(width="100%", color=colors.HexColor("#c9d4e3")),
         Spacer(1, 2 * mm),
         Paragraph("医师签名：__________________　　日期：______年____月____日", styles["signature"]),
-    ]))
-    story.append(Spacer(1, 2 * mm))
-    story.append(Paragraph(WORD_NOTICE, styles["note"]))
+    ]
+    notice = [Spacer(1, 2 * mm), Paragraph(WORD_NOTICE, styles["note"])]
+    if clinician_assessment:
+        story.append(KeepTogether(signature + notice))
+    else:
+        story.append(KeepTogether(signature))
+        story.extend(notice)
 
     def _footer(canvas, doc_obj) -> None:
         canvas.saveState()
         canvas.setFont(styles["body"].fontName, 8)
         canvas.setFillColor(colors.HexColor("#64748b"))
         canvas.drawRightString(A4[0] - 20 * mm, 10 * mm, f"第 {doc_obj.page} 页")
-        canvas.drawString(20 * mm, 10 * mm, "MediListen · 门诊病历")
+        footer = "MediListen · 门诊病历"
+        if clinician_assessment:
+            footer += f" · 就诊 E-{encounter_id}" if encounter_id is not None else f" · 任务 T-{task_id}"
+        canvas.drawString(20 * mm, 10 * mm, footer)
         canvas.restoreState()
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)

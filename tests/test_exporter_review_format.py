@@ -6,6 +6,7 @@ import pymupdf
 import pytest
 
 from app.schemas import CandidateDiagnosis, MedicalField, MedicalRecordFields, SafetyCheckResult
+from app.schemas.clinician_assessment import ClinicianAssessment
 from app.services.exporter import (
     WORD_NOTICE,
     _paragraphs_markdown,
@@ -13,6 +14,26 @@ from app.services.exporter import (
     export_record,
     render_pdf,
 )
+
+
+@pytest.mark.parametrize("repeat", [1, 180])
+def test_handwritten_statement_and_signature_stay_with_identifiable_clinical_pages(tmp_path, repeat):
+    statement = "原文详见交接记录。" * repeat
+    entry = ClinicianAssessment(statement=statement, certainty="under_consideration", recorded_by=7,
+                               recorder_name="合成医生", recorded_at="2026-11-24T00:00:00Z")
+    fields = MedicalRecordFields(chief_complaint=MedicalField(value="手腕疼两天"))
+    target = render_pdf(tmp_path / "assessment.pdf", fields, SafetyCheckResult(passed=True),
+                        approved=True, task_id=1, encounter_id=17, clinician_assessment=entry)
+    with pymupdf.open(target) as doc:
+        pages = [page.get_text() for page in doc]
+    if repeat == 1:
+        assert len(pages) == 1
+    else:
+        assert len(pages) >= 2
+    assert all("就诊 E-17" in page for page in pages)
+    assert "医师签名" in pages[-1] and "治疗意见" in pages[-1] and WORD_NOTICE in pages[-1]
+    lines = [line for page in pages for line in page.splitlines() if not line.startswith(("第 ", "MediListen"))]
+    assert statement in "".join("".join(lines).split())
 
 
 def _export(tmp_path, monkeypatch, fields, *, approved=True):

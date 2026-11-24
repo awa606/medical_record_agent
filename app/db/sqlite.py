@@ -313,6 +313,43 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
         WHERE content_hash IS NULL OR content_hash = ''
         """
     )
+    _migrate_clinician_writer_protocol(connection)
+
+
+def _migrate_clinician_writer_protocol(connection: sqlite3.Connection) -> None:
+    """Keep legacy writers from creating a revision or PDF that drops clinician text."""
+    # The preceding approval migration holds a write transaction. Install and backfill
+    # once, using the last trigger as the marker for this atomic schema change.
+    if connection.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'trigger' AND name = 'record_clinician_writer_protocol'"
+    ).fetchone():
+        return
+    _ensure_column(connection, "encounter", "min_writer_protocol", "INTEGER NOT NULL DEFAULT 1")
+    tables = ("record_revision", "approval", "export_event")
+    for table in tables:
+        _ensure_column(connection, table, "writer_protocol", "INTEGER NOT NULL DEFAULT 1")
+        connection.execute(f"""
+            CREATE TRIGGER IF NOT EXISTS require_{table}_writer_protocol BEFORE INSERT ON {table}
+            WHEN NEW.writer_protocol < (SELECT min_writer_protocol FROM encounter WHERE id = NEW.encounter_id)
+            BEGIN SELECT RAISE(ABORT, 'This encounter requires a clinician-assessment compatible application'); END
+        """)
+    # Some historical records predate structured result JSON. Their approvals and
+    # hashes must remain readable even when the archived result is empty or malformed.
+    connection.execute("""
+        UPDATE encounter SET min_writer_protocol = 2 WHERE min_writer_protocol < 2 AND id IN (
+            SELECT encounter_id FROM record_revision
+            WHERE CASE WHEN json_valid(result_json) THEN json_type(result_json, '$.clinician_assessment') END = 'object'
+        )
+    """)
+    connection.execute("""
+        CREATE TRIGGER record_clinician_writer_protocol AFTER INSERT ON record_revision
+        WHEN CASE WHEN json_valid(NEW.result_json) THEN json_type(NEW.result_json, '$.clinician_assessment') END = 'object'
+        BEGIN
+            SELECT CASE WHEN NEW.writer_protocol < 2 THEN
+                RAISE(ABORT, 'This encounter requires a clinician-assessment compatible application') END;
+            UPDATE encounter SET min_writer_protocol = 2 WHERE id = NEW.encounter_id AND min_writer_protocol < 2;
+        END
+    """)
 
 
 AUTH_USER_ROLE_CHECK = "CHECK(role IN ('admin', 'doctor', 'frontdesk', 'intake', 'intake_admin'))"
@@ -835,9 +872,9 @@ def _insert_record_revision_row(
         INSERT INTO record_revision (
             encounter_id, task_id, revision_no, source, content_hash, fields_json,
             draft_text, safety_check_json, quality_report_json,
-            result_json, created_by_user_id, created_at
+            result_json, created_by_user_id, created_at, writer_protocol
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 2)
         """,
         (
             encounter_id,
@@ -1023,9 +1060,9 @@ def create_record_revision_for_task(
             INSERT INTO record_revision (
                 encounter_id, task_id, revision_no, source, content_hash, fields_json,
                 draft_text, safety_check_json, quality_report_json,
-                result_json, created_by_user_id, created_at
+                result_json, created_by_user_id, created_at, writer_protocol
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 2)
             """,
             (
                 encounter_id,
@@ -1534,9 +1571,9 @@ def create_approval_for_task(
             """
             INSERT INTO approval (
                 encounter_id, revision_id, task_id, approved_by_user_id,
-                content_hash, status, created_at, invalidated_at, invalidation_reason
+                content_hash, status, created_at, invalidated_at, invalidation_reason, writer_protocol
             )
-            VALUES (?, ?, ?, ?, ?, 'active', ?, NULL, NULL)
+            VALUES (?, ?, ?, ?, ?, 'active', ?, NULL, NULL, 2)
             """,
             (encounter_id, revision_id, task_id, actor_user_id, revision_hash, now),
         )
@@ -1667,9 +1704,9 @@ def create_export_event_for_task(
             """
             INSERT INTO export_event (
                 encounter_id, revision_id, approval_id, task_id,
-                exported_by_user_id, exports_json, created_at
+                exported_by_user_id, exports_json, created_at, writer_protocol
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 2)
             """,
             (
                 approval["encounter_id"],

@@ -3145,6 +3145,7 @@ function renderTranscriptionFailurePanel() {
 }
 
 let drawerReturnFocus = null;
+let fieldKnowledgeFocus = null;
 let detailDrawerVersion = 0;
 let openFieldReview = null;
 let helpReturnFocus = null;
@@ -3320,7 +3321,8 @@ function closeDrawer() {
     const replacement = target.dataset?.openDetail
       ? [...document.querySelectorAll('.doctor-app [data-open-detail]')].find(node => node.dataset.openDetail === target.dataset.openDetail)
       : null;
-    const returnTo = target.isConnected && target.getClientRects().length ? target : replacement;
+    const returnTo = target.dataset?.knowledgeField ? currentFieldKnowledgeOpener()
+      : target.isConnected && target.getClientRects().length ? target : replacement;
     (returnTo || $("inputMethodButton")).focus({ preventScroll: true });
   }
   return true;
@@ -4266,8 +4268,17 @@ function renderFieldKnowledgeSearch(key) {
     results.map((item) => detailSection(item.title || item.source_id || "知识来源", renderKnowledgeResultDetails(item))).join("");
 }
 
+function currentFieldKnowledgeOpener() {
+  if (!fieldKnowledgeFocus || !isCurrentRead(fieldKnowledgeFocus.context)) return null;
+  return $("recordFields").querySelector(`[data-knowledge-field="${CSS.escape(fieldKnowledgeFocus.key)}"]`);
+}
+
 async function retrieveKnowledgeForField(key) {
   const context = captureReadContext();
+  if (!$("drawer").classList.contains("active")) {
+    fieldKnowledgeFocus = { key, context };
+    drawerReturnFocus = currentFieldKnowledgeOpener();
+  }
   const title = FIELD_DEFS.find(([itemKey]) => itemKey === key)?.[1] || key;
   const value = appState.currentRecordFields?.[key]?.value || "";
   appState.fieldKnowledgeSearch[key] = { status: "loading", results: [], error: "" };
@@ -5649,10 +5660,12 @@ function renderFields() {
     return `<section class="record-section" data-record-section="${id}" tabindex="-1" aria-label="${title}"><header class="record-section-head"><h3>${title}</h3>${statusMarkup}</header><div class="record-section-body">${inner}${extra}</div></section>`;
   }).join("");
   const leftover = [...cardHtmlByKey.entries()].filter(([key]) => !usedKeys.has(key)).map(([, html]) => html).join("");
+  const restoreLookupFocus = Boolean(document.activeElement?.dataset.knowledgeField)
+    && document.activeElement === currentFieldKnowledgeOpener();
   $("recordFields").innerHTML = previewNotice + historicalNotice + manualOriginMarkup(manualOrigin()) + audioRevisionOriginMarkup(audioRevisionOrigin())
     + `<div class="record-review-toolbar">${versionNotice}${isEditing ? "" : renderApprovalChecklist(fields)}</div>`
     + editNotice + recoveryNotice + sections + leftover + summaryFooter + draftLegend;
-
+  if (restoreLookupFocus) currentFieldKnowledgeOpener()?.focus({ preventScroll: true });
 }
 
 function classifySpeaker(line, segment = {}) {

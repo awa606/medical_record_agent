@@ -353,6 +353,7 @@ body.doctor-mode .drawer.reference-detail-mode { width: min(680px, 100vw); min-w
   body.doctor-mode .product-nav-item span { font-size: 16px; }
   body.doctor-mode .product-nav-foot { display: none; }
   body.doctor-mode .topbar { grid-area: topbar; flex-wrap: wrap; }
+  body.doctor-mode[data-product-view="workbench"] .topbar { position: static; }
   body.doctor-mode .topbar .brand-block { max-width: 100%; flex-wrap: wrap; }
   body.doctor-mode .product-main { grid-area: main; min-width: 0; }
   body.doctor-mode .alpha51-workspace { height: calc(100dvh - 150px); max-height: calc(100dvh - 150px); }

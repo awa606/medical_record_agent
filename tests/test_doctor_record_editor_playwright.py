@@ -346,6 +346,53 @@ def test_short_touch_viewport_can_open_record_fields_and_edit(width: int, height
         server.close()
 
 
+def test_scrolled_worklist_filter_accepts_touch_at_320() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 320, "height": 640}, has_touch=True)
+            _login(page, server.base_url)
+            _prepare_review_fixture(page)
+            page.locator("#openWorklistButton").tap()
+            expect(page.locator("#encounterSearchInput")).to_be_focused()
+            pending = page.locator('[data-dashboard-filter="pendingInput"]')
+            pending.evaluate("el => window.scrollBy(0, el.getBoundingClientRect().top - 94)")
+            box = pending.bounding_box()
+            assert box is not None and 0 <= box["y"] < 120
+            page.touchscreen.tap(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+            expect(pending).to_have_attribute("aria-pressed", "true")
+            browser.close()
+    finally:
+        server.close()
+
+
+def test_field_lookup_returns_to_live_button_during_and_after_record_refresh() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page()
+            _login(page, server.base_url)
+            _prepare_review_fixture(page)
+            lookup = page.locator('[data-knowledge-field="allergy_history"]')
+            with page.expect_response(lambda response: response.url.endswith("/knowledge/retrieve")):
+                lookup.click()
+            page.wait_for_function("appState.fieldKnowledgeSearch.allergy_history.status === 'ready'")
+            # A same-visit refresh replaces the original button while the drawer is open.
+            page.evaluate("renderFields()")
+            page.keyboard.press("Escape")
+            expect(lookup).to_be_focused()
+            # A later refresh must leave the doctor's next keyboard action in the same field.
+            page.evaluate("renderFields()")
+            expect(lookup).to_be_focused()
+            page.keyboard.press("Enter")
+            expect(page.locator("#drawerTitle")).to_have_text("查知识资料 · 过敏史")
+            browser.close()
+    finally:
+        server.close()
+
+
 def test_field_search_retry_ignores_a_late_response_for_previous_edit() -> None:
     server = RunningServer()
     try:

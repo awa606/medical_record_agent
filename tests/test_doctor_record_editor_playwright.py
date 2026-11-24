@@ -17,6 +17,29 @@ from tests.test_doctor_itemized_approval_playwright import (
 from tests.test_transcript_source_presentation_playwright import _open_from_workbench
 
 
+def test_field_actions_include_their_visible_heading_in_the_accessible_name() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright, playwright.chromium.launch() as browser:
+            page = browser.new_page()
+            _login(page, server.base_url)
+            _prepare_review_fixture(page)
+            for width, height in [(1366, 900), (390, 844), (320, 640)]:
+                page.set_viewport_size({"width": width, "height": height})
+                fields = page.locator("#recordFields .field-card[data-field]:visible")
+                assert fields.count() > 1
+                for field in fields.all():
+                    heading = field.locator(".field-title").inner_text()
+                    for button in field.locator(".compact-field-meta button:visible").all():
+                        label = button.inner_text()
+                        name = f"{label} {heading}"
+                        expect(button).to_have_accessible_name(name)
+                        expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
+                expect(page.get_by_role("button", name="查知识资料 主诉", exact=True)).to_have_text("查知识资料")
+    finally:
+        server.close()
+
+
 def test_clinician_assessment_is_versioned_and_preserves_concurrent_text() -> None:
     server = RunningServer()
     try:

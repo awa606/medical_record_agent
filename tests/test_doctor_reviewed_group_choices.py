@@ -100,5 +100,3 @@ def test_conflicting_review_help_and_listening_are_visible_in_the_mobile_doctor_
             browser.close()
     finally:
         server.close()
-
-

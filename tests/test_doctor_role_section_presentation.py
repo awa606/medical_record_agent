@@ -84,8 +84,8 @@ console.log(JSON.stringify({state:display.state, unchanged:JSON.stringify(segmen
     (True, "not_asked_confirmed", "本次未询问（医生已确认）"),
     (True, "missing_accepted", "本次资料缺失（医生已接受）"),
     (True, "", "该字段无记录；历史病历已审核，未记录分项处理原因"),
-    (False, "not_asked_confirmed", "建议补问：发热多久？"),
-    (False, "", "建议补问：发热多久？"),
+    (False, "not_asked_confirmed", "医生确认本次未询问"),
+    (False, "", "此栏尚无已记录的内容，请核对原文或补录。"),
 ])
 def test_approved_missing_presentation_uses_recorded_review_and_preserves_original(approved, review, expected):
     field = {"value": "", "hint": "建议补问：发热多久？", "missing": True,
@@ -96,7 +96,7 @@ const text=recordFieldDisplayValue({chief_complaint:field}, 'chief_complaint', a
 console.log(JSON.stringify({text,raw:fieldValue({chief_complaint:field}, 'chief_complaint'),unchanged:JSON.stringify(field)===before}));
 """)
     assert result["text"] == expected
-    assert result["raw"] == "建议补问：发热多久？"
+    assert result["raw"] == {"not_asked_confirmed": "医生确认本次未询问", "missing_accepted": "医生接受本次信息缺失"}.get(review, "此栏尚无已记录的内容，请核对原文或补录。")
     assert result["unchanged"]
 
 
@@ -148,6 +148,7 @@ console.log(JSON.stringify({html,unchanged:JSON.stringify(fields)===before}));
         assert '>待补充<' not in result['html']
     else:
         assert '生成时提示（历史记录）' not in result['html']
+        assert '追问建议（待核对）' in result['html']
         assert '>待补充<' in result['html']
 
 

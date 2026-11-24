@@ -3587,6 +3587,23 @@ function historicalRecordQuality(fields = appState.currentRecordFields) {
   return { placeholders, incomplete: unrecorded, affected: placeholders || unrecorded };
 }
 
+function unfilledFieldText(field) {
+  const reason = recordedMissingReason(field);
+  if (reason) return reason;
+  return readableStoredText(field?.hint) ? "此栏尚无已记录的内容，请核对原文或补录。" : "历史字段无可用内容，原因未记录";
+}
+
+function originalFieldHint(field, historical = false) {
+  const hint = readableStoredText(field?.hint);
+  if (!hint || readableStoredText(field?.value) || field?.status === "conflicting") return "";
+  // A question can be surfaced as a prompt, but never supplies a field value or an approval decision.
+  const isQuestion = !historical && /^[^。！？!?；;\r\n]+[？?]$/.test(hint.trim());
+  const title = historical ? "生成时提示（历史记录）" : isQuestion ? "追问建议（待核对）" : "查看原始字段提示（未经核实）";
+  return `<details class="history-evidence" data-original-field-hint ${isQuestion ? "open" : ""}>
+    <summary>${title}</summary><p>原始提示仅供核对。字段内容和问诊原文分别列出。</p>
+    <p class="detail-text">${escapeHtml(hint)}</p></details>`;
+}
+
 function fieldValue(fields, key) {
   if (key === "treatment_plan") {
     return previewTreatmentText()
@@ -3594,7 +3611,7 @@ function fieldValue(fields, key) {
   }
   const field = fields?.[key];
   if (field?.status === "conflicting") return "待核对（模型内容未采纳）";
-  return readableStoredText(field?.value) || readableStoredText(field?.hint) || recordedMissingReason(field) || "历史字段无可用内容，原因未记录";
+  return readableStoredText(field?.value) || unfilledFieldText(field);
 }
 
 function fieldEvidence(field, key) {
@@ -4429,7 +4446,11 @@ function refreshOpenFieldReview() {
   if (!view || view.drawerVersion !== detailDrawerVersion || !isCurrentRead(view.context)) return;
   const target = $("detailDrawerContent")?.querySelector("[data-field-review-details]");
   const fields = activeRecordFields();
-  if (target && fields) target.innerHTML = renderFieldReviewDetails(fields, view.key, view.title);
+  if (!target || !fields) return;
+  const wasOpen = target.querySelector("[data-original-field-hint]")?.open;
+  target.innerHTML = renderFieldReviewDetails(fields, view.key, view.title);
+  const hint = target.querySelector("[data-original-field-hint]");
+  if (hint && wasOpen != null) hint.open = wasOpen;
 }
 
 function renderFieldReviewDetails(fields, key, title) {
@@ -4466,9 +4487,7 @@ function renderFieldReviewDetails(fields, key, title) {
       </div>`}
       <div class="detail-text">${escapeHtml(displayValue)}</div>
     `)}
-    ${isApprovedMissing && readableStoredText(field?.hint)
-      ? detailSection("生成时提示（历史记录）", `<div class="detail-text">${escapeHtml(readableStoredText(field.hint))}</div><p>保留生成时的提示供追溯，不表示当前仍待审核。</p>`)
-      : ""}
+    ${originalFieldHint(field, isApprovedMissing)}
     ${qualityItem ? detailSection(manualOrigin() ? "手写病历保存时的自动检查" : "草稿生成时的自动检查", `
       <div class="detail-kv"><span>${manualOrigin() ? "保存时状态" : "生成时状态"}</span><strong>${escapeHtml(initialReview ? (manualOrigin() ? "需核对医生记录" : "需核对系统抽取内容") : fieldQualityLabel(key))}</strong></div>
       <div class="detail-kv"><span>证据数量</span><strong>${escapeHtml(String(qualityItem.evidence_count ?? 0))}</strong></div>
@@ -4594,7 +4613,7 @@ function renderTreatmentReferenceDetail() {
   const checks = [['建议补问','follow_up_questions'],['建议检查','suggested_checks'],['用药提示','medication_notes'],['风险提醒','risk_warnings']]
     .map(([title,key]) => referenceItems(title, uniqueDiagnosisItems(diagnoses,key))).join('');
   return renderReferenceTabs({title: '处理建议', item,
-    patient: referenceSection('已有处理内容', referenceText(item.value || item.hint || previewTreatmentText() || '暂无明确处理建议，需医生补充。'))
+    patient: referenceSection('已有处理内容', referenceText(readableStoredText(item.value) || previewTreatmentText() || '暂无明确处理建议，需医生补充。')) + originalFieldHint(item)
       + referenceSection('问诊原文 · 只读', renderFieldEvidenceDetails(item)),
     checks: referenceText('以下为病例级候选提示，需医生结合过敏史、禁忌与缺失信息核对。') + checks,
     supplementary: diagnoses.filter(d => diagnosisReferences(d).length).map(d => referenceSection(`候选诊断资料：${d.name || '未命名'}（未核验为治疗依据）`, renderReferenceSources(diagnosisReferences(d)))).join(''),
@@ -5024,7 +5043,7 @@ function renderApprovalChecklist(fields) {
       <div class="approval-item" data-approval-item="field:${escapeHtml(key)}">
         <div>
           <strong>${escapeHtml(title)}</strong>
-          <span>${escapeHtml(readableStoredText(field?.hint) || "历史字段无可用内容，原因未记录；请核对原文")}</span>
+          <span>${escapeHtml(unfilledFieldText(field))}</span>
         </div>
         ${approvalStatusPill(done)}
         <div class="approval-item-actions">
@@ -7270,13 +7289,14 @@ function renderAssistDetailContent(section) {
 
   if (section === "treatment") {
     const treatment = fields?.treatment_plan;
-    const treatmentText = treatment?.value || treatment?.hint || previewTreatmentText() || "暂无明确处理建议，需医生补充。";
+    const treatmentText = readableStoredText(treatment?.value) || previewTreatmentText() || "暂无明确处理建议，需医生补充。";
     const suggestedChecks = uniqueDiagnosisItems(diagnoses, "suggested_checks");
     const medicationNotes = uniqueDiagnosisItems(diagnoses, "medication_notes");
     const riskWarnings = uniqueDiagnosisItems(diagnoses, "risk_warnings");
     const followUpQuestions = uniqueDiagnosisItems(diagnoses, "follow_up_questions");
     return `
       ${detailSection("处理建议", `<div class="detail-text">${escapeHtml(treatmentText)}</div>`)}
+      ${originalFieldHint(treatment)}
       ${detailSection("建议检查", `<div class="detail-text">${escapeHtml(suggestedChecks.join("\n") || "暂无结构化建议检查。")}</div>`)}
       ${detailSection("用药提示", `<div class="detail-text">${escapeHtml(medicationNotes.join("\n") || "不自动处方，需医生确认。")}</div>`)}
       ${detailSection("风险提醒", `<div class="detail-text">${escapeHtml(riskWarnings.join("\n") || "暂无结构化风险提醒。")}</div>`)}

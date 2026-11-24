@@ -185,7 +185,7 @@ const field={value:"合成记录",status:"complete",missing:false,confirmed_by_d
 appState.currentEncounter={id:13,current_revision:{id:19,content_hash:"original"}};
 appState.currentTaskId=11; appState.currentTask={id:11,current_record_revision_id:19,result_json:{approved:true}};
 activeRecordFields=()=>({chief_complaint:field}); doctorDisplayState=()=>({key:"review"});
-const panel={innerHTML:""}; document.getElementById=()=>({querySelector:s=>s==="[data-field-review-details]"?panel:null});
+const panel={innerHTML:"",querySelector:()=>null}; document.getElementById=()=>({querySelector:s=>s==="[data-field-review-details]"?panel:null});
 openFieldReview={key:"chief_complaint",title:"主诉",drawerVersion:detailDrawerVersion,context:captureReadContext()};
 let release, fail; api=()=>new Promise((resolve,reject)=>{release=resolve;fail=reject});
 const first=refreshExportReadiness(); const loading=panel.innerHTML.includes("正在读取本版审核回执");

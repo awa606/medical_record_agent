@@ -3223,8 +3223,8 @@ def update_asr_session_result(
         updated_at = _now()
         reviewed_session = session.model_copy(update={"status": "reviewed", "updated_at": updated_at})
 
-        _write_session_result(session_id, updated_result)
         _write_transcript(updated_result)
+        _write_session_result(session_id, updated_result)
         _write_session(reviewed_session)
         _append_events(
             session_id,
@@ -3268,8 +3268,8 @@ def merge_asr_session_speakers(
         updated_at = _now()
         updated_session = session.model_copy(update={"updated_at": updated_at})
 
-        _write_session_result(session_id, merged_result)
         _write_transcript(merged_result)
+        _write_session_result(session_id, merged_result)
         _write_session(updated_session)
         _append_events(
             session_id,

@@ -14,6 +14,7 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
+from app.api.audio import audio_source_issue, checked_audio_signoff
 from app.db import (
     StaleRecordRevisionError,
     apply_review_revision_transaction,
@@ -113,6 +114,8 @@ class ExportReadinessResponse(BaseModel):
     content_hash: str | None = None
     approval_id: int | None = None
     pending_review_count: int = 0
+    audio_source_issue: dict[str, str] | None = None
+    can_create_export: bool = False
 
 
 def _decode_result_json(task: dict[str, Any]) -> dict[str, Any]:
@@ -850,6 +853,9 @@ def approve_task(
         raise HTTPException(status_code=409, detail="Current record revision is already approved")
     revision = _current_revision_or_error(task)
     content_hash = _assert_approval_matches_revision(payload, revision)
+    issue = audio_source_issue(result)
+    if issue:
+        raise HTTPException(status_code=409, detail=issue)
     fields = MedicalRecordFields.model_validate(result["fields"])
     # Older unsigned revisions predate this marker. Recheck the saved source
     # in memory before signing; a rejection must not rewrite that revision.
@@ -900,15 +906,16 @@ def approve_task(
     result["fields"] = fields.model_dump()
     actor = current_user_from_request(request)
     try:
-        create_approval_for_task(
-            task_id,
-            actor_user_id=actor.id if actor else None,
-            expected_revision_id=payload.revision_id,
-            content_hash=content_hash,
-            approval_items=approval_items,
-            result=result,
-            actor_detail=_actor_detail(request),
-        )
+        with checked_audio_signoff(result):
+            create_approval_for_task(
+                task_id,
+                actor_user_id=actor.id if actor else None,
+                expected_revision_id=payload.revision_id,
+                content_hash=content_hash,
+                approval_items=approval_items,
+                result=result,
+                actor_detail=_actor_detail(request),
+            )
     except StaleRecordRevisionError as exc:
         raise HTTPException(status_code=409, detail={
             "message": "病历版本已变化，请刷新后重新审核。",
@@ -959,6 +966,8 @@ def export_task(
     if ((expected_revision_id is not None and expected_revision_id != readiness["revision_id"])
             or (expected_approval_id is not None and expected_approval_id != readiness["approval_id"])):
         raise HTTPException(status_code=409, detail="病历版本或审核记录已更新，请重新查看当前病历后导出。")
+    if readiness["audio_source_issue"]:
+        raise HTTPException(status_code=409, detail=readiness["audio_source_issue"])
     if readiness["errors"]:
         raise HTTPException(status_code=400, detail=readiness)
 
@@ -983,11 +992,12 @@ def export_task(
 
     try:
         actor = current_user_from_request(request)
-        create_export_event_for_task(
-            task_id, revision_id=readiness["revision_id"], approval_id=int(approval["id"]),
-            actor_user_id=actor.id if actor else None, exports=exports, result=result,
-            actor_detail=_actor_detail(request),
-        )
+        with checked_audio_signoff(result):
+            create_export_event_for_task(
+                task_id, revision_id=readiness["revision_id"], approval_id=int(approval["id"]),
+                actor_user_id=actor.id if actor else None, exports=exports, result=result,
+                actor_detail=_actor_detail(request),
+            )
     except Exception as exc:
         # The receipt transaction did not commit. Only this request owns this file.
         Path(exports["pdf_path"]).unlink(missing_ok=True)
@@ -1160,22 +1170,37 @@ def _build_export_readiness(
     binding_error = _approval_binding_error(active_approval, current_revision)
     if binding_error:
         errors.append(binding_error)
+    approval_id = int(active_approval["id"]) if active_approval and not errors else None
     exports = result.get("exports")
     if not isinstance(exports, dict):
         exports = None
+    issue = audio_source_issue(result)
+    can_create_export = not errors and issue is None
+    next_action = "可以导出。" if not errors else "请先完成医生确认和安全校验，再导出。"
+    if issue:
+        # A previously signed receipt can still be downloaded by its own digest.
+        original = latest_export_for_approval(task_id, approval_id) if approval_id is not None else None
+        if original and original["revision_id"] == revision_id:
+            exports = json.loads(original["exports_json"])
+            next_action = "可取回本版已签原件。" + issue["message"]
+        else:
+            errors.append(issue["message"])
+            next_action = issue["message"]
 
     return {
         "task_id": task_id,
         "ready": not errors,
         "blocked": bool(errors),
         "errors": errors,
-        "next_action": "可以导出。" if not errors else "请先完成医生确认和安全校验，再导出。",
+        "next_action": next_action,
+        "audio_source_issue": issue,
+        "can_create_export": can_create_export,
         "current_stage": current_stage,
         "exports": exports,
         "revision_id": revision_id,
         "revision_number": revision_number,
         "content_hash": content_hash,
-        "approval_id": int(active_approval["id"]) if active_approval and not errors else None,
+        "approval_id": approval_id,
         "pending_review_count": len(errors),
     }
 

@@ -3,8 +3,11 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import re
+import sqlite3
 import time
 import uuid
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -24,8 +27,13 @@ from app.services.asr.config import configured_asr_backend, requested_asr_engine
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 from app.services.asr.funasr_reliability import funasr_failure_payload
 from app.services.asr.role_quality import build_speaker_role_quality, recheck_stored_role_conflicts
+from app.services.asr.signoff_source import bound_recording, signoff_source_issue, unavailable_source
 from app.services.asr.role_strategy import find_sample_config
 from app.services.runtime_limits import audio_upload_max_bytes, copy_upload_with_limit
+from app.services.task_recovery import RecoveryConfigurationError, TaskDatabaseLock
+
+
+_RECORDING_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
 
 
 router = APIRouter(prefix="/audio", tags=["audio"], dependencies=[Depends(require_current_user)])
@@ -109,15 +117,34 @@ def _assert_audio_access(record: AudioRecord, request: Request | None) -> None:
     assert_owner_or_admin(record.owner_user_id, request, resource_name="audio")
 
 
-def _write_transcript(result: ASRResult) -> None:
-    path = _transcript_path(result.audio_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
+@contextmanager
+def _transcript_lock(audio_id: str):
+    if not isinstance(audio_id, str) or not _RECORDING_KEY.fullmatch(audio_id):
+        raise HTTPException(status_code=409, detail=unavailable_source())
+    lock = TaskDatabaseLock(_transcript_path(audio_id).resolve())
     try:
-        temporary.write_text(json.dumps(result.model_dump(), ensure_ascii=False, indent=2), encoding="utf-8")
-        temporary.replace(path)
+        lock.acquire()
+    except RecoveryConfigurationError as error:
+        raise HTTPException(status_code=409, detail={
+            "reason_code": "asr_review_in_progress", "message": "该录音正被核对或签署，请刷新后重试。",
+        }) from error
+    except OSError as error:
+        raise HTTPException(status_code=409, detail=unavailable_source()) from error
+    try:
+        yield
     finally:
-        temporary.unlink(missing_ok=True)
+        lock.release()
+
+
+def _write_transcript(result: ASRResult) -> None:
+    with _transcript_lock(result.audio_id):
+        path = _transcript_path(result.audio_id)
+        temporary = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
+        try:
+            temporary.write_text(json.dumps(result.model_dump(), ensure_ascii=False, indent=2), encoding="utf-8")
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
 def _read_transcript(audio_id: str) -> ASRResult:
@@ -128,6 +155,33 @@ def _read_transcript(audio_id: str) -> ASRResult:
     if result.role_quality is None:
         result.role_quality = build_speaker_role_quality(result)
     return recheck_stored_role_conflicts(result)
+
+
+def audio_source_issue(result: dict[str, Any]) -> dict[str, str] | None:
+    snapshot = bound_recording(result)
+    if snapshot is None:
+        return None
+    audio_id = snapshot["audio_id"]
+    if not isinstance(audio_id, str) or not _RECORDING_KEY.fullmatch(audio_id):
+        return unavailable_source()
+    try:
+        return signoff_source_issue(snapshot, _read_transcript(audio_id))
+    except (HTTPException, OSError, ValueError, TypeError, sqlite3.Error):
+        return unavailable_source()
+
+
+@contextmanager
+def checked_audio_signoff(result: dict[str, Any]):
+    """Hold the same OS lock as transcript replacement through the receipt transaction."""
+    snapshot = bound_recording(result)
+    if snapshot is None:
+        yield
+        return
+    with _transcript_lock(snapshot["audio_id"]):
+        issue = audio_source_issue(result)
+        if issue:
+            raise HTTPException(status_code=409, detail=issue)
+        yield
 
 
 def _require_passed_role_quality(result: ASRResult) -> ASRResult:

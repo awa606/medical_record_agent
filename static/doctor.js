@@ -852,8 +852,9 @@ function syncSharedLogout() {
   return true;
 }
 
-function recheckVisibleSession() {
+function recheckVisibleSession(event) {
   if (document.visibilityState === "hidden" || syncSharedLogout() || focusedCheck) return;
+  if (event?.type === "focus" && returningFromHelpFrame) return;
   if (appState.authUser && ["authenticated", "checking_active", "unavailable"].includes(appState.authStatus)) {
     focusedCheck = refreshAuth().finally(() => { focusedCheck = null; });
   } else if (appState.authStatus === "logout_unconfirmed") {
@@ -3122,6 +3123,7 @@ let detailDrawerVersion = 0;
 let openFieldReview = null;
 let helpReturnFocus = null;
 let helpPushedState = false;
+let returningFromHelpFrame = false;
 
 function updateHelpBackState() {
   const button = $("helpBackButton");
@@ -3167,8 +3169,15 @@ function openEmbeddedHelp() {
 
 function closeEmbeddedHelp({ fromHistory = false } = {}) {
   const dialog = $("helpDialog");
-  if (dialog.open) dialog.close();
-  if (helpReturnFocus?.isConnected) helpReturnFocus.focus({ preventScroll: true });
+  // Closing the focused iframe fires a synchronous window focus event even
+  // though the browser tab remained active throughout the keyboard action.
+  returningFromHelpFrame = dialog.open && document.hasFocus() && document.activeElement === $("embeddedHelpFrame");
+  try {
+    if (dialog.open) dialog.close();
+    if (helpReturnFocus?.isConnected) helpReturnFocus.focus({ preventScroll: true });
+  } finally {
+    returningFromHelpFrame = false;
+  }
   helpReturnFocus = null;
   if (helpPushedState && !fromHistory) {
     helpPushedState = false;

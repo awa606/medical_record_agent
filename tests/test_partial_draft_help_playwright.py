@@ -67,9 +67,13 @@ def test_partial_draft_visible_resolution_save_and_embedded_help(method):
             frame.get_by_role("link", name="核对与修改病历").click()
             expect(frame.locator("#edit")).to_contain_text("医生补录")
             assert len(browser.contexts[0].pages) == 1
+            session_checks = []
+            page.on("request", lambda request: session_checks.append(request.url)
+                    if request.url.endswith("/api/auth/me") else None)
             frame.locator("body").press("Escape")
             expect(page.locator("#helpDialog")).not_to_be_visible()
             expect(page.locator("#openEmbeddedHelpButton")).to_be_focused()
+            assert not session_checks
             expect(editor).to_have_value("没有药物过敏")
             page.click("#saveDraftButton")
             page.wait_for_function("!window.__MRA_APP_STATE__.recordEditMode", timeout=15000)

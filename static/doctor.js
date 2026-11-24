@@ -75,6 +75,7 @@ const appState = {
   roleReviewDirty: false,
   roleReviewSaving: false,
   speakerRoleCorrections: {},
+  segmentReviewCorrections: {},
   speakerAssignments: [],
   speakerMappingRequired: false,
   lastSpeakerMergeSnapshot: null,
@@ -5475,6 +5476,12 @@ function segmentSpeakerId(segment = {}) {
   return segment.speaker_id || segment.speaker || "";
 }
 
+function individuallyReviewedRole(segment) {
+  if (segment?.reviewed_by_doctor && isClinicalRole(segment.role)
+      && (!segment.role_source || segment.role_source === "manual")) return segment.role;
+  return "";
+}
+
 function speakerRolesComplete(asr = appState.currentAsrResult) {
   const segments = stableAsrSegments(asr);
   const assignments = asr?.speaker_assignments || appState.speakerAssignments || [];
@@ -5484,10 +5491,10 @@ function speakerRolesComplete(asr = appState.currentAsrResult) {
   if (speakerIds.size) {
     for (const speakerId of speakerIds) {
       const assignmentRole = assignmentBySpeaker.get(speakerId)?.role;
-      const segmentRoles = segments
-        .filter((segment) => segmentSpeakerId(segment) === speakerId)
-        .map((segment) => segment.role)
-        .filter(Boolean);
+      const group = segments.filter((segment) => segmentSpeakerId(segment) === speakerId);
+      const manualRoles = new Set(group.map(individuallyReviewedRole).filter(Boolean));
+      if (manualRoles.size > 1 || (isClinicalRole(assignmentRole) && manualRoles.size && !manualRoles.has(assignmentRole))) return false;
+      const segmentRoles = group.map((segment) => segment.role).filter(Boolean);
       if (!isClinicalRole(assignmentRole) && !segmentRoles.some(isClinicalRole)) return false;
     }
     return true;
@@ -5889,19 +5896,20 @@ function transcriptRows() {
   return transcriptRowsFromText(appState.currentInputText);
 }
 
-function renderRoleOptions(selectedRole) {
+function renderRoleOptions(selectedRole, reviewedRole = "") {
   return ROLE_OPTIONS.map(([value, label]) => (
-    `<option value="${escapeHtml(value)}" ${selectedRole === value ? "selected" : ""}>${escapeHtml(label)}</option>`
+    `<option value="${escapeHtml(value)}" ${selectedRole === value ? "selected" : ""} ${reviewedRole && isClinicalRole(value) && value !== reviewedRole ? "disabled" : ""}>${escapeHtml(label)}</option>`
   )).join("");
 }
 
 function renderSpeakerMergeOptions(sourceSpeakerId, groups = []) {
+  const source = groups.find((group) => group.speakerId === sourceSpeakerId);
   const targets = groups.filter((group) => group.speakerId && group.speakerId !== sourceSpeakerId);
   return [
     `<option value="">合并到...</option>`,
     ...targets.map((group) => {
       const label = `${group.displayName}${group.role ? `（${group.role}）` : ""} · ${group.count} 段`;
-      return `<option value="${escapeHtml(group.speakerId)}">${escapeHtml(label)}</option>`;
+      return `<option value="${escapeHtml(group.speakerId)}" ${speakerMergeHasRoleConflict(source, group) ? "disabled" : ""}>${escapeHtml(label)}</option>`;
     }),
   ].join("");
 }
@@ -6427,9 +6435,8 @@ function renderTranscriptDetailContent(target = "all") {
   const canGenerateFromTranscript = Boolean(appState.currentAsrResult && !appState.currentTaskId && !appState.currentRecordFields);
   const speakerGroups = transcriptSpeakerGroups(rows);
   const pendingSpeakerIds = new Set(pendingSpeakerAssignments().map((item) => item.speaker_id));
-  const visibleSpeakerGroups = identityReviewMode
-    ? speakerGroups.filter((group) => pendingSpeakerIds.has(group.speakerId) || !group.role)
-    : speakerGroups;
+  const needsChoice = (group) => pendingSpeakerIds.has(group.speakerId) || group.reviewConflict || !group.role;
+  const visibleSpeakerGroups = identityReviewMode ? speakerGroups.filter(needsChoice) : speakerGroups;
   const speakerAliases = buildSpeakerAliasMap(rows);
   const reviewHint = canEdit
     ? appState.roleReviewDirty
@@ -6456,14 +6463,16 @@ function renderTranscriptDetailContent(target = "all") {
       <p class="detail-note">${escapeHtml(reviewHint)}</p>
     `)}
     ${canEdit && visibleSpeakerGroups.length ? detailSection(identityReviewMode ? "需要确认的说话人" : "按说话人统一更正", `
-      <p class="detail-note">${identityReviewMode ? "确认后会同步到该说话人的全部发言，并用于继续生成病历。" : "一次修改会同步到该说话人的全部发言。"}</p>
+      <p class="detail-note">请先核对同组发言是否来自同一身份，再选择整组角色。</p>
       <div class="speaker-role-groups">
         ${visibleSpeakerGroups.map((group) => `
           <div class="speaker-role-group">
             <span><strong>${escapeHtml(group.displayName)}</strong><small>${escapeHtml(group.speakerId)} · ${group.count} 段</small></span>
-            <select data-speaker-role-select data-speaker-id="${escapeHtml(group.speakerId)}" aria-label="设置${escapeHtml(group.displayName)}角色">
-              ${renderRoleOptions(group.role)}
+            <select data-speaker-role-select data-speaker-id="${escapeHtml(group.speakerId)}" aria-label="设置${escapeHtml(group.displayName)}角色"
+              ${group.reviewedRoles.size > 1 ? "disabled" : ""}>
+              ${renderRoleOptions(appState.speakerRoleCorrections[group.speakerId] ?? (needsChoice(group) ? "" : group.role), group.reviewedRoles.keys().next().value)}
             </select>
+            ${speakerReviewEvidence(group)}
             <div class="speaker-merge-controls">
               <select data-speaker-merge-target data-source-speaker-id="${escapeHtml(group.speakerId)}" aria-label="选择${escapeHtml(group.displayName)}合并目标">
                 ${renderSpeakerMergeOptions(group.speakerId, speakerGroups)}
@@ -7643,6 +7652,7 @@ function resetRoleReviewState() {
   appState.roleReviewSaving = false;
   appState.pendingGenerateAfterRoleReview = false;
   appState.speakerRoleCorrections = {};
+  appState.segmentReviewCorrections = {};
   appState.speakerAssignments = [];
   appState.speakerMappingRequired = false;
 }
@@ -8332,10 +8342,15 @@ function updateReviewSegment(index, patch) {
   const segments = currentReviewSegments();
   const segment = segments[index];
   if (!segment) return;
-  if (patch.role !== undefined) segment.role = patch.role;
+  if (patch.role !== undefined) {
+    segment.role = patch.role;
+    segment.reviewed_by_doctor = isClinicalRole(patch.role);
+    segment.role_source = "manual";
+    segment.needs_review = !segment.reviewed_by_doctor;
+  }
   if (patch.text !== undefined) segment.text = patch.text;
-  segment.reviewed_by_doctor = true;
-  segment.needs_review = !segment.role || segment.role === "待确认";
+  const edits = appState.segmentReviewCorrections[index] || {};
+  appState.segmentReviewCorrections[index] = { ...edits, ...patch };
   appState.roleReviewDirty = true;
   resetRecordPreview();
   syncAsrTextFromSegments();
@@ -8347,29 +8362,16 @@ function updateReviewSegment(index, patch) {
 
 function updateSpeakerRole(speakerId, role) {
   if (!speakerId) return;
-  const segments = currentReviewSegments();
-  let changed = false;
-  segments.forEach((segment) => {
-    const identity = segment.speaker_id || segment.speaker;
-    if (identity !== speakerId) return;
-    segment.role = role;
-    segment.reviewed_by_doctor = Boolean(role);
-    segment.needs_review = !role;
-    changed = true;
-  });
-  if (!changed) return;
+  const segments = currentReviewSegments().filter((segment) => segmentSpeakerId(segment) === speakerId);
+  if (!segments.length) return;
+  const reviewed = segments.map(individuallyReviewedRole).filter(Boolean);
+  if (isClinicalRole(role) && reviewed.some((old) => old !== role)) {
+    showToast("所选身份与已逐段核对的身份不同，请先回听对应音段。");
+    return;
+  }
   appState.speakerRoleCorrections[speakerId] = role;
-  appState.speakerAssignments = (appState.speakerAssignments || []).map((item) => (
-    item.speaker_id === speakerId
-      ? { ...item, role, confidence: 0.99, source: "manual_speaker_map", requires_confirmation: !role }
-      : item
-  ));
-  appState.speakerMappingRequired = appState.speakerAssignments.some(
-    (item) => item.requires_confirmation || !item.role,
-  );
   appState.roleReviewDirty = true;
   resetRecordPreview();
-  syncAsrTextFromSegments();
   renderAll();
 }
 
@@ -8385,6 +8387,7 @@ function speakerMergeSnapshot() {
     speakerAssignments: cloneStateValue(appState.speakerAssignments),
     speakerMappingRequired: appState.speakerMappingRequired,
     speakerRoleCorrections: cloneStateValue(appState.speakerRoleCorrections),
+    segmentReviewCorrections: cloneStateValue(appState.segmentReviewCorrections),
     roleReviewDirty: appState.roleReviewDirty,
   };
 }
@@ -8397,6 +8400,7 @@ function applyAsrResultUpdate(asrResult = {}) {
   appState.speakerMappingRequired = roleQualityNeedsIdentityReview(asrResult)
     || appState.speakerAssignments.some((item) => speakerAssignmentNeedsReview(item));
   appState.speakerRoleCorrections = {};
+  appState.segmentReviewCorrections = {};
   appState.roleReviewDirty = false;
   syncAsrTextFromSegments();
 }
@@ -8417,6 +8421,11 @@ async function mergeSpeakerGroup(sourceSpeaker, targetSpeaker) {
     return null;
   }
 
+  const groups = transcriptSpeakerGroups();
+  if (speakerMergeHasRoleConflict(groups.find((g) => g.speakerId === source), groups.find((g) => g.speakerId === target))) {
+    showToast("这两组包含不同的已核身份，请保留各组并回听对应音段。");
+    return null;
+  }
   const snapshot = speakerMergeSnapshot();
   const response = await api(`/api/asr/sessions/${encodeURIComponent(appState.currentAsrSessionId)}/speakers/merge`, {
     method: "POST",
@@ -8448,6 +8457,7 @@ function undoLastSpeakerMerge() {
   appState.speakerAssignments = cloneStateValue(snapshot.speakerAssignments) || [];
   appState.speakerMappingRequired = Boolean(snapshot.speakerMappingRequired);
   appState.speakerRoleCorrections = cloneStateValue(snapshot.speakerRoleCorrections) || {};
+  appState.segmentReviewCorrections = cloneStateValue(snapshot.segmentReviewCorrections) || {};
   appState.roleReviewDirty = Boolean(snapshot.roleReviewDirty);
   appState.lastSpeakerMergeSnapshot = null;
   resetRecordPreview();
@@ -8457,15 +8467,19 @@ function undoLastSpeakerMerge() {
 
 function transcriptSpeakerGroups(rows = transcriptRows()) {
   const groups = new Map();
+  const assignments = new Map((appState.currentAsrResult?.speaker_assignments || []).map((item) => [item.speaker_id, item.role]));
   rows.forEach((row) => {
     if (!row.speakerId) return;
     const current = groups.get(row.speakerId) || {
       speakerId: row.speakerId,
       count: 0,
       roles: [],
+      reviewedRoles: new Map(),
     };
     current.count += 1;
     current.roles.push(row.label);
+    const reviewedRole = individuallyReviewedRole(row.sourceSegment);
+    if (reviewedRole && !current.reviewedRoles.has(reviewedRole)) current.reviewedRoles.set(reviewedRole, row);
     groups.set(row.speakerId, current);
   });
   return [...groups.values()].map((group, index) => {
@@ -8479,14 +8493,34 @@ function transcriptSpeakerGroups(rows = transcriptRows()) {
     return {
       ...group,
       role,
+      reviewConflict: group.reviewedRoles.size > 1 || (group.reviewedRoles.size > 0 && isClinicalRole(assignments.get(group.speakerId))
+        && !group.reviewedRoles.has(assignments.get(group.speakerId))),
       displayName: `说话人 ${String.fromCharCode(65 + Math.min(index, 25))}`,
     };
   });
 }
 
+function speakerMergeHasRoleConflict(source, target) {
+  return new Set([...(source?.reviewedRoles.keys() || []), ...(target?.reviewedRoles.keys() || [])]).size > 1;
+}
+
+function speakerReviewEvidence(group) {
+  if (!group.reviewedRoles.size) return "";
+  const details = [...group.reviewedRoles.entries()].map(([role, row]) => {
+    const description = `第${row.index + 1}段${row.startTime == null ? "" : " " + row.time} · ${role}`;
+    if (row.startTime == null || !$("consultationAudio")?.getAttribute("src")) return escapeHtml(description);
+    return `<button type="button" class="detail-link" data-evidence-segment-id="${escapeHtml(row.segmentId)}" data-evidence-start="${row.startTime}">回听${escapeHtml(description)}</button>`;
+  });
+  const message = group.reviewedRoles.size > 1
+    ? "同一组有不同的已核身份，无法整组确认。请回听这些音段，必要时分开录入。"
+    : "已逐段核对的身份将保留。";
+  return `<div data-speaker-review-evidence><strong>${message}</strong><div>${details.join("　")}</div></div>`;
+}
+
 function roleReviewRequired() {
   if (!appState.currentAsrResult) return false;
   return roleQualityNeedsIdentityReview(appState.currentAsrResult)
+    || (roleQualityStatus() === "passed" && !speakerRolesComplete())
     || pendingSpeakerAssignments().length > 0;
 }
 
@@ -8509,16 +8543,7 @@ function focusNextActionPanel() {
 }
 
 function speakerRolesForReviewSave() {
-  const corrections = { ...appState.speakerRoleCorrections };
-  if (roleReviewRequired()) {
-    const pendingIds = new Set(pendingSpeakerAssignments().map((item) => item.speaker_id));
-    transcriptSpeakerGroups().forEach((group) => {
-      if (pendingIds.has(group.speakerId) && group.role && !corrections[group.speakerId]) {
-        corrections[group.speakerId] = group.role;
-      }
-    });
-  }
-  return Object.entries(corrections).map(([speakerId, role]) => ({
+  return Object.entries(appState.speakerRoleCorrections).filter(([, role]) => isClinicalRole(role)).map(([speakerId, role]) => ({
     speaker_id: speakerId,
     role,
     reviewed_by_doctor: Boolean(role),
@@ -8532,12 +8557,22 @@ async function saveRoleReview({ silent = false } = {}) {
   }
 
   const pendingIds = new Set(pendingSpeakerAssignments().map((item) => item.speaker_id));
-  const speakerGroupsForSave = pendingIds.size
-    ? transcriptSpeakerGroups().filter((group) => pendingIds.has(group.speakerId))
-    : transcriptSpeakerGroups();
-  const unresolvedSpeakers = speakerGroupsForSave.filter((group) => !group.role);
-  if (unresolvedSpeakers.length) {
-    if (!silent) showToast(`请先完成 ${unresolvedSpeakers.length} 位说话人的身份确认`);
+  const groups = transcriptSpeakerGroups();
+  const speakerRoles = speakerRolesForReviewSave();
+  const edits = Object.entries(appState.segmentReviewCorrections);
+  const conflict = groups.find((group) => {
+    const role = appState.speakerRoleCorrections[group.speakerId];
+    return isClinicalRole(role)
+      ? [...group.reviewedRoles.keys()].some((reviewed) => reviewed !== role)
+      : group.reviewedRoles.size > 1 && !edits.length;
+  });
+  const unresolved = groups.filter((group) => pendingIds.has(group.speakerId) && !isClinicalRole(appState.speakerRoleCorrections[group.speakerId]));
+  if (conflict) {
+    if (!silent) showToast(`${conflict.displayName} 的段级身份存在冲突，请回听对应音段。`);
+    return appState.currentAsrResult;
+  }
+  if (!edits.length && (unresolved.length || !speakerRoles.length)) {
+    if (!silent) showToast(unresolved.length ? `请明确选择 ${unresolved.length} 位说话人的身份。` : "没有待保存的更正。");
     return appState.currentAsrResult;
   }
 
@@ -8549,13 +8584,11 @@ async function saveRoleReview({ silent = false } = {}) {
   let qualityPassed = false;
   let shouldAutoGenerate = false;
   try {
-    const segments = appState.currentAsrResult.segments.map((segment, index) => ({
-      index,
-      role: segment.role || "待确认",
-      text: segment.text || "",
-      reviewed_by_doctor: Boolean(segment.reviewed_by_doctor && segment.role && segment.role !== "待确认"),
-    }));
-    const speakerRoles = speakerRolesForReviewSave();
+    const segments = edits.map(([index, patch]) => {
+      const segment = appState.currentAsrResult.segments[Number(index)];
+      const groupRole = appState.speakerRoleCorrections[segmentSpeakerId(segment)];
+      return { index: Number(index), ...patch, reviewed_by_doctor: Boolean(segment.reviewed_by_doctor || isClinicalRole(groupRole)) };
+    });
 
     const response = await api(`/api/asr/sessions/${appState.currentAsrSessionId}/result`, {
       method: "PATCH",
@@ -8575,6 +8608,7 @@ async function saveRoleReview({ silent = false } = {}) {
     appState.currentAudioId = response.audio_id || appState.currentAudioId;
     appState.roleReviewDirty = false;
     appState.speakerRoleCorrections = {};
+    appState.segmentReviewCorrections = {};
     savedResult = response.asr_result;
     pendingCount = roleReviewPendingCount();
     qualityPassed = roleQualityPassed(savedResult);

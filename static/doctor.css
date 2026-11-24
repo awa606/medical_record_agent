@@ -4889,6 +4889,16 @@ body.care-mode .transcript-list,
   justify-content: flex-end;
 }
 
+.speaker-role-group:has([data-speaker-review-evidence]) {
+  flex-wrap: wrap;
+}
+
+[data-speaker-review-evidence] {
+  flex-basis: 100%;
+  order: 1;
+  overflow-wrap: anywhere;
+}
+
 .speaker-role-group > span {
   min-width: 0;
   display: grid;

@@ -41,6 +41,7 @@ from app.services.clinician_draft import render_manual_draft
 from app.db.sqlite import manual_first_task_metadata
 from app.services import export_record
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
+from app.services.asr.signoff_source import bound_recording
 from app.services.clinical_codes import icd10_errors
 from app.services.exporter import DEFAULT_OUTPUT_DIR
 from app.services.episode_medication_coverage import has_episode_medication_gap, refresh_episode_medication
@@ -425,6 +426,21 @@ def _current_revision_or_error(task: dict[str, Any]) -> dict[str, Any]:
     return revision
 
 
+def _revision_audio_evidence(result: dict, revision: dict | None) -> dict:
+    """Use the source frozen with this revision; old revisions may only have the task's copy."""
+    encoded = (revision or {}).get("result_json")
+    if not encoded:
+        return result
+    try:
+        stored = json.loads(encoded) if isinstance(encoded, str) else encoded
+    except (ValueError, TypeError):
+        return result
+    source = bound_recording(stored) if isinstance(stored, dict) else None
+    if source is None or source == result.get("asr_source"):
+        return result
+    return {**result, "asr_source": source}
+
+
 def _revision_content_hash(revision: dict[str, Any]) -> str:
     current = revision.get("content_hash")
     if current:
@@ -699,6 +715,7 @@ def review_task(
             "current_content_hash": _revision_content_hash(revision),
             "message": "病历版本已更新，请加载最新版本后保存；本地修改仍保留。",
         })
+    result = _revision_audio_evidence(result, revision)
     # The transaction below repeats this check atomically against concurrent
     # saves. This early check prevents stale resolution declarations from
     # being judged against a different doctor's revision.
@@ -853,6 +870,7 @@ def approve_task(
         raise HTTPException(status_code=409, detail="Current record revision is already approved")
     revision = _current_revision_or_error(task)
     content_hash = _assert_approval_matches_revision(payload, revision)
+    result = _revision_audio_evidence(result, revision)
     issue = audio_source_issue(result)
     if issue:
         raise HTTPException(status_code=409, detail=issue)
@@ -956,12 +974,14 @@ def export_task(
 ) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
     approval = get_active_approval_for_task(task_id)
+    revision = _current_revision_or_error(task)
+    result = _revision_audio_evidence(result, revision)
     readiness = _build_export_readiness(
         task_id,
         result,
         current_stage=task.get("current_stage"),
         active_approval=approval,
-        current_revision=_current_revision_or_error(task),
+        current_revision=revision,
     )
     if ((expected_revision_id is not None and expected_revision_id != readiness["revision_id"])
             or (expected_approval_id is not None and expected_approval_id != readiness["approval_id"])):
@@ -1011,13 +1031,14 @@ def export_task(
 @router.get("/{task_id}/export-readiness", response_model=ExportReadinessResponse)
 def read_export_readiness(task_id: int, request: Request = None) -> ExportReadinessResponse:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
+    revision = _current_revision_or_error(task)
     return ExportReadinessResponse(
         **_build_export_readiness(
             task_id,
-            result,
+            _revision_audio_evidence(result, revision),
             current_stage=task.get("current_stage"),
             active_approval=get_active_approval_for_task(task_id),
-            current_revision=_current_revision_or_error(task),
+            current_revision=revision,
         )
     )
 

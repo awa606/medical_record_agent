@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+import json
 from hashlib import sha256
 from pathlib import Path
 from threading import Event
@@ -9,7 +10,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.api import audio, tasks
-from app.db import list_approvals_for_task, list_export_events_for_task
+from app.db import get_record_revision, list_approvals_for_task, list_export_events_for_task, update_task
 from app.main import app
 from app.schemas.asr import ASRResult, ASRSegment, AudioRecord, SpeakerRoleAssignment
 from app.services.asr.role_quality import attach_speaker_role_quality
@@ -134,6 +135,23 @@ def test_historical_segment_shape_and_unbound_text(recording):
     raw.speaker_assignments[0].source = "manual_draft"
     raw.speaker_assignments[0].requires_confirmation = True
     assert signoff_source_issue(old, raw)["reason_code"] == "audio_role_review_required"
+
+
+def test_legacy_task_without_source_uses_and_preserves_its_frozen_revision(recording):
+    client, raw, tid, path = recording
+    task = client.get(path).json()
+    revision_id = task["current_record_revision_id"]
+    before = get_record_revision(revision_id)
+    legacy = task["result_json"]
+    del legacy["asr_source"]
+    update_task(tid, result_json=json.dumps(legacy, ensure_ascii=False))
+    withdraw(raw)
+    assert client.get(path + "/export-readiness").json()["audio_source_issue"]["reason_code"] == "audio_role_review_required"
+    assert approval(client, path, tid).status_code == 409
+    saved = client.post(path + "/review", json=review_payload_for_fields(tid, legacy["fields"]))
+    assert saved.is_success and saved.json()["result_json"]["asr_source"]["audio_id"] == raw.audio_id
+    assert approval(client, path, tid).status_code == 409
+    assert get_record_revision(revision_id) == before
 
 
 def test_overlapping_approvals_and_withdrawal_cannot_commit_under_one_another(recording, monkeypatch):

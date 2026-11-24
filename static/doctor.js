@@ -3637,7 +3637,7 @@ function contextRole(row) {
 }
 
 function renderSourceContext(span, source) {
-  if (!source || source.rows.length < 2) return "";
+  if (!source?.rows.length) return "";
   const { rows, asr } = source;
   const role = explicitTextRole(span.text);
   const literal = String(span.text || "").slice(role?.prefixLength || 0).trim().replace(/[。！？!?]+$/, "");
@@ -3672,14 +3672,18 @@ function renderSourceContext(span, source) {
     }
   } else if (span.segment_id != null || (span.start_time ?? span.start) != null || (span.end_time ?? span.end) != null) return "";
   if (!Number.isInteger(index) || !rows[index] || !matchesRole(rows[index])
-      || (index === last && !matches(rows[index])) || (index === 0 && last === rows.length - 1)) return "";
+      || (index === last && !matches(rows[index]))) return "";
+  const single = rows.length === 1;
+  if (single ? rows[index].quote === evidenceQuote(span.text) : index === 0 && last === rows.length - 1) return "";
   const lines = [[index - 1, "前一句"], [index, "引用所在句"], [last + 1, "后一句"]]
     .filter(([i]) => rows[i]).map(([i, label]) => {
       const row = rows[i];
       const text = i === index && last > index ? rows.slice(index, last + 1).map(part => part.text).join("") : row.text;
       return `<li><strong>${label}</strong><span>${escapeHtml(contextRole(row))}</span><div>${escapeHtml(text)}</div></li>`;
     });
-  return `<details class="field-source-context"><summary>看前后原话</summary><ol>${lines.join("")}</ol><small>相邻原话仅供对照。</small></details>`;
+  const title = single ? "看完整原句" : "看前后原话";
+  const note = single ? "" : "<small>相邻原话仅供对照。</small>";
+  return `<details class="field-source-context"><summary>${title}</summary><ol>${lines.join("")}</ol>${note}</details>`;
 }
 
 function renderFieldEvidenceDetails(field, key = null) {

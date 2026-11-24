@@ -152,8 +152,8 @@ def test_historical_field_evidence_uses_clinical_sentence_and_discards_unverifie
             text = "医生：刚才如何？\n患者：稍稍头晕，又缓过来了！\n家属：我当时也在场。\n没有录入说话人。"
             text_spans = [{"text": "头晕", "index": 1}, {"text": "头晕"}, {"text": "头晕", "index": 0},
                           {"text": "患者：没有录入说话人", "index": 3}]
-            def check_saved(patient, kind, original, asr, spans):
-                saved_fields = {"present_illness": {**fields["present_illness"], "source_spans": spans}}
+            def check_saved(patient, kind, original, asr, spans, status="complete"):
+                saved_fields = {"present_illness": {**fields["present_illness"], "source_spans": spans, "status": status}}
                 target = _saved_encounter(server, login["id"], patient, kind, original, asr, saved_fields)
                 _open_from_workbench(page, target)
                 page.locator('[data-open-detail="field:present_illness"]').first.click()
@@ -166,6 +166,34 @@ def test_historical_field_evidence_uses_clinical_sentence_and_discards_unverifie
             lines = cards.first.locator("li")
             expect(lines).to_have_text(["前一句医生刚才如何？", "引用所在句患者稍稍头晕，又缓过来了！", "后一句家属我当时也在场。"])
             assert page.locator("#detailPanel").evaluate("el => el.scrollWidth <= el.clientWidth + 1")
+            page.keyboard.press("Escape")
+            # Only the indexed sentence is selected; a repeated word within it is not highlighted.
+            one = "她头晕，我本人早上也头晕。"
+            one_spans = [{"text": "头晕", "index": 0}, {"text": one, "index": 0},
+                         {"text": "头晕", "index": 1}, {"text": "医生：头晕", "index": 0}]
+            summaries = check_saved("SIM-ONE-TEXT", "text", "患者：" + one, None, one_spans, "conflicting")
+            expect(summaries).to_have_text(["看完整原句"])
+            page.locator("#closeDrawerButton").focus()
+            for _ in range(12):
+                page.keyboard.press("Tab")
+                if summaries.evaluate("el => el === document.activeElement"):
+                    break
+            expect(summaries).to_be_focused()
+            page.keyboard.press("Enter")
+            expect(cards.first.locator("li div")).to_have_text(one)
+            expect(cards.first.locator("li mark")).to_have_count(0)
+            page.keyboard.press("Space")
+            expect(cards.first.locator("li")).to_be_hidden()
+            page.keyboard.press("Escape")
+
+            audio_one = {**source, "text": "患者：" + one, "conversation_text": "患者：" + one,
+                         "segments": [{"segment_id": "one", "text": one, "role": "患者", "start": 1, "end": 4}]}
+            spans = [{"text": "头晕", "index": 0, "segment_id": "one"},
+                     {"text": "头晕", "index": 0, "segment_id": "old"}]
+            summaries = check_saved("SIM-ONE-AUDIO", "audio", "患者：" + one, audio_one, spans)
+            expect(summaries).to_have_text(["看完整原句"])
+            summaries.click()
+            expect(cards.first.locator("li")).to_have_text("引用所在句患者（角色待核）" + one)
             page.keyboard.press("Escape")
             for patient, kind, original, bad_source in [
                 ("SIM-CONTEXT-NONE", "text", "", None),

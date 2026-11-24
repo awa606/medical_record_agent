@@ -11,7 +11,7 @@ from contextlib import closing
 
 import pymupdf
 import pytest
-import requests
+import httpx
 from playwright.sync_api import expect, sync_playwright
 
 from tests.test_doctor_itemized_approval_playwright import RunningServer
@@ -126,7 +126,7 @@ class Visit:
 
     def api(self, method, route, body=None):
         r = self.client.request(method, self.server.base_url + "/api" + route, json=body, timeout=15)
-        assert r.ok, (route, r.status_code, r.text[:500])
+        assert r.is_success, (route, r.status_code, r.text[:500])
         return r.json()
 
     def role(self, new_role):
@@ -161,7 +161,7 @@ class Visit:
         r = self.client.get(
             self.server.base_url + "/api" + self.task + "/exports/pdf", params={"sha256": sha}
         )
-        assert r.ok, r.status_code
+        assert r.is_success, r.status_code
         return r.content
 
 
@@ -177,8 +177,7 @@ def doctor(tmp_path):
         }
     )
     try:
-        with requests.Session() as client, sync_playwright() as pw:
-            client.trust_env = False
+        with httpx.Client(trust_env=False, timeout=20) as client, sync_playwright() as pw:
             base = server.base_url + "/api/auth/"
             for action, data in [
                 ("login", {"username": "admin", "password": admin}),

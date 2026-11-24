@@ -22,3 +22,13 @@ Get-FileHash -Algorithm SHA256 -LiteralPath '.\合成问诊听录.zip'
 ```
 
 构建器先核对编号、页面摘要及声音存在性，写入临时压缩包后逐项回读核对，再公开新的 ZIP 路径。运行前的逐案验证负责确认真实音频摘要、首次转写输入、模型原始回复、是否有待评稿，以及断网后的锁定、恢复与错病例拒绝。听录页仅用于本地工程协作；它不认证使用者身份。
+
+## 两份三人合成问诊音轨
+
+在装有 Microsoft Huihui、Kangkang、Yaoyao 简体中文语音的 Windows 电脑，用 Python 3.11 或更高版本从仓库根目录执行。目标选择一个新目录。
+
+~~~powershell
+python -X utf8 experiments/clinical-review-20261124/render_visit_audio.py 三人合成问诊
+~~~
+
+输出为 `SYN-TM-B.wav`、`SYN-TM-C.wav` 和逐句时间轴 `timeline.json`。每个音频为 16 kHz 单声道 16 位 PCM，各句间隔 300 毫秒。角色参考来自既有原创脚本。经验证的本机语音版本中，B、C 文件 SHA-256 分别为 `1f8a5348cdd81e80c652e74eb211605edd6083723779eeefb02ca19a46b9f278` 与 `5ed37c62cb21ca1e8bb49cba44fe21a20c6a9e4b4e6ee2512309de6ff84d925a`。若系统语音版本不同，请按实际生成文件记录摘要。[三人原始台词](../../data/clinical_e2e/synthetic_visit_timeline_v1/spoken_input.json) · [首次识别与人工订正记录](../../docs/evidence/20261124_portable_session_review.md)

@@ -13,6 +13,7 @@ RECIPE = Path(__file__).resolve().parent
 REPO = RECIPE.parents[2]
 BASE_SHA256 = "6371cb8ee6a62609e9fc19656ad106e566302a3a45f74ba271a731f636a5da87"
 BASE_COMMIT = "d231e1c5f0c120fa15b3cc228cbfec12c345ecfd"
+R41_COMMIT = "ebece5c7ffb863f334034095e464d871561933e1"
 REFERENCE = "data/knowledge/review/outpatient-information-page/six-clauses.json"
 REFERENCE_SHA256 = "5d470b317685af7b30653ce65285d0392c3d6cf8b76f1e48b1dc46c73c30737d"
 REFERENCE_FILE = "六条文书释义.json"
@@ -46,6 +47,22 @@ def approved_help_inputs(commit: str) -> list[str]:
     return [script, *("docs/pilot/doctor-v1/" + name for name in names)]
 
 
+def verify_r42_changes(commit: str) -> list[str]:
+    """Check the released code and help inputs against the last accepted desktop package."""
+    packaged = ["app", "assets", "config", "static", *approved_help_inputs(R41_COMMIT)]
+    changed = git_bytes("diff", "--name-only", R41_COMMIT, commit, "--", *packaged).decode().splitlines()
+    if set(changed) != {"static/doctor.js", "static/doctor-workspace.css", "static/doctor.html"}:
+        raise ValueError(f"r4.2 相对 r4.1 的运行文件或内置帮助超出已核验范围：{changed}")
+    expected_html = git_bytes("show", f"{R41_COMMIT}:static/doctor.html").decode()
+    for name in ("doctor.js", "doctor-workspace.css"):
+        old_stamp = digest(git_bytes("show", f"{R41_COMMIT}:static/{name}"))[:16]
+        new_stamp = digest(git_bytes("show", f"{commit}:static/{name}"))[:16]
+        expected_html = replace_once(expected_html, f"./{name}?v={old_stamp}", f"./{name}?v={new_stamp}")
+    if git_bytes("show", f"{commit}:static/doctor.html") != expected_html.encode():
+        raise ValueError("r4.2 的医生入口只允许更新 doctor.js 和 doctor-workspace.css 的实际内容指纹")
+    return sorted(changed)
+
+
 def update_launcher(data: bytes, commit: str, with_help: bool) -> bytes:
     text = data.decode("utf8")
     if text.count(BASE_COMMIT[:12]) != 3:
@@ -63,11 +80,20 @@ def update_launcher(data: bytes, commit: str, with_help: bool) -> bytes:
     compile(text, "体验.py", "exec")
     return text.encode()
 
-def build(base: Path, output: Path, commit: str, *, with_help: bool = False) -> Path:
+def build(base: Path, output: Path, commit: str, *, with_help: bool = False, r4_2: bool = False) -> Path:
     if not re.fullmatch("[0-9a-f]{40}", commit):
         raise ValueError("请使用完整的应用提交 SHA")
+    if with_help and r4_2:
+        raise ValueError("请选择 r4.1 或 r4.2 中的一个版本")
+    if r4_2 and output.exists() and any(output.iterdir()):
+        raise ValueError("r4.2 须使用全新的输出目录，以保留已有发行物和指纹")
     if digest(base.read_bytes()) != BASE_SHA256:
         raise ValueError("基础 ZIP 与已验收的 r3 不符")
+    edition = "r4.1" if with_help else "r4"
+    if r4_2:
+        edition = "r4.2"
+        with_help = True
+        changes_since_r41 = verify_r42_changes(commit)
     changed = set(git_bytes("diff", "--name-only", BASE_COMMIT, commit, "--", "app", "assets", "config", "static").decode().splitlines())
     expected = {"static/doctor.js", "static/doctor.html", "static/doctor-workspace.css"}
     if with_help:
@@ -102,7 +128,6 @@ def build(base: Path, output: Path, commit: str, *, with_help: bool = False) -> 
     guide = replace_once(guide, anchor, (RECIPE / "field_help.html").read_text(encoding="utf-8-sig").strip()+"\n"+anchor)
     files[guide_name] = guide.encode()
     output.mkdir(parents=True, exist_ok=True)
-    edition = "r4.1" if with_help else "r4"
     path = output / f"MediListen_字段审核_Windows-x64_{commit[:7]}_{edition}.zip"
     with ZipFile(path, "x") as bundle:
         for name, contents in sorted(files.items()):
@@ -122,6 +147,9 @@ def build(base: Path, output: Path, commit: str, *, with_help: bool = False) -> 
                   reference_sha256=REFERENCE_SHA256)
     if with_help:
         report["public_help_inputs"] = help_inputs
+    if r4_2:
+        report["previous_application_commit"] = R41_COMMIT
+        report["changed_since_r4_1"] = changes_since_r41
     (output / "发布指纹.json").write_bytes(json_bytes(report))
     (output / (path.name+".sha256")).write_bytes((sha+"  "+path.name+"\n").encode())
     return path
@@ -131,6 +159,8 @@ if __name__ == "__main__":
     parser.add_argument("--base", type=Path, required=True, help="已冻结的 r3 ZIP")
     parser.add_argument("--output", type=Path, required=True, help="新构建目录")
     parser.add_argument("--commit", required=True, help="完整的字段审核应用提交")
-    parser.add_argument("--with-help", action="store_true", help="按应用提交中的公开白名单装配内置帮助")
+    edition = parser.add_mutually_exclusive_group()
+    edition.add_argument("--with-help", action="store_true", help="构建含完整内置帮助的 r4.1")
+    edition.add_argument("--r4-2", action="store_true", help="构建含完整内置帮助、可逐条查看出处的 r4.2")
     args = parser.parse_args()
-    print(build(args.base, args.output, args.commit, with_help=args.with_help))
+    print(build(args.base, args.output, args.commit, with_help=args.with_help, r4_2=args.r4_2))

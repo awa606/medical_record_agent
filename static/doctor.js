@@ -4179,7 +4179,7 @@ function renderKnowledgeResultDetails(result = {}) {
     <div class="detail-kv"><span>文档 / 片段</span><strong>${escapeHtml(result.document_id || "-")} / ${escapeHtml(result.chunk_id || "-")}</strong></div>
     <div class="detail-kv"><span>内容校验值（SHA256）</span><strong class="hash-value">${escapeHtml(result.content_sha256 || "-")}</strong></div>
     <div class="detail-text">${escapeHtml(result.excerpt || result.match_reason || "暂无摘要。")}</div>
-    ${sourceUrl ? `<a class="knowledge-source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">打开官方来源（需联网）</a>` : ""}
+    ${sourceUrl ? `<a class="knowledge-source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">打开登记来源（需联网）</a>` : ""}
   `;
 }
 

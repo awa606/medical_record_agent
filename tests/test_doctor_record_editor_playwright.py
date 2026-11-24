@@ -239,6 +239,7 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(detail.get_by_role("region", name="本次检索与来源")).to_contain_text("1 份资料")
             expect(detail.get_by_role("region", name="本次检索与来源")).to_contain_text("支持程度尚未核实")
             expect(detail.get_by_text("仅用于自动化测试中的医生人工参考。", exact=True)).to_be_visible()
+            expect(detail.get_by_role("link", name="打开登记来源（需联网）")).to_be_visible()
             expect(detail.get_by_text("选择来源核对原文", exact=False)).to_have_count(0)
 
             # Two passages in one version share an original; a new version is a second source.

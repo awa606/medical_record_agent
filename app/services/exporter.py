@@ -446,6 +446,8 @@ def render_pdf(
     clinician_assessment: ClinicianAssessment | None = None,
     clinician_draft_origin: ClinicianDraftOrigin | None = None,
     itemized_approval: dict[str, Any] | None = None,
+    source_sha256: str | None = None,
+    revision_sha256: str | None = None,
 ) -> Path:
     """Hospital-style outpatient record: meta header, sections, signature block."""
     styles = _pdf_styles()
@@ -547,6 +549,8 @@ def render_pdf(
         story.extend(notice)
 
     def _footer(canvas, doc_obj) -> None:
+        if source_sha256 and revision_sha256:
+            canvas.setSubject(f"audio-source-sha256={source_sha256}; record-sha256={revision_sha256}")
         canvas.saveState()
         canvas.setFont(styles["body"].fontName, 8)
         canvas.setFillColor(colors.HexColor("#64748b"))
@@ -600,6 +604,8 @@ def export_record(
             clinician_draft_origin=ClinicianDraftOrigin.model_validate(result["clinician_draft_origin"])
             if result.get("clinician_draft_origin") else None,
             itemized_approval=result.get("approval") if (result.get("approval") or {}).get("id") == approval_id else None,
+            source_sha256=(result.get("approval") or {}).get("source_sha256"),
+            revision_sha256=(result.get("approval") or {}).get("content_hash"),
             clinician_assessment=ClinicianAssessment.model_validate(result["clinician_assessment"])
             if result.get("clinician_assessment") else None,
         )
@@ -607,5 +613,8 @@ def export_record(
     except Exception:
         pdf_path.unlink(missing_ok=True)
         raise
-    return {"pdf_path": str(pdf_path), "pdf_sha256": digest}
+    receipt = {"pdf_path": str(pdf_path), "pdf_sha256": digest}
+    if (result.get("approval") or {}).get("source_sha256"):
+        receipt.update(source_sha256=result["approval"]["source_sha256"], content_hash=result["approval"]["content_hash"])
+    return receipt
 

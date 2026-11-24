@@ -21,6 +21,7 @@ from app.api import (
     tasks_router,
 )
 from app.db import init_db
+from app.api.audio_source_revisions import router as audio_source_revision_router
 from app.services.privacy import AnonymousResponses, install_anonymous_logging
 from app.services.asr.prewarm import is_prewarm_enabled, start_funasr_prewarm
 from app.services.task_recovery import (
@@ -87,6 +88,7 @@ app.include_router(records_router, prefix="/api")
 app.include_router(security_router, prefix="/api")
 app.include_router(speaker_profiles_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
+app.include_router(audio_source_revision_router, prefix="/api")
 app.include_router(runtime_router)
 
 

@@ -127,7 +127,9 @@ def anonymize_payload(value):
                 register_identity(value[key])
         # Revision and citation digests are opaque integrity values, not prose.
         # A numeric run inside a SHA must not break optimistic concurrency.
-        digest_keys = {"content_hash", "current_content_hash", "expected_content_hash", "content_sha256"}
+        digest_keys = {"content_hash", "current_content_hash", "expected_content_hash", "content_sha256",
+                       "source_hash", "revision_hash", "source_sha256", "previous_source_sha256", "previous_content_hash",
+                       "pdf_sha256"}
         return {
             key: item if (
                 key in digest_keys and isinstance(item, str)

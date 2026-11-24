@@ -249,6 +249,15 @@ def _init_db_once() -> None:
                 FOREIGN KEY(approval_id) REFERENCES approval(id),
                 FOREIGN KEY(task_id) REFERENCES agent_task(id)
             );
+            CREATE TABLE IF NOT EXISTS audio_source_revision_request (
+                task_id INTEGER NOT NULL REFERENCES agent_task(id),
+                doctor_id INTEGER NOT NULL REFERENCES auth_user(id),
+                request_id TEXT NOT NULL,
+                request_hash TEXT NOT NULL,
+                revision_id INTEGER NOT NULL REFERENCES record_revision(id),
+                source_sha256 TEXT NOT NULL,
+                PRIMARY KEY(task_id, doctor_id, request_id)
+            );
             """
         )
         _migrate_schema(connection)
@@ -323,6 +332,21 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
         """
     )
     _migrate_clinician_writer_protocol(connection)
+    _ensure_column(connection, "approval", "source_sha256", "TEXT")
+    connection.execute("""
+        CREATE TRIGGER IF NOT EXISTS require_reviewed_audio_approval BEFORE INSERT ON approval
+        WHEN (SELECT writer_protocol FROM record_revision WHERE id=NEW.revision_id) >= 4
+          AND (NEW.source_sha256 IS NULL OR NEW.source_sha256 IS NOT
+               (SELECT json_extract(result_json,'$.audio_source_revision.source_sha256') FROM record_revision WHERE id=NEW.revision_id))
+        BEGIN SELECT RAISE(ABORT, 'Approval must bind the reviewed recording'); END
+    """)
+    connection.execute("""
+        CREATE TRIGGER IF NOT EXISTS require_reviewed_audio_export BEFORE INSERT ON export_event
+        WHEN (SELECT source_sha256 FROM approval WHERE id=NEW.approval_id) IS NOT NULL
+          AND (json_extract(NEW.exports_json,'$.source_sha256') IS NOT (SELECT source_sha256 FROM approval WHERE id=NEW.approval_id)
+               OR json_extract(NEW.exports_json,'$.content_hash') IS NOT (SELECT content_hash FROM approval WHERE id=NEW.approval_id))
+        BEGIN SELECT RAISE(ABORT, 'Export must bind the approved recording and revision'); END
+    """)
 
 
 def _migrate_clinician_writer_protocol(connection: sqlite3.Connection) -> None:
@@ -574,6 +598,7 @@ def json_or_none(value: Any) -> str | None:
 
 
 RECORD_CONTENT_KEYS = {
+    "audio_source_revision",
     "clinician_draft_origin",
     "clinician_assessment",
     "fields",
@@ -899,7 +924,7 @@ def _insert_record_revision_row(
             json_dumps(result),
             actor_user_id,
             now,
-            3 if result.get("clinician_draft_origin") else 2,
+            4 if result.get("audio_source_revision") else 3 if result.get("clinician_draft_origin") else 2,
         ),
     )
     return int(cursor.lastrowid)
@@ -1665,6 +1690,14 @@ def create_approval_for_task(
                 expected_revision_id=expected_revision_id, expected_content_hash=content_hash,
                 current_revision_id=revision_id, current_content_hash=revision_hash,
             )
+        revision_source_sha = None
+        if revision["writer_protocol"] >= 4:
+            stored = json.loads(revision["result_json"])
+            proof = stored.get("audio_source_revision")
+            if (not proof or record_content_hash(stored) != revision_hash or result is None
+                    or proof != result.get("audio_source_revision")):
+                raise ValueError("当前版本的音频来源或内容校验值已变化，请重新核对。")
+            revision_source_sha = proof["source_sha256"]
         active = connection.execute(
             """
             SELECT *
@@ -1685,11 +1718,11 @@ def create_approval_for_task(
             """
             INSERT INTO approval (
                 encounter_id, revision_id, task_id, approved_by_user_id,
-                content_hash, status, created_at, invalidated_at, invalidation_reason, writer_protocol
+                content_hash, status, created_at, invalidated_at, invalidation_reason, writer_protocol, source_sha256
             )
-            VALUES (?, ?, ?, ?, ?, 'active', ?, NULL, NULL, ?)
+            VALUES (?, ?, ?, ?, ?, 'active', ?, NULL, NULL, ?, ?)
             """,
-            (encounter_id, revision_id, task_id, actor_user_id, revision_hash, now, max(2, revision["writer_protocol"])),
+            (encounter_id, revision_id, task_id, actor_user_id, revision_hash, now, max(2, revision["writer_protocol"]), revision_source_sha),
         )
         approval_id = int(cursor.lastrowid)
         for item in approval_items or []:
@@ -1730,6 +1763,11 @@ def create_approval_for_task(
             )},
             "approval_summary": {"item_count": len(approval_items or []), "items": approval_items or []},
         })
+        source_receipt = {}
+        source_proof = signed_result.get("audio_source_revision")
+        if source_proof:
+            source_receipt = {"source_sha256": source_proof["source_sha256"], "content_hash": revision_hash}
+            signed_result["approval"]["source_sha256"] = source_proof["source_sha256"]
         if signed_result.get("clinician_draft_origin") and actor_user_id is not None:
             # Keep the name as it was at approval. The person exporting a copy may be a different user.
             signer = connection.execute("SELECT display_name FROM auth_user WHERE id=?", (actor_user_id,)).fetchone()
@@ -1742,7 +1780,7 @@ def create_approval_for_task(
         _insert_audit_log_row(
             connection, task_id=task_id, event_type="doctor_approved", actor_user_id=actor_user_id,
             event_detail={"task_id": task_id, "revision_id": revision_id, "approval_id": approval_id,
-                          **(actor_detail or {})},
+                          **(actor_detail or {}), **source_receipt},
         )
         connection.commit()
     if result is not None:

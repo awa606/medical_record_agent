@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.api.audio import audio_source_issue, checked_audio_signoff
+from app.api.audio_source_revisions import recoverable_source
 from app.db import (
     StaleRecordRevisionError,
     apply_review_revision_transaction,
@@ -117,6 +118,7 @@ class ExportReadinessResponse(BaseModel):
     pending_review_count: int = 0
     audio_source_issue: dict[str, str] | None = None
     can_create_export: bool = False
+    can_recover_audio_source: bool = False
 
 
 def _decode_result_json(task: dict[str, Any]) -> dict[str, Any]:
@@ -436,9 +438,17 @@ def _revision_audio_evidence(result: dict, revision: dict | None) -> dict:
     except (ValueError, TypeError):
         return result
     source = bound_recording(stored) if isinstance(stored, dict) else None
-    if source is None or source == result.get("asr_source"):
+    if source is None:
         return result
-    return {**result, "asr_source": source}
+    proof = stored.get("audio_source_revision")
+    if source == result.get("asr_source") and proof == result.get("audio_source_revision"):
+        return result
+    restored = {**result, "asr_source": source}
+    if proof is not None:
+        restored["audio_source_revision"] = proof
+    else:
+        restored.pop("audio_source_revision", None)
+    return restored
 
 
 def _revision_content_hash(revision: dict[str, Any]) -> str:
@@ -1032,15 +1042,15 @@ def export_task(
 def read_export_readiness(task_id: int, request: Request = None) -> ExportReadinessResponse:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
     revision = _current_revision_or_error(task)
-    return ExportReadinessResponse(
-        **_build_export_readiness(
-            task_id,
-            _revision_audio_evidence(result, revision),
-            current_stage=task.get("current_stage"),
-            active_approval=get_active_approval_for_task(task_id),
-            current_revision=revision,
-        )
+    readiness = _build_export_readiness(
+        task_id, _revision_audio_evidence(result, revision),
+        current_stage=task.get("current_stage"),
+        active_approval=get_active_approval_for_task(task_id), current_revision=revision,
     )
+    issue = readiness.get("audio_source_issue") or {}
+    if issue.get("reason_code") == "audio_source_changed":
+        readiness["can_recover_audio_source"] = recoverable_source(task_id, current_user_from_request(request))
+    return ExportReadinessResponse(**readiness)
 
 
 def _export_output_root() -> Path:

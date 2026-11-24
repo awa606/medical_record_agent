@@ -28,6 +28,7 @@ from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 from app.services.asr.funasr_reliability import funasr_failure_payload
 from app.services.asr.role_quality import build_speaker_role_quality, recheck_stored_role_conflicts
 from app.services.asr.signoff_source import bound_recording, signoff_source_issue, unavailable_source
+from app.services.audio_source_revisions import source_digest
 from app.services.asr.role_strategy import find_sample_config
 from app.services.runtime_limits import audio_upload_max_bytes, copy_upload_with_limit
 from app.services.task_recovery import RecoveryConfigurationError, TaskDatabaseLock
@@ -160,11 +161,14 @@ def _read_transcript(audio_id: str) -> ASRResult:
 def audio_source_issue(result: dict[str, Any]) -> dict[str, str] | None:
     snapshot = bound_recording(result)
     if snapshot is None:
-        return None
+        return unavailable_source() if result.get("audio_source_revision") else None
     audio_id = snapshot["audio_id"]
     if not isinstance(audio_id, str) or not _RECORDING_KEY.fullmatch(audio_id):
         return unavailable_source()
     try:
+        proof = result.get("audio_source_revision")
+        if proof is not None and (not isinstance(proof, dict) or proof.get("source_sha256") != source_digest(snapshot)):
+            return unavailable_source()
         return signoff_source_issue(snapshot, _read_transcript(audio_id))
     except (HTTPException, OSError, ValueError, TypeError, sqlite3.Error):
         return unavailable_source()
@@ -175,6 +179,8 @@ def checked_audio_signoff(result: dict[str, Any]):
     """Hold the same OS lock as transcript replacement through the receipt transaction."""
     snapshot = bound_recording(result)
     if snapshot is None:
+        if result.get("audio_source_revision"):
+            raise HTTPException(status_code=409, detail=unavailable_source())
         yield
         return
     with _transcript_lock(snapshot["audio_id"]):

@@ -6,12 +6,12 @@
   ],
   "schema_version": "mra-current-status-v1.1",
   "generator_version": "1.1.1",
-  "updated_at": "2026-11-24T16:18:12.167Z",
-  "source_hash": "6fc2c1615e6a7edd668886f7fb1aca4911b810e3c8e6e471b689cb6d08f05a8d",
+  "updated_at": "2026-11-24T16:39:27.450Z",
+  "source_hash": "e517e8f5ad40e2a9c23bb41400e8a5055fcdf2f6f3c31b7743e784be1ee7db5c",
   "source_of_truth": "Obsidian",
   "project": "medical-record-agent",
   "phase": "Alpha",
-  "repo_sha": "8914d2613cf93f597b9ce94cda584b30e8819405",
+  "repo_sha": "c06e48d1706385300cb40bcfe1c3265c538654bf",
   "base_main_sha": "a1f38cd1b5601e624a7dc22bc3462664951a8238",
   "branch": "codex/ui-hospital-record-v1",
   "active_pr": {
@@ -93,7 +93,7 @@
     }
   },
   "purchase_decision": "DEFERRED",
-  "next_task": "继续验证非空查体字段的范围、知识资料是否足以回答问题，以及真实门诊条件下的审阅结果。",
+  "next_task": "在现有 5.1 的未签首稿中，按就诊时点核对明确未做、检查已做待回与医生实际所见的保留情况。",
   "parallel_waiting_task": "继续项目内可复查的工程门禁；待正式教师评分、目标医生盲评与院方受控接口条件。",
   "manual_actions": [
     "在实际教室投影并由授课教师或目标医生独立试用后登记意见。"
@@ -224,7 +224,7 @@
     "Projects/Medical_Record_Agent/Reviews/2026-09-29_课程展示检查点.md": "b3c01a3099232ef2ae84a0ae69bc0fd1e20d17fbc823b65238df8599565d0944",
     "Projects/Medical_Record_Agent/Reviews/Alpha_Current_State_Audit.md": "ea2ffaddcb13c94928155e08183e085cc7c7732a5b615452f8af4832c5b5b720",
     "Projects/Medical_Record_Agent/Reviews/PM_Assistant_Verification.md": "e84c3985c8919aa7acc6a8c63199b1e68db8b8dec6453e9aa016e78d3efae402",
-    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "f60db1a7cf40559b9eb917e2df65c381a0818f50f53b61a8764f569bd5ba7030",
+    "Projects/Medical_Record_Agent/Reviews/PM_Update_Log.md": "baf95e5fde05e3a1a983a91c6e826811182de00b7c62aa82e10146e971c0d74e",
     "Projects/Medical_Record_Agent/Reviews/基线差异与迁移说明.md": "dabf4cec3d4a5c0dbc1a1a9e0223ec7c19322613fc7bff6db40f8756246606ed",
     "Projects/Medical_Record_Agent/Risks.md": "bba76b18e8373b4617404379be4e4e77471ea385ffe6ee956965436dc791e46e",
     "Projects/Medical_Record_Agent/Risks/R01 本地ASR模型无法稳定离线加载.md": "2371134630b6c1a314975535fba66cb87a182debe9da7c4160db29e202af8d22",
@@ -329,7 +329,9 @@
     "experiments/course-defense-20261118/verify_cold_transfer.py": "5958f670e1c9508534b2efb16fd853b68f86bee39fe5374c2bbcebca91ff9cb3",
     "experiments/course-defense-20261118/windows-offline/build_portable.py": "490ea393351ae3c67eb51f4009bdf432aaf85ceb3b96b05e347bca23b659c5e7",
     "experiments/course-defense-20261118/windows-offline/requirements-win314.lock": "8c834d6b88dc64af0528164851c1f6b74b5fcd1b5cf4dbd1b443ef4103524a28",
-    "experiments/frontend-reference-workbench-20261106/design-qa.md": "a7d7c840e93ef122259fdc5534975c766f14b1556a90c625343feb38caca2184"
+    "experiments/frontend-reference-workbench-20261106/design-qa.md": "a7d7c840e93ef122259fdc5534975c766f14b1556a90c625343feb38caca2184",
+    "tests/test_doctor_record_editor_playwright.py": "168b3064dc5803248ae0a39974a86d84f1b96f3e52176510df67a41fa39bc124",
+    "tests/test_partial_draft_help_playwright.py": "2ee57fcded7d034d720ae87a738f7156a59a89ddeb23bf98c14139d11142eb4c"
   },
   "snapshot_verification": {
     "result": "PASS",

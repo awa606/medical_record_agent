@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-24T16:18:12.167Z`
-- Source hash: `6fc2c1615e6a7edd668886f7fb1aca4911b810e3c8e6e471b689cb6d08f05a8d`
+- Updated at: `2026-11-24T16:39:27.450Z`
+- Source hash: `e517e8f5ad40e2a9c23bb41400e8a5055fcdf2f6f3c31b7743e784be1ee7db5c`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@8914d2613cf93f597b9ce94cda584b30e8819405`
+- Repo: `codex/ui-hospital-record-v1@c06e48d1706385300cb40bcfe1c3265c538654bf`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -54,7 +54,7 @@
 
 ## Next
 
-- Single next task: 继续验证非空查体字段的范围、知识资料是否足以回答问题，以及真实门诊条件下的审阅结果。
+- Single next task: 在现有 5.1 的未签首稿中，按就诊时点核对明确未做、检查已做待回与医生实际所见的保留情况。
 - Parallel waiting task: 继续项目内可复查的工程门禁；待正式教师评分、目标医生盲评与院方受控接口条件。
 
 ## Manual Actions

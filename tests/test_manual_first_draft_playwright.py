@@ -188,16 +188,20 @@ def test_first_draft_late_receipt_does_not_expose_or_resurrect_draft(after_commi
                 assert page.evaluate("sessionStorage.getItem('unrelated-legacy-key')") == "keep"
                 return
             if after_commit in ("expired", "expired-same"):
-                other_tab = page.context.new_page()
-                other_tab.goto(server.base_url + "/static/doctor.html")
-                other_tab.locator("#logoutButton").click()
-                expect(other_tab.locator("#loginPanel")).to_be_visible()
-                other_tab.close()
+                # Passive server revocation leaves this doctor to discover expiry on save.
+                # Explicit logout in another tab now locks this editor immediately.
+                assert page.request.post(server.base_url + "/api/auth/logout").ok
                 dialog.get_by_role("button", name="保存手写首稿").press("Enter")
                 expect(page.locator("#loginPanel")).to_be_visible()
                 if after_commit == "expired-same":
-                    login_doctor(page, "first-writer", password)
-                    _open_from_workbench(page, encounter)
+                    # A same-account login resumes this authorized encounter link.
+                    with page.expect_response(lambda response: response.url.endswith(f"/api/encounters/{encounter}")
+                                              and response.status == 200):
+                        login_doctor(page, "first-writer", password)
+                    expect(page.locator("#patientProfile")).to_contain_text(f"E-{encounter}")
+                    page.wait_for_function(
+                        "id => appState.currentTaskId === id && !appState.busy", arg=task
+                    )
                     page.get_by_role("button", name="手写病历", exact=True).press("Enter")
                     expect(dialog.get_by_label("主诉", exact=True)).to_have_value("本次由医生记录来意。")
                     return

@@ -23,7 +23,7 @@ from app.services.asr.chunking import probe_audio_duration
 from app.services.asr.config import configured_asr_backend, requested_asr_engine_mismatch
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 from app.services.asr.funasr_reliability import funasr_failure_payload
-from app.services.asr.role_quality import build_speaker_role_quality
+from app.services.asr.role_quality import build_speaker_role_quality, recheck_stored_role_conflicts
 from app.services.asr.role_strategy import find_sample_config
 from app.services.runtime_limits import audio_upload_max_bytes, copy_upload_with_limit
 
@@ -112,17 +112,22 @@ def _assert_audio_access(record: AudioRecord, request: Request | None) -> None:
 def _write_transcript(result: ASRResult) -> None:
     path = _transcript_path(result.audio_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(result.model_dump(), ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    temporary = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        temporary.write_text(json.dumps(result.model_dump(), ensure_ascii=False, indent=2), encoding="utf-8")
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def _read_transcript(audio_id: str) -> ASRResult:
     path = _transcript_path(audio_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Transcript not found")
-    return ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
+    result = ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
+    if result.role_quality is None:
+        result.role_quality = build_speaker_role_quality(result)
+    return recheck_stored_role_conflicts(result)
 
 
 def _require_passed_role_quality(result: ASRResult) -> ASRResult:
@@ -408,7 +413,8 @@ def generate_record_from_audio(
         _assert_audio_access(record, request)
     result = _read_transcript(audio_id)
     result = _require_passed_role_quality(result)
-    _write_transcript(result)
+    # This snapshot lives with the generated task. Writing it back could replace
+    # a clinician's newer correction if generation and role review overlap.
     conversation_text = result.conversation_text.strip()
     if not conversation_text:
         raise HTTPException(status_code=400, detail="Transcript conversation_text is empty")

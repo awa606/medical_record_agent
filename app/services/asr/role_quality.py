@@ -27,6 +27,32 @@ from app.services.asr.speaker_role_policy import (
     speaker_role_decision,
 )
 MANUAL_SOURCE_PREFIXES = ("manual",)
+MANUAL_ROLE_CONFLICT = "manual_segment_role_conflict"
+
+
+def independently_reviewed_role(segment: ASRSegment) -> bool:
+    """Group operations cannot replace a clinician's existing per-segment evidence."""
+    return (
+        not segment.provisional and segment.reviewed_by_doctor
+        and normalize_role(segment.role) in CLINICAL_ROLES
+        and segment.role_source not in {"manual_speaker_map", "manual_speaker_merge", "manual_draft"}
+    )
+
+
+def _conflicting_reviewed_speakers(result: ASRResult) -> set[str]:
+    reviewed: dict[str, set[str]] = {}
+    for segment in result.segments:
+        speaker = _speaker_id(segment)
+        role = normalize_role(segment.role)
+        if speaker and not segment.provisional and segment.reviewed_by_doctor and role in CLINICAL_ROLES:
+            reviewed.setdefault(speaker, set()).add(role)
+    for assignment in result.speaker_assignments:
+        role = normalize_role(assignment.role)
+        if (assignment.speaker_id in reviewed and not assignment.requires_confirmation
+                and assignment.source.startswith(MANUAL_SOURCE_PREFIXES) and role in CLINICAL_ROLES):
+            reviewed[assignment.speaker_id].add(role)
+    return {speaker for speaker, roles in reviewed.items() if len(roles) > 1}
+
 
 
 @dataclass(frozen=True)
@@ -71,12 +97,14 @@ class SpeakerRoleQualityPolicy:
             if item.get("speaker_id")
         }
 
+        conflicts = _conflicting_reviewed_speakers(asr_result)
         decisions = [
             _decision_for_speaker(
                 speaker_id,
                 segments=segments,
                 assignment=assignments.get(speaker_id),
                 speaker_count=len(speaker_ids),
+                reviewed_conflict=speaker_id in conflicts,
                 mixed_blocked=speaker_id in mixed_speakers and mixed_rate > self.max_mixed_utterance_rate,
                 policy=self,
             )
@@ -156,6 +184,8 @@ class SpeakerRoleQualityPolicy:
             policy=self,
             has_segments=bool(segments),
         )
+        if conflicts:
+            reasons.insert(0, "同一声音组内已核对的身份不一致，请核对分段、原声与组身份。")
         return SpeakerRoleQualityResult(
             status=status,
             reasons=reasons,
@@ -240,7 +270,23 @@ def attach_speaker_role_quality(
         expected_roles=expected_roles,
         policy=policy,
     )
-    return asr_result.model_copy(update={"role_quality": quality})
+    updates = {"role_quality": quality}
+    if any(item.reason_code == MANUAL_ROLE_CONFLICT for item in quality.pending_confirmation):
+        updates["needs_review"] = True
+    return asr_result.model_copy(update=updates)
+
+
+def recheck_stored_role_conflicts(result: ASRResult) -> ASRResult:
+    """Earlier snapshots may have stored a passed gate for a contradictory group."""
+    if not _conflicting_reviewed_speakers(result):
+        return result
+    current = attach_speaker_role_quality(result)
+    previous = result.role_quality
+    if previous and previous.status == "blocked":
+        current.role_quality.status = "blocked"
+        current.role_quality.reasons = list(dict.fromkeys([*previous.reasons, *current.role_quality.reasons]))
+    current.needs_review = True
+    return current
 
 
 def legacy_speaker_role_quality_report(
@@ -262,6 +308,7 @@ def _decision_for_speaker(
     assignment: SpeakerRoleAssignment | None,
     speaker_count: int,
     mixed_blocked: bool,
+    reviewed_conflict: bool,
     policy: SpeakerRoleQualityPolicy,
 ) -> SpeakerRoleDecision:
     speaker_segments = [
@@ -270,7 +317,7 @@ def _decision_for_speaker(
     if assignment is None:
         assignment = _assignment_from_segments(speaker_id, speaker_segments)
     reviewed_by_doctor = _speaker_reviewed_by_doctor(speaker_segments, assignment)
-    return speaker_role_decision(
+    decision = speaker_role_decision(
         speaker_id=speaker_id,
         role=assignment.role,
         confidence=assignment.confidence,
@@ -282,6 +329,11 @@ def _decision_for_speaker(
         mixed_blocked=mixed_blocked,
         policies=policy.provider_policies,
     )
+    if reviewed_conflict and decision.action != ACTION_BLOCKED:
+        return decision.model_copy(update={
+            "predicted_role": None, "action": ACTION_NEEDS_REVIEW, "reason_code": MANUAL_ROLE_CONFLICT,
+        })
+    return decision
 
 
 def _assignment_from_segments(

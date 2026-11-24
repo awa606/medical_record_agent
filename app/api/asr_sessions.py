@@ -11,6 +11,7 @@ import threading
 import time
 import uuid
 import wave
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -55,7 +56,11 @@ from app.services.asr.chunking import build_chunk_plan, probe_audio_duration
 from app.services.asr.config import backend_capabilities, configured_asr_backend, requested_asr_engine_mismatch
 from app.services.asr.ffmpeg_utils import find_ffprobe_executable
 from app.services.asr.funasr_reliability import classify_funasr_error, funasr_error_code
-from app.services.asr.role_quality import attach_speaker_role_quality
+from app.services.asr.role_quality import (
+    attach_speaker_role_quality,
+    independently_reviewed_role,
+    recheck_stored_role_conflicts,
+)
 from app.services.asr.speaker_role_classifier import resolve_speaker_roles
 from app.services.live_clinical import (
     build_live_clinical_snapshot,
@@ -70,6 +75,7 @@ from app.services.runtime_limits import (
     recording_chunk_max_bytes,
     recording_max_seconds,
 )
+from app.services.task_recovery import RecoveryConfigurationError, TaskDatabaseLock
 
 
 router = APIRouter(prefix="/asr/sessions", tags=["asr-sessions"], dependencies=[Depends(require_current_user)])
@@ -601,6 +607,7 @@ def _apply_segment_corrections(
     if not updated.segments:
         updated.segments = [ASRSegment(speaker="asr", role="待确认", text=updated.text)]
 
+    mapped_roles = {item.speaker_id: _normalize_role(item.role) for item in payload.speaker_roles}
     for speaker_correction in payload.speaker_roles:
         role = _normalize_role(speaker_correction.role)
         matched = False
@@ -609,6 +616,8 @@ def _apply_segment_corrections(
             if identity != speaker_correction.speaker_id:
                 continue
             matched = True
+            if independently_reviewed_role(segment):
+                continue
             segment.role = role
             segment.reviewed_by_doctor = speaker_correction.reviewed_by_doctor
             segment.needs_review = not speaker_correction.reviewed_by_doctor or role == "待确认"
@@ -649,6 +658,16 @@ def _apply_segment_corrections(
         if correction.index >= len(updated.segments):
             raise HTTPException(status_code=400, detail=f"Segment index out of range: {correction.index}")
         segment = updated.segments[correction.index]
+        group_role = mapped_roles.get(_speaker_identity(segment))
+        previous = result.segments[correction.index] if correction.index < len(result.segments) else None
+        if group_role and previous and independently_reviewed_role(previous):
+            # Full-page forms may echo a changed group role into every row. A
+            # separate segment edit remains the explicit way to change a reviewed row.
+            changed_role = correction.role is not None and _normalize_role(correction.role) != _normalize_role(previous.role)
+            if changed_role or not correction.reviewed_by_doctor:
+                continue
+            if correction.text is None or correction.text.strip() == previous.text:
+                continue
         if correction.role is not None:
             segment.role = _normalize_role(correction.role)
         if correction.text is not None:
@@ -661,9 +680,10 @@ def _apply_segment_corrections(
         segment.reviewed_by_doctor = correction.reviewed_by_doctor
         segment.needs_review = not correction.reviewed_by_doctor or segment.role == "待确认"
         if correction.reviewed_by_doctor and segment.role and segment.role != "待确认":
-            segment.role_source = "manual"
+            group_echo = group_role == segment.role and not (previous and independently_reviewed_role(previous))
+            segment.role_source = "manual_speaker_map" if group_echo else "manual"
             segment.role_confidence = 0.98
-            segment.role_note = "医生已人工确认"
+            segment.role_note = "医生已确认该说话人的全局角色" if group_echo else "医生已人工确认"
 
     updated.text = _plain_text_from_segments(updated.segments)
     updated.conversation_text = _conversation_from_segments(updated.segments)
@@ -780,6 +800,8 @@ def _apply_assignment_to_segment(
     segment: ASRSegment,
     assignment: SpeakerRoleAssignment | None,
 ) -> ASRSegment:
+    if independently_reviewed_role(segment):
+        return segment
     if assignment is None:
         return segment.model_copy(update={"needs_review": True, "reviewed_by_doctor": False})
     role = assignment.role if _is_confirmed_role(assignment.role) else "待确认"
@@ -3166,6 +3188,23 @@ def upload_asr_session_audio_route(
     return upload_asr_session_audio(session_id, file, background_tasks=background_tasks)
 
 
+@contextmanager
+def _review_result_write(path: Path):
+    # Two tabs or application workers may concurrently edit the same saved ASR.
+    # Use the existing OS file lock on this result, independently of the task database.
+    lock = TaskDatabaseLock(path.resolve())
+    try:
+        lock.acquire()
+    except RecoveryConfigurationError as error:
+        raise HTTPException(status_code=409, detail={
+            "reason_code": "asr_review_in_progress", "message": "该转写正在保存，请重新读取后再保存。",
+        }) from error
+    try:
+        yield
+    finally:
+        lock.release()
+
+
 @router.patch("/{session_id}/result")
 def update_asr_session_result(
     session_id: str,
@@ -3178,25 +3217,26 @@ def update_asr_session_result(
     if not path.exists():
         raise HTTPException(status_code=404, detail="ASR session result not found")
 
-    result = ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
-    updated_result = _apply_segment_corrections(result, payload)
-    updated_at = _now()
-    reviewed_session = session.model_copy(update={"status": "reviewed", "updated_at": updated_at})
+    with _review_result_write(path):
+        result = ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
+        updated_result = _apply_segment_corrections(result, payload)
+        updated_at = _now()
+        reviewed_session = session.model_copy(update={"status": "reviewed", "updated_at": updated_at})
 
-    _write_session_result(session_id, updated_result)
-    _write_transcript(updated_result)
-    _write_session(reviewed_session)
-    _append_events(
-        session_id,
-        [
-            _reviewed_event(
-                session=reviewed_session,
-                result=updated_result,
-                reviewer=payload.reviewer,
-                note=payload.note,
-            )
-        ],
-    )
+        _write_session_result(session_id, updated_result)
+        _write_transcript(updated_result)
+        _write_session(reviewed_session)
+        _append_events(
+            session_id,
+            [
+                _reviewed_event(
+                    session=reviewed_session,
+                    result=updated_result,
+                    reviewer=payload.reviewer,
+                    note=payload.note,
+                )
+            ],
+        )
     return ASRSessionCorrectionResponse(
         session_id=session_id,
         audio_id=updated_result.audio_id,
@@ -3218,42 +3258,43 @@ def merge_asr_session_speakers(
     if not path.exists():
         raise HTTPException(status_code=404, detail="ASR session result not found")
 
-    result = ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
-    merged_result, affected_segment_ids, speaker_count_before, speaker_count_after = _merge_speakers_in_result(
-        result,
-        source_speaker=payload.source_speaker,
-        target_speaker=payload.target_speaker,
-    )
-    updated_at = _now()
-    updated_session = session.model_copy(update={"updated_at": updated_at})
+    with _review_result_write(path):
+        result = ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
+        merged_result, affected_segment_ids, speaker_count_before, speaker_count_after = _merge_speakers_in_result(
+            result,
+            source_speaker=payload.source_speaker,
+            target_speaker=payload.target_speaker,
+        )
+        updated_at = _now()
+        updated_session = session.model_copy(update={"updated_at": updated_at})
 
-    _write_session_result(session_id, merged_result)
-    _write_transcript(merged_result)
-    _write_session(updated_session)
-    _append_events(
-        session_id,
-        [
-            _session_event(
-                session=updated_session,
-                event="speakers_merged",
-                data={
-                    "status": "speakers_merged",
-                    "audio_id": merged_result.audio_id,
-                    "source_speaker": payload.source_speaker,
-                    "target_speaker": payload.target_speaker,
-                    "speaker_count_before": speaker_count_before,
-                    "speaker_count_after": speaker_count_after,
-                    "affected_segment_ids": affected_segment_ids,
-                    "reviewer": payload.reviewer,
-                    "note": payload.note,
-                    "role_quality": merged_result.role_quality.model_dump(mode="json")
-                    if merged_result.role_quality
-                    else None,
-                    "asr_result": merged_result.model_dump(),
-                },
-            )
-        ],
-    )
+        _write_session_result(session_id, merged_result)
+        _write_transcript(merged_result)
+        _write_session(updated_session)
+        _append_events(
+            session_id,
+            [
+                _session_event(
+                    session=updated_session,
+                    event="speakers_merged",
+                    data={
+                        "status": "speakers_merged",
+                        "audio_id": merged_result.audio_id,
+                        "source_speaker": payload.source_speaker,
+                        "target_speaker": payload.target_speaker,
+                        "speaker_count_before": speaker_count_before,
+                        "speaker_count_after": speaker_count_after,
+                        "affected_segment_ids": affected_segment_ids,
+                        "reviewer": payload.reviewer,
+                        "note": payload.note,
+                        "role_quality": merged_result.role_quality.model_dump(mode="json")
+                        if merged_result.role_quality
+                        else None,
+                        "asr_result": merged_result.model_dump(),
+                    },
+                )
+            ],
+        )
     return ASRSpeakerMergeResponse(
         session_id=session_id,
         audio_id=merged_result.audio_id,
@@ -3372,4 +3413,4 @@ def read_asr_session_result(session_id: str, request: Request = None) -> ASRResu
     path = _result_path(session_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="ASR session result not found")
-    return ASRResult.model_validate_json(path.read_text(encoding="utf-8"))
+    return recheck_stored_role_conflicts(ASRResult.model_validate_json(path.read_text(encoding="utf-8")))

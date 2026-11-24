@@ -47,6 +47,7 @@ def test_doctor_ranking_sources_and_admin_history_across_publication(local_db):
     baseline = doctor_view()
     assert len(baseline[0]["results"]) == 4
     assert baseline[1]["metadata_origin"] == "version_import"
+    assert all(row["usage_scope"] == baseline[1]["usage_scope"] for row in baseline[0]["results"])
     new_payload = {**_payload(version="乙", content="# 飞舟\n" + "\n".join(f"# 飞舟 {i}\n飞舟新版" for i in range(16))),
                    "title": "候审说明", "publisher": "新版单位", "source_url": "https://example.test/v2"}
     imported = admin.post("/api/knowledge/admin/import", json=new_payload)
@@ -60,10 +61,12 @@ def test_doctor_ranking_sources_and_admin_history_across_publication(local_db):
     assert doctor.post(preview, json={**query, "document_id": new}).status_code == 403
     history = admin.post(preview, json={**query, "document_id": new}).json()["results"]
     assert history and all(r["title"] == "待发表版本" and r["document_id"] == new for r in history)
+    assert all(row["usage_scope"] == "新版范围" for row in history)
     assert admin.post(f"{docs}/{new}/enable").status_code == 200
     published = doctor_view()
     assert published[1]["title"] == "待发表版本"
     assert published[1]["usage_scope"] == "新版范围"
+    assert all(row["usage_scope"] == "新版范围" for row in published[0]["results"])
     assert all(r["source_url"] == new_payload["source_url"] and r["document_id"] == new for r in published[0]["results"])
     assert admin.post(preview, json={**query, "document_id": old}).json()["count"] == 4
     assert admin.post(f"{docs}/{old}/enable").status_code == 200

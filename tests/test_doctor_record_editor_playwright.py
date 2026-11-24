@@ -237,6 +237,8 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(detail.locator('a[href^="https://www.nhc.gov.cn/"]')).to_have_count(1)
             expect(detail.get_by_role("note")).to_have_text(DEFAULT_DISCLAIMER)
             expect(detail.get_by_role("region", name="本次检索与来源")).to_contain_text("1 份资料")
+            expect(detail.get_by_role("region", name="本次检索与来源")).to_contain_text("支持程度尚未核实")
+            expect(detail.get_by_text("仅用于自动化测试中的医生人工参考。", exact=True)).to_be_visible()
             expect(detail.get_by_text("选择来源核对原文", exact=False)).to_have_count(0)
 
             # Two passages in one version share an original; a new version is a second source.
@@ -249,6 +251,7 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             page.locator('[data-knowledge-field="chief_complaint"]').first.press("Enter")
             directory = detail.get_by_role("region", name="本次检索与来源")
             expect(directory).to_contain_text("3 个片段，来自 2 份资料")
+            expect(detail.get_by_text("登记用途", exact=True)).to_have_count(0)
             directory.locator("summary").press("Enter")
             expect(directory.get_by_role("link")).to_have_text(["文书示例 · 2024", "文书示例 · 2025"])
             expect(directory.get_by_role("link").last).to_have_attribute("href", revised["source_url"])

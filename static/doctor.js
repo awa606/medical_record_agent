@@ -4168,10 +4168,13 @@ function safeKnowledgeUrl(value) {
 
 function renderKnowledgeResultDetails(result = {}) {
   const sourceUrl = safeKnowledgeUrl(result.source_url || result.url);
+  const scope = typeof result.usage_scope === "string" ? result.usage_scope.trim() : "";
+  const scopeLabel = result.metadata_origin === "legacy_observed" ? "旧库共用用途登记" : "登记用途";
   return `
     <div class="detail-kv"><span>发布机构</span><strong>${escapeHtml(result.publisher || "未标注")}</strong></div>
     <div class="detail-kv"><span>版本</span><strong>${escapeHtml(result.version || "-")}</strong></div>
     <div class="detail-kv"><span>出处登记</span><strong>${knowledgeMetadataDescription(result.metadata_origin)}</strong></div>
+    ${scope ? `<div class="detail-kv"><span>${scopeLabel}</span><strong>${escapeHtml(scope)}</strong></div>` : ""}
     <div class="detail-kv"><span>章节 / 页码</span><strong>${escapeHtml(result.section || "-")} / ${escapeHtml(result.page ?? "-")}</strong></div>
     <div class="detail-kv"><span>文档 / 片段</span><strong>${escapeHtml(result.document_id || "-")} / ${escapeHtml(result.chunk_id || "-")}</strong></div>
     <div class="detail-kv"><span>内容校验值（SHA256）</span><strong class="hash-value">${escapeHtml(result.content_sha256 || "-")}</strong></div>
@@ -4216,7 +4219,7 @@ function renderKnowledgeSourceIndex(results) {
     });
     directory = `<details><summary>选择来源核对原文（需联网）</summary><ol>${links.join("")}</ol></details>`;
   }
-  return `<section aria-label="本次检索与来源"><p>检索返回 <strong>${results.length} 个片段</strong>${count}，按匹配度排列。${missingMetadata}请对照来源原文，核对片段能否回答当前问题。</p>${directory}</section>`;
+  return `<section aria-label="本次检索与来源"><p>检索返回 <strong>${results.length} 个片段</strong>${count}，按匹配度排列。${missingMetadata}这些片段对当前问题的支持程度尚未核实，请对照登记用途和原文逐项核对。</p>${directory}</section>`;
 }
 
 function renderFieldKnowledgeSearch(key) {

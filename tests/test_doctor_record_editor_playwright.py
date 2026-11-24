@@ -1,17 +1,127 @@
 from __future__ import annotations
 
 from contextlib import closing
+import secrets
 import sqlite3
 
 import pytest
 from playwright.sync_api import expect, sync_playwright
 
 from app.services.knowledge_store import DEFAULT_DISCLAIMER
+from tests.approval_helpers import approval_payload_for_fields
 from tests.test_doctor_itemized_approval_playwright import (
     RunningServer,
     _login,
     _prepare_review_fixture,
 )
+from tests.test_transcript_source_presentation_playwright import _open_from_workbench
+
+
+def test_clinician_assessment_is_versioned_and_preserves_concurrent_text() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright, playwright.chromium.launch() as browser:
+            page = browser.new_page()
+            _login(page, server.base_url)
+            password = secrets.token_urlsafe(24)
+            api = lambda path: server.base_url + "/api" + path
+            credentials = {"username": "assessment-doctor", "password": password}
+            assert page.request.post(api("/auth/users"), data={**credentials, "role": "doctor", "display_name": "演练记录医生"}).ok
+            assert page.request.post(api("/auth/logout")).ok
+            assert page.request.post(api("/auth/login"), data=credentials).ok
+            encounter = page.request.post(api("/encounters"), data={"patient_deidentified_id": "SYN-ASSESSMENT"}).json()["id"]
+            for action in ("check-in", "start"):
+                assert page.request.post(api(f"/encounters/{encounter}/{action}"), data={}).ok
+            task = page.request.post(api("/records/generate"), data={"encounter_id": encounter, "conversation_text": "患者：最近两天偶尔咳嗽。"}).json()["task_id"]
+            page.reload()
+            page.wait_for_function("async p => (await fetch(p).then(r => r.json())).status === 'WAITING_DOCTOR_REVIEW'", arg=api(f"/tasks/{task}"))
+            _open_from_workbench(page, encounter)
+            card = page.get_by_role("article", name="本次医生评估（手录）")
+            edit = card.get_by_role("button", name="编辑本次医生评估")
+            expect(card).to_contain_text("未填写")
+            edit.click()
+            card.get_by_label("评估原文").fill("取消时应保留未填写")
+            page.locator("#cancelRecordEditButton").click()
+            expect(card).to_contain_text("未填写")
+            edit.click()
+            card.get_by_label("评估原文").fill("由本人记录的判断")
+            card.get_by_label("记录状态").select_option("under_consideration")
+            with page.expect_response(lambda r: r.url == api(f"/tasks/{task}/review") and r.request.method == "POST") as first:
+                page.locator("#saveDraftButton").click()
+            assert first.value.ok
+            request = first.value.request.post_data_json
+            assert request["clinician_assessment"] == {"statement": "由本人记录的判断", "certainty": "under_consideration"}
+            assert "clinician_assessment" not in request["fields"]
+            expect(card).to_contain_text("待排 · 由本人记录的判断")
+            expect(card).to_contain_text("演练记录医生")
+            page.locator('[data-open-detail="history:record"]').click()
+            page.locator("[data-history-version]").select_option(index=1)
+            history = page.locator("[data-history-assessment]")
+            expect(history).to_contain_text("未填写")
+            expect(history).to_contain_text("待排 · 由本人记录的判断")
+            page.locator("#closeDrawerButton").click()
+
+            stored_fields = page.request.get(api(f"/tasks/{task}")).json()["result_json"]["fields"]
+            signed_version = page.request.get(api(f"/tasks/{task}/export-readiness")).json()
+            approval = approval_payload_for_fields(stored_fields)
+            approval.update(revision_id=signed_version["revision_id"], content_hash=signed_version["content_hash"])
+            for item in approval["fields"]:
+                field = stored_fields[item["key"]]
+                item["action"] = "confirm_content" if field["value"] and not field["missing"] else "confirm_not_asked"
+            for item in approval["diagnoses"]:
+                item["action"] = "delete_ai_candidate"
+            signed = page.request.post(api(f"/tasks/{task}/approve"), data=approval)
+            assert signed.ok, signed.text()
+            _open_from_workbench(page, encounter)
+            expect(page.locator("#fieldCountBadge")).to_have_text("已审核")
+            expect(card).to_contain_text("待排 · 由本人记录的判断")
+
+            edit.click()
+            card.get_by_label("评估原文").fill("这个标签页的未保存原文")
+            detail = page.request.get(api(f"/tasks/{task}")).json()
+            receipt = page.request.get(api(f"/tasks/{task}/export-readiness")).json()
+            assert page.request.post(api(f"/tasks/{task}/review"), data={
+                "fields": detail["result_json"]["fields"], "expected_revision_id": receipt["revision_id"],
+                "expected_content_hash": receipt["content_hash"],
+                "clinician_assessment": {"statement": "另一处已经保存的原文", "certainty": "documented"},
+            }).ok
+            page.locator("#saveDraftButton").click()
+            page.get_by_role("button", name="加载最新版本").click()
+            fold = page.locator("details.record-recovery")
+            fold.locator("summary").click()
+            expect(fold).to_contain_text("这个标签页的未保存原文")
+            expect(fold).to_contain_text("另一处已经保存的原文")
+            fold.locator("button").click()
+            expect(card.get_by_label("评估原文")).to_have_value("另一处已经保存的原文")
+            expect(fold).to_contain_text("这个标签页的未保存原文")
+            card.get_by_role("button", name="清除本次手录").click()
+            with page.expect_response(lambda r: r.url == api(f"/tasks/{task}/review") and r.request.method == "POST") as cleared:
+                page.locator("#saveDraftButton").click()
+            assert cleared.value.ok and cleared.value.request.post_data_json["clinician_assessment"] is None
+            expect(card).to_contain_text("未填写")
+
+            # Simulate a server downgrade between opening the editor and saving. A legacy
+            # review accepts unrelated fields while dropping this new top-level property.
+            def legacy_review(route):
+                body = route.request.post_data_json
+                del body["clinician_assessment"]
+                response = route.fetch(post_data=body)
+                assert response.ok
+                task_data = response.json()
+                task_data.pop("supports_clinician_assessment")
+                route.fulfill(response=response, json=task_data)
+
+            page.route(api(f"/tasks/{task}/review"), legacy_review)
+            edit.click()
+            card.get_by_label("记录状态").select_option("documented")
+            card.get_by_label("评估原文").fill("旧服务未保存这一句")
+            page.locator("#saveDraftButton").click()
+            expect(page.locator(".record-version")).to_contain_text("医生评估未核实保存")
+            expect(card.get_by_label("评估原文")).to_have_value("旧服务未保存这一句")
+            expect(page.locator("#saveDraftButton")).to_be_disabled()
+            assert not page.request.get(api(f"/tasks/{task}")).json()["result_json"].get("clinician_assessment")
+    finally:
+        server.close()
 
 
 def _import_knowledge_fixture(page) -> str:

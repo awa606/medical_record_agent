@@ -173,6 +173,8 @@ const appState = {
   recordEditMode: false,
   recordEditDirty: false,
   recordEditBaseline: null,
+  assessmentBaseline: null,
+  assessmentDraft: null,
   recordEditRevision: null,
   recordEditConflict: null,
   recordEditRecovery: null,
@@ -3268,10 +3270,69 @@ function recordEditableSnapshot(fields = appState.currentRecordFields) {
   ])), diagnosisCodes: (fields.candidate_diagnoses || []).map(item => item.icd10_code || "")});
 }
 
+function assessmentValue(entry) {
+  const statement = (entry?.statement || "").trim();
+  return statement ? { statement, certainty: entry.certainty || "" } : null;
+}
+
+function sameAssessment(a, b) {
+  return JSON.stringify(assessmentValue(a)) === JSON.stringify(assessmentValue(b));
+}
+
+function canWriteAssessment() {
+  return appState.authUser?.role === "doctor" && appState.currentTask?.supports_clinician_assessment === true
+    && appState.currentTask.id === appState.currentTaskId;
+}
+
+function recordEditHasChanges() {
+  return recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline)
+    || !sameAssessment(appState.assessmentDraft, appState.assessmentBaseline);
+}
+
+function updateAssessmentDirtyState() {
+  appState.recordEditDirty = recordEditHasChanges();
+  const notice = document.querySelector("[data-record-edit-status]");
+  if (notice) notice.textContent = appState.recordEditDirty ? "有未保存修改" : "编辑模式";
+  renderFooter();
+}
+
+function assessmentText(entry) {
+  if (!entry?.statement) return "未填写";
+  const label = { documented: "医生记录", under_consideration: "待排" }[entry.certainty] || "状态未记录";
+  return label + " · " + entry.statement;
+}
+
+function assessmentAuthor(entry) {
+  if (!entry) return "";
+  const date = entry.recorded_at && new Date(entry.recorded_at);
+  const time = date && !Number.isNaN(date.getTime()) ? date.toLocaleString("zh-CN") : entry.recorded_at;
+  return [entry.recorder_name || (entry.recorded_by ? `医生 #${entry.recorded_by}` : ""), time].filter(Boolean).join(" · ");
+}
+
+function clinicianAssessmentMarkup(isEditing) {
+  const saved = appState.currentTask?.result_json?.clinician_assessment;
+  const draft = appState.assessmentDraft;
+  const editable = canWriteAssessment();
+  const heading = '<h3 class="field-title" id="clinicianAssessmentHeading">本次医生评估（手录）</h3>';
+  const editor = isEditing && editable && draft;
+  const content = editor ? `
+    <label class="record-field-editor">记录状态<select id="clinicianAssessmentCertainty" ${appState.busy ? "disabled" : ""}>
+      <option value="">请选择</option><option value="documented" ${draft.certainty === "documented" ? "selected" : ""}>医生记录</option><option value="under_consideration" ${draft.certainty === "under_consideration" ? "selected" : ""}>待排</option>
+    </select></label>
+    <label class="record-field-editor">评估原文<textarea id="clinicianAssessmentText" ${appState.busy ? "readonly" : ""}>${escapeHtml(draft.statement)}</textarea></label>
+    ${appState.assessmentBaseline ? `<button type="button" data-clear-assessment ${appState.busy ? "disabled" : ""}>清除本次手录</button>` : ""}`
+    : `<p class="reference-prose">${escapeHtml(assessmentText(saved))}</p>${saved ? `<p class="field-meta">${escapeHtml(assessmentAuthor(saved))}</p>` : ""}
+       ${editable && !isEditing ? '<button type="button" data-edit-assessment>编辑本次医生评估</button>' : ""}
+       ${appState.authUser?.role === "doctor" && appState.currentTask?.supports_clinician_assessment !== true ? '<p class="field-meta">当前服务未提供医生评估录入。</p>' : ""}`;
+  return `<article class="field-card doctor-summary-card" aria-labelledby="clinicianAssessmentHeading">${heading}${content}</article>`;
+}
+
 function resetRecordEditState() {
   appState.recordEditMode = false;
   appState.recordEditDirty = false;
   appState.recordEditBaseline = null;
+  appState.assessmentBaseline = null;
+  appState.assessmentDraft = null;
   appState.recordEditRevision = null;
   appState.recordEditConflict = null;
   appState.recordFieldResolutionModes = {};
@@ -3295,6 +3356,8 @@ function beginRecordEdit(fieldKey) {
       contentHash: revision.contentHash || (exportReadinessMatches(receipt) ? receipt.content_hash : ""),
     };
     appState.recordEditBaseline = cloneRecordFields(appState.currentRecordFields);
+    appState.assessmentBaseline = assessmentValue(appState.currentTask?.result_json?.clinician_assessment);
+    appState.assessmentDraft = { statement: "", certainty: "", ...appState.assessmentBaseline };
     appState.currentRecordFields = cloneRecordFields(appState.currentRecordFields);
     appState.recordEditMode = true;
     appState.recordEditDirty = false;
@@ -3303,6 +3366,10 @@ function beginRecordEdit(fieldKey) {
     clearApprovalReviewSelections();
   }
   renderAll();
+  if (fieldKey === "clinician_assessment") {
+    $("clinicianAssessmentText")?.focus();
+    return;
+  }
   if (typeof fieldKey === "string" && fieldKey.startsWith("diagnosis-code:")) {
     const index = Number(fieldKey.slice("diagnosis-code:".length));
     document.querySelector(`[data-diagnosis-code-index="${index}"]`)?.focus();
@@ -3339,7 +3406,7 @@ function updateRecordFieldValue(key, value) {
   const baseline = appState.recordEditBaseline?.[key];
   if (baseline && !appState.recordFieldResolutionModes[key] && normalized === String(baseline.value || "").trim()) {
     appState.currentRecordFields[key] = cloneRecordFields(baseline);
-    appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
+    appState.recordEditDirty = recordEditHasChanges();
     if (appState.recordEditConflict?.error_code !== "saved_revision_refresh_failed") appState.recordEditConflict = null;
     renderFooter();
     const notice = document.querySelector("[data-record-edit-status]");
@@ -3356,7 +3423,7 @@ function updateRecordFieldValue(key, value) {
   field.confirmed_by_doctor = false;
   field.doctor_review_status = "pending";
   field.high_risk_confirmed_by_doctor = false;
-  appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
+  appState.recordEditDirty = recordEditHasChanges();
   if (appState.recordEditConflict?.error_code !== "saved_revision_refresh_failed") appState.recordEditConflict = null;
   renderFooter();
   const notice = document.querySelector("[data-record-edit-status]");
@@ -3412,7 +3479,7 @@ function beginFieldResolution(key, method) {
   field.source_spans = [];
   field.confirmed_by_doctor = false;
   field.doctor_review_status = "pending";
-  appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
+  appState.recordEditDirty = recordEditHasChanges();
   renderAll();
   document.querySelector(`[data-record-field-input="${key}"]`)?.focus();
 }
@@ -3424,7 +3491,7 @@ function updateFieldCorrectionSources(key, group) {
   // The review endpoint rechecks each selected span against the task's stored input.
   field.source_spans = [...group.querySelectorAll("input:checked")].map(input => JSON.parse(input.value));
   group.querySelector("[data-source-count]").textContent = `已选 ${field.source_spans.length} 条`;
-  appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
+  appState.recordEditDirty = recordEditHasChanges();
   renderFooter();
 }
 
@@ -4197,6 +4264,21 @@ function historyFieldSignature(field) {
   return JSON.stringify([field?.value ?? null, field?.missing ?? null, field?.status ?? null]);
 }
 
+function savedRevisionAssessment(revision) {
+  if (!revision?.result_json) return null;
+  try {
+    const result = typeof revision.result_json === "string" ? JSON.parse(revision.result_json) : revision.result_json;
+    return result?.clinician_assessment || null;
+  } catch (_) {
+    return undefined;
+  }
+}
+
+function assessmentHistoryText(entry) {
+  if (entry === undefined) return "该版评估快照无法读取";
+  return [assessmentText(entry), assessmentAuthor(entry)].filter(Boolean).join(" · ");
+}
+
 function recordHistoryMarkup(view) {
   const versions = view.revisions;
   if (!versions.length) return '<div class="empty-state">本次就诊尚无已保存版本。保存病历后可在这里查看。</div>';
@@ -4209,6 +4291,16 @@ function recordHistoryMarkup(view) {
   const options = versions.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === selected.id ? "selected" : ""}>版本 ${escapeHtml(item.revision_no)} · ${escapeHtml(revisionSourceLabel(item.source))} · ${escapeHtml(formatDateTime(item.created_at))}${String(item.id) === String(view.currentId) ? " · 当前" : ""}</option>`).join("");
   const comparing = Boolean(!isCurrent && fields && currentFields);
   const changedKeys = new Set(comparing ? FIELD_DEFS.filter(([key]) => historyFieldSignature(fields[key]) !== historyFieldSignature(currentFields[key])).map(([key]) => key) : []);
+  const previousAssessment = savedRevisionAssessment(selected);
+  const currentAssessment = savedRevisionAssessment(current);
+  const assessmentChanged = comparing && (!sameAssessment(previousAssessment, currentAssessment)
+    || previousAssessment?.recorded_at !== currentAssessment?.recorded_at || previousAssessment?.recorded_by !== currentAssessment?.recorded_by
+    || (previousAssessment === undefined) !== (currentAssessment === undefined));
+  if (assessmentChanged) changedKeys.add("clinician_assessment");
+  const assessmentRow = `<section class="history-field ${assessmentChanged ? "history-field-changed" : ""}" data-history-assessment>
+    <h3>本次医生评估（手录）${assessmentChanged ? '<span class="history-change-badge">已变化</span>' : ""}</h3>
+    <div class="history-field-columns ${assessmentChanged ? "has-comparison" : ""}"><div><strong>版本 ${escapeHtml(selected.revision_no)}</strong><p class="history-value">${escapeHtml(assessmentHistoryText(previousAssessment))}</p></div>
+    ${assessmentChanged ? `<div><strong>当前版本 ${escapeHtml(current.revision_no)}</strong><p class="history-value">${escapeHtml(assessmentHistoryText(currentAssessment))}</p></div>` : ""}</div></section>`;
   const unchangedRows = [];
   const rows = fields ? FIELD_DEFS.map(([key, title]) => {
     const field = fields[key];
@@ -4236,7 +4328,7 @@ function recordHistoryMarkup(view) {
     <label class="history-version-select">选择保存版本<select data-history-version>${options}</select></label>
     <p class="history-meta">就诊 E-${escapeHtml(view.encounterId)} · ${escapeHtml(revisionSourceLabel(selected.source))} · 保存于 ${escapeHtml(formatDateTime(selected.created_at))}</p>
     <p class="history-compare-summary" role="status">${isCurrent ? "正在查看当前已保存版本。" : comparing ? `与当前已保存版本 ${escapeHtml(current.revision_no)} 相比，${changedKeys.size}项字段内容或采集状态不同。` : "当前已保存版本不可用，暂不能对照。"}${versions.length === 1 ? " 本次就诊目前只有一个版本。" : ""}</p>
-    ${rows}
+    ${rows}${assessmentRow}
     ${unchangedRows.length ? `<details class="history-unchanged history-evidence"><summary>展开 ${unchangedRows.length} 项内容与采集状态相同的字段</summary>${unchangedRows.join("")}</details>` : ""}
     ${diagnoses.length ? `<details class="history-evidence"><summary>该版本候选诊断（历史记录）</summary><ul>${diagnoses.map(item => `<li>${escapeHtml(item.name || "未命名候选")}</li>`).join("")}</ul><p>历史候选不等于已确认诊断，未从当前病历补写。</p></details>` : ""}
     ${selected.draft_text ? `<details class="history-evidence"><summary>该版本保存的病历全文</summary><p class="history-value">${escapeHtml(selected.draft_text)}</p></details>` : ""}
@@ -4639,7 +4731,9 @@ async function buildTaskApprovalPayload() {
 }
 
 function renderRecoveryFieldChanges(recovery, savedFields) {
-  return EDITABLE_FIELD_DEFS.map(([key, title]) => {
+  const assessment = sameAssessment(recovery.assessmentDraft, recovery.assessmentBaseline) ? "" :
+    `<div><strong>本次医生评估（手录）</strong><dl class="reference-prose"><dt>最新已存</dt><dd>${escapeHtml(assessmentText(appState.currentTask?.result_json?.clinician_assessment))}</dd><dt>本地未保存</dt><dd>${escapeHtml(assessmentText(recovery.assessmentDraft))}</dd></dl></div>`;
+  return assessment + EDITABLE_FIELD_DEFS.map(([key, title]) => {
     const originalField = recovery.baseline?.[key];
     const original = String(originalField?.value ?? "");
     const local = String(recovery.fields[key]?.value ?? "");
@@ -4828,7 +4922,7 @@ function renderFields() {
       `<label class="diagnosis-code-input">${escapeHtml(diagnosis.name)} · ICD-10
         <input type="text" data-diagnosis-code-index="${index}" value="${escapeHtml(diagnosis.icd10_code || "")}" ${appState.busy ? "readonly" : ""} placeholder="如 J06.9">
       </label>`).join("") : "";
-    const extra = id === "management" ? diagnoses + codeEditors : "";
+    const extra = id === "management" ? (!isPreview && appState.currentTaskId ? clinicianAssessmentMarkup(isEditing) : "") + diagnoses + codeEditors : "";
     if (!inner && !extra) return "";
     const statusMarkup = issues.length ? `<button type="button" class="record-section-status ${statusTone}" data-record-section-focus="${escapeHtml(issues[0].fieldKey)}">${statusText}</button>` : "";
     if (id === "demographics") {
@@ -8357,9 +8451,20 @@ async function saveDraftReview() {
     return;
   }
   let committed = false;
+  let unverifiedAssessment = false;
   try {
     appState.recordSaveNotice = "";
     if (!appState.currentTaskId || !appState.currentRecordFields) throw new Error("暂无可保存的病历字段");
+    const assessmentChanged = !sameAssessment(appState.assessmentDraft, appState.assessmentBaseline);
+    const assessment = assessmentValue(appState.assessmentDraft);
+    if (assessmentChanged && (!canWriteAssessment() || (assessment && !assessment.certainty) || (!assessment && !appState.assessmentDraft?.clear))) {
+      appState.recordSaveNotice = !canWriteAssessment() ? "当前服务无法保存医生评估，本地修改仍保留。"
+        : assessment ? "请选择医生记录或待排。" : "如需移除已存评估，请选择“清除本次手录”。";
+      renderFooter();
+      showToast(appState.recordSaveNotice);
+      (assessment ? $("clinicianAssessmentCertainty") : document.querySelector("[data-clear-assessment]"))?.focus();
+      return;
+    }
     const missingSource = EDITABLE_FIELD_DEFS.find(([key]) => appState.recordFieldResolutionModes[key] === "source_correction"
       && !appState.currentRecordFields[key]?.source_spans?.length);
     if (missingSource) {
@@ -8391,11 +8496,12 @@ async function saveDraftReview() {
       revision.contentHash = receipt.content_hash;
     }
     const submittedFields = cloneRecordFields(appState.currentRecordFields);
-    appState.currentTask = await api(`/api/tasks/${appState.currentTaskId}/review`, {
+    const reviewed = await api(`/api/tasks/${appState.currentTaskId}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         fields: submittedFields,
+        ...(assessmentChanged ? { clinician_assessment: assessment } : {}),
         expected_revision_id: revision.revisionId,
         expected_content_hash: revision.contentHash,
         manual_takeover_fields: Object.entries(appState.recordFieldResolutionModes).filter(([, mode]) => mode === "doctor_entry").map(([key]) => key),
@@ -8403,8 +8509,16 @@ async function saveDraftReview() {
       }),
     });
     committed = true;
+    if (appState.recordEditRevision !== revision || appState.currentTaskId !== revision.taskId) return;
+    if (assessmentChanged && (reviewed.supports_clinician_assessment !== true
+        || !sameAssessment(reviewed.result_json?.clinician_assessment, assessment))) {
+      unverifiedAssessment = true;
+      throw new Error("服务已接受修订，但未回读到本次提交的医生评估。");
+    }
+    appState.currentTask = reviewed;
     // Only changes after the acknowledged POST belong in the recovery buffer.
     appState.recordEditBaseline = cloneRecordFields(appState.currentTask.result_json?.fields || submittedFields);
+    appState.assessmentBaseline = assessmentValue(reviewed.result_json?.clinician_assessment);
     appState.recordEditDirty = false;
     await refreshTask(appState.currentTaskId, appState.currentTask, {editorRead: true});
     if (!await refreshExportReadiness()) throw new Error("保存已完成，但版本状态读取失败");
@@ -8424,7 +8538,7 @@ async function saveDraftReview() {
       showToast("当前病历已被更新；本地修改仍保留，请核对后加载最新版本");
       return;
     }
-    appState.recordSaveNotice = committed
+    appState.recordSaveNotice = unverifiedAssessment ? "病历修订已提交，但医生评估未核实保存。本地评估仍保留，请加载最新版本核对。" : committed
       ? "服务器已接受保存，但版本状态刷新失败。请加载最新版本核验，勿重复提交。"
       : "保存失败，本地修改仍保留。请检查连接后重试。";
     if (committed) {
@@ -8441,7 +8555,7 @@ async function reloadLatestRecordRevision() {
   const taskId = appState.currentTaskId;
   const keys = ["currentRecordFields", "currentTask", "currentExportReadiness", "currentSteps",
     "currentDraft", "currentSafetyCheck", "currentQualityReport", "taskStatus",
-    "recordEditMode", "recordEditDirty", "recordEditBaseline", "recordEditRevision", "recordEditConflict", "recordFieldResolutionModes",
+    "recordEditMode", "recordEditDirty", "recordEditBaseline", "recordEditRevision", "recordEditConflict", "recordFieldResolutionModes", "assessmentDraft", "assessmentBaseline",
     "approvalRevisionId", "approvalRegularFieldsConfirmed", "approvalMissingDecisions",
     "approvalDiagnosisDecisions", "approvalHighRiskConfirmations"];
   const local = Object.fromEntries(keys.map((key) => [key, structuredClone(appState[key])]));
@@ -8452,6 +8566,7 @@ async function reloadLatestRecordRevision() {
     if (appState.currentTaskId !== taskId) return;
     appState.recordEditRecovery = local.recordEditDirty ? {
       taskId, fields: local.currentRecordFields, baseline: local.recordEditBaseline, resolutions: local.recordFieldResolutionModes,
+      assessmentDraft: local.assessmentDraft, assessmentBaseline: local.assessmentBaseline,
     } : appState.recordEditRecovery;
     resetRecordEditState();
     appState.recordSaveNotice = "已加载最新版本；冲突前的本地修改可展开核对。";
@@ -8480,6 +8595,14 @@ function reapplyLocalRecordChanges() {
     if (recovery.resolutions?.[key] === "source_correction") appState.currentRecordFields[key].source_spans = structuredClone(recovery.fields[key].source_spans || []);
   });
   let requiresManualReview = false;
+  if (!sameAssessment(recovery.assessmentDraft, recovery.assessmentBaseline)) {
+    const current = appState.assessmentBaseline;
+    if (!canWriteAssessment() || (!sameAssessment(current, recovery.assessmentBaseline) && !sameAssessment(current, recovery.assessmentDraft))) {
+      requiresManualReview = true;
+    } else {
+      appState.assessmentDraft = structuredClone(recovery.assessmentDraft);
+    }
+  }
   for (const change of changedDiagnosisCodes(recovery.fields, recovery.baseline)) {
     const matches = (appState.currentRecordFields.candidate_diagnoses || []).filter(item =>
       item.name === change.name && JSON.stringify(item.evidence || []) === JSON.stringify(change.evidence || []));
@@ -8489,7 +8612,7 @@ function reapplyLocalRecordChanges() {
       matches[0].icd10_code = change.to || null;
     }
   }
-  appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
+  appState.recordEditDirty = recordEditHasChanges();
   if (!requiresManualReview) appState.recordEditRecovery = null;
   renderAll();
 }
@@ -8516,7 +8639,7 @@ async function confirmFields() {
       body: JSON.stringify(payload),
     });
     appState.taskStatus = "approved";
-    await refreshTask(appState.currentTaskId, appState.currentTask);
+    await refreshTask(appState.currentTaskId, appState.currentTask.supports_clinician_assessment === true ? appState.currentTask : null);
     await refreshExportReadiness();
     appState.recordSaveNotice = "";
     renderAll();
@@ -10554,6 +10677,17 @@ function bindEvents() {
     }
   });
   $("recordFields").addEventListener("click", (event) => {
+    if (event.target.closest("[data-edit-assessment]") && canWriteAssessment()) {
+      beginRecordEdit("clinician_assessment");
+      return;
+    }
+    if (event.target.closest("[data-clear-assessment]") && appState.recordEditMode && canWriteAssessment()) {
+      appState.assessmentDraft = { statement: "", certainty: "", clear: true };
+      appState.recordEditDirty = recordEditHasChanges();
+      renderAll();
+      $("clinicianAssessmentText")?.focus();
+      return;
+    }
     const sectionFocus = event.target.closest("[data-record-section-focus]");
     if (sectionFocus) { focusRecordTarget(sectionFocus.dataset.recordSectionFocus); return; }
     const resolve = event.target.closest("[data-field-resolution]");
@@ -10617,10 +10751,21 @@ function bindEvents() {
     }
   });
   $("recordFields").addEventListener("change", (event) => {
+    if (event.target.id === "clinicianAssessmentCertainty" && appState.assessmentDraft && canWriteAssessment()) {
+      appState.assessmentDraft.certainty = event.target.value;
+      updateAssessmentDirtyState();
+      return;
+    }
     const checkbox = event.target.closest("[data-record-source-field]");
     if (checkbox) updateFieldCorrectionSources(checkbox.dataset.recordSourceField, checkbox.closest("fieldset"));
   });
   $("recordFields").addEventListener("input", (event) => {
+    if (event.target.id === "clinicianAssessmentText" && appState.assessmentDraft && canWriteAssessment()) {
+      appState.assessmentDraft.statement = event.target.value;
+      appState.assessmentDraft.clear = false;
+      updateAssessmentDirtyState();
+      return;
+    }
     const editor = event.target.closest("[data-record-field-input]");
     if (!editor) return;
     updateRecordFieldValue(editor.dataset.recordFieldInput, editor.value);
@@ -10631,7 +10776,7 @@ function bindEvents() {
     const diagnosis = appState.currentRecordFields?.candidate_diagnoses?.[Number(input.dataset.diagnosisCodeIndex)];
     if (!diagnosis) return;
     diagnosis.icd10_code = input.value.trim() || null;
-    appState.recordEditDirty = recordEditableSnapshot() !== recordEditableSnapshot(appState.recordEditBaseline);
+    appState.recordEditDirty = recordEditHasChanges();
     const notice = document.querySelector("[data-record-edit-status]");
     if (notice) notice.textContent = appState.recordEditDirty ? "有未保存修改" : "编辑模式";
     renderFooter();

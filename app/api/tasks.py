@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import re
+from datetime import UTC, datetime
 from pathlib import Path, PureWindowsPath
 from typing import Any, Literal
 
@@ -32,6 +33,8 @@ from app.db import (
     record_content_hash,
 )
 from app.schemas import MedicalRecordFields, SafetyCheckResult
+from app.schemas.auth import AuthenticatedUser
+from app.schemas.clinician_assessment import ClinicianAssessment, ClinicianAssessmentInput
 from app.services import LLMProviderUnavailableError, create_llm_record_generator, export_record
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
 from app.services.clinical_codes import icd10_errors
@@ -57,6 +60,7 @@ class ReviewRequest(BaseModel):
     expected_content_hash: str
     manual_takeover_fields: list[str] = Field(default_factory=list)
     source_corrected_fields: list[str] = Field(default_factory=list)
+    clinician_assessment: ClinicianAssessmentInput | None = None
 
 
 class FieldApprovalItem(BaseModel):
@@ -593,7 +597,7 @@ def read_task(task_id: int, request: Request = None) -> dict[str, Any]:
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     _assert_task_access(task, request)
-    return _decode_result_json(task)
+    return {**_decode_result_json(task), "supports_clinician_assessment": True}
 
 
 @router.get("/{task_id}/steps")
@@ -626,6 +630,30 @@ def read_task_agent_trace(
     )
 
 
+def _update_clinician_assessment(
+    result: dict[str, Any], payload: ReviewRequest, actor: AuthenticatedUser | None, owner_id: int | None,
+) -> str | None:
+    if "clinician_assessment" not in payload.model_fields_set:
+        return None
+    entry = payload.clinician_assessment
+    previous = result.get("clinician_assessment")
+    if not previous and entry is None:
+        return None
+    if actor is None or actor.role != "doctor" or actor.id != owner_id:
+        raise HTTPException(status_code=403, detail="仅经治医生可修改本次医生评估。")
+    if entry is None:
+        del result["clinician_assessment"]
+        return "cleared"
+    if previous and all(previous.get(k) == v for k, v in entry.model_dump().items()):
+        return None
+    assessment = ClinicianAssessment(
+        **entry.model_dump(), recorded_by=actor.id, recorder_name=actor.display_name,
+        recorded_at=datetime.now(UTC).isoformat(),
+    )
+    result["clinician_assessment"] = assessment.model_dump()
+    return "revised" if previous else "entered"
+
+
 @router.post("/{task_id}/review")
 def review_task(
     task_id: int,
@@ -655,6 +683,8 @@ def review_task(
         previous_fields = MedicalRecordFields.model_validate(result.get("fields") or {})
     except ValidationError:
         previous_fields = None
+    actor = current_user_from_request(request)
+    assessment_action = _update_clinician_assessment(result, review_payload, actor, task.get("owner_user_id"))
     _validate_field_resolutions(review_payload, previous_fields)
     fields = _reset_review_state(review_payload.fields)
     trusted_source_corrections = set(review_payload.source_corrected_fields) | _retained_source_corrections(
@@ -699,6 +729,9 @@ def review_task(
 
     result["fields"] = fields.model_dump()
     result["draft"] = draft
+    if result.get("clinician_assessment"):
+        entry = ClinicianAssessment.model_validate(result["clinician_assessment"])
+        result["draft"] += f"\n\n本次医生评估（手录）\n{entry.status_label}：{entry.statement}"
     result["safety_check"] = safety_check.model_dump()
     prior_trace = result.get("llm_trace") or {}
     review_trace = generator.get_trace()
@@ -729,7 +762,6 @@ def review_task(
     from app.services.record_quality import build_record_quality_report
     result["quality_report"] = build_record_quality_report(fields, safety_check, draft=draft)
 
-    actor = current_user_from_request(request)
     try:
         updated_task = apply_review_revision_transaction(
             task_id,
@@ -743,6 +775,7 @@ def review_task(
             workflow_status="waiting_review",
             event_type="doctor_review_saved",
             event_detail={"task_id": task_id, "manual_edited_fields": manual_edited_fields,
+                          **({"clinician_assessment_action": assessment_action} if assessment_action else {}),
                           "field_resolutions": [{"field": r["field"], "method": r["method"]} for r in resolutions],
                           **_actor_detail(request)},
         )
@@ -758,6 +791,7 @@ def review_task(
             },
         ) from exc
     updated_task["result_json"] = result
+    updated_task["supports_clinician_assessment"] = True
     return updated_task
 
 

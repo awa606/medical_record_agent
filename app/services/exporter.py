@@ -29,6 +29,7 @@ from reportlab.platypus import (
 )
 
 from app.schemas import MedicalField, MedicalRecordFields, SafetyCheckResult
+from app.schemas.clinician_assessment import ClinicianAssessment
 from app.services.privacy import anonymize_text
 
 
@@ -346,7 +347,9 @@ def _pdf_missing_field_text(field: MedicalField) -> str:
     return "未提及/待补充"
 
 
-def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | None]]:
+def _pdf_sections(
+    fields: MedicalRecordFields, clinician_assessment: ClinicianAssessment | None = None,
+) -> list[tuple[str, str, str | None]]:
     def value_of(name: str) -> str:
         field = getattr(fields, name)
         return str(field.value).strip() if field.value and not field.missing else ""
@@ -401,13 +404,21 @@ def _pdf_sections(fields: MedicalRecordFields) -> list[tuple[str, str, str | Non
     else:
         diagnosis_text = "未记录候选诊断"
 
+    assessment_sections = []
+    if clinician_assessment:
+        assessment_sections.append((
+            "本次医生评估（手录）",
+            f"{clinician_assessment.status_label}：{clinician_assessment.statement}",
+            f"记录人：{clinician_assessment.recorder_name}　录入时间：{_pdf_time(clinician_assessment.recorded_at)}",
+        ))
     return [
         ("主诉", chief or "未提及/待补充", None if chief else missing_note("chief_complaint")),
         ("现病史", present_text, None),
         ("既往史", past_text, None),
         ("体格及专科检查", exam or "待医生查体补充", None if exam else missing_note("physical_exam")),
         ("辅助检查", auxiliary or "本次未提供；如有检验检查结果，请在病历系统中补录。", None),
-        ("诊断", diagnosis_text, "AI 候选诊断必须由医生确认，不构成诊断结论。"),
+        *assessment_sections,
+        ("系统候选诊断" if clinician_assessment else "诊断", diagnosis_text, "AI 候选诊断必须由医生确认，不构成诊断结论。"),
         (
             "治疗意见",
             treatment or missing_note("treatment_notes") or "待医生补充。",
@@ -430,6 +441,7 @@ def render_pdf(
     patient_deidentified_id: str | None = None,
     patient_display_name: str | None = None,
     doctor_name: str | None = None,
+    clinician_assessment: ClinicianAssessment | None = None,
 ) -> Path:
     """Hospital-style outpatient record: meta header, sections, signature block."""
     styles = _pdf_styles()
@@ -492,7 +504,7 @@ def render_pdf(
     )
     story.extend([meta_table, Spacer(1, 3 * mm), HRFlowable(width="100%", color=colors.HexColor("#c9d4e3"))])
 
-    for heading, body, note in _pdf_sections(fields):
+    for heading, body, note in _pdf_sections(fields, clinician_assessment):
         # Long sections must flow across pages. Keeping the whole block
         # together leaves a nearly empty page when one field exceeds a page.
         # A conditional break keeps the heading from being stranded alone.
@@ -560,6 +572,8 @@ def export_record(
             patient_deidentified_id=result.get("patient_deidentified_id"),
             patient_display_name=result.get("patient_display_name"),
             doctor_name=doctor_name or result.get("doctor_name"),
+            clinician_assessment=ClinicianAssessment.model_validate(result["clinician_assessment"])
+            if result.get("clinician_assessment") else None,
         )
         digest = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
     except Exception:

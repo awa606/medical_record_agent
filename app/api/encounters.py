@@ -98,6 +98,7 @@ def _detail(encounter: dict[str, Any]) -> dict[str, Any]:
             "status": encounter.get("task_status"),
             "current_stage": encounter.get("task_current_stage"),
             "result_json": task_result,
+            "supports_clinician_assessment": True,
         } if encounter.get("task_id") else None,
         "current_revision": current_revision,
         "revisions": revisions,

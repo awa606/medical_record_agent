@@ -528,6 +528,7 @@ def json_or_none(value: Any) -> str | None:
 
 
 RECORD_CONTENT_KEYS = {
+    "clinician_assessment",
     "fields",
     "draft",
     "safety_check",

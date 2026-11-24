@@ -66,7 +66,6 @@ def recorded_review(tmp_path, monkeypatch):
         provider = ResponseProvider(raw.model_dump(mode="json"))
         generator = LLMRecordGenerator(provider=provider, mode="edge", allow_mock_fallback=False)
         generator.max_retries = 0
-        monkeypatch.setattr("app.api.tasks.create_llm_record_generator", lambda: generator)
         generated = MedicalRecordOrchestrator(generator).run_from_text(SOURCE)
         assert generated["status"] == "WAITING_DOCTOR_REVIEW"
         assert generated["fields"].chief_complaint.status == "conflicting"

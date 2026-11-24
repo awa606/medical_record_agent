@@ -35,7 +35,6 @@ def test_doctor_review_persists_checked_spans_and_blocks_invalid_identity_and_ti
     initial = MedicalRecordFields(chief_complaint=source_field, present_illness=source_field)
     generator = LLMRecordGenerator(provider=ResponseProvider(initial.model_dump(mode="json")),
                                    mode="edge", allow_mock_fallback=False)
-    monkeypatch.setattr("app.api.tasks.create_llm_record_generator", lambda: generator)
     with TestClient(app) as client:
         owner = create_user(client, username="citation-doctor")
         login_as_user(client, username="citation-doctor")

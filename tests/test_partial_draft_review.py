@@ -34,7 +34,6 @@ def prepare(tmp_path, monkeypatch, *, only_conflict=False):
     generator = LLMRecordGenerator(provider=provider, mode="edge", allow_mock_fallback=False)
     generator.max_retries = 0
     generator.diagnostics_enabled = True
-    monkeypatch.setattr("app.api.tasks.create_llm_record_generator", lambda: generator)
     result = MedicalRecordOrchestrator(generator).run_from_text(SOURCE)
     return result, provider, generator
 

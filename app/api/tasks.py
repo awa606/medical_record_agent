@@ -38,12 +38,13 @@ from app.schemas.clinician_assessment import ClinicianAssessment, ClinicianAsses
 from app.schemas.clinician_draft import ClinicianDraftOrigin
 from app.services.clinician_draft import render_manual_draft
 from app.db.sqlite import manual_first_task_metadata
-from app.services import LLMProviderUnavailableError, create_llm_record_generator, export_record
+from app.services import export_record
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
 from app.services.clinical_codes import icd10_errors
 from app.services.exporter import DEFAULT_OUTPUT_DIR
 from app.services.episode_medication_coverage import has_episode_medication_gap, refresh_episode_medication
-from app.services.record_rules import allergy_treatment_errors
+from app.services.llm.factory import STRICT_RECORD_PROVIDER_MODES, _record_provider_mode
+from app.services.record_rules import allergy_treatment_errors, check_draft_safety, render_draft
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"], dependencies=[Depends(require_current_user)])
@@ -214,18 +215,28 @@ def _load_task_result(
     return decoded_task, result
 
 
-def _record_generator_or_503():
+def _requires_strict_review(prior_trace: dict) -> bool:
     try:
-        return create_llm_record_generator()
-    except LLMProviderUnavailableError as exc:
+        mode = _record_provider_mode()
+    except ValueError as exc:
         raise HTTPException(
             status_code=503,
             detail={
-                "message": "Requested record generation provider is unavailable.",
+                "message": "Cannot determine the evidence policy for this review.",
                 "fallback": False,
-                "fallback_reason": str(exc),
+                "fallback_reason": "Unsupported RECORD_PROVIDER_MODE",
             },
         ) from exc
+    previous_review = prior_trace.get("review_components")
+    if not isinstance(previous_review, dict):
+        previous_review = {}
+    # A deployment changing to demo must not relax a previously strict record.
+    # Older records without a saved mode use today's policy. An unrecognized
+    # nonempty historical mode gets strict grounding instead of guessing demo.
+    saved_modes = (prior_trace.get("mode"), previous_review.get("mode"))
+    return (mode in STRICT_RECORD_PROVIDER_MODES
+            or previous_review.get("strict_grounding") is True
+            or any(str(value).strip().lower() != "demo" for value in saved_modes if value))
 
 
 FIELD_LABELS = {
@@ -696,8 +707,9 @@ def review_task(
     assessment_action = _update_clinician_assessment(result, review_payload, actor, task.get("owner_user_id"))
     _validate_field_resolutions(review_payload, previous_fields)
     fields = _reset_review_state(review_payload.fields)
+    prior_trace = result.get("llm_trace") or {}
     trusted_source_corrections = set(review_payload.source_corrected_fields) | _retained_source_corrections(
-        fields, previous_fields, result.get("llm_trace") or {},
+        fields, previous_fields, prior_trace,
     )
     manual_edited_fields = _mark_manual_doctor_edits(
         fields, previous_fields,
@@ -716,7 +728,7 @@ def review_task(
             field.fact_ids = []
             if key not in review_payload.manual_takeover_fields:
                 field.source_spans = [s.model_copy(deep=True) for s in getattr(previous_fields, key).source_spans]
-    live_review = not origin and os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}
+    live_review = not origin and _requires_strict_review(prior_trace)
     if live_review or trusted_source_corrections:
         from app.services.field_grounding import ground_fields
         saved_asr = result.get("asr_source")
@@ -751,12 +763,13 @@ def review_task(
         refresh_episode_medication(fields.present_illness, coverage_source)
     if origin:
         draft, safety_check = render_manual_draft(fields, ClinicianDraftOrigin.model_validate(origin))
-        review_trace = {"actual_provider": "local_rules", "operation": "doctor_review"}
     else:
-        generator = _record_generator_or_503()
-        draft = generator.generate_draft(fields)
-        safety_check = generator.safety_check(draft, fields)
-        review_trace = generator.get_trace()
+        draft = render_draft(fields)
+        safety_check = check_draft_safety(draft, fields)
+    review_trace = {"actual_provider": "local_rules", "operation": "doctor_review",
+                    "strict_grounding": live_review,
+                    "operations": {"draft_generation": {"actual_provider": "deterministic_renderer_v1"},
+                                   "safety_check": {"actual_provider": "deterministic_safety_v1"}}}
 
     result["fields"] = fields.model_dump()
     result["draft"] = draft
@@ -764,9 +777,8 @@ def review_task(
         entry = ClinicianAssessment.model_validate(result["clinician_assessment"])
         result["draft"] += f"\n\n本次医生评估（手录）\n{entry.status_label}：{entry.statement}"
     result["safety_check"] = safety_check.model_dump()
-    prior_trace = result.get("llm_trace") or {}
     result["llm_trace"] = {**prior_trace, "review_components": review_trace}
-    if not prior_trace:
+    if origin and not prior_trace:
         result["llm_trace"].update(review_trace)
     result["reviewed"] = True
     result["approved"] = False

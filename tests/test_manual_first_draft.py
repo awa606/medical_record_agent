@@ -109,10 +109,10 @@ def test_manual_history_offline_signatures_and_protocol(failed_visit, monkeypatc
     client, ep, failed, owner, _other = failed_visit
     dest = ep + "/manual-first-draft"
 
-    def model_is_down():
+    def model_is_down(*args, **kwargs):
         pytest.fail("handwritten records must be editable when the generator is unavailable")
 
-    monkeypatch.setattr("app.api.tasks._record_generator_or_503", model_is_down)
+    monkeypatch.setattr("app.services.llm.LLMRecordGenerator.__init__", model_is_down)
     monkeypatch.setenv("RECORD_PROVIDER_MODE", "edge")
     body = {"failed_task_id": failed, "request_id": str(uuid4()), "present_illness": "今天来咨询既往报告。"}
     response = client.post(dest, json=body)

@@ -1,0 +1,99 @@
+{
+  "previous_application": "963439b389e07cf31791dbfac030f825ab951a35",
+  "current_application": "bfc6779c5bd3d9f546b1f7669e2c32eb6bde1f96",
+  "synthetic_only": true,
+  "widths": {
+    "1366": {
+      "buttons": 38,
+      "field_in_name_before": 0,
+      "field_in_name_after": 38,
+      "distinct_names_after": 38,
+      "preserved_visible_text": 38,
+      "preserved_size": 38,
+      "preserved_full_rect": 38
+    },
+    "390": {
+      "buttons": 38,
+      "field_in_name_before": 0,
+      "field_in_name_after": 38,
+      "distinct_names_after": 38,
+      "preserved_visible_text": 38,
+      "preserved_size": 38,
+      "preserved_full_rect": 38
+    },
+    "320": {
+      "buttons": 38,
+      "field_in_name_before": 0,
+      "field_in_name_after": 38,
+      "distinct_names_after": 38,
+      "preserved_visible_text": 38,
+      "preserved_size": 38,
+      "preserved_full_rect": 38
+    }
+  },
+  "baseline_receipt_sha256": "79569c8c443dc89f0be2b41a4e02d3860ced2dc581abc3bea293d59cb8c297c7",
+  "candidate_receipt_sha256": "62eb7e18ce30886933c8290af1aec4ed5673c6e6a7e0a7a11e88dac628d8b8f1",
+  "naming_spike": [
+    {
+      "width": 1366,
+      "height": 900,
+      "visible_geometry_identical": true,
+      "results": {
+        "baseline": {
+          "buttons": 38,
+          "matched_by_field_and_action": 0
+        },
+        "title": {
+          "buttons": 38,
+          "matched_by_field_and_action": 0
+        },
+        "accessible": {
+          "buttons": 38,
+          "matched_by_field_and_action": 38
+        }
+      }
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "visible_geometry_identical": true,
+      "results": {
+        "baseline": {
+          "buttons": 38,
+          "matched_by_field_and_action": 0
+        },
+        "title": {
+          "buttons": 38,
+          "matched_by_field_and_action": 0
+        },
+        "accessible": {
+          "buttons": 38,
+          "matched_by_field_and_action": 38
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "visible_geometry_identical": true,
+      "results": {
+        "baseline": {
+          "buttons": 38,
+          "matched_by_field_and_action": 0
+        },
+        "title": {
+          "buttons": 38,
+          "matched_by_field_and_action": 0
+        },
+        "accessible": {
+          "buttons": 38,
+          "matched_by_field_and_action": 38
+        }
+      }
+    }
+  ],
+  "nhs_capture_sha256": "b500587875fc9d4c45d7a012482a3dfc0474440a03e6d90437c55b5b59e28f7c",
+  "offline_visual_page_sha256": "0df8ced34990beb027979f994dac05c65f9f3f5e45cce9b41388ab658c123c97",
+  "release_zip_sha256": "9db2960e93d22900b19714f2e70ca9f28d6277bf7226cbe6948797fc88c519e4",
+  "human_clinician_responses_received_for_four_item_material": 0
+}

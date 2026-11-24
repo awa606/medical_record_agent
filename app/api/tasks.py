@@ -35,6 +35,9 @@ from app.db import (
 from app.schemas import MedicalRecordFields, SafetyCheckResult
 from app.schemas.auth import AuthenticatedUser
 from app.schemas.clinician_assessment import ClinicianAssessment, ClinicianAssessmentInput
+from app.schemas.clinician_draft import ClinicianDraftOrigin
+from app.services.clinician_draft import render_manual_draft
+from app.db.sqlite import manual_first_task_metadata
 from app.services import LLMProviderUnavailableError, create_llm_record_generator, export_record
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
 from app.services.clinical_codes import icd10_errors
@@ -459,7 +462,7 @@ def _apply_field_approval(fields: MedicalRecordFields, item: FieldApprovalItem) 
         field.confirmed_by_doctor = True
         field.doctor_review_status = "missing_accepted"
     source_note = str(field.doctor_review_note or "")
-    if source_note.startswith(("manual_doctor_edit_v1:", "doctor_source_correction_v1:")):
+    if source_note.startswith(("manual_doctor_edit_v1:", "doctor_source_correction_v1:", "医生手录首稿")):
         # Approval must not erase the server-established source of a doctor's
         # correction, otherwise a later revision loses its provenance.
         if item.note:
@@ -597,7 +600,11 @@ def read_task(task_id: int, request: Request = None) -> dict[str, Any]:
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     _assert_task_access(task, request)
-    return {**_decode_result_json(task), "supports_clinician_assessment": True}
+    user = current_user_from_request(request)
+    decoded = _decode_result_json(task)
+    return {**decoded, "supports_clinician_assessment": True,
+            **manual_first_task_metadata(task_id, task.get("encounter_id"), task.get("status"), decoded.get("result_json"),
+                                         doctor_id=user.id if user and user.role == "doctor" else None)}
 
 
 @router.get("/{task_id}/steps")
@@ -661,6 +668,8 @@ def review_task(
     request: Request = None,
 ) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
+    if payload and "clinician_draft_origin" in payload:
+        raise HTTPException(422, "首稿来源由服务保存。")
     try:
         review_payload = ReviewRequest.model_validate(payload or {})
     except ValidationError as exc:
@@ -698,12 +707,29 @@ def review_task(
     from app.services.field_alignment import refresh_existing_coverage_hints
     from app.services.privacy import anonymize_text
     coverage_source = anonymize_text(task.get("input_text") or result.get("conversation_text") or "")
-    live_review = os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}
+    origin = result.get("clinician_draft_origin")
+    if origin and previous_fields:
+        for key in set(manual_edited_fields) - set(review_payload.source_corrected_fields):
+            # Only the explicit source-correction operation can attach a new citation to a handwritten record.
+            field = getattr(fields, key)
+            field.confidence = None
+            field.fact_ids = []
+            if key not in review_payload.manual_takeover_fields:
+                field.source_spans = [s.model_copy(deep=True) for s in getattr(previous_fields, key).source_spans]
+    live_review = not origin and os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}
     if live_review or trusted_source_corrections:
         from app.services.field_grounding import ground_fields
-        asr = result.get("asr_source") or {}
+        saved_asr = result.get("asr_source")
+        asr = saved_asr if isinstance(saved_asr, dict) else {}
         text_import = asr.get("audio_id") == "text-import" or asr.get("engine") == "text-import"
-        audio_origin = not text_import and (task.get("input_type") == "audio" or bool(asr))
+        audio_origin = not text_import and (task.get("input_type") == "audio" or bool(saved_asr))
+        if origin and audio_origin:
+            quality = asr.get("role_quality")
+            if (not isinstance(quality, dict) or quality.get("status") != "passed"
+                    or asr.get("reviewed_by_doctor") is not True or asr.get("needs_review") is True
+                    or not isinstance(asr.get("segments"), list)
+                    or not all(isinstance(s, dict) for s in asr["segments"])):
+                raise HTTPException(409, "原录音角色尚未核对，不能把该转写选为病历证据。")
         # An empty list marks an audio source lacking its saved turns. None is plain text.
         turns = (asr.get("segments") or []) if audio_origin else None
         fields = ground_fields(fields, coverage_source, turns,
@@ -719,13 +745,18 @@ def review_task(
         field.doctor_review_note = ("医生根据原文修正，所选证据存在冲突，需重新核对。" if field.status == "conflicting"
                                     else "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。")
     fields = refresh_existing_coverage_hints(fields, source=coverage_source if live_review else None)
-    if not live_review:
+    if not live_review and not origin:
         # A doctor can remove a previously covered medication on a later edit.
         # Recompute this narrow finding from the saved input, even in a demo replay.
         refresh_episode_medication(fields.present_illness, coverage_source)
-    generator = _record_generator_or_503()
-    draft = generator.generate_draft(fields)
-    safety_check = generator.safety_check(draft, fields)
+    if origin:
+        draft, safety_check = render_manual_draft(fields, ClinicianDraftOrigin.model_validate(origin))
+        review_trace = {"actual_provider": "local_rules", "operation": "doctor_review"}
+    else:
+        generator = _record_generator_or_503()
+        draft = generator.generate_draft(fields)
+        safety_check = generator.safety_check(draft, fields)
+        review_trace = generator.get_trace()
 
     result["fields"] = fields.model_dump()
     result["draft"] = draft
@@ -734,7 +765,6 @@ def review_task(
         result["draft"] += f"\n\n本次医生评估（手录）\n{entry.status_label}：{entry.statement}"
     result["safety_check"] = safety_check.model_dump()
     prior_trace = result.get("llm_trace") or {}
-    review_trace = generator.get_trace()
     result["llm_trace"] = {**prior_trace, "review_components": review_trace}
     if not prior_trace:
         result["llm_trace"].update(review_trace)
@@ -760,7 +790,7 @@ def review_task(
             *(prior_trace.get("field_resolution_history") or []), *resolutions,
         ]
     from app.services.record_quality import build_record_quality_report
-    result["quality_report"] = build_record_quality_report(fields, safety_check, draft=draft)
+    result["quality_report"] = build_record_quality_report(fields, safety_check, draft=draft, clinician_authored=bool(origin))
 
     try:
         updated_task = apply_review_revision_transaction(

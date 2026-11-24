@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
     <link rel="stylesheet" href="./doctor.css?v=5ae25b98f38cea0b" />
     <link rel="stylesheet" href="./doctor-ui-v2.css?v=d862fb3374b2be79" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=3a3304d8cbb08793" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=a8b231c288aca7eb" />
   </head>
   <body class="doctor-mode standard-mode">
 <a class="skip-link" href="#mainContent">跳到主要内容</a>
@@ -250,6 +250,7 @@
             </dl>
           </div>
           <div class="failure-actions">
+            <button type="button" class="primary-action" id="openManualFirstButton" hidden>手写病历</button>
             <button type="button" class="primary-action" id="retryTranscriptionButton">重新转写</button>
             <button type="button" id="fallbackTextInputButton">改用文本输入</button>
             <button type="button" id="openTechnicalDetailButton">查看技术详情</button>
@@ -293,7 +294,7 @@
           <div class="panel-header">
             <div>
               <h2>门诊病历</h2>
-              <p>核对 AI 提取字段，缺失和低置信内容会单独标记。</p>
+              <p id="recordFieldsHelp">核对 AI 提取字段，缺失和低置信内容会单独标记。</p>
             </div>
             <span id="fieldCountBadge" class="status-badge neutral">-</span>
           </div>
@@ -646,12 +647,28 @@
       </div>
     </section>
 
+    <dialog id="manualFirstDialog" class="manual-first-dialog" aria-labelledby="manualFirstTitle">
+      <form id="manualFirstForm">
+        <h2 id="manualFirstTitle">手写病历</h2>
+        <p id="manualFirstContext"></p>
+        <p>至少填写主诉或现病史一项。只记录您核实的内容。保存后形成待审核的第一版病历。</p>
+        <label for="manualFirstChief">主诉</label>
+        <textarea id="manualFirstChief" rows="2" maxlength="4000"></textarea>
+        <label for="manualFirstIllness">现病史</label>
+        <textarea id="manualFirstIllness" rows="4" maxlength="4000"></textarea>
+        <p id="manualFirstNotice" role="status"></p>
+        <div class="manual-first-actions">
+          <button type="submit" class="primary-action" id="manualFirstSave">保存手写首稿</button>
+          <button type="button" id="manualFirstClose">返回本次就诊</button>
+        </div>
+      </form>
+    </dialog>
     <dialog id="helpDialog" class="help-drawer" aria-labelledby="helpDialogTitle">
       <header class="help-drawer-header"><h2 id="helpDialogTitle">使用帮助</h2><div class="help-drawer-actions"><button type="button" id="helpBackButton">返回上一页</button><button type="button" id="closeEmbeddedHelpButton">关闭</button></div></header>
       <p class="help-drawer-caption">帮助在本窗口内打开；进入子页面后可用“返回上一页”，关闭后继续当前操作。</p>
       <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=90bdc694822e1dc4"></script>
+    <script src="./doctor.js?v=b8ad882313c8c328"></script>
   </body>
 </html>

@@ -34,6 +34,7 @@ def build_record_quality_report(
     safety_check: SafetyCheckResult | dict[str, Any] | None = None,
     *,
     draft: str | None = None,
+    clinician_authored: bool = False,
 ) -> dict[str, Any]:
     """Build an explainable quality report without creating or approving a record."""
 
@@ -57,13 +58,17 @@ def build_record_quality_report(
     evidence_missing = _evidence_missing_fields(record)
     diagnosis_summary = _diagnosis_summary(record)
     treatment_summary = _treatment_summary(record)
-    field_quality = _field_quality(record)
+    field_quality = _field_quality(record, clinician_authored=clinician_authored)
 
     completed_core = len([key for key in CORE_FIELD_LABELS if _is_complete_field(getattr(record, key))])
     core_completeness = round(completed_core / len(CORE_FIELD_LABELS), 2)
     evidence_total = len([key for key in ALL_FIELD_LABELS if _has_real_field_value(getattr(record, key))])
     evidence_covered = evidence_total - len(evidence_missing)
     evidence_coverage = round(evidence_covered / evidence_total, 2) if evidence_total else 0.0
+    # Coverage counts actual citations only. A typed statement does not require a transcript citation.
+    if clinician_authored:
+        evidence_missing = [label for key, label in ALL_FIELD_LABELS.items() if label in evidence_missing
+                            and getattr(record, key).status == "conflicting"]
 
     blocked = bool(safety and (safety.blocked or not safety.passed))
     ready_for_doctor_review = (
@@ -230,14 +235,14 @@ def _has_real_field_value(field: Any) -> bool:
     return value not in PLACEHOLDER_VALUES
 
 
-def _field_quality(record: MedicalRecordFields) -> list[dict[str, Any]]:
+def _field_quality(record: MedicalRecordFields, *, clinician_authored: bool = False) -> list[dict[str, Any]]:
     return [
-        _field_quality_item(key, label, getattr(record, key))
+        _field_quality_item(key, label, getattr(record, key), clinician_authored=clinician_authored)
         for key, label in ALL_FIELD_LABELS.items()
     ]
 
 
-def _field_quality_item(key: str, label: str, field: Any | None) -> dict[str, Any]:
+def _field_quality_item(key: str, label: str, field: Any | None, *, clinician_authored: bool = False) -> dict[str, Any]:
     if field is None or not _has_real_field_value(field):
         return {
             "key": key,
@@ -268,6 +273,15 @@ def _field_quality_item(key: str, label: str, field: Any | None) -> dict[str, An
             "suggested_action": field.hint or f"继续补问{label}相关信息。",
             "evidence_count": evidence_count,
         }
+    if clinician_authored:
+        reason = f"{label}由医生书写。"
+        if evidence_count:
+            reason += ("医生选取了原文依据。" if str(field.doctor_review_note or "").startswith("doctor_source_correction_v1:")
+                       else "已保存的引文供对照。")
+        return {"key": key, "label": label, "status": "complete" if field.confirmed_by_doctor else "needs_doctor_review",
+                "reason": reason,
+                "suggested_action": "已审核。" if field.confirmed_by_doctor else f"核对本次手录的{label}。",
+                "evidence_count": evidence_count}
     if evidence_count == 0:
         return {
             "key": key,

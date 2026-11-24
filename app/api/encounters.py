@@ -4,7 +4,7 @@ import json
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
@@ -21,6 +21,8 @@ from app.db import (
     update_encounter_check_in_status,
 )
 from app.schemas.auth import AuthenticatedUser
+from app.schemas.clinician_draft import ManualFirstDraftInput
+from app.db.sqlite import create_manual_first_draft, manual_first_task_metadata
 from app.services.privacy import register_identity
 
 
@@ -85,7 +87,7 @@ def _summary(encounter: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _detail(encounter: dict[str, Any]) -> dict[str, Any]:
+def _detail(encounter: dict[str, Any], user: AuthenticatedUser | None = None) -> dict[str, Any]:
     current_revision = None
     if encounter.get("current_revision_id"):
         current_revision = get_record_revision(int(encounter["current_revision_id"]))
@@ -99,6 +101,8 @@ def _detail(encounter: dict[str, Any]) -> dict[str, Any]:
             "current_stage": encounter.get("task_current_stage"),
             "result_json": task_result,
             "supports_clinician_assessment": True,
+            **manual_first_task_metadata(encounter["task_id"], encounter["id"], encounter.get("task_status"),
+                                         task_result, doctor_id=user.id if user and user.role == "doctor" else None),
         } if encounter.get("task_id") else None,
         "current_revision": current_revision,
         "revisions": revisions,
@@ -148,7 +152,27 @@ def read_encounter(encounter_id: int, request: Request) -> dict[str, Any]:
     if row is None:
         raise HTTPException(status_code=404, detail="Encounter not found")
     _assert_encounter_access(row, request)
-    return _detail(row)
+    return _detail(row, current_user_from_request(request))
+
+
+@router.post("/{encounter_id}/manual-first-draft", status_code=201)
+def manual_first_draft(encounter_id: int, payload: ManualFirstDraftInput, response: Response,
+                       user: AuthenticatedUser = Depends(require_current_user)) -> dict[str, Any]:
+    if user.role != "doctor":
+        raise HTTPException(403, "仅经治医生可手写本次病历。")
+    values = {key: value for key, value in (("chief_complaint", payload.chief_complaint),
+                                           ("present_illness", payload.present_illness)) if value}
+    try:
+        receipt, created = create_manual_first_draft(encounter_id, user.id, payload.failed_task_id,
+                                                     str(payload.request_id), values)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    response.status_code = 201 if created else 200
+    return receipt
 
 
 def _transition_check_in_status(
@@ -169,7 +193,7 @@ def _transition_check_in_status(
     if current not in CHECK_IN_STATUSES:
         raise HTTPException(status_code=409, detail="Encounter has an invalid check-in status")
     if current == target:
-        return _detail(row)
+        return _detail(row, current_user_from_request(request))
     if current not in allowed_from:
         raise HTTPException(
             status_code=409,
@@ -197,7 +221,7 @@ def _transition_check_in_status(
                 "actor_role": actor.role if actor else None,
             },
         )
-    return _detail(updated)
+    return _detail(updated, actor)
 
 
 @router.post("/{encounter_id}/check-in")

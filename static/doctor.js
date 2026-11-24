@@ -659,6 +659,7 @@ function isCurrentRead(context) {
 }
 
 function beginEncounterRead() {
+  closeManualFirstDialog();
   document.querySelectorAll(".field-source-context").forEach(node => node.remove());
   appState.encounterReadController?.abort();
   appState.encounterReadController = new AbortController();
@@ -691,6 +692,7 @@ async function refreshAuth() {
 }
 
 function renderAuthPanel() {
+  if (!appState.authUser) closeManualFirstDialog();
   const panel = $("loginPanel");
   const label = $("authUserLabel");
   const logoutButton = $("logoutButton");
@@ -730,6 +732,14 @@ async function submitLogin(event) {
         : (detail && detail.message) || "用户名或密码错误。";
       throw new Error(message);
     }
+    // A cookie can expire while a patient is on screen. A different doctor
+    // logging into the same tab starts at their own worklist.
+    if (appState.currentEncounter && appState.currentEncounter.doctor_user_id !== data.user.id) {
+      beginEncounterRead();
+      resetTaskState();
+      closeDrawer();
+      setProductView("workbench");
+    }
     appState.encounterWorklist = [];
     appState.encounterSelectionNotice = "";
     appState.authUser = data.user;
@@ -755,9 +765,12 @@ async function logout() {
     return;
   }
   if (encounterSwitchBlocked("退出登录")) return;
+  const departingUserId = appState.authUser?.id;
+  manualFirstSessionEpoch++;
   try {
     await fetch("/api/auth/logout", { method: "POST" });
   } finally {
+    clearManualFirstDrafts(departingUserId);
     beginEncounterRead();
     resetTaskState();
     appState.encounterWorklist = [];
@@ -987,7 +1000,7 @@ function encounterWorklistMarkup({ includeRevisions = true } = {}) {
       ${revisions.map((revision) => `
         <div class="encounter-revision-row">
           <strong>v${escapeHtml(revision.revision_no || "-")}</strong>
-          <span>${escapeHtml(revision.source || "-")} · ${escapeHtml(formatDateTime(revision.created_at))}</span>
+          <span>${escapeHtml(revisionSourceLabel(revision.source))} · ${escapeHtml(formatDateTime(revision.created_at))}</span>
         </div>
       `).join("")}
     </section>
@@ -1461,6 +1474,193 @@ async function retryFailedTask() {
   if (failure.kind === "generation") return regenerateRecord();
   if (failure.kind === "transcription") return retryTranscriptionFromFailure();
   return openDebug();
+}
+
+// Session storage belongs to this browser tab. Each draft is further bound to
+// the authenticated writer, the encounter and the failed task it can replace.
+const manualFirstDrafts = new Map();
+const manualFirstWrites = new Map();
+let manualFirstEditor = null;
+let manualFirstSessionEpoch = 0;
+
+function manualFirstKey() {
+  const user = appState.authUser;
+  const task = appState.currentTask;
+  const encounter = appState.currentEncounter;
+  const permission = task?.supports_manual_first_draft === true ? task : encounter?.task;
+  if (user?.role !== "doctor" || !task?.id || !encounter?.id
+      || String(task.id) !== String(encounter.task_id) || String(user.id) !== String(encounter.doctor_user_id)
+      || String(permission?.id) !== String(task.id) || permission.supports_manual_first_draft !== true
+      || permission.manual_first_draft_available !== true) return "";
+  return `mra-manual-first:v1:${user.id}:${encounter.id}:${task.id}`;
+}
+
+function storeManualFirst(key, draft) {
+  if (draft) manualFirstDrafts.set(key, draft);
+  else manualFirstDrafts.delete(key);
+  try {
+    if (draft) sessionStorage.setItem(key, JSON.stringify(draft));
+    else sessionStorage.removeItem(key);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function clearManualFirstDrafts(userId) {
+  if (userId == null) return;
+  const prefix = `mra-manual-first:v1:${userId}:`;
+  const keys = new Set(manualFirstDrafts.keys());
+  try { Object.keys(sessionStorage).forEach(key => keys.add(key)); } catch (_) { /* Private browsing. */ }
+  for (const key of keys) if (key.startsWith(prefix)) storeManualFirst(key, null);
+  for (const key of manualFirstWrites.keys()) if (key.startsWith(prefix)) manualFirstWrites.delete(key);
+}
+
+function readManualFirst(key) {
+  if (manualFirstDrafts.has(key)) return manualFirstDrafts.get(key);
+  try { return JSON.parse(sessionStorage.getItem(key)); } catch (_) { return null; }
+}
+
+function closeManualFirstDialog() {
+  const dialog = $("manualFirstDialog");
+  if (dialog?.open) dialog.close();
+  if (!manualFirstEditor) return;
+  manualFirstEditor = null;
+  $("manualFirstForm").reset();
+  $("manualFirstContext").textContent = "";
+  $("manualFirstNotice").textContent = "";
+}
+
+function openManualFirstDialog() {
+  const key = manualFirstKey();
+  if (!key) return;
+  let draft = readManualFirst(key);
+  if (draft?.savedTaskId) return restoreEncounter(selectedEncounterId());
+  draft ||= { chief: "", illness: "", requestId: "", attempted: false };
+  manualFirstEditor = manualFirstWrites.get(key) || { key, draft, encounterId: selectedEncounterId(), taskId: appState.currentTaskId, sending: false };
+  $("manualFirstChief").value = draft.chief;
+  $("manualFirstIllness").value = draft.illness;
+  $("manualFirstContext").textContent = `就诊 E-${selectedEncounterId()} · 前次生成任务 #${appState.currentTaskId}。 ${currentFailureDetail().reason}`;
+  updateManualFirstControls(manualFirstEditor.sending ? "正在等待保存回执。" : draft.attempted ? "上次保存尚未取得确认。请用同一内容重试。" :
+    (draft.chief || draft.illness ? "已恢复本标签页中本次就诊尚未提交的内容。" : "未提交的文字暂存在本浏览器标签页中，退出账号后清除。"));
+  $("manualFirstDialog").showModal();
+  (manualFirstEditor.sending ? $("manualFirstClose") : draft.attempted ? $("manualFirstSave") : $("manualFirstChief")).focus();
+}
+
+function updateManualFirstControls(message) {
+  const editor = manualFirstEditor;
+  if (!editor) return;
+  const locked = editor.sending || editor.draft.attempted;
+  $("manualFirstChief").readOnly = locked;
+  $("manualFirstIllness").readOnly = locked;
+  $("manualFirstSave").disabled = editor.sending;
+  $("manualFirstSave").textContent = editor.sending ? "正在保存…" : editor.draft.attempted ? "重试保存同一首稿" : "保存手写首稿";
+  $("manualFirstNotice").textContent = message;
+}
+
+function rememberManualFirstInput() {
+  const editor = manualFirstEditor;
+  if (!editor || editor.key !== manualFirstKey() || editor.draft.attempted) return;
+  const draft = { chief: $("manualFirstChief").value, illness: $("manualFirstIllness").value, requestId: "", attempted: false };
+  editor.draft = draft;
+  const stored = storeManualFirst(editor.key, draft);
+  updateManualFirstControls(stored ? "尚未提交。刷新后可在本次就诊继续填写。" : "浏览器未允许暂存。请在刷新或离开之前保存首稿。");
+}
+
+function manualFirstRequestId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  // getRandomValues also works on an HTTP intranet where randomUUID is unavailable.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join("-");
+}
+
+async function submitManualFirst(event) {
+  event.preventDefault();
+  const editor = manualFirstEditor;
+  if (!editor || editor.sending || editor.key !== manualFirstKey()) return;
+  const draft = editor.draft;
+  const epoch = manualFirstSessionEpoch;
+  const writer = appState.authUser;
+  const chief = draft.chief.trim();
+  const illness = draft.illness.trim();
+  if (!chief && !illness) {
+    updateManualFirstControls("请至少填写一项主诉或现病史。");
+    $("manualFirstChief").focus();
+    return;
+  }
+  if (!draft.requestId) draft.requestId = manualFirstRequestId();
+  draft.attempted = true;
+  storeManualFirst(editor.key, draft);
+  editor.sending = true;
+  manualFirstWrites.set(editor.key, editor);
+  updateManualFirstControls("正在保存手写首稿。返回就诊不会撤销已发送的请求。");
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(`/api/encounters/${encodeURIComponent(editor.encounterId)}/manual-first-draft`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
+      body: JSON.stringify({ failed_task_id: editor.taskId, request_id: draft.requestId,
+        ...(chief ? { chief_complaint: chief } : {}), ...(illness ? { present_illness: illness } : {}) }),
+    });
+    const result = await response.json();
+    if (epoch !== manualFirstSessionEpoch || writer !== appState.authUser) return;
+    if (!response.ok) {
+      if (response.status >= 400 && response.status < 500) {
+        draft.attempted = false;
+        storeManualFirst(editor.key, draft);
+      }
+      if (response.status === 401) {
+        appState.authUser = null;
+        appState.authStatus = "required";
+        appState.authMessage = "登录已失效，请重新登录。";
+        renderAuthPanel();
+      }
+      const detail = result.detail;
+      const reason = response.status === 409 ? "本次就诊已有变化。请返回工作台重新打开就诊，核对最新版本。" :
+        response.status === 403 ? "当前账号无法为该就诊保存首稿。" : (typeof detail === "string" ? detail : detail?.message);
+      throw new Error(reason || "服务未能确认保存，请重试。");
+    }
+    if (!result.task_id || !result.revision_id) throw new Error("未取得完整保存回执。请用同一内容重试。");
+    // The write is confirmed, even if the next GET fails. Reopening the panel
+    // now reloads the encounter; it cannot send a second first-draft request.
+    storeManualFirst(editor.key, { savedTaskId: result.task_id });
+    if (manualFirstKey() !== editor.key) return;
+    if (manualFirstEditor !== editor) {
+      renderTranscriptionFailurePanel();
+      return;
+    }
+    closeManualFirstDialog();
+    await restoreEncounter(editor.encounterId);
+    if (String(selectedEncounterId()) === String(editor.encounterId) && String(appState.currentTaskId) === String(result.task_id)) {
+      showToast("医生手写首稿已保存。");
+      focusRecordWorkspace();
+      document.querySelector('#recordFields [data-open-detail="history:record"]')?.focus();
+    } else if (String(selectedEncounterId()) === String(editor.encounterId)) {
+      showToast("手写首稿已保存，请重新打开本次就诊读取已保存版本。");
+    }
+  } catch (error) {
+    if (manualFirstEditor === editor && epoch === manualFirstSessionEpoch && writer === appState.authUser) {
+      editor.sending = false;
+      updateManualFirstControls(draft.attempted ? "尚未确认是否已保存。请重试同一首稿，服务会核对原请求。" : userFacingError(error.message));
+    }
+  } finally {
+    window.clearTimeout(timeout);
+    if (manualFirstWrites.get(editor.key) === editor) manualFirstWrites.delete(editor.key);
+  }
+}
+
+function manualOrigin(result = appState.currentTask?.result_json) {
+  const origin = result?.clinician_draft_origin;
+  return origin?.kind === "doctor_manual_first" ? origin : null;
+}
+
+function manualOriginMarkup(origin) {
+  if (!origin) return "";
+  const reason = { no_supported_facts: "未找到可用于生成病历的事实", generation_failed: "病历生成失败" }[origin.failure_category] || "失败分类未记录";
+  return `<p class="manual-first-origin"><strong>首稿来源 · 医生手写</strong><br>执笔人 ${escapeHtml(origin.recorded_by_name || String(origin.recorded_by || "未记录"))} · ${escapeHtml(formatDateTime(origin.recorded_at))}<br>前次生成任务 #${escapeHtml(String(origin.previous_failed_task_id))} · ${escapeHtml(reason)}</p>`;
 }
 
 function reportActionError(error) {
@@ -2354,7 +2554,7 @@ function doctorDisplayState() {
       title: "病历草稿已生成，可编辑",
       taskHint: "病历草稿已生成，可编辑",
       reviewLabel: "病历草稿已生成",
-      dataStatus: "AI草稿待保存",
+      dataStatus: manualOrigin() ? "手写首稿已保存" : "AI草稿待保存",
       inputStatus,
     };
   }
@@ -2611,7 +2811,7 @@ function nextActionState() {
     }
     const missingText = risk.missing.length
       ? `当前草稿仍有 ${risk.missing.length} 项待补充；请先保存修改，再进入医生审核。`
-      : "AI 已生成病历草稿，请先保存修改后再完成医生审核。";
+      : manualOrigin() ? "医生手写首稿已保存，可核对并修改。" : "AI 已生成病历草稿，请先保存修改后再完成医生审核。";
     return {
       tone: risk.hasError ? "danger" : risk.hasRisk ? "warning" : "ready",
       title: "病历草稿已生成，可编辑",
@@ -2681,6 +2881,12 @@ function renderTranscriptionFailurePanel() {
   if (!panel) return;
   const failed = doctorDisplayState().key === "failed";
   panel.hidden = !failed;
+  const manualButton = $("openManualFirstButton");
+  const manualKey = failed && currentFailureDetail().kind === "generation" ? manualFirstKey() : "";
+  if (manualButton) {
+    manualButton.hidden = !manualKey;
+    manualButton.textContent = manualKey && readManualFirst(manualKey)?.savedTaskId ? "打开已保存首稿" : "手写病历";
+  }
   if (!failed) return;
   const message = $("transcriptionFailureMessage");
   const retryButton = $("retryTranscriptionButton");
@@ -3112,7 +3318,7 @@ function renderWorkflow() {
   const activeIndex = WORKFLOW_STEPS.findIndex((step) => step.key === activeKey);
   $("workflowSteps").innerHTML = WORKFLOW_STEPS.map((step, index) => {
     const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "";
-    let label = step.label;
+    let label = step.key === "AI_PROCESS" && manualOrigin() ? "医生起草" : step.label;
     if (step.key === "EXPORT" && activeKey === "EXPORT" && isApprovedForExport()) {
       label = currentExportFile() ? "已导出 PDF" : "待导出 PDF";
     }
@@ -3178,6 +3384,7 @@ function fieldValue(fields, key) {
 }
 
 function fieldEvidence(field, key) {
+  if (manualOrigin() && !field?.source_spans?.length) return "此栏没有保存原文引用。";
   if (key === "treatment_plan") return "处理建议来自 AI 病历草稿，需医生结合诊疗规范确认。";
   const spans = field?.source_spans || [];
   return spans.length ? spans.map((span) => span.text).filter(Boolean).join("\n") : "暂无证据片段，需结合原始转写复核。";
@@ -4038,24 +4245,24 @@ function renderFieldReviewDetails(fields, key, title) {
         <span>本版字段状态</span>
         <strong>${escapeHtml(statusLabel)}</strong>
       </div>
-      <div class="detail-kv">
+      ${manualOrigin() ? "" : `<div class="detail-kv">
         <span>模型置信度</span>
         <strong>${escapeHtml(confidence == null ? "未提供" : `${Math.round(confidence * 100)}%`)}</strong>
-      </div>
+      </div>`}
       <div class="detail-text">${escapeHtml(displayValue)}</div>
     `)}
     ${isApprovedMissing && readableStoredText(field?.hint)
       ? detailSection("生成时提示（历史记录）", `<div class="detail-text">${escapeHtml(readableStoredText(field.hint))}</div><p>保留生成时的提示供追溯，不表示当前仍待审核。</p>`)
       : ""}
-    ${qualityItem ? detailSection("草稿生成时的自动检查", `
-      <div class="detail-kv"><span>生成时状态</span><strong>${escapeHtml(initialReview ? "需核对系统抽取内容" : fieldQualityLabel(key))}</strong></div>
+    ${qualityItem ? detailSection(manualOrigin() ? "手写病历保存时的自动检查" : "草稿生成时的自动检查", `
+      <div class="detail-kv"><span>${manualOrigin() ? "保存时状态" : "生成时状态"}</span><strong>${escapeHtml(initialReview ? (manualOrigin() ? "需核对医生记录" : "需核对系统抽取内容") : fieldQualityLabel(key))}</strong></div>
       <div class="detail-kv"><span>证据数量</span><strong>${escapeHtml(String(qualityItem.evidence_count ?? 0))}</strong></div>
       <div class="detail-text">${escapeHtml(initialReview ? `草稿生成时，系统提示医生核对${title}与引用原文。` : qualityItem.reason || qualityItem.suggested_action || "暂无进一步说明。")}</div>
     `) : ""}
     ${episodeMedicationGaps(key, field).length ? detailSection("需要补核的用药原话", episodeMedicationGaps(key, field)
       .map(item => `<p class="detail-text">${escapeHtml(item)}</p>`).join("")) : ""}
     ${field?.status === "conflicting" ? detailSection("未采纳的模型内容", `<p class="detail-text">${escapeHtml(field.value || "（无可用内容）")}</p><p>${escapeHtml(field.hint || "证据校验未通过")}</p>`) : ""}
-    ${(appState.currentTask?.result_json?.llm_trace?.field_resolution_history || []).filter(item => item.field === key).map(item => detailSection("医生处置前的模型记录（只读对照）", `<p>原版本 ${escapeHtml(String(item.previous_revision_id))} · ${item.method === "doctor_entry" ? "医生补录" : "根据原文修正"}</p><p class="detail-text">${escapeHtml(item.previous_value || "（空）")}</p><p class="detail-text">${escapeHtml((item.previous_source_spans || []).map(s => s.text).join("\n") || "（无模型引用）")}</p>`)).join("")}
+    ${(appState.currentTask?.result_json?.llm_trace?.field_resolution_history || []).filter(item => item.field === key).map(item => detailSection(manualOrigin() ? "医生处置前的字段记录（只读对照）" : "医生处置前的模型记录（只读对照）", `<p>原版本 ${escapeHtml(String(item.previous_revision_id))} · ${item.method === "doctor_entry" ? "医生补录" : "根据原文修正"}</p><p class="detail-text">${escapeHtml(item.previous_value || "（空）")}</p><p class="detail-text">${escapeHtml((item.previous_source_spans || []).map(s => s.text).join("\n") || (manualOrigin() ? "（无原文引用）" : "（无模型引用）"))}</p>`)).join("")}
     ${renderFieldRevisionNote(field?.doctor_review_note)}
   `;
 }
@@ -4248,7 +4455,7 @@ function savedRevisionFields(revision) {
 }
 
 function revisionSourceLabel(source) {
-  return { generation: "系统生成", doctor_review: "医生修改保存" }[source]
+  return { generation: "系统生成", doctor_review: "医生修改保存", doctor_manual_first: "医生手写首稿" }[source]
     || (source ? `其他来源（${source}）` : "来源未记录");
 }
 
@@ -4268,14 +4475,18 @@ function historyFieldSignature(field) {
   return JSON.stringify([field?.value ?? null, field?.missing ?? null, field?.status ?? null]);
 }
 
-function savedRevisionAssessment(revision) {
+function savedRevisionResult(revision) {
   if (!revision?.result_json) return null;
   try {
-    const result = typeof revision.result_json === "string" ? JSON.parse(revision.result_json) : revision.result_json;
-    return result?.clinician_assessment || null;
+    return typeof revision.result_json === "string" ? JSON.parse(revision.result_json) : revision.result_json;
   } catch (_) {
     return undefined;
   }
+}
+
+function savedRevisionAssessment(revision) {
+  const result = savedRevisionResult(revision);
+  return result === undefined ? undefined : result?.clinician_assessment || null;
 }
 
 function assessmentHistoryText(entry) {
@@ -4331,6 +4542,7 @@ function recordHistoryMarkup(view) {
     ${view.editing ? '<p class="history-edit-notice">您的编辑内容仍保留。这里仅比较已经保存的版本，不包含尚未保存的修改。</p>' : ""}
     <label class="history-version-select">选择保存版本<select data-history-version>${options}</select></label>
     <p class="history-meta">就诊 E-${escapeHtml(view.encounterId)} · ${escapeHtml(revisionSourceLabel(selected.source))} · 保存于 ${escapeHtml(formatDateTime(selected.created_at))}</p>
+    ${manualOriginMarkup(manualOrigin(savedRevisionResult(selected) || null))}
     <p class="history-compare-summary" role="status">${isCurrent ? "正在查看当前已保存版本。" : comparing ? `与当前已保存版本 ${escapeHtml(current.revision_no)} 相比，${changedKeys.size}项字段内容或采集状态不同。` : "当前已保存版本不可用，暂不能对照。"}${versions.length === 1 ? " 本次就诊目前只有一个版本。" : ""}</p>
     ${rows}${assessmentRow}
     ${unchangedRows.length ? `<details class="history-unchanged history-evidence"><summary>展开 ${unchangedRows.length} 项内容与采集状态相同的字段</summary>${unchangedRows.join("")}</details>` : ""}
@@ -4647,7 +4859,7 @@ function renderApprovalChecklist(fields) {
         <strong>医生分项审核</strong>
         <span class="approval-entry-label">${escapeHtml(reviewLabel)}</span>
       </summary>
-      <details class="review-instructions"><summary>审核说明</summary><p>AI 生成草稿，仅供医生审核；原审核已失效或尚未完成时，审核通过后方可导出。普通内容可集中确认，缺失、候选诊断和风险须分别处理；勾选不能消除证据冲突。已签署版本的决定在审核记录中查看。</p></details>
+      <details class="review-instructions"><summary>审核说明</summary><p>${manualOrigin() ? "本病历由医生手写起草，签署前仍需核对本版内容。" : "AI 生成草稿，仅供医生审核；"}原审核已失效或尚未完成时，审核通过后方可导出。普通内容可集中确认，缺失、候选诊断和风险须分别处理；勾选不能消除证据冲突。已签署版本的决定在审核记录中查看。</p></details>
       ${approved ? `<div class="approval-readonly-record">${fieldItems.map(({title,field}) => `<div><strong>${escapeHtml(title)}</strong><span>${escapeHtml({content_confirmed:"内容已确认",not_asked_confirmed:"确认本次未询问",missing_accepted:"接受本次缺失"}[field?.doctor_review_status] || "未记录分项确认")}</span></div>`).join("")}${diagnoses.map(d => `<div><strong>${escapeHtml(d.name)}</strong><span>${escapeHtml({candidate_confirmed:"候选已确认",ai_candidate_deleted:"已移除AI候选"}[d.doctor_review_status] || "未确认")}</span></div>`).join("")}</div>` : `
       ${outstanding(`<div class="approval-section">
         <div class="approval-section-title">
@@ -4755,6 +4967,16 @@ function renderRecoveryFieldChanges(recovery, savedFields) {
 }
 
 function renderFields() {
+  const origin = manualOrigin();
+  if (origin && appState.authUser?.id === origin.recorded_by && selectedEncounterId()) {
+    const key = `mra-manual-first:v1:${origin.recorded_by}:${selectedEncounterId()}:${origin.previous_failed_task_id}`;
+    const pending = readManualFirst(key);
+    const confirmedId = appState.currentTask?.manual_first_draft_request_id;
+    if (pending && (String(pending.savedTaskId) === String(appState.currentTaskId)
+        || (confirmedId && pending.attempted && pending.requestId === confirmedId))) storeManualFirst(key, null);
+  }
+  if ($("recordFieldsHelp")) $("recordFieldsHelp").textContent = manualOrigin()
+    ? "核对医生手写病历和后续修订，逐项处理缺失内容。" : "核对 AI 提取字段，缺失和低置信内容会单独标记。";
   const fields = activeRecordFields();
   const isPreview = isRecordPreviewActive();
   const isEditing = Boolean(appState.recordEditMode && appState.currentRecordFields && !isPreview);
@@ -4939,7 +5161,7 @@ function renderFields() {
     return `<section class="record-section" data-record-section="${id}" tabindex="-1" aria-label="${title}"><header class="record-section-head"><h3>${title}</h3>${statusMarkup}</header><div class="record-section-body">${inner}${extra}</div></section>`;
   }).join("");
   const leftover = [...cardHtmlByKey.entries()].filter(([key]) => !usedKeys.has(key)).map(([, html]) => html).join("");
-  $("recordFields").innerHTML = previewNotice + historicalNotice
+  $("recordFields").innerHTML = previewNotice + historicalNotice + manualOriginMarkup(manualOrigin())
     + `<div class="record-review-toolbar">${versionNotice}${isEditing ? "" : renderApprovalChecklist(fields)}</div>`
     + editNotice + recoveryNotice + sections + leftover + summaryFooter + draftLegend;
 
@@ -10360,6 +10582,14 @@ async function testLlmConnection() {
 }
 
 function bindEvents() {
+  $("openManualFirstButton").addEventListener("click", openManualFirstDialog);
+  $("manualFirstForm").addEventListener("submit", event => submitManualFirst(event).catch(reportActionError));
+  $("manualFirstForm").addEventListener("input", rememberManualFirstInput);
+  $("manualFirstClose").addEventListener("click", closeManualFirstDialog);
+  $("manualFirstDialog").addEventListener("cancel", event => {
+    event.preventDefault();
+    closeManualFirstDialog();
+  });
   $("openEmbeddedHelpButton").addEventListener("click", openEmbeddedHelp);
   $("loginHelpButton").addEventListener("click", openEmbeddedHelp);
   $("closeEmbeddedHelpButton").addEventListener("click", closeEmbeddedHelp);

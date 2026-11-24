@@ -508,3 +508,25 @@ body.doctor-mode [data-open-detail="assist:live-clinical"] { min-height: 32px; f
 @media (max-width:899px) {
   body.doctor-mode [data-open-detail="assist:live-clinical"] { min-height: 44px; }
 }
+.manual-first-dialog {
+  box-sizing: border-box;
+  width: min(34rem, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  border: 1px solid #bac9d5;
+  border-radius: 10px;
+  padding: clamp(16px, 4vw, 26px);
+  color: var(--text);
+}
+.manual-first-dialog::backdrop { background: rgba(16, 32, 48, .38); }
+.manual-first-dialog form { display: grid; gap: 8px; min-width: 0; }
+.manual-first-dialog h2, .manual-first-dialog p { margin: 0 0 4px; }
+.manual-first-dialog label { font-weight: 600; }
+.manual-first-dialog textarea { box-sizing: border-box; width: 100%; min-width: 0; resize: vertical; font: inherit; }
+.manual-first-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.manual-first-actions button { min-height: 44px; }
+.failure-actions #openManualFirstButton[hidden] { display: none; }
+@media (max-width: 680px) {
+  body.doctor-mode .top-actions .auth-status { display: inline-flex; padding: 0; border: 0; }
+}
+.manual-first-origin { margin: 8px 0; line-height: 1.55; overflow-wrap: anywhere; }

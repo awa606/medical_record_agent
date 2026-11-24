@@ -192,6 +192,15 @@ def _init_db_once() -> None:
                 FOREIGN KEY(task_id) REFERENCES agent_task(id)
             );
 
+            CREATE TABLE IF NOT EXISTS clinician_first_draft_request (
+                encounter_id INTEGER NOT NULL REFERENCES encounter(id),
+                doctor_id INTEGER NOT NULL REFERENCES auth_user(id),
+                request_id TEXT NOT NULL,
+                input_sha256 TEXT NOT NULL,
+                revision_id INTEGER NOT NULL UNIQUE REFERENCES record_revision(id),
+                PRIMARY KEY (encounter_id, doctor_id, request_id)
+            );
+
             CREATE TABLE IF NOT EXISTS approval (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 encounter_id INTEGER NOT NULL,
@@ -565,6 +574,7 @@ def json_or_none(value: Any) -> str | None:
 
 
 RECORD_CONTENT_KEYS = {
+    "clinician_draft_origin",
     "clinician_assessment",
     "fields",
     "draft",
@@ -874,7 +884,7 @@ def _insert_record_revision_row(
             draft_text, safety_check_json, quality_report_json,
             result_json, created_by_user_id, created_at, writer_protocol
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 2)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             encounter_id,
@@ -889,6 +899,7 @@ def _insert_record_revision_row(
             json_dumps(result),
             actor_user_id,
             now,
+            3 if result.get("clinician_draft_origin") else 2,
         ),
     )
     return int(cursor.lastrowid)
@@ -1123,7 +1134,7 @@ def apply_review_revision_transaction(
             if current_revision_id is None:
                 raise ValueError("Task has no current record revision")
             revision = connection.execute(
-                "SELECT id, content_hash FROM record_revision WHERE id = ? AND task_id = ?",
+                "SELECT id, content_hash, writer_protocol, result_json FROM record_revision WHERE id = ? AND task_id = ?",
                 (current_revision_id, task_id),
             ).fetchone()
             if revision is None:
@@ -1136,6 +1147,10 @@ def apply_review_revision_transaction(
                     current_revision_id=int(current_revision_id),
                     current_content_hash=current_content_hash,
                 )
+            prior_origin = (json.loads(revision["result_json"])["clinician_draft_origin"]
+                            if revision["writer_protocol"] == 3 else None)
+            if prior_origin != result.get("clinician_draft_origin"):
+                raise ValueError("首稿来源不能在修订中变更。")
 
             encounter = _ensure_task_encounter_with_connection(
                 connection,
@@ -1318,6 +1333,105 @@ def can_retry_failed_encounter(encounter_id: int) -> bool:
     with closing(get_connection()) as connection:
         encounter = connection.execute("SELECT * FROM encounter WHERE id = ?", (encounter_id,)).fetchone()
         return encounter is not None and _failed_task_has_no_record(connection, encounter)
+
+
+def can_start_manual_first_draft(encounter_id: int, failed_task_id: int, doctor_id: int) -> bool:
+    with closing(get_connection()) as connection:
+        encounter = connection.execute("SELECT * FROM encounter WHERE id = ?", (encounter_id,)).fetchone()
+        return bool(encounter and encounter["doctor_user_id"] == doctor_id and encounter["task_id"] == failed_task_id
+                    and encounter["check_in_status"] == "in_progress" and _failed_task_has_no_record(connection, encounter))
+
+
+def manual_first_task_metadata(task_id: int, encounter_id: int | None, status: str | None,
+                               result: Any, *, doctor_id: int | None) -> dict[str, Any]:
+    metadata = {"supports_manual_first_draft": True, "manual_first_draft_available": False}
+    if doctor_id is None or encounter_id is None:
+        return metadata
+    if status == "FAILED":
+        metadata["manual_first_draft_available"] = can_start_manual_first_draft(encounter_id, task_id, doctor_id)
+    elif isinstance(result, dict) and result.get("clinician_draft_origin"):
+        # Only the current owner can reconcile an unacknowledged save with this exact browser request.
+        with closing(get_connection()) as connection:
+            row = connection.execute("""
+                SELECT r.request_id FROM clinician_first_draft_request r
+                JOIN record_revision v ON v.id = r.revision_id JOIN encounter e ON e.id = r.encounter_id
+                WHERE v.task_id=? AND e.task_id=? AND e.id=? AND e.doctor_user_id=? AND r.doctor_id=?
+            """, (task_id, task_id, encounter_id, doctor_id, doctor_id)).fetchone()
+            if row:
+                metadata["manual_first_draft_request_id"] = row["request_id"]
+    return metadata
+
+
+def create_manual_first_draft(encounter_id: int, doctor_id: int, failed_task_id: int, request_id: str,
+                              values: dict[str, str]) -> tuple[dict[str, Any], bool]:
+    from app.schemas.clinician_draft import ClinicianDraftOrigin
+    from app.services.clinician_draft import build_manual_first_result
+
+    # Store a digest for delivery retries. The clinical text itself belongs only to its revision.
+    input_hash = hashlib.sha256(json.dumps([failed_task_id, values], sort_keys=True,
+                                          ensure_ascii=False).encode("utf-8")).hexdigest()
+    init_db()
+    with closing(get_connection()) as connection, connection:
+        connection.execute("BEGIN IMMEDIATE")
+        encounter = connection.execute("SELECT * FROM encounter WHERE id = ?", (encounter_id,)).fetchone()
+        if not encounter:
+            raise LookupError("就诊不存在。")
+        doctor = connection.execute("SELECT display_name FROM auth_user WHERE id=? AND role='doctor' AND is_active=1",
+                                    (doctor_id,)).fetchone()
+        if not doctor or encounter["doctor_user_id"] != doctor_id:
+            raise PermissionError("仅经治医生可手写本次病历。")
+        receipt = connection.execute("""
+            SELECT r.input_sha256, v.task_id, v.id AS revision_id, v.content_hash, v.result_json
+            FROM clinician_first_draft_request r JOIN record_revision v ON v.id = r.revision_id
+            WHERE r.encounter_id=? AND r.doctor_id=? AND r.request_id=?
+        """, (encounter_id, doctor_id, request_id)).fetchone()
+        if receipt:
+            if receipt["input_sha256"] != input_hash:
+                raise ValueError("此请求已保存其他内容，请核对已保存的版本。")
+            return {"task_id": receipt["task_id"], "revision_id": receipt["revision_id"],
+                    "content_hash": receipt["content_hash"],
+                    "clinician_draft_origin": json.loads(receipt["result_json"])["clinician_draft_origin"]}, False
+        if (encounter["check_in_status"] != "in_progress" or encounter["task_id"] != failed_task_id
+                or not _failed_task_has_no_record(connection, encounter)):
+            raise ValueError("就诊或原失败任务已变化，请重新打开当前病历。")
+        failed = connection.execute("SELECT * FROM agent_task WHERE id=?", (failed_task_id,)).fetchone()
+        now = utc_now()
+        origin = ClinicianDraftOrigin(recorded_by=doctor_id, recorded_by_name=doctor["display_name"],
+                                     recorded_at=now, previous_failed_task_id=failed_task_id,
+                                     failure_category="no_supported_facts" if "LLM_NO_SUPPORTED_FACTS:" in
+                                     (failed["error_message"] or "") else "generation_failed")
+        result = build_manual_first_result(values, origin)
+        # Keep the original source for authorized reading/corrections, separately from the handwritten fields.
+        try:
+            previous_result = json.loads(failed["result_json"] or "{}")
+        except (TypeError, ValueError):
+            previous_result = None
+        if isinstance(previous_result, dict):
+            for key in ("asr_source", "conversation_text"):
+                if previous_result.get(key) is not None:
+                    result[key] = previous_result[key]
+        result.setdefault("conversation_text", failed["input_text"] or "")
+        task_id = connection.execute("""
+            INSERT INTO agent_task(input_type,input_text,status,current_stage,created_at,updated_at,owner_user_id,encounter_id)
+            VALUES (?,?,'WAITING_DOCTOR_REVIEW','waiting_doctor_review',?,?,?,?)
+        """, (failed["input_type"], failed["input_text"], now, now, doctor_id, encounter_id)).lastrowid
+        connection.execute("UPDATE encounter SET task_id=?, min_writer_protocol=MAX(min_writer_protocol,3) WHERE id=?",
+                           (task_id, encounter_id))
+        revision_id = _insert_record_revision_row(connection, task_id=task_id, encounter_id=encounter_id, result=result,
+                                                  actor_user_id=doctor_id, source="doctor_manual_first")
+        content_hash = record_content_hash(result)
+        result["record_revision"] = {"id": revision_id, "revision_no": 1, "source": "doctor_manual_first",
+                                     "content_hash": content_hash}
+        _update_encounter_revision_row(connection, encounter_id=encounter_id, revision_id=revision_id, workflow_status="waiting_review")
+        _update_task_result_revision_row(connection, task_id=task_id, result=result, status="WAITING_DOCTOR_REVIEW",
+                                         current_stage="waiting_doctor_review", encounter_id=encounter_id, revision_id=revision_id)
+        connection.execute("INSERT INTO clinician_first_draft_request VALUES (?,?,?,?,?)",
+                           (encounter_id, doctor_id, request_id, input_hash, revision_id))
+        _insert_audit_log_row(connection, task_id=task_id, event_type="doctor_manual_first_saved",
+                              event_detail={"revision_id": revision_id, "content_hash": content_hash, **origin.model_dump()},
+                              actor_user_id=doctor_id, resource_type="record_revision", resource_id=revision_id)
+        return {"task_id": task_id, "revision_id": revision_id, "content_hash": content_hash,
+                "clinician_draft_origin": origin.model_dump()}, True
 
 
 def bind_task_to_encounter(
@@ -1573,9 +1687,9 @@ def create_approval_for_task(
                 encounter_id, revision_id, task_id, approved_by_user_id,
                 content_hash, status, created_at, invalidated_at, invalidation_reason, writer_protocol
             )
-            VALUES (?, ?, ?, ?, ?, 'active', ?, NULL, NULL, 2)
+            VALUES (?, ?, ?, ?, ?, 'active', ?, NULL, NULL, ?)
             """,
-            (encounter_id, revision_id, task_id, actor_user_id, revision_hash, now),
+            (encounter_id, revision_id, task_id, actor_user_id, revision_hash, now, max(2, revision["writer_protocol"])),
         )
         approval_id = int(cursor.lastrowid)
         for item in approval_items or []:
@@ -1616,6 +1730,11 @@ def create_approval_for_task(
             )},
             "approval_summary": {"item_count": len(approval_items or []), "items": approval_items or []},
         })
+        if signed_result.get("clinician_draft_origin") and actor_user_id is not None:
+            # Keep the name as it was at approval. The person exporting a copy may be a different user.
+            signer = connection.execute("SELECT display_name FROM auth_user WHERE id=?", (actor_user_id,)).fetchone()
+            if signer:
+                signed_result["approval"]["approved_by_name"] = signer["display_name"]
         connection.execute(
             "UPDATE agent_task SET current_stage = 'approved', result_json = ?, updated_at = ? WHERE id = ?",
             (json_dumps(signed_result), now, task_id),
@@ -1706,7 +1825,7 @@ def create_export_event_for_task(
                 encounter_id, revision_id, approval_id, task_id,
                 exported_by_user_id, exports_json, created_at, writer_protocol
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, 2)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 approval["encounter_id"],
@@ -1716,6 +1835,7 @@ def create_export_event_for_task(
                 actor_user_id,
                 json_dumps(exports),
                 now,
+                max(2, approval["writer_protocol"]),
             ),
         )
         export_event_id = int(cursor.lastrowid)

@@ -30,6 +30,7 @@ from reportlab.platypus import (
 
 from app.schemas import MedicalField, MedicalRecordFields, SafetyCheckResult
 from app.schemas.clinician_assessment import ClinicianAssessment
+from app.schemas.clinician_draft import ClinicianDraftOrigin
 from app.services.privacy import anonymize_text
 
 
@@ -418,7 +419,8 @@ def _pdf_sections(
         ("体格及专科检查", exam or "待医生查体补充", None if exam else missing_note("physical_exam")),
         ("辅助检查", auxiliary or "本次未提供；如有检验检查结果，请在病历系统中补录。", None),
         *assessment_sections,
-        ("系统候选诊断" if clinician_assessment else "诊断", diagnosis_text, "AI 候选诊断必须由医生确认，不构成诊断结论。"),
+        ("系统候选诊断" if clinician_assessment else "诊断", diagnosis_text,
+         "AI 候选诊断必须由医生确认，不构成诊断结论。" if retained else None),
         (
             "治疗意见",
             treatment or missing_note("treatment_notes") or "待医生补充。",
@@ -442,6 +444,8 @@ def render_pdf(
     patient_display_name: str | None = None,
     doctor_name: str | None = None,
     clinician_assessment: ClinicianAssessment | None = None,
+    clinician_draft_origin: ClinicianDraftOrigin | None = None,
+    itemized_approval: dict[str, Any] | None = None,
 ) -> Path:
     """Hospital-style outpatient record: meta header, sections, signature block."""
     styles = _pdf_styles()
@@ -469,7 +473,8 @@ def render_pdf(
             styles["subtitle"],
         ),
         Paragraph(record_title, styles["title"]),
-        Paragraph("AI 辅助生成 · 医生审核确认后方可作为病历使用", styles["subtitle"]),
+        Paragraph("首稿为医生手录 · 审核状态见签署栏" if clinician_draft_origin
+                  else "AI 辅助生成 · 医生审核确认后方可作为病历使用", styles["subtitle"]),
         Spacer(1, 4 * mm),
     ]
 
@@ -505,6 +510,9 @@ def render_pdf(
     story.extend([meta_table, Spacer(1, 3 * mm), HRFlowable(width="100%", color=colors.HexColor("#c9d4e3"))])
 
     sections = _pdf_sections(fields, clinician_assessment)
+    if clinician_draft_origin:
+        origin_text = clinician_draft_origin.display(recorded_at=_pdf_time(clinician_draft_origin.recorded_at))
+        story.append(Paragraph(_pdf_text(origin_text), styles["note"]))
     signing_section = []
     for index, (heading, body, note) in enumerate(sections):
         # Long sections must flow across pages. Keeping the whole block
@@ -525,7 +533,13 @@ def render_pdf(
         Spacer(1, 2 * mm),
         Paragraph("医师签名：__________________　　日期：______年____月____日", styles["signature"]),
     ]
-    notice = [Spacer(1, 2 * mm), Paragraph(WORD_NOTICE, styles["note"])]
+    notice = [Spacer(1, 2 * mm), Paragraph("首稿来源见执笔记录。" if clinician_draft_origin else WORD_NOTICE, styles["note"])]
+    if clinician_draft_origin and approved and itemized_approval:
+        signer = itemized_approval.get("approved_by_name") or "姓名未记录"
+        actor_id = itemized_approval.get("approved_by_user_id")
+        stamp = _pdf_time(itemized_approval["created_at"])
+        signed = f"本版软件分项审核人：{signer}（账号 {actor_id}）　审核时间：{stamp}"
+        signature.insert(-1, Paragraph(_pdf_text(signed), styles["note"]))
     if clinician_assessment:
         story.append(KeepTogether(signature + notice))
     else:
@@ -583,6 +597,9 @@ def export_record(
             patient_deidentified_id=result.get("patient_deidentified_id"),
             patient_display_name=result.get("patient_display_name"),
             doctor_name=doctor_name or result.get("doctor_name"),
+            clinician_draft_origin=ClinicianDraftOrigin.model_validate(result["clinician_draft_origin"])
+            if result.get("clinician_draft_origin") else None,
+            itemized_approval=result.get("approval") if (result.get("approval") or {}).get("id") == approval_id else None,
             clinician_assessment=ClinicianAssessment.model_validate(result["clinician_assessment"])
             if result.get("clinician_assessment") else None,
         )

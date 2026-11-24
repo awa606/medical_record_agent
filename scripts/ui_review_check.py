@@ -211,6 +211,36 @@ def audit(page: Page, name: str, steps: list[dict], *, check_axe: bool = True) -
     page.screenshot(path=str(OUT / f"audit_{name}.png"), full_page=True)
 
 
+def check_cancel_notice_at_320(page, steps: list[dict]) -> None:
+    page.click("#editRecordButton")
+    page.click("#cancelRecordEditButton")
+    toast = page.locator("#toast")
+    page.wait_for_function("""() => {
+      const toast = document.getElementById('toast');
+      return toast.classList.contains('active') && getComputedStyle(toast).opacity === '1';
+    }""")
+    # Sampling after a resize can miss a brief, low-contrast opacity transition.
+    # A duration > 0 for `all` also animates opacity even when it is not named.
+    read_state = """el => {
+      const style = getComputedStyle(el);
+      const durations = style.transitionDuration.split(',').map(parseFloat);
+      const fades = style.transitionProperty.split(',').some((property, i) =>
+        ['opacity', 'all'].includes(property.trim()) && durations[i % durations.length] > 0);
+      return {opacity: Number(style.opacity), fades, transition: style.transitionProperty};
+    }"""
+    shown = toast.evaluate(read_state)
+    announced = (toast.text_content() == "未保存修改已取消" and toast.get_attribute("role") == "status"
+                 and toast.get_attribute("aria-live") == "polite")
+    page.wait_for_function("() => !document.getElementById('toast').classList.contains('active')", timeout=8000)
+    dismissed = toast.evaluate(read_state)
+    steps.append({
+        "step": "cancel_notice_320",
+        "ok": announced and shown["opacity"] == 1 and dismissed["opacity"] == 0
+              and not shown["fades"] and not dismissed["fades"],
+        "detail": f"announced={announced} shown={shown} dismissed={dismissed}",
+    })
+
+
 def run() -> dict:
     OUT.mkdir(parents=True, exist_ok=True)
     if not (ROOT / "static" / "help" / "manual.html").exists() or not (ROOT / "static" / "help" / "help-nav.js").exists():
@@ -379,6 +409,7 @@ def run() -> dict:
             page.set_viewport_size({"width": 320, "height": 640})
             page.wait_for_timeout(400)
             audit(page, "workspace_320_reflow", steps)
+            check_cancel_notice_at_320(page, steps)
             page.click("#openEmbeddedHelpButton")
             page.frame_locator("#embeddedHelpFrame").locator("h1").wait_for(timeout=20000)
             audit(page, "help_drawer_320", steps)

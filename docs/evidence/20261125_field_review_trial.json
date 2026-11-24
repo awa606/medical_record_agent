@@ -111,5 +111,52 @@
   ],
   "independent_lifecycle_receipt_sha256": "72830db501c79f24731f4a2204561fdd22f96c0be645c8ad6d42cfdef59933f9",
   "model_inferences": 0,
-  "clinical_reviewers": 0
+  "clinical_reviewers": 0,
+  "r4_1": {
+    "commit": "ebece5c7ffb863f334034095e464d871561933e1",
+    "archive_sha256": "5ecc3913659f89e0f4d6b83ea30e99dbdecb3360dc0c3d0412bd45ba87ef5c8d",
+    "bytes": 73436479,
+    "matched_git_inputs": 170,
+    "saved_pdf_sha256": "2271ecdbc21c9e42c124a10a68225c479ebb862751848faaced3abeffb2b7774",
+    "signed_pdf_bytes": 41244,
+    "model_inferences": 0,
+    "public_help_qa_sha256": "53418d2cf6c4ddad240c0e95becb766fb946b94b04084c0542f75e44ae2508a3",
+    "old_help_target_404": 12,
+    "new_help_target_200_each_width": 14,
+    "help_widths": [
+      "1366",
+      "390"
+    ],
+    "preserved_edit_and_record": true,
+    "knowledge_lifecycle": "PASS",
+    "knowledge_lifecycle_sha256": "04383b6a31a7be162860079be957cd0fdde215e055e20e1b1c9021e29241eb3a",
+    "remote_contrast_regression_run": 45440158648,
+    "local_audit_checks": 80,
+    "downloads": [
+      {
+        "width": 320,
+        "sha256": "5ecc3913659f89e0f4d6b83ea30e99dbdecb3360dc0c3d0412bd45ba87ef5c8d",
+        "bytes": 73436479,
+        "comparison": true,
+        "external_requests": 0,
+        "page_errors": []
+      },
+      {
+        "width": 390,
+        "sha256": "5ecc3913659f89e0f4d6b83ea30e99dbdecb3360dc0c3d0412bd45ba87ef5c8d",
+        "bytes": 73436479,
+        "comparison": true,
+        "external_requests": 0,
+        "page_errors": []
+      },
+      {
+        "width": 1366,
+        "sha256": "5ecc3913659f89e0f4d6b83ea30e99dbdecb3360dc0c3d0412bd45ba87ef5c8d",
+        "bytes": 73436479,
+        "comparison": true,
+        "external_requests": 0,
+        "page_errors": []
+      }
+    ]
+  }
 }

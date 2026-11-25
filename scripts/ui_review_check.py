@@ -367,9 +367,15 @@ def run() -> dict:
             page.wait_for_selector("#recordFields .record-section", timeout=60000)
             page.wait_for_timeout(1200)
             task_after_reload = page.evaluate("window.__MRA_APP_STATE__?.currentTaskId")
+            page.wait_for_function(
+                "document.querySelector('#encounterLoadAnnouncement').textContent === '已恢复就诊草稿'",
+                timeout=15000,
+            )
+            restore_toast_visible = page.locator("#toast.active").filter(has_text="已恢复就诊草稿").is_visible()
             steps.append({
                 "step": "session_recovery",
-                "ok": task_before_reload == task_after_reload and page.locator("#recordFields .record-section").count() >= 5,
+                "ok": task_before_reload == task_after_reload and not restore_toast_visible
+                      and page.locator("#recordFields .record-section").count() >= 5,
                 "detail": {"before": task_before_reload, "after": task_after_reload},
             })
             audit(page, "session_recovery", steps)

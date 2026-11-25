@@ -1361,6 +1361,8 @@ async function restoreEncounter(encounterId, { nextInputMethod = "", sessionId =
   }
   if (encounterSwitchBlocked()) return;
   const restoreVersion = beginEncounterRead();
+  const loadAnnouncement = $("encounterLoadAnnouncement");
+  if (loadAnnouncement) loadAnnouncement.textContent = "";
   const ownerId = appState.authUser.id;
   const stillCurrent = () => restoreVersion === appState.encounterRestoreVersion && ownerId === appState.authUser?.id;
   appState.encounterRestoreTarget = { encounterId, sessionId };
@@ -1390,7 +1392,7 @@ async function restoreEncounter(encounterId, { nextInputMethod = "", sessionId =
     refreshEncounterWorklist().catch(() => {});
     appState.pendingInputMethodAfterEncounterSelection = "";
     appState.encounterSelectionNotice = "";
-    showToast("已恢复就诊草稿");
+    if (loadAnnouncement) loadAnnouncement.textContent = "已恢复就诊草稿";
     if (nextInputMethod === "record") {
       openReservedRecording();
     } else if (nextInputMethod === "audio") {

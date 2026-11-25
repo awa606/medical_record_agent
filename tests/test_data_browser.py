@@ -76,6 +76,9 @@ class SnapshotTests(unittest.TestCase):
                 INSERT INTO export_event(id,encounter_id,task_id,revision_id,approval_id) VALUES(1,1,1,1,1);
                 INSERT INTO knowledge_source(source_id,title) VALUES('source','官方指南');
                 INSERT INTO knowledge_document(document_id,source_id,version,is_active) VALUES('doc','source','v1',0);
+                INSERT INTO knowledge_document_source(document_id,title,metadata_origin) VALUES('doc','当时可见的旧题名','legacy_observed');
+                ALTER TABLE knowledge_document_source ADD COLUMN internal_note TEXT;
+                UPDATE knowledge_document_source SET internal_note='DO_NOT_EXPORT_METADATA_NOTE';
                 INSERT INTO knowledge_chunk(chunk_id,document_id,section,page,content) VALUES('chunk','doc','章节',1,'完整片段正文');
                 INSERT INTO knowledge_embedding VALUES('chunk','bge',384,'DO_NOT_EXPORT_VECTOR','2026-09-28');
             """)
@@ -99,7 +102,16 @@ class SnapshotTests(unittest.TestCase):
             self.assertEqual(c.execute("select count(*) from patient").fetchone()[0], 1)
             self.assertEqual(c.execute("select value from revision_field").fetchone()[0], "发热")
             self.assertEqual(c.execute("select is_active from knowledge_document").fetchone()[0], 0)
+            self.assertEqual(c.execute("select title,metadata_origin from knowledge_document_source").fetchone(),
+                             ("当时可见的旧题名", "legacy_observed"))
             self.assertEqual({r[0] for r in c.execute("select name from sqlite_master where type='table'")}, set(TABLES))
+
+    def test_pre_versioning_archive_does_not_claim_a_historical_source(self):
+        with database(self.source) as c:
+            c.execute("DROP TABLE knowledge_document_source")
+        manifest = self.export()
+        self.assertEqual(manifest["table_counts"]["knowledge_document_source"], 0)
+        self.assertEqual(manifest["table_counts"]["knowledge_document"], 1)
 
     def test_allowlist_required_and_unknown_id_rejected(self):
         self.policy.write_text(json.dumps({"confirmed_synthetic": False, "synthetic_patient_ids": ["SIM-APPROVED"]}))

@@ -170,13 +170,26 @@ def test_export_uses_authenticated_download_endpoint_not_server_paths() -> None:
     export_body = function_body(js, "exportRecord")
 
     assert "function downloadTaskExport" in js
-    assert "/exports/${encodeURIComponent(format)}" in js
+    assert "/exports/pdf${query}" in function_body(js, "downloadTaskExport")
     assert "data-export-download-format" in js
-    assert "exportSummaryRows" in detail_body
-    assert "renderExportDownloadActions" in detail_body
+    assert "currentExportFile(readiness)" in detail_body
+    assert "pdf_path" not in detail_body
     assert "Object.entries(exports)" not in detail_body
     assert "Object.values(result.exports" not in export_body
-    assert 'downloadTaskExport("docx")' in export_body
+    assert "downloadTaskExport(context, file.pdf_sha256, readiness.revision_number)" in export_body
+    assert 'expected.set("expected_revision_id"' in export_body
+    assert 'expected.set("expected_approval_id"' in export_body
+    assert "isCurrentRead(context)" in function_body(js, "downloadTaskExport")
+    assert '?sha256=${encodeURIComponent(sha256)}' in js
+
+
+def test_export_receipt_copy_distinguishes_restoring_original_from_regenerating() -> None:
+    js = read_static("doctor.js")
+    for view in ("renderFooter", "renderStepPrompt", "nextActionState", "renderExportReadinessDetail"):
+        assert "PDF 导出记录" in function_body(js, view), view
+    retry = function_body(js, "exportRecord")
+    assert "从对应备份恢复原 PDF 到导出目录" in retry
+    assert "重新生成会创建新的导出记录" in retry
 
 
 def test_admin_and_reference_copy_hide_debug_values() -> None:

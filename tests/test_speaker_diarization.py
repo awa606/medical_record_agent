@@ -9,6 +9,41 @@ from app.schemas.asr import (
     ASRSpeakerRoleCorrection,
 )
 from app.services.asr.speaker_diarization import enhance_speaker_diarization
+from app.services.asr.auto_roles import ensure_automatic_speaker_roles
+
+
+def test_review_summary_is_derived_from_segment_decisions_after_reload():
+    segment = ASRSegment(speaker_id="a", text="今天有点咳嗽。")
+    result = ASRResult(audio_id="synthetic",engine="offline",text=segment.text,conversation_text="",segments=[segment])
+    stale = result.model_dump()
+    stale["reviewed_by_doctor"] = True
+    assert not ASRResult.model_validate(stale).reviewed_by_doctor
+    assert not ASRResult.model_validate({**stale,"segments":[]}).reviewed_by_doctor
+    assert not ASRResult.model_validate({**stale,"segments":[{**stale["segments"][0],
+        "reviewed_by_doctor":True,"provisional":True}]}).reviewed_by_doctor
+
+
+def test_doctor_review_is_preserved_per_segment_in_strict_and_demo_roles(monkeypatch):
+    raw=ASRResult(audio_id="synthetic",engine="offline",text="",conversation_text="",segments=[
+        ASRSegment(segment_id="one",speaker="spk0",text="我今天有些咳嗽",start_time=0,end_time=2),
+        ASRSegment(segment_id="two",speaker="spk0",text="嗯。",start_time=2.1,end_time=3),
+        ASRSegment(segment_id="three",speaker="spk1",text="从什么时候开始？",start_time=4,end_time=6)])
+    partial=_apply_segment_corrections(raw, ASRSessionCorrectionRequest(segments=[
+        ASRSegmentCorrection(index=0,role="患者",reviewed_by_doctor=True)]))
+    for mode in ("edge","demo"):
+        monkeypatch.setenv("RECORD_PROVIDER_MODE",mode)
+        result=ensure_automatic_speaker_roles(partial)
+        assert not result.reviewed_by_doctor
+        assert [(s.segment_id,s.role) for s in result.segments if s.reviewed_by_doctor] == [("one","患者")]
+        assert not any(a.source.startswith("manual") for a in result.speaker_assignments)
+        assert not ASRResult.model_validate_json(result.model_dump_json()).reviewed_by_doctor
+    whole=_apply_segment_corrections(raw, ASRSessionCorrectionRequest(speaker_roles=[
+        ASRSpeakerRoleCorrection(speaker_id="spk0",role="患者"),
+        ASRSpeakerRoleCorrection(speaker_id="spk1",role="医生")]))
+    for mode in ("edge","demo"):
+        monkeypatch.setenv("RECORD_PROVIDER_MODE",mode)
+        result=ensure_automatic_speaker_roles(whole)
+        assert result.reviewed_by_doctor and all(s.reviewed_by_doctor for s in result.segments)
 
 
 class SpeakerDiarizationAssistTests(unittest.TestCase):

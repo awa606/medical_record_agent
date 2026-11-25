@@ -6,12 +6,13 @@
     <title>MediListen - AI 智能病历助手</title>
     <link rel="icon" href="./brand/medilisten-v1.ico" sizes="any" />
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
-    <link rel="stylesheet" href="./doctor.css?v=alpha51-history-20261020" />
-    <link rel="stylesheet" href="./doctor-ui-v2.css?v=alpha51-task-layout-20261016" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=alpha51-transcript-header-20261029" />
+    <link rel="stylesheet" href="./doctor.css?v=0a613f8edbc66aa5" />
+    <link rel="stylesheet" href="./doctor-ui-v2.css?v=e54cc5c3d1902782" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=73890f23f99ff67b" />
   </head>
   <body class="doctor-mode standard-mode">
-    <div class="doctor-app">
+<a class="skip-link" href="#mainContent" inert>跳到主要内容</a>
+    <div class="doctor-app" hidden>
       <header class="topbar">
         <div class="brand-block">
           <img class="brand-mark" src="./brand/medilisten-v1.png" alt="" aria-hidden="true" />
@@ -43,6 +44,7 @@
                   <button type="button" id="debugModeButton">调试模式</button>
                 </div>
               </section>
+              <p id="settingsDeployment" class="settings-deployment"></p>
               <section>
                 <span class="settings-label">截图显示</span>
                 <div class="settings-button-row capture-switch" aria-label="截图显示模式">
@@ -93,7 +95,7 @@
         </button>
         <button type="button" class="product-nav-item" data-product-view-target="encounter" aria-label="就诊工作区">
           <span class="product-nav-full">就诊工作区</span><span class="product-nav-short" aria-hidden="true">就诊</span>
-          <small>转写 · 病历 · 审核</small>
+          <small>转写·病历·审核</small>
         </button>
         <button type="button" class="product-nav-item" data-product-view-target="admin" aria-label="管理后台">
           <span class="product-nav-full">管理后台</span><span class="product-nav-short" aria-hidden="true">管理</span>
@@ -103,12 +105,12 @@
           <span class="environment-dot" aria-hidden="true"></span>
           <div>
             <strong>受控试点环境</strong>
-            <small>AI 结果需医生审核</small>
+            <small>AI结果需医生审核</small>
           </div>
         </div>
       </nav>
 
-      <main class="product-main">
+      <main id="mainContent" class="product-main" tabindex="-1">
 
       <section id="workbenchHome" class="product-view product-dashboard" data-product-view="workbench" aria-label="医生工作台与就诊列表">
         <div class="dashboard-hero">
@@ -166,11 +168,16 @@
             <button type="button" id="refreshWorklistButton">刷新</button>
           </div>
           <div id="dashboardEncounterList" class="encounter-worklist" aria-live="polite"></div>
+          <footer class="workbench-boundary">
+            <span class="environment-dot" aria-hidden="true"></span>
+            <p><strong>受控试点</strong> 当前只显示合成患者；接诊后的病历会在此按状态出现，AI 生成内容需医生审核。</p>
+          </footer>
         </section>
       </section>
 
       <section id="encounterView" class="product-view encounter-view alpha51-workspace" data-product-view="encounter" aria-label="患者就诊工作区">
         <section class="patient-bar encounter-patient-banner" aria-label="患者与会话信息">
+          <span id="patientAvatar" class="patient-avatar" aria-hidden="true">患</span>
           <div class="patient-identity-cell">
             <span class="meta-label">当前患者</span>
             <strong id="patientName">-</strong>
@@ -209,18 +216,18 @@
         </section>
 
         <section class="encounter-command-center" aria-label="病历生成流程与下一步操作">
-          <section class="workflow-panel" aria-label="病历生成流程">
-            <ol id="workflowSteps" class="workflow-steps"></ol>
+          <section class="workflow-panel" aria-label="病历生成流程" tabindex="0">
+            <ol id="workflowSteps" class="workflow-steps" tabindex="0" aria-label="就诊流程步骤"></ol>
           </section>
 
           <section id="stepPrompt" class="step-prompt" aria-live="polite">
             请上传问诊音频或粘贴问诊文本开始。
           </section>
 
-          <div class="workspace-panel-switches" aria-label="辅助工作区">
+          <div id="encounterSourceTools"><div class="workspace-panel-switches" aria-label="辅助工作区">
             <button type="button" id="showTranscriptButton" data-workspace-panel="transcript">转写与录音</button>
             <button type="button" id="showReferenceButton" data-workspace-panel="assist">诊疗参考</button>
-          </div>
+          </div></div>
         </section>
 
         <section id="transcriptionFailurePanel" class="failure-recovery-panel" hidden aria-live="polite">
@@ -244,6 +251,7 @@
             </dl>
           </div>
           <div class="failure-actions">
+            <button type="button" class="primary-action" id="openManualFirstButton" hidden>手写病历</button>
             <button type="button" class="primary-action" id="retryTranscriptionButton">重新转写</button>
             <button type="button" id="fallbackTextInputButton">改用文本输入</button>
             <button type="button" id="openTechnicalDetailButton">查看技术详情</button>
@@ -283,13 +291,24 @@
       </section>
 
       <div class="workbench" aria-label="医生工作台主体">
+        <aside class="chart-context" aria-label="本次就诊资料">
+          <details id="chartContextDetails" open>
+            <summary>本次病历摘要 <span id="chartContextStatus"></span></summary>
+            <div id="chartContextFacts" class="chart-context-facts"></div>
+          </details>
+          <div id="chartContextTools"></div>
+        </aside>
         <aside class="column field-column">
           <div class="panel-header">
             <div>
               <h2>门诊病历</h2>
-              <p>核对 AI 提取字段，缺失和低置信内容会单独标记。</p>
+              <p id="recordFieldsHelp">核对 AI 提取字段，缺失和低置信内容会单独标记。</p>
             </div>
             <span id="fieldCountBadge" class="status-badge neutral">-</span>
+            <details class="chart-chapters">
+              <summary>病历目录</summary>
+              <nav id="recordNavigation" class="record-navigation" aria-label="病历章节定位" hidden></nav>
+            </details>
           </div>
           <div id="reviewBoundaryNotice" class="review-boundary-notice" hidden></div>
           <div id="recordFields" class="field-list"></div>
@@ -591,13 +610,18 @@
         </details>
       </section>
 
-      <section id="detailPanel" class="drawer-panel">
+      <section id="detailPanel" class="drawer-panel" tabindex="0" aria-labelledby="drawerTitle">
         <div id="detailDrawerContent" class="drawer-result detail-drawer-content"></div>
       </section>
     </aside>
 
-    <section id="loginPanel" class="login-panel" aria-live="polite">
-      <div class="login-shell">
+    <section id="loginPanel" class="login-panel" aria-label="医生工作台访问">
+      <div id="sessionCheck" class="login-card session-check">
+        <h2 id="sessionCheckTitle">登录状态核对</h2>
+        <p id="sessionCheckMessage" role="status">正在核对登录状态，请稍候。</p>
+        <button type="button" id="retrySessionCheck" class="primary-action" hidden>重新核对</button>
+      </div>
+      <div id="loginShell" class="login-shell" hidden inert>
         <aside class="login-brand-pane">
           <div class="login-brand-lockup">
             <img class="brand-mark" src="./brand/medilisten-v1.png" alt="" aria-hidden="true" />
@@ -626,25 +650,69 @@
           </div>
           <label>
             <span>用户名</span>
-            <input id="loginUsername" type="text" autocomplete="username" value="admin" />
+            <input id="loginUsername" type="text" autocomplete="username" required />
           </label>
           <label>
             <span>密码</span>
-            <input id="loginPassword" type="password" autocomplete="current-password" value="admin123456" />
+            <input id="loginPassword" type="password" autocomplete="current-password" required />
           </label>
-          <button type="submit" class="primary-action login-submit">进入工作台</button>
-          <div id="loginMessage" class="login-message"></div>
+          <button type="submit" class="primary-action login-submit" disabled>进入工作台</button>
+          <div id="loginMessage" class="login-message" role="status"></div>
           <p class="login-help">登录问题请联系试点环境管理员。<button type="button" id="loginHelpButton">使用帮助</button></p>
         </form>
       </div>
     </section>
 
+    <dialog id="audioRevisionDialog" class="manual-first-dialog audio-revision-dialog" aria-labelledby="audioRevisionTitle">
+      <form id="audioRevisionForm">
+        <div class="audio-revision-head">
+          <h2 id="audioRevisionTitle">按订正录音建立新版本</h2>
+          <button type="button" id="closeAudioRevision" aria-label="关闭录音修订">关闭</button>
+        </div>
+        <p id="audioRevisionContext"></p>
+        <p id="audioRevisionStatus" role="status" aria-live="polite" tabindex="-1"></p>
+        <fieldset id="audioRevisionBody" hidden>
+          <legend class="sr-only">核对录音与病历</legend>
+          <audio id="audioRevisionPlayer" controls preload="metadata" aria-label="本次就诊原声" hidden></audio>
+          <details open>
+            <summary>对照两次录音转写</summary>
+            <div class="audio-revision-sources" id="audioRevisionSources"></div>
+          </details>
+          <h3>逐项处理原病历</h3>
+          <p>保留的文字将记为医生确认。选择引用时，新版会写入所选分段的原话。</p>
+          <div id="audioRevisionChoices"></div>
+          <label id="audioRevisionAddLabel">补充空字段
+            <select id="audioRevisionAdd"><option value="">选择字段</option></select>
+          </label>
+          <label class="audio-revision-confirm"><input type="checkbox" id="audioRevisionConfirmed" required>我已对照订正后的录音转写，确认以上选择。</label>
+          <button type="submit" class="primary-action" id="saveAudioRevision">保存新版本</button>
+        </fieldset>
+      </form>
+    </dialog>
+
+    <dialog id="manualFirstDialog" class="manual-first-dialog" aria-labelledby="manualFirstTitle">
+      <form id="manualFirstForm">
+        <h2 id="manualFirstTitle">手写病历</h2>
+        <p id="manualFirstContext"></p>
+        <p>至少填写主诉或现病史一项。只记录您核实的内容。保存后形成待审核的第一版病历。</p>
+        <label for="manualFirstChief">主诉</label>
+        <textarea id="manualFirstChief" rows="2" maxlength="4000"></textarea>
+        <label for="manualFirstIllness">现病史</label>
+        <textarea id="manualFirstIllness" rows="4" maxlength="4000"></textarea>
+        <p id="manualFirstNotice" role="status"></p>
+        <div class="manual-first-actions">
+          <button type="submit" class="primary-action" id="manualFirstSave">保存手写首稿</button>
+          <button type="button" id="manualFirstClose">返回本次就诊</button>
+        </div>
+      </form>
+    </dialog>
     <dialog id="helpDialog" class="help-drawer" aria-labelledby="helpDialogTitle">
-      <header class="help-drawer-header"><h2 id="helpDialogTitle">使用帮助</h2><button type="button" id="closeEmbeddedHelpButton">关闭</button></header>
-      <p class="help-drawer-caption">帮助在本窗口内打开；关闭后继续当前操作。</p>
+      <header class="help-drawer-header"><h2 id="helpDialogTitle">使用帮助</h2><div class="help-drawer-actions"><button type="button" id="helpBackButton">返回上一页</button><button type="button" id="closeEmbeddedHelpButton">关闭</button></div></header>
+      <p class="help-drawer-caption">帮助在本窗口内打开；进入子页面后可用“返回上一页”，关闭后继续当前操作。</p>
       <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
     </dialog>
+    <div id="encounterLoadAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=alpha51-role-sections-20261027"></script>
+    <script src="./doctor.js?v=631e07fa0efded84"></script>
   </body>
 </html>

@@ -137,7 +137,7 @@ def test_live_patient_symptoms_and_negation_remain_visible(role) -> None:
     assert result["record_patch"]["chief_complaint"]["value"] == "发热伴咳嗽"
     assert "38.2℃" in result["record_patch"]["present_illness"]["value"]
     assert "没有药物过敏" in result["record_patch"]["allergy_history"]["value"]
-    assert result["differentials"]
+    assert result["differentials"] == result["care_plan"] == []
 
 
 @pytest.mark.parametrize("role", ["家属", "家长", "陪同人员"])
@@ -152,7 +152,7 @@ def test_live_family_explicit_child_report_retains_child_not_parent_facts(role) 
     assert "past_history" not in patch
     assert "associated_symptoms" not in patch
     assert result["alerts"] == []
-    assert result["differentials"]
+    assert result["differentials"] == result["care_plan"] == []
     assert patch["present_illness"]["evidence_segment_ids"] == ["seg-1"]
 
 
@@ -248,4 +248,4 @@ def test_live_contrast_boundary_keeps_patient_facts_in_both_orders(role, patient
     assert "past_history" not in patch
     assert "associated_symptoms" not in patch
     assert result["alerts"] == []
-    assert result["differentials"]
+    assert result["differentials"] == result["care_plan"] == []

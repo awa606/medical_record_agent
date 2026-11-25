@@ -1,5 +1,6 @@
 """Exercise presentation logic only; no real browser, ASR, model or API calls."""
 import json
+from html import unescape
 from pathlib import Path
 
 import pytest
@@ -56,12 +57,35 @@ console.log(JSON.stringify({presentation:transcriptRowPresentation(row), unchang
     assert result["presentation"]["state"] == expected_state
 
 
+@pytest.mark.parametrize("overrides, expected", [
+    ({}, "confirmed"),
+    ({"role_source": "manual_speaker_map", "role_warning": "系统自动推定"}, "confirmed"),
+    ({"reviewed_by_doctor": False}, "inferred"),
+    ({"reviewed_by_doctor": "false"}, "inferred"),
+    ({"needs_review": True}, "inferred"),
+    ({"role_source": "automatic"}, "inferred"),
+    ({"role_warning": "需重新核实音段来源"}, "inferred"),
+])
+def test_saved_asr_role_uses_explicit_review_with_historical_warning(overrides, expected):
+    segment = {
+        "text": "昨天没有这个感觉。", "speaker_id": "spk0", "role": "患者",
+        "role_source": "manual", "reviewed_by_doctor": True, "needs_review": False,
+        "role_warning": "系统自动推定说话人角色，最终病历字段仍需医生审核。", **overrides,
+    }
+    result = run_browser_logic("const segment=" + json.dumps(segment, ensure_ascii=False) + r""";
+appState.currentAsrResult={segments:[segment]}; appState.liveTranscriptSegments=[];
+const before=JSON.stringify(segment); const display=transcriptRowPresentation(transcriptRows()[0]);
+console.log(JSON.stringify({state:display.state, unchanged:JSON.stringify(segment)===before}));
+""")
+    assert result == {"state": expected, "unchanged": True}
+
+
 @pytest.mark.parametrize("approved, review, expected", [
     (True, "not_asked_confirmed", "本次未询问（医生已确认）"),
     (True, "missing_accepted", "本次资料缺失（医生已接受）"),
     (True, "", "该字段无记录；历史病历已审核，未记录分项处理原因"),
-    (False, "not_asked_confirmed", "建议补问：发热多久？"),
-    (False, "", "建议补问：发热多久？"),
+    (False, "not_asked_confirmed", "医生确认本次未询问"),
+    (False, "", "此栏尚无已记录的内容，请核对原文或补录。"),
 ])
 def test_approved_missing_presentation_uses_recorded_review_and_preserves_original(approved, review, expected):
     field = {"value": "", "hint": "建议补问：发热多久？", "missing": True,
@@ -72,7 +96,7 @@ const text=recordFieldDisplayValue({chief_complaint:field}, 'chief_complaint', a
 console.log(JSON.stringify({text,raw:fieldValue({chief_complaint:field}, 'chief_complaint'),unchanged:JSON.stringify(field)===before}));
 """)
     assert result["text"] == expected
-    assert result["raw"] == "建议补问：发热多久？"
+    assert result["raw"] == {"not_asked_confirmed": "医生确认本次未询问", "missing_accepted": "医生接受本次信息缺失"}.get(review, "此栏尚无已记录的内容，请核对原文或补录。")
     assert result["unchanged"]
 
 
@@ -124,7 +148,75 @@ console.log(JSON.stringify({html,unchanged:JSON.stringify(fields)===before}));
         assert '>待补充<' not in result['html']
     else:
         assert '生成时提示（历史记录）' not in result['html']
+        assert '追问建议（待核对）' in result['html']
         assert '>待补充<' in result['html']
+
+
+@pytest.mark.parametrize("signed,review,status,confidence,expected", [
+    (True, "content_confirmed", "complete", None, "内容已确认"),
+    (True, "pending", "complete", None, "未记录分项决定"),
+    (False, "pending", "complete", 0.81, "待医生审核"),
+    (False, "content_confirmed", "complete", None, "待医生审核"),
+    (True, "content_confirmed", "conflicting", None, "证据冲突 · 需修正"),
+    (False, "pending", "conflicting", None, "证据冲突"),
+])
+def test_field_detail_distinguishes_review_from_draft_quality(signed, review, status, confidence, expected):
+    field = {"value": "合成主诉", "missing": False, "status": status, "confidence": confidence,
+             "confirmed_by_doctor": review == "content_confirmed", "doctor_review_status": review}
+    setup = "const signed=" + json.dumps(signed) + ",field=" + json.dumps(field, ensure_ascii=False) + ";"
+    html = run_browser_logic(setup + r"""
+const quality={key:"chief_complaint",status:"needs_doctor_review",reason:"主诉来自系统抽取，尚未医生确认。"};
+activeRecordFields=()=>({chief_complaint:field}); currentRevisionIsSigned=()=>signed;
+doctorDisplayState=()=>({key:signed?"approved":"review"});
+activeQualityReport=()=>({field_quality:[quality]});
+console.log(JSON.stringify(renderFieldDetailContent('chief_complaint')));
+""")
+    assert "本版字段状态" in html and f">{expected}<" in html
+    assert "模型置信度" in html and (">未提供<" if confidence is None else ">81%<") in html
+    assert "草稿生成时的自动检查" in html
+    assert ("尚未医生确认" in html) is (not signed)
+
+
+@pytest.mark.parametrize("note,origin", [
+    ("manual_doctor_edit_v1: 医生手工修改；原始转写证据仅供对照，不作为该修改的自动证据。", "医生已修改"),
+    ("manual_doctor_edit_v1: 医生补录；新内容为人工来源，原模型内容和错误引用保留在旧版本。", "医生补录"),
+    ("doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。", "医生根据原文修正"),
+])
+def test_revision_note_keeps_physician_words_and_original_for_debug(note, origin):
+    comment = " 医生补录是患者转述。\n  原句 <来源> & 标点；审核说明：保留。  "
+    result = run_browser_logic("const note=" + json.dumps(note) + ",comment=" + json.dumps(comment) + r""";
+const signed = [false,true].map(flag=>{
+  currentRevisionIsSigned=()=>flag; appState.viewMode="doctor";
+  return renderFieldRevisionNote(note+"；审核说明："+comment);
+});
+const paper=renderFieldRevisionNote(note); const origin=knownFieldRevisionNote(note+"；审核说明："+comment).origin;
+appState.viewMode="debug";
+console.log(JSON.stringify({signed,paper,origin,raw:renderFieldRevisionNote(note+"；审核说明："+comment)}));
+""")
+    assert result["origin"] == origin
+    assert "修订时的操作记录" in result["paper"] and "医生审核说明" not in result["paper"]
+    assert result["signed"][0] == result["signed"][1]
+    shown = result["signed"][0]
+    assert "医生审核说明" in shown and comment in unescape(shown) and "<来源>" not in shown
+    assert "_v1:" not in shown and "需审核当前版本" not in shown
+    assert note + "；审核说明：" + comment in unescape(result["raw"])
+
+
+@pytest.mark.parametrize("note", [
+    "医生根据原文修正，所选证据存在冲突，需重新核对。",
+    "manual_doctor_edit_v1: 医生自行输入的备注，提及医生补录。",
+    "doctor_source_correction_v1: 自由文本；审核说明：附注<保留>。",
+    "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。手写补述",
+    "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。；审核说明：",
+    " 原始备注\n  第二行 & 末尾空格  ",
+])
+def test_unrecognized_revision_note_is_preserved_without_inferred_origin(note):
+    result = run_browser_logic("const note=" + json.dumps(note) + r""";
+appState.viewMode="doctor";
+console.log(JSON.stringify({origin:knownFieldRevisionNote(note),html:renderFieldRevisionNote(note)}));
+""")
+    assert result["origin"] is None and "修订时的操作记录" not in result["html"]
+    assert note in unescape(result["html"])
 
 
 @pytest.mark.parametrize("audio", [True, False])

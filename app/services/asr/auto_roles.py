@@ -5,7 +5,7 @@ import os
 
 from app.schemas.asr import ASRResult, ASRSegment, SpeakerRoleAssignment
 from app.services.asr.role_quality import build_speaker_role_quality
-from app.services.asr.speaker_diarization import ROLE_DOCTOR, ROLE_OTHER, ROLE_PATIENT, enhance_speaker_diarization
+from app.services.asr.speaker_diarization import FINAL_ROLES, ROLE_DOCTOR, ROLE_OTHER, ROLE_PATIENT, enhance_speaker_diarization
 
 
 AUTO_ROLE_WARNING = "系统自动推定说话人角色，最终病历字段仍需医生审核。"
@@ -35,7 +35,9 @@ def ensure_automatic_speaker_roles(result: ASRResult) -> ASRResult:
         return updated.model_copy(update={
             'role_quality': quality,
             'needs_review': quality.status != 'passed',
-            'segments': [segment.model_copy(update={'needs_review': (segment.speaker_id or segment.speaker) in pending}) for segment in updated.segments],
+            'segments': [segment.model_copy(update={'needs_review': (segment.speaker_id or segment.speaker) in pending
+                                                    and not (segment.reviewed_by_doctor and segment.role in FINAL_ROLES)})
+                         for segment in updated.segments],
         })
     segments = updated.segments or [ASRSegment(speaker="speaker_0", speaker_id="speaker_0", text=updated.text)]
     speaker_ids = _ordered_speaker_ids(segments)
@@ -78,6 +80,9 @@ def ensure_automatic_speaker_roles(result: ASRResult) -> ASRResult:
 
     enhanced_segments: list[ASRSegment] = []
     for index, segment in enumerate(segments, start=1):
+        if segment.reviewed_by_doctor and segment.role in FINAL_ROLES:
+            enhanced_segments.append(segment)
+            continue
         speaker_id = _segment_speaker_id(segment, index)
         assignment = replacements[speaker_id]
         low_confidence = assignment.confidence < 0.9 or assignment.source.startswith("auto_provisional")
@@ -107,7 +112,6 @@ def ensure_automatic_speaker_roles(result: ASRResult) -> ASRResult:
             "text": "\n".join(segment.text for segment in enhanced_segments if segment.text.strip()),
             "conversation_text": _conversation_from_segments(enhanced_segments),
             "needs_review": False,
-            "reviewed_by_doctor": False,
             "warnings": warnings,
             "role_strategy": (
                 original_strategy
@@ -118,6 +122,7 @@ def ensure_automatic_speaker_roles(result: ASRResult) -> ASRResult:
             ),
         }
     )
+    stabilized.reviewed_by_doctor = stabilized.all_segments_reviewed()
     return stabilized.model_copy(update={"role_quality": build_speaker_role_quality(stabilized)})
 
 

@@ -47,7 +47,6 @@ def test_review_refreshes_owned_gaps_and_keeps_revision_guards(tmp_path, monkeyp
     provider = ResponseProvider(original.model_dump(mode="json"))
     generator = LLMRecordGenerator(provider=provider, mode="edge", allow_mock_fallback=False)
     generator.max_retries = 0
-    monkeypatch.setattr("app.api.tasks.create_llm_record_generator", lambda: generator)
     generated = MedicalRecordOrchestrator(generator).run_from_text(SOURCE)
     task_id = generated["task_id"]
     set_task_owner(task_id, doctor["id"])

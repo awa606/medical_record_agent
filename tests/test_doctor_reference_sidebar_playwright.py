@@ -16,10 +16,11 @@ def prepare_reference_fixture(page) -> None:
       const s = window.__MRA_APP_STATE__;
       s.currentEncounter = {id: 'SIM-REF-001', patient_display_name: '模拟患者',
         patient_deidentified_id: 'SIM-REF-001', check_in_status: 'checked_in'};
+      const utterance = '今天发热三十八点二度，没有胸痛。';
       const base = s.currentRecordFields.candidate_diagnoses[0];
       s.currentRecordFields.candidate_diagnoses = ['上呼吸道感染', '流行性感冒', '社区获得性肺炎待排'].map((name, i) => ({
         ...base, name, reason: '合成依据：发热与咳嗽，仍需医生结合检查判断。'.repeat(8),
-        evidence: [{text: '合成原文：今天发热三十八点二度，没有胸痛。', segment_id: 'sim-segment-1'}],
+        evidence: [{text: utterance, segment_id: 'sim-segment-1'}],
         suggested_checks: ['合成检查提示：按临床需要评估'], medication_notes: ['合成用药提示：不得自动处方'],
         follow_up_questions: ['合成补问：症状持续多久？'], risk_warnings: ['合成风险：病情变化需医生复核'],
         references: [{title: '合成指南来源（展示测试）', publisher: '测试机构', version: 'fixture-v1',
@@ -30,7 +31,7 @@ def prepare_reference_fixture(page) -> None:
       s.currentKnowledgeEvidence = {results: [{title: '病例级合成资料', publisher: '测试机构', version: 'fixture-v1',
         section: '合成章节', page: 1, content_sha256: 'f'.repeat(64), chunk_id: 'fixture-chunk', document_id: 'fixture-doc',
         source_url: 'https://example.org/case-reference', excerpt: '病例级摘要，不与某一诊断自动关联'}]};
-      s.currentAsrResult = {segments: [{segment_id: 'sim-segment-1', text: '今天发热三十八点二度，没有胸痛。',
+      s.currentAsrResult = {segments: [{segment_id: 'sim-segment-1', text: utterance,
         role: 'patient', speaker: 'speaker_1', start: 0, end: 8}], role_quality: {status: 'passed'}};
       setProductView('encounter'); renderAll();
     }""")
@@ -57,24 +58,25 @@ def test_reference_names_open_full_details_without_losing_edits(page):
     prepare_reference_fixture(page)
     panel = page.locator('#assistPanels')
     expect(panel.locator('.clinical-reference-section')).to_have_count(2)
-    expect(panel.get_by_role('button')).to_have_count(4)
     expect(panel).not_to_contain_text('合成依据')
     expect(panel).not_to_contain_text('合成处理建议')
     expect(panel).not_to_contain_text('证据匹配')
     page.locator('#editRecordButton').click()
     editor = page.locator('[data-record-field-input="chief_complaint"]')
     editor.fill('未保存的合成修改')
+    page.locator('#showReferenceButton').click()
+    expect(panel.get_by_role('button')).to_have_count(4)
     row = panel.get_by_role('button', name='上呼吸道感染', exact=True)
     row.click()
     drawer = page.locator('#drawer')
     expect(drawer).to_contain_text('合成依据')
-    expect(drawer).to_contain_text('合成原文')
+    expect(drawer.locator('.field-evidence-detail p')).to_have_text('今天发热三十八点二度，没有胸痛。')
     expect(drawer).to_contain_text('合成指南来源')
     expect(drawer).to_contain_text('病例级资料 · 未关联当前项目')
     expect(page.locator('#closeDrawerButton')).to_be_focused()
-    drawer.get_by_role('tab', name='指南资料').click()
+    drawer.get_by_role('tab', name='参考资料').click()
     expect(drawer.get_by_role('link', name='打开来源').first).to_have_attribute('href', 'https://example.org/clinical-reference')
-    expect(drawer.get_by_role('tab', name='指南资料')).to_be_focused()
+    expect(drawer.get_by_role('tab', name='参考资料')).to_be_focused()
     expect(drawer).to_contain_text('病例级合成资料')
     expect(drawer.get_by_role('link', name='打开来源').last).to_have_attribute('href', 'https://example.org/case-reference')
     page.locator('#closeDrawerButton').focus()
@@ -82,13 +84,14 @@ def test_reference_names_open_full_details_without_losing_edits(page):
     assert page.evaluate('document.querySelector("#drawer").contains(document.activeElement)')
     page.keyboard.press('Escape')
     expect(drawer).to_have_attribute('aria-hidden', 'true')
-    expect(row).to_be_focused()
+    expect(page.locator('#showReferenceButton')).to_be_focused()
     expect(editor).to_have_value('未保存的合成修改')
+    page.locator('#showReferenceButton').click()
     panel.get_by_role('button', name='查看处理建议', exact=True).click()
     expect(drawer).to_contain_text('合成处理建议')
     expect(drawer).to_contain_text('合成用药提示')
     page.locator('#closeDrawerButton').click()
-    expect(panel.get_by_role('button', name='查看处理建议', exact=True)).to_be_focused()
+    expect(page.locator('#showReferenceButton')).to_be_focused()
     expect(editor).to_have_value('未保存的合成修改')
     expect(page.locator('#exportButton')).to_be_disabled()
 
@@ -112,7 +115,7 @@ def test_empty_live_and_failure_references_remain_compact_and_escaped(page):
       renderAssist();
     }""")
     expect(panel.locator('img')).to_have_count(0)
-    expect(panel.get_by_role('button')).to_have_count(2)
+    expect(panel.get_by_role('button')).to_have_count(3)
     expect(panel).not_to_contain_text('临时诊断说明')
     panel.get_by_role('button', name='<img src=x onerror=alert(1)>', exact=True).click()
     expect(page.locator('#drawer')).to_contain_text('临时诊断说明')
@@ -134,8 +137,33 @@ def test_live_reference_close_does_not_stop_recording_and_restores_replaced_trig
     page.locator('#dashboardEncounterList [data-encounter-action="start"]').first.click()
     page.wait_for_function('appState.currentEncounter && !appState.busy && document.body.dataset.productView === "encounter"')
     page.evaluate("""() => {
+      applyLiveClinicalDraft({version: 1, stable_segment_count: 2, unassigned_role_segment_count: 2});
+      renderAssist();
+    }""")
+    panel = page.locator('#assistPanels')
+    expect(panel).to_contain_text('2 段转写的说话人待核对')
+    expect(panel.locator('.live-source-count')).to_be_visible()
+    review = panel.get_by_role('button', name='查看原话')
+    review.focus()
+    page.keyboard.press('Enter')
+    expect(page.locator('#drawer')).to_contain_text('说话人待核对')
+    page.keyboard.press('Escape')
+    expect(review).to_be_focused()
+    page.evaluate("""() => {
+      appState.liveTranscriptSegments = [{segment_id: 'sim-cough', role: '患者', text: '现在只有咳嗽。'}];
+      applyLiveClinicalDraft({version: 2, stable_segment_count: 1,
+        record_patch: {chief_complaint: {value: '合成错误推断', evidence_segment_ids: ['sim-cough']}}});
+      renderAssist();
+    }""")
+    expect(panel).not_to_contain_text('说话人待核对')
+    review.click()
+    expect(page.locator('#drawer')).to_contain_text('现在只有咳嗽。')
+    expect(page.locator('#drawer')).not_to_contain_text('合成错误推断')
+    expect(page.locator('#drawer').get_by_role('button', name='回听这段原话')).to_have_count(0)
+    page.keyboard.press('Escape')
+    page.evaluate("""() => {
       setProductView('encounter');
-      applyLiveClinicalDraft({version: 1, differentials: [{name: '临时参考', summary: '合成说明'}]});
+      applyLiveClinicalDraft({version: 3, differentials: [{name: '临时参考', summary: '合成说明'}]});
       window.__MRA_APP_STATE__.browserRecordingStatus = 'recording';
       renderAssist();
     }""")
@@ -161,12 +189,12 @@ def test_reference_layout_on_real_page(page, width, height):
           font: parseFloat(getComputedStyle(x).fontSize), height: x.getBoundingClientRect().height}))};
     }""")
     assert layout['width'] <= width + 1, layout
-    assert layout['nav'] == 16 and layout['title'] == 20 and layout['heading'] == 18, layout
+    assert 14 <= layout['nav'] < layout['heading'], layout
+    assert layout['title'] == 20 and layout['heading'] == 19, layout
     assert layout['field'] == 17 and layout['transcript'] == 16, layout
     visible_headers = [h for h in layout['headers'] if h > 0]
     assert max(visible_headers) - min(visible_headers) <= 1, layout
-    if width < 900:
-        page.locator('#showReferenceButton').click()
+    page.locator('#showReferenceButton').click()
     names = page.locator('.clinical-reference-link').evaluate_all("els => els.map(x => ({font: parseFloat(getComputedStyle(x).fontSize), height: x.getBoundingClientRect().height}))")
     assert all(x['font'] == 16 and x['height'] >= 44 for x in names), names
     page.get_by_role('button', name='上呼吸道感染', exact=True).click()

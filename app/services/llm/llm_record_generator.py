@@ -160,7 +160,7 @@ class LLMRecordGenerator:
                     field.missing = False
                     field.status = "conflicting"
                     field.hint = "模型输出矛盾，未采纳；请核对原文后修改。"
-                fields, self.field_alignment = validate_field_alignment(fields)
+                fields, self.field_alignment = validate_field_alignment(fields, source=conversation)
                 self._diagnostic("grounded", fields.model_dump())
                 self.field_validation = {key: {"status": getattr(fields, key).status, "reason": getattr(fields, key).hint,
                     "source_segment_ids": [s.segment_id for s in getattr(fields, key).source_spans]} for key in FIELD_KEYS}

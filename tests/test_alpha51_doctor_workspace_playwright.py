@@ -22,6 +22,45 @@ from tests.test_doctor_itemized_approval_playwright import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_step_labels_fit_their_own_boxes_and_remain_keyboard_reachable() -> None:
+    server = RunningServer()
+    try:
+        with sync_playwright() as playwright, playwright.chromium.launch() as browser:
+            page = browser.new_page()
+            _login(page, server.base_url)
+            _prepare_review_fixture(page)
+            steps = page.locator("#workflowSteps")
+            for width in (390, 360, 1366):
+                page.set_viewport_size({"width": width, "height": 844})
+                steps.focus()
+                page.keyboard.press("Tab")
+                page.keyboard.press("Shift+Tab")
+                assert steps.evaluate("list => list === document.activeElement")
+                assert steps.locator(".workflow-index").all_text_contents() == ["1", "2", "3", "4", "5"]
+                assert steps.locator(".workflow-label").all_text_contents()[:4] == ["选择就诊", "采集信息", "AI处理", "病历审核"]
+                bounds = steps.evaluate("""list => [...list.children].map(item => {
+                  const range = document.createRange();
+                  range.selectNodeContents(item.querySelector('.workflow-label'));
+                  const text = range.getBoundingClientRect(), box = item.getBoundingClientRect();
+                  const number = item.querySelector('.workflow-index').getBoundingClientRect();
+                  return text.left >= box.left - 1 && text.right <= box.right + 1
+                     && (number.bottom <= text.top + 1 || number.right <= text.left + 1);
+                })""")
+                assert all(bounds), (width, bounds)
+                for key, side in [("ArrowLeft", "first"), ("ArrowRight", "last")]:
+                    page.keyboard.press(key)
+                    page.wait_for_function("""side => {
+                      const list = document.querySelector('#workflowSteps');
+                      const item = side === 'first' ? list.firstElementChild : list.lastElementChild;
+                      const range = document.createRange(); range.selectNodeContents(item.querySelector('.workflow-label'));
+                      const box = list.getBoundingClientRect(), text = range.getBoundingClientRect();
+                      return text.left >= box.left - 1 && text.right <= box.right + 1;
+                    }""", arg=side)
+                assert page.evaluate("document.documentElement.scrollWidth") == width
+    finally:
+        server.close()
+
+
 @pytest.mark.parametrize("width,height", [
     (1366, 768), (1440, 900), (1920, 1080), (1000, 720),
     (1093, 614), (910, 512), (800, 600),

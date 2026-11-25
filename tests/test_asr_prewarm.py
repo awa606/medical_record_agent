@@ -3,13 +3,34 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from app.api.auth import require_current_user
 from app.main import app
+from app.schemas.auth import AuthenticatedUser
 from app.services.asr.prewarm import get_prewarm_status, reset_prewarm_state_for_tests
+
+
+def _admin_user() -> AuthenticatedUser:
+    return AuthenticatedUser(
+        id=1,
+        username="admin",
+        display_name="Admin",
+        role="admin",
+        is_active=True,
+    )
 
 
 class ASRPrewarmApiTests(unittest.TestCase):
     def setUp(self):
         reset_prewarm_state_for_tests()
+        app.dependency_overrides[require_current_user] = _admin_user
+
+    def tearDown(self):
+        app.dependency_overrides.pop(require_current_user, None)
+
+    def test_anonymous_cannot_start_prewarm(self):
+        app.dependency_overrides.pop(require_current_user, None)
+        response = TestClient(app).post("/api/asr/prewarm/start")
+        self.assertEqual(response.status_code, 401)
 
     def test_default_status_is_idle(self):
         status = get_prewarm_status()

@@ -1,0 +1,8 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MediListen 离线课堂使用说明</title><style>body{max-width:780px;margin:2em auto;padding:0 1em;color:#23393b;font:16px/1.7 "Microsoft YaHei",sans-serif}a{color:#005766}code{overflow-wrap:anywhere}li{margin:.45em 0}</style><main><h1>MediListen 离线课堂使用说明</h1><p>适用 Windows 11 x64。课堂使用一例固定合成问诊，演示医生核对、修订、签署和 PDF 导出。</p>
+<ol><li>在资源管理器中右击收到的 ZIP，选择“全部提取”。打开解压后的文件夹，保留“现场回放”和“专用环境”两个目录原有位置。</li>
+<li>双击同目录的 <strong>双击启动课堂.cmd</strong>。首次启动会从随包文件准备 Python 与依赖。组织管理的电脑需允许执行本地 PowerShell 脚本。启动时保留控制台窗口。</li>
+<li>在自动打开的浏览器中，用窗口显示的普通模拟医生账号和本机口令登录。进入固定就诊，核对原话、修订、签署、下载 PDF。演示完毕回控制台按回车。</li></ol>
+<p>本包默认地址为 <code>http://127.0.0.1:26428</code>，数据留在 <code>%LOCALAPPDATA%\MediListen课堂专用\课堂数据-314</code>。如需独立排练，在解压根目录的 PowerShell 中执行以下命令。请将目录名改为本次新排练的名称。</p>
+<pre><code>.\双击启动课堂.cmd -Port 26429 -DataRoot "$env:LOCALAPPDATA\MediListen排练-01"</code></pre>
+<p>若准备中断，可从同一文件夹重开。若提示端口占用，请回到原启动窗口按回车，或选择另一个空闲端口。程序帮助中的“历史课程展示顺序”属于旧环境，当前演示请使用本页地址。</p>
+<p><a href="专用环境/requirements-win314.lock">依赖版本与 SHA-256</a>　<a href="专用环境/Windows314轮包核验.json">官方轮包记录</a>　<a href="许可/第三方成分.html">第三方许可</a>　<a href="分发清单.json">随包文件清单</a></p></main></html>

@@ -47,10 +47,13 @@ resetTaskState = () => {
   appState.recordEditRecovery = null;
 };
 renderAll = () => { renders++; };
+clearToast = () => {};
+const originalGetElement = document.getElementById;
+document.getElementById = id => id === 'loginForm' ? {reset(){}} : originalGetElement(id);
 globalThis.fetch = async (path, options) => {
   calls.push({path, method: options?.method});
   if (REJECT_LOGOUT) throw new Error('synthetic network failure');
-  return {ok: true};
+  return {ok: true, json: async () => ({status:'logged_out'})};
 };
 let error = null, blocked = null;
 try {
@@ -110,12 +113,13 @@ def test_clean_logout_retains_the_original_request_and_cleanup(state):
     assert result["error"] is None
 
 
-def test_clean_logout_network_failure_keeps_existing_finally_cleanup_semantics():
+def test_clean_logout_without_server_confirmation_keeps_the_workbench_locked():
     result = run_exit_logic({}, reject_logout=True)
-    assert result["calls"] == [{"path": "/api/auth/logout", "method": "POST"}]
+    assert result["calls"] == [{"path": "/api/auth/logout", "method": "POST"}, {"path": "/api/auth/me"}]
     assert result["resets"] == result["readInvalidations"] == result["renders"] == 1
-    assert result["user"] is None and result["authStatus"] == "required"
-    assert result["error"] == "synthetic network failure"
+    assert result["user"] is None and result["authStatus"] == "logout_unconfirmed"
+    assert "尚未确认退出" in result["authMessage"]
+    assert result["error"] is None
 
 
 @pytest.mark.parametrize("state", [

@@ -1,0 +1,430 @@
+/*
+ * MediListen clinical editorial v4
+ * A warmer, lower-noise layer over v3. Presentation only.
+ */
+
+:root {
+  --bg: #f2efe8;
+  --surface: #fffdf9;
+  --surface-soft: #faf6ee;
+  --line: #e5ded2;
+  --line-strong: #d3c8b8;
+  --text: #1d2d2c;
+  --muted: #5b6a67;
+  --primary: #0f625c;
+  --primary-strong: #0a4a46;
+  --primary-soft: #e8f4f0;
+  --nav: #0b2321;
+  --nav-soft: #143b37;
+  --green: #137356;
+  --green-soft: #e8f5ee;
+  --yellow: #94620b;
+  --yellow-soft: #fdf3df;
+  --red: #a92f3e;
+  --red-soft: #fceef0;
+  --shadow: 0 18px 42px rgba(37, 48, 44, 0.10);
+  --shadow-soft: 0 6px 18px rgba(37, 48, 44, 0.06);
+}
+
+body.doctor-mode {
+  background:
+    radial-gradient(1000px 500px at 92% -10%, rgba(19, 115, 86, 0.10), transparent 62%),
+    radial-gradient(800px 420px at -10% 104%, rgba(180, 140, 70, 0.08), transparent 58%),
+    linear-gradient(180deg, #f6f3ed 0%, #efebe2 100%);
+  color: var(--text);
+}
+
+body.doctor-mode .topbar {
+  background: rgba(255, 253, 248, 0.90);
+  border-bottom: 1px solid rgba(213, 202, 186, 0.72);
+  box-shadow: 0 6px 22px rgba(45, 52, 48, 0.06);
+}
+
+body.doctor-mode .deployment-badge {
+  background: #f3ede2;
+  border-color: #dfd3c0;
+  color: #5c4a2f;
+}
+
+body.doctor-mode .top-actions button,
+body.doctor-mode .top-actions a {
+  background: rgba(255, 253, 248, 0.86);
+  border-color: #ddd2c2;
+  color: #3e514d;
+}
+
+body.doctor-mode .top-actions button:hover,
+body.doctor-mode .top-actions a:hover {
+  background: #fffdf8;
+  border-color: #b6a98f;
+  box-shadow: 0 7px 18px rgba(59, 55, 43, 0.10);
+}
+
+body.doctor-mode .product-nav {
+  background:
+    radial-gradient(280px 240px at 20% 0%, rgba(41, 160, 128, 0.16), transparent 70%),
+    linear-gradient(180deg, #0a2220 0%, #10332f 58%, #0b2522 100%);
+}
+
+body.doctor-mode .product-nav-item {
+  color: #b6cbc5;
+}
+
+body.doctor-mode .product-nav-item.active,
+body.doctor-mode .product-nav-item.active:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fffdf7 0%, #f2eee4 100%);
+  color: #12332e;
+  border-color: rgba(255, 253, 247, 0.8);
+  box-shadow: 0 14px 30px rgba(2, 20, 17, 0.30);
+}
+
+body.doctor-mode .product-nav-item.active small,
+body.doctor-mode .product-nav-item.active:hover:not(:disabled) small {
+  color: #68766e;
+}
+
+body.doctor-mode .product-nav-item.active::before {
+  background: linear-gradient(180deg, #e0b768, #1b8a72);
+}
+
+/* patient banner */
+
+body.doctor-mode .alpha51-workspace .encounter-patient-banner {
+  background-color: #0d3b36;
+  background-image:
+    radial-gradient(560px 190px at 96% -50%, rgba(64, 196, 160, 0.30), transparent 70%),
+    linear-gradient(118deg, #0c2f2b 0%, #11534c 58%, #12746a 100%);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 34px rgba(13, 55, 49, 0.20);
+}
+
+body.doctor-mode .alpha51-workspace .encounter-patient-banner .patient-identity-cell {
+  padding-left: 58px;
+}
+
+body.doctor-mode .patient-avatar {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #f0cf8f, #c99a4e);
+  color: #2c2416;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+body.doctor-mode .alpha51-workspace .encounter-patient-banner .meta-label {
+  color: #a9d2c7;
+}
+
+body.doctor-mode .alpha51-workspace .encounter-patient-banner #patientName {
+  color: #fffdf7;
+}
+
+body.doctor-mode .alpha51-workspace .encounter-patient-banner #patientProfile {
+  background: #0b3a35;
+  color: #e6f5ef;
+}
+
+body.doctor-mode .demo-patient-badge {
+  background: #e0b768;
+  border-color: #f0d59c;
+  color: #2d2412;
+}
+
+body.doctor-mode .alpha51-workspace .encounter-patient-banner .model-status {
+  background: rgba(255, 253, 247, 0.12);
+  border-color: rgba(255, 253, 247, 0.24);
+  color: #e7f4ee;
+}
+
+/* workflow rail */
+
+body.doctor-mode .workflow-panel {
+  background: rgba(255, 253, 248, 0.56);
+  border-bottom-color: #ddd3c4;
+}
+
+body.doctor-mode .alpha51-workspace .workflow-step {
+  color: #65736d;
+}
+
+body.doctor-mode .alpha51-workspace .workflow-step.active {
+  background: linear-gradient(135deg, #0d5a53, #168375);
+  color: #fffdf7;
+  box-shadow: 0 7px 18px rgba(13, 90, 83, 0.22);
+}
+
+body.doctor-mode .alpha51-workspace .workflow-step.active .workflow-label {
+  color: #fffdf7;
+}
+
+body.doctor-mode .alpha51-workspace .workflow-step.done {
+  color: #137356;
+}
+
+body.doctor-mode .alpha51-workspace .workflow-step.done .workflow-index {
+  background: #e7f4ed;
+  color: #137356;
+}
+
+/* panels */
+
+body.doctor-mode .workbench > .column {
+  background: rgba(255, 253, 249, 0.94);
+  border-color: #e3dbce;
+  box-shadow: 0 14px 34px rgba(45, 52, 48, 0.07);
+}
+
+body.doctor-mode .panel-header {
+  background: linear-gradient(180deg, #fffdf9 0%, #f9f5ed 100%);
+  border-bottom-color: #e9e1d5;
+}
+
+body.doctor-mode .panel-header h2 {
+  color: #203b36;
+}
+
+body.doctor-mode .panel-header p {
+  color: #6c7a74;
+}
+
+body.doctor-mode .panel-body,
+body.doctor-mode .field-list,
+body.doctor-mode .transcript-list {
+  background: #fdfbf7;
+}
+
+/* record sections */
+
+body.doctor-mode .record-section {
+  background: #fffdf9;
+  border-color: #e8dfd2;
+  box-shadow: 0 5px 16px rgba(45, 52, 48, 0.045);
+}
+
+body.doctor-mode .record-section-head {
+  background: linear-gradient(90deg, #f7f2e8 0%, #fcfaf5 70%, #fffdf9 100%);
+  border-bottom-color: #ece4d7;
+}
+
+body.doctor-mode .record-section-head h3 {
+  color: #203b36;
+}
+
+body.doctor-mode .record-section-head h3::before {
+  background: linear-gradient(180deg, #e0b768, #14806f);
+  box-shadow: 0 0 0 3px rgba(224, 183, 104, 0.13);
+}
+
+body.doctor-mode .record-section-head p {
+  color: #738079;
+}
+
+body.doctor-mode .record-section-status.pending {
+  background: #fdf2dc;
+  border-color: #ecd4a8;
+  color: #7f560b;
+}
+
+body.doctor-mode .record-section-status.conflict {
+  background: #fceef0;
+  border-color: #efc2c9;
+  color: #9c2637;
+}
+
+body.doctor-mode .record-section-status.done {
+  background: #e8f5ee;
+  border-color: #b9dfcd;
+  color: #116048;
+}
+
+body.doctor-mode .record-section-status.neutral {
+  background: #f4f0e8;
+  border-color: #e2dacd;
+  color: #5d6a64;
+}
+
+/* field cards */
+
+body.doctor-mode .field-card {
+  background: #fffdfa;
+  border-color: #ece4d8;
+  box-shadow: 0 1px 2px rgba(45, 52, 48, 0.03);
+}
+
+body.doctor-mode .field-card.has-value {
+  border-left-color: #6fb7a5;
+}
+
+body.doctor-mode .field-card.conflicting {
+  border-left-color: #d97a86;
+}
+
+body.doctor-mode .field-card:hover {
+  border-color: #c9bda8;
+  box-shadow: 0 9px 24px rgba(62, 58, 42, 0.10);
+}
+
+body.doctor-mode .field-card-head strong,
+body.doctor-mode .field-head strong {
+  color: #27433d;
+}
+
+body.doctor-mode .field-value {
+  color: #334a44;
+}
+
+body.doctor-mode .field-meta {
+  border-top-color: #eee7dc;
+}
+
+/* notices, approval, assist */
+
+body.doctor-mode .preview-notice,
+body.doctor-mode .record-review-notice,
+body.doctor-mode .historical-record-notice {
+  border-color: #cfe4da;
+  background: linear-gradient(90deg, #edf7f2, #fbfdf9);
+  color: #285b4d;
+}
+
+body.doctor-mode .approval-disclosure {
+  border-color: #dce5db;
+  background: linear-gradient(180deg, #fffdf9, #f8f5ee);
+}
+
+body.doctor-mode .approval-disclosure > summary {
+  color: #25443c;
+}
+
+body.doctor-mode .assist-column .clinical-reference-section {
+  background: #fffdf9;
+  border-color: #e9e1d4;
+  box-shadow: 0 4px 14px rgba(45, 52, 48, 0.04);
+}
+
+body.doctor-mode .clinical-reference-section h3 {
+  color: #27433d;
+}
+
+body.doctor-mode .diagnosis-reference-card,
+body.doctor-mode .reference-card {
+  background: #fcf9f3;
+  border-color: #eee6d9;
+}
+
+/* controls */
+
+body.doctor-mode input,
+body.doctor-mode select,
+body.doctor-mode textarea {
+  border-color: #d8cebe;
+  background: #fffdfa;
+}
+
+body.doctor-mode input:focus,
+body.doctor-mode select:focus,
+body.doctor-mode textarea:focus {
+  border-color: #2b9a83;
+  box-shadow: 0 0 0 3px rgba(43, 154, 131, 0.15);
+}
+
+body.doctor-mode .primary-action,
+body.doctor-mode #editRecordButton,
+body.doctor-mode #saveDraftButton {
+  background: linear-gradient(135deg, #0d5a53 0%, #168375 100%);
+  box-shadow: 0 8px 20px rgba(13, 90, 83, 0.22);
+}
+
+body.doctor-mode .primary-action:hover:not(:disabled),
+body.doctor-mode #editRecordButton:hover:not(:disabled),
+body.doctor-mode #saveDraftButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0a4a46 0%, #116d62 100%);
+  box-shadow: 0 10px 24px rgba(13, 90, 83, 0.28);
+}
+
+body.doctor-mode .encounter-action-bar {
+  border-color: #ded5c7;
+  background: rgba(255, 253, 248, 0.94);
+  box-shadow: 0 12px 30px rgba(45, 52, 48, 0.13);
+}
+
+body.doctor-mode .toast {
+  background: #163a33;
+}
+
+body.doctor-mode .page-eyebrow {
+  color: #2c6759;
+}
+
+/* login */
+
+.login-panel {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(32, 148, 119, 0.20), transparent 30%),
+    radial-gradient(circle at 88% 90%, rgba(224, 183, 104, 0.10), transparent 30%),
+    linear-gradient(135deg, #0a2421 0%, #103b35 54%, #f2eee5 54%, #f7f4ed 100%);
+}
+
+.login-shell {
+  border-color: rgba(255, 253, 247, 0.24);
+  background: #fffdf9;
+  box-shadow: 0 34px 90px rgba(6, 28, 24, 0.30);
+}
+
+.login-brand-pane {
+  background:
+    linear-gradient(rgba(8, 38, 34, 0.90), rgba(13, 58, 51, 0.97)),
+    linear-gradient(145deg, #17695d, #092923);
+}
+
+.login-product-copy .page-eyebrow {
+  color: #e0b768;
+}
+
+.login-card {
+  background: #fffdf9;
+}
+
+.login-card-heading h2,
+.login-card h2 {
+  color: #1f3a34;
+}
+
+.login-submit {
+  background: linear-gradient(135deg, #0d5a53 0%, #168375 100%) !important;
+  border-color: transparent !important;
+}
+
+/* dashboard */
+
+body.doctor-mode .product-dashboard .dashboard-hero h2,
+body.doctor-mode .dashboard-panel .panel-header h2 {
+  color: #203b36;
+}
+
+body.doctor-mode .dashboard-panel {
+  border-color: #e4dbcd;
+  background: rgba(255, 253, 249, 0.94);
+}
+
+@media (max-width: 680px) {
+  body.doctor-mode .alpha51-workspace .encounter-patient-banner .patient-identity-cell {
+    padding-left: 50px;
+  }
+
+  body.doctor-mode .patient-avatar {
+    left: 12px;
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+}

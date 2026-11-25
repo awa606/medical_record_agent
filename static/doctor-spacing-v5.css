@@ -1,0 +1,596 @@
+/*
+ * MediListen spacing and alignment pass v5
+ * Rules applied:
+ * - 4/8/12/16/20/24/32 spacing scale instead of ad-hoc 10/13/14/15px.
+ * - Proximity: heading closer to its content, sections farther from each other.
+ * - Consistent 16px workbench gutter and 20px panel padding.
+ * - 14px clinical body with 1.7 line-height; 16px section titles.
+ */
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+}
+
+body.doctor-mode .alpha51-workspace .workbench {
+  gap: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .workbench > .column {
+  padding: 0;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: start;
+  padding: var(--space-4) var(--space-5);
+  gap: var(--space-3);
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header > div {
+  grid-column: 1;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header > .status-badge {
+  grid-column: 2;
+  align-self: start;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header h2 {
+  margin: 0 0 var(--space-1);
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header p {
+  margin: 0;
+  color: #55665f;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+@media (min-width: 1100px) and (min-height: 800px) {
+  body.doctor-mode .alpha51-workspace .column > .panel-header {
+    min-height: 100px;
+  }
+
+  body.doctor-mode .alpha51-workspace .column > .panel-header p {
+    display: block;
+  }
+}
+
+body.doctor-mode .alpha51-workspace .field-list {
+  padding: var(--space-3) var(--space-5) 160px;
+}
+
+body.doctor-mode .alpha51-workspace .record-empty-state {
+  width: 100%;
+}
+
+body.doctor-mode .alpha51-workspace .field-list:has(.record-empty-state) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: 420px;
+  padding-bottom: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .record-section {
+  margin: 0 0 var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .record-section + .record-section {
+  margin-top: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: start;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head > div {
+  grid-column: 1;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head > .record-section-status {
+  grid-column: 2;
+  align-self: start;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head h3 {
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-head p {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-body {
+  padding: var(--space-4);
+  gap: var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card + .field-card {
+  margin-top: var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card-head,
+body.doctor-mode .alpha51-workspace #recordFields .field-head {
+  gap: var(--space-2);
+  padding-bottom: var(--space-1);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card-head strong,
+body.doctor-mode .alpha51-workspace #recordFields .field-head strong {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-value {
+  margin-top: var(--space-2);
+  color: #2e4740;
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-meta {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  gap: var(--space-2);
+}
+
+body.doctor-mode .alpha51-workspace .record-section-status {
+  min-height: 26px;
+  padding: 2px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+body.doctor-mode .alpha51-workspace .encounter-action-bar {
+  padding: var(--space-3) var(--space-5);
+  gap: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .encounter-action-bar > * {
+  margin: 0;
+}
+
+body.doctor-mode .alpha51-workspace .approval-disclosure {
+  margin-bottom: var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace .approval-disclosure > summary {
+  padding: var(--space-3) var(--space-4);
+  line-height: 1.55;
+}
+
+body.doctor-mode .alpha51-workspace .approval-checklist-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: start;
+}
+
+body.doctor-mode .alpha51-workspace .approval-checklist-head > div {
+  grid-column: 1;
+}
+
+body.doctor-mode .alpha51-workspace .approval-checklist-head > .approval-entry-label {
+  grid-column: 2;
+  align-self: start;
+}
+
+body.doctor-mode .alpha51-workspace .approval-readonly-record > div {
+  padding: var(--space-2) var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace .approval-readonly-record > div:nth-child(even) {
+  background: #faf7f1;
+}
+
+body.doctor-mode .alpha51-workspace .approval-item-actions {
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+}
+
+body.doctor-mode .alpha51-workspace .approval-item-actions button {
+  padding-inline: 10px;
+  font-size: 13px;
+}
+
+@media (max-width: 680px) {
+  body.doctor-mode .alpha51-workspace .approval-item-actions {
+    flex-wrap: wrap;
+  }
+}
+
+body.doctor-mode .alpha51-workspace .review-boundary-notice {
+  margin: var(--space-3) var(--space-5) 0;
+  border-radius: 10px;
+  line-height: 1.6;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header {
+  align-items: start;
+}
+
+body.doctor-mode .alpha51-workspace .column > .panel-header > button,
+body.doctor-mode .alpha51-workspace .column > .panel-header > .panel-header-action {
+  align-self: center;
+  flex: none;
+}
+
+body.doctor-mode .alpha51-workspace .record-section-status,
+body.doctor-mode .alpha51-workspace .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card {
+  overflow: hidden;
+  padding: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card + .field-card {
+  margin-top: var(--space-3);
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card .field-head {
+  margin: 0;
+}
+
+body.doctor-mode .alpha51-workspace #recordFields .field-card .field-meta {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+/* Controls in the worklist should share one height and baseline. */
+body.doctor-mode .worklist-toolbar input,
+body.doctor-mode .worklist-toolbar select,
+body.doctor-mode .worklist-toolbar button {
+  height: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+body.doctor-mode .dashboard-status-filters button {
+  height: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-block: 0;
+}
+
+body.doctor-mode .dashboard-status-filters button[aria-pressed="true"] {
+  background: #e8f4ef;
+  border-color: #9ac9ba;
+  color: #0d5a53;
+}
+
+body.doctor-mode .dashboard-status-filters button[aria-pressed="true"] strong {
+  color: #0d5a53;
+}
+
+body.doctor-mode .dashboard-hero h2 {
+  margin: 0 0 var(--space-1);
+}
+
+body.doctor-mode .product-dashboard .dashboard-hero {
+  align-items: center;
+}
+
+/* Admin tabs: replace the underline that sat on the panel divider. */
+body.doctor-mode .knowledge-tabs {
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 var(--space-2);
+}
+
+body.doctor-mode .knowledge-tabs button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 14px;
+  min-height: 38px;
+  color: #52627a;
+}
+
+body.doctor-mode .knowledge-tabs button[aria-selected="true"] {
+  border-color: #cfe3da;
+  border-bottom-color: #cfe3da;
+  background: #e8f4ef;
+  color: #0d5a53;
+  font-weight: 700;
+}
+
+body.doctor-mode .knowledge-tabs button:hover:not([aria-selected="true"]) {
+  background: #f5f1e8;
+  color: #27433d;
+}
+
+body.doctor-mode .alpha51-workspace .field-list .preview-notice,
+body.doctor-mode .alpha51-workspace .field-list .historical-record-notice {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  line-height: 1.65;
+}
+
+/* Worklist: align toolbar and rows on one 8px rhythm. */
+body.doctor-mode .worklist-toolbar {
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+}
+
+body.doctor-mode .encounter-worklist {
+  padding: 0 var(--space-5) var(--space-4);
+}
+
+body.doctor-mode .workbench-boundary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 var(--space-5);
+  padding: var(--space-3) 0 var(--space-4);
+  border-top: 1px solid #eee5d8;
+  color: #55665f;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+body.doctor-mode .workbench-boundary p {
+  margin: 0;
+}
+
+body.doctor-mode .workbench-boundary .environment-dot {
+  flex: none;
+  margin-top: 5px;
+}
+
+@media (min-width: 900px) and (min-height: 720px) {
+  body.doctor-mode #workbenchHome > .dashboard-panel:not(.local-registration-panel) {
+    min-height: calc(100dvh - 340px);
+  }
+}
+
+@media (max-height: 680px) {
+  body.doctor-mode .product-main {
+    overflow-y: auto;
+  }
+}
+
+body.doctor-mode .encounter-worklist:has(.empty-state) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+
+body.doctor-mode .encounter-worklist .empty-state {
+  width: 100%;
+}
+
+body.doctor-mode .dashboard-panel > .panel-header {
+  padding-bottom: var(--space-3);
+}
+
+/* Keep the patient bar compact but align its internal cells. */
+body.doctor-mode .alpha51-workspace .encounter-patient-banner {
+  padding-inline: var(--space-4);
+}
+
+body.doctor-mode .alpha51-workspace .encounter-patient-banner .patient-identity-cell {
+  padding-left: 58px;
+}
+
+/* At tablet landscape width the three-column baseline becomes too tight.
+   Keep transcript + record, and expose the reference column through the
+   existing auxiliary drawer trigger. */
+@media (min-width: 1024px) and (max-width: 1080px), (min-width: 1100px) and (max-width: 1199px) {
+  body.doctor-mode .alpha51-workspace .workbench {
+    grid-template-columns: minmax(0, 28fr) minmax(0, 72fr);
+    grid-template-areas: "transcript record";
+  }
+
+  body.doctor-mode .alpha51-workspace .assist-column {
+    display: none;
+  }
+
+  body.doctor-mode .alpha51-workspace .workspace-panel-switches {
+    display: flex;
+  }
+
+  body.doctor-mode .alpha51-workspace #showTranscriptButton {
+    display: none;
+  }
+
+  body.doctor-mode .alpha51-workspace .record-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) and (max-width: 1199px) {
+  body.doctor-mode .workspace-aux-dialog {
+    width: min(460px, calc(100vw - 24px));
+  }
+}
+
+/* Avoid cramped mobile cards without changing the grid. */
+@media (max-width: 680px) {
+  body.doctor-mode .alpha51-workspace .field-list {
+    padding: var(--space-2) var(--space-4) 100px;
+  }
+
+  body.doctor-mode .record-section-head,
+  body.doctor-mode .alpha51-workspace .record-section-body {
+    padding: var(--space-3) var(--space-3);
+  }
+
+  body.doctor-mode .alpha51-workspace .record-section-head h3 {
+    font-size: 15px;
+  }
+
+  body.doctor-mode .alpha51-workspace #recordFields .field-card {
+    padding: var(--space-3);
+  }
+
+  body.doctor-mode .worklist-toolbar,
+  body.doctor-mode .encounter-worklist {
+    padding-inline: var(--space-4);
+  }
+
+  /* Mobile worklist: search on its own row, status + refresh below. */
+  body.doctor-mode .worklist-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2);
+  }
+
+  body.doctor-mode .worklist-toolbar input {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  body.doctor-mode .worklist-toolbar select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.doctor-mode .product-dashboard .dashboard-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  body.doctor-mode .product-dashboard .dashboard-actions {
+    display: flex;
+    width: 100%;
+    gap: var(--space-2);
+  }
+
+  body.doctor-mode .product-dashboard .dashboard-actions > button {
+    flex: 1;
+  }
+
+  /* Admin header actions wrap as a second row instead of squeezing the title. */
+  body.doctor-mode .admin-knowledge-panel > .panel-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    padding: var(--space-4);
+  }
+
+  body.doctor-mode .admin-knowledge-panel > .panel-header > div {
+    grid-column: 1 / -1;
+  }
+
+  body.doctor-mode .admin-knowledge-panel > .panel-header > .status-badge {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  body.doctor-mode .admin-knowledge-panel > .panel-header > button {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  body.doctor-mode .knowledge-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-1);
+  }
+
+  body.doctor-mode .knowledge-tabs button {
+    min-width: 0;
+    padding: 8px 4px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  body.doctor-mode .admin-list-row {
+    display: grid;
+    gap: 4px;
+  }
+
+  /* Five fixed-width steps scroll horizontally; the active stage is centered by JS. */
+  body.doctor-mode .workflow {
+    overflow: hidden;
+  }
+
+  body.doctor-mode .workflow-steps {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding: 0 var(--space-3) var(--space-1);
+    scrollbar-width: thin;
+    scroll-behavior: smooth;
+    mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  }
+
+  body.doctor-mode .workflow-step {
+    flex: 0 0 86px;
+    justify-content: center;
+    gap: var(--space-1);
+    padding-inline: var(--space-1);
+    font-size: 13px;
+  }
+
+  body.doctor-mode .admin-home .dashboard-hero {
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  body.doctor-mode #refreshAdminHomeButton {
+    flex: none;
+    min-height: 38px;
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+}
+
+/* A fixed login overlay must not leave a scrollable app strip below it. */
+body:has(#loginPanel:not([hidden])) {
+  overflow: hidden;
+}
+
+body:has(#loginPanel:not([hidden])) .login-panel {
+  background-color: #f7f4ed;
+  overflow-y: auto;
+}
+
+@media (max-height: 520px) {
+  body:has(#loginPanel:not([hidden])) .login-panel {
+    place-items: start center;
+    padding-top: var(--space-3);
+  }
+}

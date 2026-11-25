@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>三例评阅收件 · MediListen</title>
+<style>
+*{box-sizing:border-box}html{color:#1f302e;background:#f2f6f3;font:16px/1.6 "Microsoft YaHei",system-ui,sans-serif}body{margin:0}main{max-width:1000px;margin:auto;padding:30px clamp(12px,3vw,40px) 60px}h1,h2,h3,p{margin:0 0 .55em}h1{font-size:clamp(29px,5vw,43px);line-height:1.23}h2{font-size:1.35rem}h3{font-size:1rem}header{padding:8px 0 18px;border-bottom:3px solid #286653}section{margin:18px 0;background:#fff;border:1px solid #cedbd3;border-radius:8px;padding:clamp(14px,2.6vw,27px)}.fields,.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.stats{grid-template-columns:repeat(3,minmax(0,1fr));margin:12px 0}.stats div{padding:9px 14px;background:#edf4ef;border-radius:5px}.stats strong{display:block;font-size:1.6rem}.full{grid-column:1/-1}label{display:block;font-weight:650}input,select,button{font:inherit;max-width:100%}input:not([type=checkbox]),select{display:block;width:100%;min-height:42px;padding:5px 7px;border:1px solid #8da299;border-radius:4px;background:white;color:inherit}input[type=checkbox]{width:18px;height:18px;vertical-align:middle}button{padding:8px 16px;color:white;background:#20644c;border:1px solid #20644c;border-radius:5px;cursor:pointer}button:disabled{background:#66766e;cursor:default}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #b74d14;outline-offset:2px}.note,small{color:#475951}.note{font-size:.92rem}.wrap,code,dd{overflow-wrap:anywhere}code{font-size:.9em}.messages{min-height:1.5em;color:#205943;font-weight:650}ul{padding-left:1.3em}details{border-top:1px solid #dae3dd;padding:8px 0}summary{cursor:pointer;font-weight:650;overflow-wrap:anywhere}dl{display:grid;grid-template-columns:6.2em minmax(0,1fr);gap:2px 8px;margin:8px 0}dt{color:#52645b}dd{margin:0}#group-list{padding-left:1.4em}#group-list b{margin-right:.6em}@media(max-width:600px){main{padding-top:18px}.fields{grid-template-columns:1fr}.stats{gap:5px}.stats div{padding:5px 7px}.stats strong{font-size:1.25rem}button{width:100%}dl{grid-template-columns:5em minmax(0,1fr)}}
+</style>
+</head><body><main>
+<header><h1>三例评阅收件</h1><p>组织者按匿名领包记录核对三个合成就诊的初诊与补记。文件只在当前页面处理，关闭或刷新后需重新选取。</p></header>
+<section aria-labelledby="intake-title"><h2 id="intake-title">登记本次收到的文件</h2>
+<div class="fields">
+<div class="full"><label for="package">原始发放题包（ZIP）</label><input id="package" type="file" accept=".zip"><p id="package-status" role="status">尚未选择原始题包。</p>
+<details><summary>查看冻结题包指纹</summary><code id="pinned"></code></details></div>
+<div><label for="group">匿名领包代码</label><input id="group" maxlength="32" autocomplete="off" placeholder="例如 G01" aria-describedby="group-hint"><small id="group-hint">沿用发放登记里的代号，支持汉字、字母、数字、连字符或下划线。请勿填写姓名。</small></div>
+<div><label for="purpose">领包用途</label><select id="purpose"><option value="">请选择</option><option>工程模拟</option><option>教学练习</option><option>现场评阅待核</option></select></div>
+<div class="full"><label><input id="issued" type="checkbox"> 我已按本地发放记录核对该匿名组、用途及原题包。</label></div>
+<div class="full"><label for="files">该组导出的答卷（可多选 JSON）</label><input id="files" type="file" multiple accept=".json,application/json"></div>
+<div><button id="receive" type="button">登记所选答卷</button></div>
+</div><p class="messages" id="status" role="status" aria-live="polite"></p>
+<p class="note">答卷自身没有领包代码、题包签名或身份凭据。题包一致时，仍需组织者用发放记录建立关联。缺少关联的文件会登记为待核。</p></section>
+<section aria-labelledby="result-title"><h2 id="result-title">收件汇总</h2>
+<div class="stats"><div><strong id="total">0</strong>登记文件</div><div><strong id="counted">0</strong>计入的组内病例</div><div><strong id="ready">0</strong>三例齐收组</div></div>
+<ul id="group-list"></ul><p id="initial">还没有登记答卷。</p>
+<p class="note">同组同例的相同稿只计一份；出现两种完整稿时，该组该例的所有完整件暂缓。跨组相同稿会提示核对独立性。齐收只表示三例文件具备对应阶段、锁记和可见出处。</p>
+<button id="export" type="button" disabled>下载组织者回执</button><p class="note">回执含匿名组、各阶段锁定时间、出处编号、状态和指纹。原作答文字留在原文件，身份、独立性和医疗评分须另行核定。</p>
+<details><summary>关闭后怎样补收或处理异稿？</summary><p>请先保存回执和各组原答卷。下次打开时，按发放记录重新选择原题包及各组全部原件，再加入新收到的答卷并导出新回执。旧回执用于前后核对，重新计算需要原答卷。遇到异稿须先核对发放记录并留存两稿和旧回执。核实采用哪份后，另开一页，仅登记经核实的文件，保留组织者的裁决记录。</p></details></section>
+<section aria-labelledby="detail-title"><h2 id="detail-title">逐件核对</h2><div id="rows"></div></section>
+</main>
+<script>
+"use strict";
+const PIN = "167679e8e34ae951f7c59f30f133f16352110619584263430c566006ea1830ef";
+const FORMAT = "MRA-visit-time-portable-1";
+const ORIGIN = "项目原创合成书面材料。角色台词、就诊号、报告和时间均虚构。";
+const CASES = new Map([
+  ["SYN-TM-A", ["2026-06-09 09:12","2026-06-09 11:05",["T01","T02","T03"],["L01"]]],
+  ["SYN-TM-B", ["2026-06-12 14:17","2026-06-12 15:40",["T01","T02","T03"],["R01","R02"]]],
+  ["SYN-TM-C", ["2026-07-02 10:08","2026-07-02 13:10",["T01","T02","O01","T03"],["N01"]]]
+]);
+const $ = id => document.getElementById(id);
+const items = [];
+let zip = {status:"未选题包",sha256:null};
+let zipGeneration = 0, processing = false;
+const encoder = new TextEncoder();
+async function digest(bytes) {
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash), n => n.toString(16).padStart(2,"0")).join("");
+}
+function requireValue(test, message) { if (!test) throw new Error(message); }
+function object(value) {return value !== null && typeof value === "object" && !Array.isArray(value);}
+function orderedKeys(value, keys) {return Object.keys(value).length === keys.length && keys.every(k => Object.hasOwn(value,k));}
+function verify(payload, row) {
+  requireValue(object(payload) && payload.format === FORMAT,"答卷格式或版本不匹配");
+  const caseDef = CASES.get(payload.encounter);
+  requireValue(caseDef,"就诊不在本批");
+  row.encounter = payload.encounter;
+  requireValue(payload.origin === ORIGIN,"合成题源标记不符");
+  requireValue(orderedKeys(payload,["format","encounter","origin","visibleThrough","phase","completion","entries"]),"答卷字段与冻结格式不符");
+  const {phase,completion,entries} = payload;
+  requireValue([1,2,3].includes(phase) && Array.isArray(entries),"阶段或作答记录格式错误");
+  requireValue(payload.visibleThrough === caseDef[phase === 1 ? 0 : 1],"资料可见截止时间不符");
+  const lengths = [[0,1],[1,2],[2]];
+  requireValue(lengths[phase-1].includes(entries.length),"阶段与记录数量不符");
+  const expected = phase === 3 ? "complete" : phase === 1 && entries.length === 0 ? "not_started" : "in_progress";
+  requireValue(completion === expected,"完成标记与阶段不符");
+  const normalized = [];
+  for (const [i,entry] of entries.entries()) {
+    requireValue(object(entry) && entry.stage === i+1 && orderedKeys(entry,["stage","text","sourceIds","lockedAt"]),"阶段记录格式或次序错误");
+    const {text,sourceIds,lockedAt} = entry;
+    requireValue(typeof text === "string" && Array.isArray(sourceIds),"阶段文字或出处格式错误");
+    const codes = i === 0 ? caseDef[2] : caseDef[2].concat(caseDef[3]);
+    const visible = codes.map(s => row.encounter+"-"+s);
+    requireValue(sourceIds.every(s => visible.includes(s)) && new Set(sourceIds).size === sourceIds.length,"出处重复、跨案或当时尚不可见");
+    const locked = phase > i+1;
+    if (locked) {
+      requireValue(text.trim() && sourceIds.length,"锁定阶段缺少文字或出处");
+      requireValue(typeof lockedAt === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(lockedAt) && Number.isFinite(Date.parse(lockedAt)) && new Date(lockedAt).toISOString() === lockedAt,"锁记缺失或格式异常");
+    } else {
+      requireValue(lockedAt === null && (text.trim() || sourceIds.length),"未锁记录与阶段不符");
+    }
+    normalized.push({stage:entry.stage,text,sourceIds:[...sourceIds].sort(),lockedAt});
+    row.stages.push({stage:i+1,locked,locked_at:lockedAt,visible_through:caseDef[i],source_ids:[...sourceIds]});
+  }
+  if (phase === 3) requireValue(normalized[0].lockedAt <= normalized[1].lockedAt,"两阶段锁记时间倒序");
+  row.validation = phase === 3 ? "两阶段完整" : phase === 1 && !entries.length ? "未开始" : "未完成";
+  return {format:FORMAT,encounter:row.encounter,origin:ORIGIN,visibleThrough:payload.visibleThrough,phase,completion,entries:normalized};
+}
+function trustedContext() {
+  const code = $("group").value.trim();
+  const group = /^[\p{Script=Han}a-z0-9][\p{Script=Han}a-z0-9_-]{0,31}$/iu.test(code) ? code : null;
+  return {group,purpose:$("purpose").value || null,checked:$("issued").checked,package_status:zip.status,package_sha256:zip.sha256};
+}
+function bindingIssue(ctx) {
+  if (ctx.package_status !== "冻结题包一致") return "题包待核";
+  if (!ctx.group || !ctx.purpose || !ctx.checked) return "领包关联待核";
+  return null;
+}
+async function inspectFile(file, row) {
+  try {
+    const bytes = await file.arrayBuffer();
+    row.raw_sha256 = await digest(bytes);
+    let payload;
+    try {payload = JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));}
+    catch {throw new Error("无法解析 UTF-8 JSON");}
+    const normalized = verify(payload,row);
+    row.content_sha256 = await digest(encoder.encode(JSON.stringify(normalized)));
+  } catch (e) {
+    row.validation = "不合格";
+    row.issue = e instanceof Error ? e.message : "读取失败";
+  }
+}
+function addTo(map,key,value) {
+  if (!map.has(key)) map.set(key,[]);
+  map.get(key).push(value);
+}
+function summarize() {
+  const groups = new Map(), cases = new Map(), shared = new Map();
+  const receipts = items.map(row => ({...row,decision:row.validation,cross_group:false}));
+  for (const row of receipts) {
+    const ctx = row.assignment, binding = bindingIssue(ctx);
+    if (row.validation === "不合格") {row.decision="退回核对"; continue;}
+    if (binding) {row.decision=binding;continue;}
+    if (!groups.has(ctx.group)) groups.set(ctx.group,{code:ctx.group,purposes:new Set(),counted:[],conflicts:[],cross_group:[]});
+    groups.get(ctx.group).purposes.add(ctx.purpose);
+    if (row.validation !== "两阶段完整") continue;
+    addTo(cases,JSON.stringify([ctx.group,row.encounter]),row);
+    addTo(shared,row.content_sha256,row);
+  }
+  for (const same of shared.values()) {
+    if (new Set(same.map(r=>r.assignment.group)).size > 1) {
+      for (const r of same) {
+        r.cross_group=true;
+        const flags=groups.get(r.assignment.group).cross_group;
+        if (!flags.includes(r.encounter)) flags.push(r.encounter);
+      }
+    }
+  }
+  for (const same of cases.values()) {
+    const g=groups.get(same[0].assignment.group), id=same[0].encounter;
+    if (g.purposes.size > 1 || new Set(same.map(r=>r.content_sha256)).size > 1) {
+      g.conflicts.push(id);
+      same.forEach(r=>r.decision=g.purposes.size>1 ? "同组用途冲突，暂缓" : "同组同例异稿，全部暂缓");
+    } else {
+      g.counted.push(id);same[0].decision="完整，计入一份";
+      const seen=new Set([same[0].raw_sha256]);
+      for (const row of same.slice(1)) {
+        row.decision=seen.has(row.raw_sha256) ? "重复文件，合计一份" : "内容等同，合计一份";
+        seen.add(row.raw_sha256);
+      }
+    }
+  }
+  const groupRows=[...groups.values()].map(g=>({group:g.code,purposes:[...g.purposes],counted:g.counted.sort(),missing:[...CASES.keys()].filter(k=>!g.counted.includes(k)),conflicts:g.conflicts.sort(),check_independence:g.cross_group.sort(),all_three:g.counted.length===CASES.size}));
+  return {format:"MRA-visit-time-organizer-receipt-1",package_expected_sha256:PIN,scope:"合成三例的文件收件。匿名组取自组织者登记，独立性、身份和医疗评分待另行核定。",registered_files:receipts.length,accepted_group_cases:groupRows.reduce((n,g)=>n+g.counted.length,0),complete_groups:groupRows.filter(g=>g.all_three).length,groups:groupRows,files:receipts};
+}
+function el(tag,text) {const node=document.createElement(tag);node.textContent=text;return node;}
+function pair(dl,k,v) {dl.append(el("dt",k),el("dd",v));}
+function render() {
+  const r=summarize(); $("total").textContent=r.registered_files; $("counted").textContent=r.accepted_group_cases; $("ready").textContent=r.complete_groups;
+  $("initial").hidden=!!r.registered_files;$("export").disabled=!r.registered_files||processing;
+  const groupList=$("group-list");groupList.replaceChildren();
+  for (const g of r.groups) {
+    const node=el("li","");
+    node.append(el("b",g.group+" · "+g.counted.length+"/3"),document.createTextNode(g.purposes.join("、")+" · "+(g.all_three?"三例齐收":"待补或核对 "+g.missing.join("、"))+(g.check_independence.length?" · 跨组相同，需核实独立性 "+g.check_independence.join("、"):"")));
+    groupList.append(node);
+  }
+  const rows=$("rows");rows.replaceChildren();
+  for (const item of r.files) {
+    const d=el("details",""), label=el("summary","第 "+item.sequence+" 件 · "+(item.assignment.group||"未关联")+" · "+(item.encounter||"未识别病例")+" · "+item.decision);d.append(label);
+    const dl=el("dl","");pair(dl,"发放核对",[item.assignment.package_status,item.assignment.purpose||"用途待核",item.assignment.checked?"声明已核发放记录":"发放记录待核"].join(" · "));
+    pair(dl,"答卷核对",item.issue||item.validation);
+    for (const s of item.stages) pair(dl,s.stage===1?"初诊":"补记",(s.locked?"已锁定 "+s.locked_at+"（UTC）":"未锁定")+" · 截至 "+s.visible_through+" · "+(s.source_ids.join("、")||"未选出处"));
+    if (item.cross_group) pair(dl,"独立性","跨组相同，需核实独立性");
+    pair(dl,"文件指纹",item.raw_sha256||"读取失败");if(item.content_sha256) pair(dl,"内容指纹",item.content_sha256);
+    d.append(dl);rows.append(d);
+  }
+}
+$("pinned").textContent=PIN;
+$("package").addEventListener("change",async () => {
+  const version=++zipGeneration,file=$("package").files[0];
+  $("issued").checked=false;zip={status:file?"核验中":"未选题包",sha256:null};$("package-status").textContent=zip.status;
+  if (!file) return;
+  try {
+    const sha256=await digest(await file.arrayBuffer());
+    if (version!==zipGeneration)return;
+    zip={status:sha256===PIN?"冻结题包一致":"题包指纹不符",sha256};
+  } catch {if(version!==zipGeneration)return;zip={status:"无法核验题包",sha256:null};}
+  $("package-status").textContent=zip.status+(zip.sha256?" · "+zip.sha256:"");$("package-status").classList.add("wrap");
+});
+$("group").addEventListener("input",()=>$("issued").checked=false);
+$("purpose").addEventListener("change",()=>$("issued").checked=false);
+$("receive").addEventListener("click",async () => {
+  if(processing)return;
+  const files=Array.from($("files").files);
+  if(!files.length){$("status").textContent="请先选择答卷 JSON。";$("files").focus();return;}
+  if(zip.status==="核验中"){$("status").textContent="正在核验题包，完成后请再登记。";return;}
+  const context=trustedContext();
+  processing=true;const disabled=["receive","files","package","group","purpose","issued","export"];
+  disabled.forEach(id=>$(id).disabled=true);
+  $("status").textContent="正在逐件核对。";
+  try {
+    for (const f of files) {
+      const row={sequence:items.length+1,assignment:{...context},encounter:null,stages:[],validation:null,issue:null,raw_sha256:null,content_sha256:null};
+      await inspectFile(f,row);items.push(row);
+    }
+    $("files").value="";$("status").textContent="已登记 "+files.length+" 件，请核对汇总。";
+  } finally {processing=false;disabled.forEach(id=>$(id).disabled=false);render();}
+});
+$("export").addEventListener("click",()=>{
+  const report=summarize();report.created_at=new Date().toISOString();
+  const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:"application/json;charset=utf-8"}));
+  const link=el("a","");link.href=url;link.download="三例评阅组织者回执.json";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+</script></body></html>

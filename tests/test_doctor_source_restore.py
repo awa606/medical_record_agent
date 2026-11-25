@@ -1,19 +1,14 @@
 """Persisted input must survive encounter reopening without using draft prose."""
 import json
-import subprocess
-from pathlib import Path
+
+from tests.test_doctor_history_restore import run_browser_logic
 
 
 def restored(task):
-    source = Path('static/doctor.js').read_text(encoding='utf8')
-    start = source.find('function restoreTaskSource(')
-    if start < 0:
-        start = source.index('function applyEncounterDetail(')
-    code = source[start:source.index('function selectedEncounterId()', start)]
-    script = "const appState={}; const resetTaskState=()=>{};\n" + code
-    script += '\napplyEncounterDetail(' + json.dumps({'id':13,'task':task}) + ');'
-    script += '\nconsole.log(JSON.stringify(appState));'
-    return json.loads(subprocess.check_output(['node','-e',script], text=True, encoding='utf8'))
+    encounter = json.dumps({'id': 13, 'task': task})
+    return run_browser_logic(
+        f'applyEncounterDetail({encounter});\nconsole.log(JSON.stringify(appState));'
+    )
 
 
 def test_reopen_text_keeps_original_not_doctor_modified_draft():

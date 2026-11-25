@@ -1,0 +1,2 @@
+# The trial verifies the published source and synthetic fixtures by their exact bytes.
+* -text whitespace=trailing-space,space-before-tab,cr-at-eol

@@ -19,7 +19,8 @@ def test_workflow_uses_five_steps_without_role_review_step() -> None:
     assert "采集信息" in script
     assert "AI处理" in script
     assert "病历审核" in script
-    assert "导出完成" in script
+    assert '{ key: "EXPORT", label: "导出 PDF" }' in script
+    assert '"已导出 PDF" : "待导出 PDF"' in script
     assert "3.角色校正" not in script
     assert 'TRANSCRIBED: "AI_PROCESS"' in script
 

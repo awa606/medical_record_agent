@@ -17,6 +17,15 @@ from scripts.alpha51_release_archive import COMPOSE
 
 
 class OfflineDeliveryTests(unittest.TestCase):
+    def test_offline_open_uses_restored_build_version(self):
+        from scripts.offline_pilot_archive import main
+
+        version = "ce240aba" * 5
+        write_json(self.root / "restore.private.json", {"port": 18123, "app_sha": version})
+        with patch("sys.argv", ["offline", "open", "--target", str(self.root)]), patch("webbrowser.open") as opened:
+            main()
+        opened.assert_called_once_with(f"http://127.0.0.1:18123/static/doctor.html?v={version}")
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -73,6 +82,32 @@ class OfflineDeliveryTests(unittest.TestCase):
             c.commit()
         with self.assertRaisesRegex(ValueError, 'outside reviewed'):
             sanitize_database(source, self.root / 'out.sqlite3', policy)
+
+    def test_versioned_source_and_published_fts_in_archive_fingerprint(self):
+        from app.services.knowledge_store import KnowledgePage, ingest_pages, init_knowledge_schema
+
+        source, policy = self.seed()
+        self.assertNotIn('knowledge_document_source', fingerprints(source))
+        with closing(sqlite3.connect(source)) as db:
+            for table in ('knowledge_embedding', 'knowledge_chunk', 'knowledge_document', 'knowledge_source'):
+                db.execute(f'DROP TABLE {table}')
+            db.row_factory = sqlite3.Row
+            init_knowledge_schema(db)
+            ingest_pages(source={"source_id": "sim", "version": "v1", "title": "演练目录", "publisher": "合成机构",
+                                 "usage_scope": "演练", "source_url": "https://example.test"},
+                         document_bytes=b"sim", pages=[KnowledgePage(1, "记载", "登记演练。")],
+                         extraction_method="test", connection=db)
+            db.execute("INSERT INTO knowledge_admin_audit(actor_user_id,action,detail_json,created_at) VALUES(7,'test','{}','now')")
+            db.commit()
+        target = self.root / 'archive.sqlite3'
+        recorded = sanitize_database(source, target, policy)
+        self.assertEqual(recorded, fingerprints(source))
+        self.assertEqual(recorded, fingerprints(target))
+        self.assertEqual(recorded['knowledge_document_source']['rows'], 1)
+        self.assertEqual(recorded['knowledge_published_terms_fts']['rows'], 1)
+        with closing(sqlite3.connect(target)) as db:
+            self.assertEqual(db.execute("SELECT count(*) FROM knowledge_published_terms_fts WHERE knowledge_published_terms_fts MATCH '登记'").fetchone()[0], 1)
+            self.assertEqual(db.execute("SELECT count(*) FROM knowledge_admin_audit").fetchone()[0], 0)
 
     def test_verify_rejects_tamper_extra_missing_and_traversal(self):
         p = self.root / 'package'

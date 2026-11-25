@@ -301,9 +301,13 @@ def data_browser_status(config: dict | None = None) -> dict:
         return {"available": False, "phase": "INVALID_SNAPSHOT"}
 
 
+def workbench_url(config: dict) -> str:
+    return f"http://127.0.0.1:{config['port']}/static/doctor.html?v={config['app_git_sha']}"
+
+
 def entrypoint_status(config: dict, result: dict) -> dict:
     documents = Path(config.get("handbook_dir") or ROOT / "docs/pilot/doctor-v1")
-    base = f"http://127.0.0.1:{config['port']}/static/doctor.html"
+    base = workbench_url(config)
     return {**result, "entrypoints": {
         "doctor": {"available": result["web_available"], "url": base},
         "knowledge": {"available": result["web_available"], "url": base + "#admin",
@@ -498,7 +502,7 @@ def open_workspace(config: dict, *, view: str = "workbench") -> dict:
     if not result["web_available"]:
         raise PilotError("WEB_NOT_READY: 请先启动本版本。")
     suffix = "#admin" if view == "admin" else "#help" if view == "help" else ""
-    _open_app_window(config, f"http://127.0.0.1:{config['port']}/static/doctor.html?v={config['app_git_sha']}{suffix}")
+    _open_app_window(config, workbench_url(config) + suffix)
     return result
 
 

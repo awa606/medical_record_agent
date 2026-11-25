@@ -26,6 +26,7 @@ TABLES = {
     "export_event": "id INTEGER PRIMARY KEY, encounter_id INTEGER REFERENCES encounter(id), revision_id INTEGER REFERENCES record_revision(id), approval_id INTEGER REFERENCES approval(id), task_id INTEGER REFERENCES agent_task(id), created_at TEXT",
     "knowledge_source": "source_id TEXT PRIMARY KEY, title TEXT, publisher TEXT, source_url TEXT, published_at TEXT, usage_scope TEXT, document_type TEXT, disease_scope TEXT",
     "knowledge_document": "document_id TEXT PRIMARY KEY, source_id TEXT REFERENCES knowledge_source(source_id), version TEXT, content_sha256 TEXT, retrieved_at TEXT, page_count INTEGER, extraction_method TEXT, is_current INTEGER, is_active INTEGER, effective_date TEXT, content_format TEXT",
+    "knowledge_document_source": "document_id TEXT PRIMARY KEY REFERENCES knowledge_document(document_id), title TEXT, publisher TEXT, source_url TEXT, published_at TEXT, usage_scope TEXT, document_type TEXT, disease_scope TEXT, metadata_origin TEXT",
     "knowledge_chunk": "chunk_id TEXT PRIMARY KEY, document_id TEXT REFERENCES knowledge_document(document_id), section TEXT, page INTEGER, content TEXT, content_sha256 TEXT",
     "knowledge_embedding_metadata": "chunk_id TEXT REFERENCES knowledge_chunk(chunk_id), model_id TEXT, dimensions INTEGER, created_at TEXT, PRIMARY KEY(chunk_id,model_id)",
 }
@@ -127,6 +128,11 @@ def export_snapshot(source: Path, output: Path, allowlist: Path, source_label: s
             "approval": [r for r in _rows(snapshot, "approval") if r["encounter_id"] in eids],
             "export_event": [r for r in _rows(snapshot, "export_event") if r["encounter_id"] in eids],
             **{t: _rows(snapshot, t) for t in ("knowledge_source", "knowledge_document", "knowledge_chunk")},
+            "knowledge_document_source": (
+                _rows(snapshot, "knowledge_document_source")
+                if snapshot.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='knowledge_document_source'").fetchone()
+                else []
+            ),
             "knowledge_embedding_metadata": _rows(snapshot, "knowledge_embedding"),
         }
         if any(r["revision_id"] not in rids for t in ("approval", "export_event") for r in projection[t]):
@@ -158,6 +164,8 @@ def export_snapshot(source: Path, output: Path, allowlist: Path, source_label: s
                         "patient": {"label_column": "deidentified_id"},
                         "knowledge_source": {"label_column": "title"},
                         "knowledge_document": {"label_column": "version"},
+                        "knowledge_document_source": {"label_column": "title",
+                            "description": "按 document_id 核对该版本的资料出处。version_import 表示按版本登记；legacy_observed 表示迁移时可见的共用资料。早期快照无此表时不补写历史出处。"},
                         "knowledge_chunk": {"label_column": "section"},
                         "revision_field": {"description": "从病历版本提取的字段及原文证据；这里只能查看，修改请回到医生工作台。"},
                         "knowledge_embedding_metadata": {"description": "仅展示语义向量索引（embedding）的模型、维度与片段关联；数量不等于混合检索验收通过。"},

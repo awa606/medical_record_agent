@@ -5,6 +5,8 @@ import re
 from typing import Any
 
 from app.schemas import MedicalRecordFields, SourceSpan
+from app.services.asr.speaker_role_policy import normalize_role
+from app.services.audio_citations import AudioCitationIndex, quote_text
 from app.services.clinical_facts import (
     _FAMILY_WORDS, _RESPIRATORY_SYMPTOMS, clinical_experiencer, clinical_segment_contexts,
     extract_clinical_facts, split_clinical_segments,
@@ -356,10 +358,14 @@ def reconcile_extractive_fields(
     return fields, repairs
 
 def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: list[dict] | None = None,
-                  *, source_corrected_fields: set[str] | None = None) -> MedicalRecordFields:
+                  *, source_corrected_fields: set[str] | None = None, only_corrected: bool = False) -> MedicalRecordFields:
     segments = split_clinical_segments(source)
     contexts = clinical_segment_contexts(source)
+    corrected = source_corrected_fields or set()
+    audio_index = AudioCitationIndex(source, trusted_segments, persisted=True) if corrected and trusted_segments else None
     for key in FIELD_KEYS:
+        if only_corrected and key not in corrected:
+            continue
         field = getattr(fields, key)
         field.confirmed_by_doctor = False
         field.doctor_review_status = "pending"
@@ -368,40 +374,76 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
             continue
         errors = []
         guardian_child_quotes: set[str] = set()
+        selected_quotes = set()
         if field.missing:
             errors.append("非空字段不能标记为未提及")
         if not field.source_spans and not manual_doctor_edit:
             errors.append("缺少转写证据")
-        for span in field.source_spans:
+        for i, span in enumerate(field.source_spans):
             matching = [s for s in segments if span.text and compact(span.text) in compact(s)]
+            matching_contexts = [c for c in contexts if span.text and compact(span.text) in compact(c.text)]
+            if span.index is not None:
+                matching_contexts = [c for c in matching_contexts if c.index == span.index]
             if not span.text or compact(span.text) not in compact(source):
                 errors.append("引用不在原始转写中")
             if span.index is not None and (span.index < 0 or span.index >= len(segments) or compact(span.text) not in compact(segments[span.index])):
                 errors.append("引用片段序号不匹配")
-            if span.segment_id is not None:
+            if key in corrected and trusted_segments == []:
+                errors.append("这次录音缺少可核实的原始音段及说话人，请恢复来源或选择医生补录")
+            elif key in corrected and trusted_segments is None:
+                quoted = quote_text(span.text)
+                if not quoted or not any(quoted in quote_text(c.text) for c in matching_contexts):
+                    errors.append("所选引文与本次输入原句不一致")
+                if any(v is not None for v in (span.segment_id, span.start_time, span.end_time)):
+                    errors.append("本次文字来源没有可核实的音段编号或时间")
+                if span.index is None and len(matching) != 1:
+                    errors.append("请按本次原文的句序明确选择引用")
+                if len(matching_contexts) == 1:
+                    location = (matching_contexts[0].index, quoted)
+                    if location in selected_quotes:
+                        errors.append("同一原文被重复选取，请保留一次")
+                    selected_quotes.add(location)
+                if key != "physical_exam" and any(c.speaker == "医生" for c in matching_contexts):
+                    errors.append("医生陈述不能作为患者自述")
+            elif span.segment_id is not None and key not in corrected:
                 trusted = next((s for s in trusted_segments or [] if s.get('segment_id') == span.segment_id), None)
                 if trusted is None or compact(span.text) not in compact(trusted.get('text', '')):
                     errors.append("转写片段身份或原文不匹配")
             if trusted_segments:
-                matches = [s for s in trusted_segments if span.text and compact(span.text) in compact(s.get('text', ''))]
-                if span.segment_id:
-                    matches = [s for s in matches if s.get('segment_id') == span.segment_id]
+                if key in corrected:
+                    resolved = audio_index.match(span)
+                    matches = []
+                    if resolved is None:
+                        errors.append("所选原文、句序、音段或时间无法相互核实，请重新选择")
+                    else:
+                        row, span = resolved
+                        field.source_spans[i] = span
+                        matches = [row]
+                        location = (row["index"], quote_text(span.text))
+                        if location in selected_quotes:
+                            errors.append("同一原文被重复选取，请保留一次")
+                        selected_quotes.add(location)
+                        if audio_index.owners:
+                            matching_contexts = [c for c in matching_contexts if audio_index.owners[c.index] is row]
+                else:
+                    matches = [s for s in trusted_segments if span.text and compact(span.text) in compact(s.get('text', ''))]
+                    if span.segment_id:
+                        matches = [s for s in matches if s.get('segment_id') == span.segment_id]
                 if len(matches) == 1:
                     trusted = matches[0]
                     span.segment_id = trusted.get('segment_id')
-                    if trusted.get('role') not in {'患者', '医生'}:
+                    role = normalize_role(trusted.get('role')) if key in corrected else trusted.get('role')
+                    if role not in {'患者', '医生'}:
                         errors.append("转写角色尚未确认")
-                    if trusted.get('role') == '医生' and (key != 'physical_exam' or re.search(r'吗|么|有没有|是否|[?？]', trusted.get('text', ''))):
+                    if role == '医生' and (key != 'physical_exam' or re.search(r'吗|么|有没有|是否|[?？]', trusted.get('text', ''))):
                         errors.append("医生提问或非患者陈述不能写成患者事实")
                 elif not matches:
-                    errors.append("没有对应的真实音频片段")
+                    if key not in corrected:
+                        errors.append("没有对应的真实音频片段")
                 else:
                     errors.append("引用匹配多个音频片段，必须明确片段身份")
-            context = segments[span.index] if span.index is not None and 0 <= span.index < len(segments) else "\n".join(matching)
+            context = segments[span.index] if span.index is not None and 0 <= span.index < len(segments) else "\n".join(c.text for c in matching_contexts)
             errors.extend(treatment_grounding_errors(field.value, context, previous_treatment=key == "previous_treatment"))
-            matching_contexts = [c for c in contexts if span.text and compact(span.text) in compact(c.text)]
-            if span.index is not None:
-                matching_contexts = [c for c in matching_contexts if c.index == span.index]
             if key == "chief_complaint" and _explicitly_retracted_chief(field.value, matching_contexts):
                 errors.append("原文已明确撤回该症状，不能作为当前阳性主诉")
             guardian_child_quote = _guardian_child_quote(span.text, matching_contexts)
@@ -499,6 +541,8 @@ def ground_fields(fields: MedicalRecordFields, source: str, trusted_segments: li
         elif field.status == "conflicting":
             field.status = "complete"
             field.hint = None
+    if only_corrected:
+        return fields
     for diagnosis in fields.candidate_diagnoses:
         diagnosis.confirmed_by_doctor = False
         if not diagnosis.evidence or any(not s.text or compact(s.text) not in compact(source) for s in diagnosis.evidence):

@@ -142,7 +142,10 @@ def _layout_metrics(page) -> dict[str, object]:
           };
           const transcript = document.querySelector("#transcriptList");
           const workbench = document.querySelector(".workbench");
-          const actionBar = document.querySelector(".encounter-action-bar");
+          // While reading the modal transcript its return control is active.
+          // The encounter's own review controls are measured again after closing.
+          const actionBar = document.querySelector("#workspaceAuxDialog[open] > header") ||
+            document.querySelector(".encounter-action-bar");
           const productMain = document.querySelector(".product-main");
           const firstText = document.querySelector(".transcript-row-text");
           const firstRoleWarning = document.querySelector(".transcript-role-warning");
@@ -185,6 +188,11 @@ def _layout_metrics(page) -> dict[str, object]:
 
 
 def _assert_footer_button_clickable(page, selector: str) -> None:
+    bar = page.locator(".encounter-action-bar").bounding_box()
+    viewport_height = page.evaluate("innerHeight")
+    assert bar and 0 <= bar["y"] and bar["y"] + bar["height"] <= viewport_height
+    record_column = page.locator(".field-column").bounding_box()
+    assert record_column and record_column["y"] + record_column["height"] <= bar["y"] + 1
     page.evaluate(
         """
         (selector) => {
@@ -258,6 +266,10 @@ def test_long_transcript_scrolls_inside_transcript_region_and_action_bar_is_clic
                 _login(page, server.base_url)
                 _inject_layout_state(page, 90)
 
+                _assert_footer_button_clickable(page, "#confirmFieldsButton")
+                opener = page.locator("#showTranscriptButton")
+                opener.click()
+                expect(page.locator("#workspaceAuxDialog #transcriptList")).to_be_visible()
                 metrics = _layout_metrics(page)
                 assert metrics["bodyScrollWidth"] <= metrics["bodyClientWidth"]
                 assert metrics["transcriptScrollHeight"] > metrics["transcriptClientHeight"]
@@ -274,8 +286,10 @@ def test_long_transcript_scrolls_inside_transcript_region_and_action_bar_is_clic
                 assert metrics["actionBar"]["top"] >= 0
                 assert metrics["actionBar"]["bottom"] <= height
 
-                _assert_footer_button_clickable(page, "#confirmFieldsButton")
                 page.evaluate("document.querySelector('#transcriptList').scrollTop = document.querySelector('#transcriptList').scrollHeight")
+                page.locator("#closeWorkspaceAuxButton").click()
+                expect(opener).to_be_focused()
+                expect(page.locator("#workspaceAuxDialog")).not_to_be_visible()
                 _assert_footer_button_clickable(page, "#confirmFieldsButton")
                 context.close()
             browser.close()
@@ -329,6 +343,9 @@ def test_short_transcript_keeps_action_bar_visible_without_horizontal_overflow()
             _login(page, server.base_url)
             _inject_layout_state(page, 2)
 
+            opener = page.locator("#showTranscriptButton")
+            opener.press("Enter")
+            expect(page.locator("#workspaceAuxDialog #transcriptList")).to_be_visible()
             metrics = _layout_metrics(page)
             assert metrics["bodyScrollWidth"] <= metrics["bodyClientWidth"]
             assert metrics["transcriptScrollHeight"] >= metrics["transcriptClientHeight"]
@@ -337,6 +354,9 @@ def test_short_transcript_keeps_action_bar_visible_without_horizontal_overflow()
             assert metrics["firstText"]["width"] >= 115
             assert metrics["actionBar"]["top"] >= 0
             assert metrics["actionBar"]["bottom"] <= 900
+            page.keyboard.press("Escape")
+            expect(opener).to_be_focused()
+            expect(page.locator("#workspaceAuxDialog")).not_to_be_visible()
             _assert_footer_button_clickable(page, "#confirmFieldsButton")
             browser.close()
     finally:

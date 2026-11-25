@@ -4,21 +4,25 @@ import json
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
 from app.db import (
     CHECK_IN_STATUSES,
+    DEPARTMENT_VISIBLE_ROLES,
     create_audit_log,
     create_encounter,
     get_encounter,
     get_record_revision,
+    get_user_by_id,
     list_encounters,
     list_record_revisions_for_encounter,
     update_encounter_check_in_status,
 )
 from app.schemas.auth import AuthenticatedUser
+from app.schemas.clinician_draft import ManualFirstDraftInput
+from app.db.sqlite import create_manual_first_draft, manual_first_task_metadata
 from app.services.privacy import register_identity
 
 
@@ -37,7 +41,29 @@ def _parse_json(value: str | None) -> Any:
     return json.loads(value)
 
 
-def _assert_encounter_access(encounter: dict[str, Any], request: Request | None) -> None:
+def _assert_encounter_access(
+    encounter: dict[str, Any],
+    request: Request | None,
+    *,
+    allow_department_role: bool = True,
+) -> None:
+    if request is None:
+        # Direct handler call; the HTTP boundary is guarded below.
+        return
+    user = current_user_from_request(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    department_match = bool(
+        user.department_id and encounter.get("department_id") == user.department_id
+    )
+    if not department_match and user.department_id and encounter.get("department_id") is None:
+        # Legacy rows have no department; fall back to the owning doctor's.
+        owner_id = encounter.get("doctor_user_id")
+        owner = get_user_by_id(int(owner_id)) if owner_id is not None else None
+        department_match = bool(owner and owner.get("department_id") == user.department_id)
+    if allow_department_role and user.role in DEPARTMENT_VISIBLE_ROLES and department_match:
+        # Front desk / intake read and check in patients of their own department.
+        return
     owner = encounter.get("doctor_user_id")
     assert_owner_or_admin(int(owner) if owner is not None else None, request, resource_name="encounter")
 
@@ -49,6 +75,7 @@ def _summary(encounter: dict[str, Any]) -> dict[str, Any]:
         "patient_deidentified_id": encounter.get("patient_deidentified_id"),
         "patient_display_name": encounter.get("patient_display_name"),
         "doctor_user_id": encounter.get("doctor_user_id"),
+        "department_id": encounter.get("department_id"),
         "task_id": encounter.get("task_id"),
         "status": encounter.get("status"),
         "check_in_status": encounter.get("check_in_status") or "checked_in",
@@ -60,7 +87,7 @@ def _summary(encounter: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _detail(encounter: dict[str, Any]) -> dict[str, Any]:
+def _detail(encounter: dict[str, Any], user: AuthenticatedUser | None = None) -> dict[str, Any]:
     current_revision = None
     if encounter.get("current_revision_id"):
         current_revision = get_record_revision(int(encounter["current_revision_id"]))
@@ -73,6 +100,9 @@ def _detail(encounter: dict[str, Any]) -> dict[str, Any]:
             "status": encounter.get("task_status"),
             "current_stage": encounter.get("task_current_stage"),
             "result_json": task_result,
+            "supports_clinician_assessment": True,
+            **manual_first_task_metadata(encounter["task_id"], encounter["id"], encounter.get("task_status"),
+                                         task_result, doctor_id=user.id if user and user.role == "doctor" else None),
         } if encounter.get("task_id") else None,
         "current_revision": current_revision,
         "revisions": revisions,
@@ -94,6 +124,7 @@ def read_encounters(
         status=status,
         mine=mine,
         q=q,
+        department_id=user.department_id,
     )
     return {"encounters": [_summary(row) for row in rows]}
 
@@ -110,6 +141,7 @@ def create_encounter_route(
         deidentified_id=deidentified_id,
         display_name=payload.patient_display_name or deidentified_id,
         check_in_status="registered",
+        department_id=user.department_id,
     )
     return _detail(row)
 
@@ -120,7 +152,27 @@ def read_encounter(encounter_id: int, request: Request) -> dict[str, Any]:
     if row is None:
         raise HTTPException(status_code=404, detail="Encounter not found")
     _assert_encounter_access(row, request)
-    return _detail(row)
+    return _detail(row, current_user_from_request(request))
+
+
+@router.post("/{encounter_id}/manual-first-draft", status_code=201)
+def manual_first_draft(encounter_id: int, payload: ManualFirstDraftInput, response: Response,
+                       user: AuthenticatedUser = Depends(require_current_user)) -> dict[str, Any]:
+    if user.role != "doctor":
+        raise HTTPException(403, "仅经治医生可手写本次病历。")
+    values = {key: value for key, value in (("chief_complaint", payload.chief_complaint),
+                                           ("present_illness", payload.present_illness)) if value}
+    try:
+        receipt, created = create_manual_first_draft(encounter_id, user.id, payload.failed_task_id,
+                                                     str(payload.request_id), values)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    response.status_code = 201 if created else 200
+    return receipt
 
 
 def _transition_check_in_status(
@@ -130,17 +182,18 @@ def _transition_check_in_status(
     action: str,
     target: str,
     allowed_from: set[str],
+    allow_department_role: bool = True,
 ) -> dict[str, Any]:
     row = get_encounter(encounter_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Encounter not found")
-    _assert_encounter_access(row, request)
+    _assert_encounter_access(row, request, allow_department_role=allow_department_role)
 
     current = row.get("check_in_status") or "checked_in"
     if current not in CHECK_IN_STATUSES:
         raise HTTPException(status_code=409, detail="Encounter has an invalid check-in status")
     if current == target:
-        return _detail(row)
+        return _detail(row, current_user_from_request(request))
     if current not in allowed_from:
         raise HTTPException(
             status_code=409,
@@ -168,7 +221,7 @@ def _transition_check_in_status(
                 "actor_role": actor.role if actor else None,
             },
         )
-    return _detail(updated)
+    return _detail(updated, actor)
 
 
 @router.post("/{encounter_id}/check-in")
@@ -190,6 +243,7 @@ def start_encounter(encounter_id: int, request: Request) -> dict[str, Any]:
         action="start",
         target="in_progress",
         allowed_from={"checked_in"},
+        allow_department_role=False,
     )
 
 
@@ -201,6 +255,7 @@ def complete_encounter(encounter_id: int, request: Request) -> dict[str, Any]:
         action="complete",
         target="completed",
         allowed_from={"in_progress"},
+        allow_department_role=False,
     )
 
 

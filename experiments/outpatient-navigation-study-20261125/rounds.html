@@ -1,0 +1,44 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>合成复诊资料 · 两轮试用</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f1f5f4;color:#193932;font:16px/1.65 "Microsoft YaHei",sans-serif}main{max-width:760px;margin:auto;padding:28px clamp(14px,5vw,48px)}h1{font-size:clamp(1.6rem,5vw,2.2rem);line-height:1.2}h2{font-size:1.2rem}.card{background:white;padding:18px clamp(12px,4vw,25px);border:1px solid #c5d5ce;border-radius:10px;margin:16px 0}a,button{font:inherit;color:#075744}a{font-weight:bold}a:focus-visible,button:focus-visible,textarea:focus-visible{outline:3px solid #00715d;outline-offset:3px}button{border:1px solid #518171;border-radius:5px;background:white;padding:.35em .8em;cursor:pointer}button:disabled{opacity:.55}label,textarea{display:block;width:100%}label{margin-top:10px}textarea{font:inherit;line-height:1.4;border:1px solid #95aaa1;border-radius:4px;padding:8px}small{color:#4a625b}summary{cursor:pointer}.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+</style><main><h1>合成复诊资料 · 两轮试用</h1><p>请独立完成两轮，每轮都会打开一个虚构患者的资料页。两轮可以使用同一种输入方式。请只记录合成资料。</p>
+<section class="card"><h2>每轮任务</h2><p>① 写下所读资料的题名或一条书写要求。② 这位患者带来的旧片是哪一侧、多久以前的？写下依据，并说明看到的引文与当前记录有什么关系。③ 回到刚才阅读资料的位置。若无法确认，可答“无法确认”。</p><p>每轮开始后会打开新标签。完成阅读与返回操作后，回到本页点击“结束本轮计时”，再填写答案。遇到困难可以记录并结束该轮。</p></section>
+<div id="tasks"></div><details class="card"><summary>观察者记录（选填）</summary><label>操作环境与是否有协助<textarea id="env" placeholder="如：桌面、键盘、无提示。请勿填写姓名。"></textarea></label><label>两轮中的误读、停顿、求助、返回位置或个人偏好<textarea id="observation"></textarea></label></details>
+<section class="card"><div class="actions"><button id="download">保存本机观察记录</button><button id="finish">结束并关闭本次服务</button></div><p id="notice" role="status">答案暂存在当前标签页，可保存为本机 JSON。关闭服务前请先保存需要保留的记录。</p></section></main>
+<script>
+const assigned=STUDY_ROWS;
+const storageKey='trial-notes:'+location.pathname;
+let prior={};
+try{prior=JSON.parse(sessionStorage.getItem(storageKey)||'{}')}catch{}
+const state={rounds:assigned.map((row,i)=>({...row,started:null,ended:null,answer:'',...prior.rounds?.[i]})),env:prior.env||'',observation:prior.observation||''};
+function preserve(){sessionStorage.setItem(storageKey,JSON.stringify(state))}
+for(const [i,row] of state.rounds.entries()){
+  const card=document.createElement('section');card.className='card';
+  card.innerHTML='<h2>第 '+(i+1)+' 轮</h2><div class="actions"><a target="_blank" rel="noopener">开始本轮</a><button>结束本轮计时</button></div><p role="status"></p><label>本轮答案与返回位置<textarea rows="4"></textarea></label>';
+  const link=card.querySelector('a'), stop=card.querySelector('button'), note=card.querySelector('p'), answer=card.querySelector('textarea');
+  link.href='/static/round-'+(i+1)+'.html?encounter_id='+row.id+'#encounter';
+  function update(){
+    link.textContent=row.started?'再次打开本轮资料':'开始本轮';
+    stop.disabled=!row.started||Boolean(row.ended);
+    note.textContent=row.ended?'已结束。用时 '+Math.round((row.ended-row.started)/1000)+' 秒。':row.started?'本轮计时中。':'尚未开始。';
+  }
+  link.addEventListener('click',()=>{if(!row.started)row.started=Date.now();preserve();update()});
+  stop.addEventListener('click',()=>{if(row.started&&!row.ended)row.ended=Date.now();preserve();update()});
+  answer.value=row.answer;answer.addEventListener('input',()=>{row.answer=answer.value;preserve()});
+  update();document.getElementById('tasks').append(card);
+}
+for(const key of ['env','observation']){
+  const e=document.getElementById(key);e.value=state[key];e.addEventListener('input',()=>{state[key]=e.value;preserve()});
+}
+document.getElementById('download').onclick=()=>{
+ const record={性质:'合成资料观察记录，未经医生或学校审核',版本:'r4.5 / a2f6c31',输入环境:state.env,观察记录:state.observation,计时范围:'从开始本轮至结束本轮计时，含标签切换。',两轮:state.rounds.map((r,i)=>({顺序:i+1,方案:r.variant,合成病例:r.case,已开始:Boolean(r.started),已结束:Boolean(r.ended),用时秒:r.ended?Math.round((r.ended-r.started)/1000):null,答案与返回:r.answer}))};
+ const url=URL.createObjectURL(new Blob([JSON.stringify(record,null,2)],{type:'application/json;charset=utf-8'}));
+ const a=document.createElement('a');a.href=url;a.download='合成复诊_两轮观察记录.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ document.getElementById('notice').textContent='已交给浏览器下载。请在下载目录确认文件。';
+};
+document.getElementById('finish').onclick=()=>{
+ if(!confirm('要结束本次试用吗？请确认需要的观察记录已下载。'))return;
+ sessionStorage.removeItem(storageKey);
+ const f=document.createElement('form');f.method='post';f.action=location.pathname+'/stop';document.body.append(f);f.submit();
+};
+</script></html>

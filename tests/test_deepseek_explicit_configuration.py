@@ -179,9 +179,13 @@ def test_proxy_disconnect_does_not_fall_back_to_direct_or_retry(tmp_path):
             p.generate_fields_json(TEXT, timeout_seconds=1)
     assert build.call_count == 1 and opener.open.call_count == 1
     assert build.call_args.args[0].proxies == {"https": PROXY}
-    assert p.response_metadata == {"transport_mode": "explicit_local_proxy", "field_contract": "clause_v1"}
+    assert set(p.response_metadata) == {"transport_mode", "field_contract", "latency_ms", "budget_call_id"}
+    assert p.response_metadata["transport_mode"] == "explicit_local_proxy"
+    assert p.response_metadata["field_contract"] == "clause_v1"
+    assert isinstance(p.response_metadata["latency_ms"], int) and p.response_metadata["latency_ms"] >= 0
     calls = json.loads((tmp_path / "ledger.json").read_text())["calls"]
     assert len(calls) == 1 and calls[0]["state"] == "failed_reservation_retained"
+    assert p.response_metadata["budget_call_id"] == calls[0]["id"]
     with pytest.raises(dp.SpikeError, match="^AUTOMATIC_RETRY_FORBIDDEN$"):
         p.generate_fields_json(TEXT, timeout_seconds=1)
     files = "\n".join(path.read_text(encoding="utf8") for path in tmp_path.rglob("*.json"))

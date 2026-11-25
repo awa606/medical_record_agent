@@ -13,7 +13,7 @@ def test_record_editor_and_field_knowledge_actions_are_bound_to_existing_apis() 
     assert 'id="cancelRecordEditButton"' in html
     assert 'data-record-field-input=' in script
     assert 'data-knowledge-field=' in script
-    assert 'api("/api/knowledge/retrieve"' in script
+    assert 'readApi("/api/knowledge/retrieve"' in script
     assert "expected_revision_id" in script
     assert "expected_content_hash" in script
     assert "stale_record_revision" in script

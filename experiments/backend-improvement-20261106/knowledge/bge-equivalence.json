@@ -1,0 +1,47 @@
+{
+  "model_id": "BAAI/bge-small-zh-v1.5",
+  "revision": "7999e1d3359715c523056ef9478215996d62a620",
+  "files_sha_manifest": "bge_download_manifest.json",
+  "torch": "2.10.0",
+  "transformers": "5.12.1",
+  "device": "cpu",
+  "pooling": "CLS",
+  "normalization": "L2",
+  "max_seq_length": 512,
+  "queries_instruction": "none, same as existing production encode",
+  "load_ms": 31326.826399999845,
+  "thresholds_fixed_before_run": {
+    "cosine_min": 0.99999,
+    "max_abs_error_max": 0.0001
+  },
+  "checks": [
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c001",
+      "length": 9,
+      "cosine": 1.0000001192092896,
+      "max_abs_error": 1.8067657947540283e-07,
+      "elapsed_ms": 170.87200000059966,
+      "matched": true
+    },
+    {
+      "chunk_id": "nhc-covid19-trial-v10-v2-0d062b0213b1-p013-c013",
+      "length": 526,
+      "cosine": 0.9989879131317139,
+      "max_abs_error": 0.00723198801279068,
+      "elapsed_ms": 177.51090000092518,
+      "matched": false
+    },
+    {
+      "chunk_id": "nhc-record-standard-2010-2010-11-7558c6eac6a3-p001-c004",
+      "length": 1765,
+      "cosine": 1.0000001192092896,
+      "max_abs_error": 1.1175870895385742e-07,
+      "elapsed_ms": 209.90559999881953,
+      "matched": true
+    }
+  ],
+  "matched": false,
+  "production_embeddings_unchanged": true,
+  "python": "3.13.5",
+  "decision": "STOP; 1/3源片段未达到预注册一致性，未编码24查询"
+}

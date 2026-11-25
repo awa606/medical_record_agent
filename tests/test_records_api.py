@@ -6,6 +6,7 @@ from fastapi import BackgroundTasks, HTTPException
 
 from app.agents import MedicalRecordOrchestrator
 from app.api.records import (
+    _AudioCitations,
     BuildDraftRequest,
     ExtractFieldsRequest,
     GenerateRecordRequest,
@@ -19,6 +20,7 @@ from app.api.records import (
     run_record_generation_task,
 )
 from app.api.tasks import read_task
+from app.schemas import SourceSpan
 
 
 class RecordsApiTests(unittest.TestCase):
@@ -76,6 +78,51 @@ class RecordsApiTests(unittest.TestCase):
         self.assertEqual(completed_task["status"], MedicalRecordOrchestrator.STATUS_WAITING_DOCTOR_REVIEW)
         self.assertIn("门诊病历草稿", completed_task["result_json"]["draft"])
         self.assertIn("quality_report", completed_task["result_json"])
+
+    def test_audio_citations_use_sentence_indices_inside_multi_sentence_turns(self):
+        segments = [
+            {"segment_id": "doctor", "role": "医生", "text": "先听我说。喝水后我头晕。",
+             "start_time": 0, "end_time": 4},
+            {"segment_id": "patient", "role": "患者", "text": "喝水后我头晕。", "start_time": 9, "end_time": 11},
+        ]
+        citations = _AudioCitations("[医生] 先听我说。喝水后我头晕。\n[患者] 喝水后我头晕。", segments)
+        for index, segment_id, start in ((1, "doctor", 0), (2, "patient", 9)):
+            with self.subTest(index=index):
+                span = citations.bind(SourceSpan(text="喝水后我头晕", index=index))
+                self.assertEqual((span.index, span.segment_id, span.start_time), (index, segment_id, start))
+        existing = SourceSpan(text="喝水后我头晕", index=2, segment_id="patient", start_time=9.5, end_time=10)
+        self.assertEqual(citations.bind(existing), existing)
+        for span in (
+            SourceSpan(text="喝水后我头晕"),
+            SourceSpan(text="喝水后我头晕", index=0),
+            SourceSpan(text="喝水后我头晕", index=2, segment_id="doctor"),
+            SourceSpan(text="[患者] 喝水后我头晕", index=1),
+            SourceSpan(text="喝水后我头晕", index=2, start_time=0),
+            SourceSpan(text="喝水后我头晕而且发热"),
+        ):
+            with self.subTest(original=span):
+                result = citations.bind(span)
+                self.assertEqual((result.text, result.index), (span.text, span.index))
+                self.assertEqual((result.segment_id, result.start_time, result.end_time), (None, None, None))
+        untimed = _AudioCitations("昨晚用药", [{"text": "昨晚用药", "segment_id": "u"}])
+        span = untimed.bind(SourceSpan(text="昨晚用药"))
+        self.assertEqual((span.segment_id, span.start_time, span.end_time), ("u", None, None))
+
+    def test_preview_does_not_bind_a_patients_medication_to_the_doctors_short_prompt(self):
+        segments = [
+            {"segment_id": "prompt", "speaker_id": "d", "role": "医生", "text": "布洛芬",
+             "role_source": "mock_deterministic", "role_confidence": 0.99, "start_time": 1, "end_time": 2},
+            {"segment_id": "answer", "speaker_id": "p", "role": "患者", "text": "昨晚吃了布洛芬",
+             "role_source": "mock_deterministic", "role_confidence": 0.99, "start_time": 9, "end_time": 10},
+        ]
+        response = preview_record(PreviewRecordRequest(
+            conversation_text="[医生] 布洛芬\n[患者] 昨晚吃了布洛芬", segments=segments))
+        evidence = response.fields_preview["previous_treatment"]["source_spans"]
+        self.assertEqual([(s["segment_id"], s["start_time"]) for s in evidence], [("answer", 9)])
+        update = next(item for item in response.structured_updates if item["key"] == "previous_treatment")
+        self.assertEqual(update["source_segment_ids"], ["answer"])
+        links = [item["segment_id"] for item in response.evidence_links if item["label"] == "既往处理"]
+        self.assertEqual(links, ["answer"])
 
     def test_reusable_record_service_interfaces_do_not_create_task(self):
         extracted = extract_fields(

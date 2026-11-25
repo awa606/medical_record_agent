@@ -1,0 +1,90 @@
+{
+  "date_local": "2026-11-25",
+  "release": "r4.5",
+  "application_commit": "a2f6c3120eb82d36eceeaa53b3fffc0ef5d1e20a",
+  "package_sha256": "f77967711c459cfec818bc71176f64d52cef3cdcb84a43f2b2133b3680c240d6",
+  "scope": "本机隔离环境的两份合成草稿。字段引用实测使用普通医生工作台，实际媒体播放使用 Edge。既有 R1 两组来自同一份冷备。完整录音另由一次独立的快速会话生成。未进行真实医师盲听、临床准确性或正式发布验收。",
+  "same_snapshot": {
+    "database_only": {
+      "stored_field_quote_visible_in_doctor_ui": true,
+      "current_transcript_http": 404,
+      "readiness_http": 200,
+      "ready_for_export": false,
+      "readiness_error_count": 6,
+      "source_issue_code": "audio_source_unavailable",
+      "unsigned_export_http": 409,
+      "unchanged_counts": {
+        "record_revision": 1,
+        "approval": 0,
+        "export_event": 0
+      },
+      "revision_digest_preserved": true
+    },
+    "database_and_bound_transcript": {
+      "stored_field_quote_visible_in_doctor_ui": true,
+      "current_transcript_http": 404,
+      "readiness_http": 200,
+      "ready_for_export": false,
+      "readiness_error_count": 5,
+      "source_issue_code": null,
+      "unsigned_export_http": 400,
+      "unchanged_counts": {
+        "record_revision": 1,
+        "approval": 0,
+        "export_event": 0
+      },
+      "revision_digest_preserved": true
+    }
+  },
+  "old_snapshot_missing_items": [
+    "原运行实例的上传音频",
+    "该录音的归属登记"
+  ],
+  "independent_synthetic_recording": {
+    "different_recording_and_revision": true,
+    "input": "依据项目固定六句脚本，用本地语音合成独立生成 WAV",
+    "provider": "mock ASR 与模拟生成；模拟普通医生账号按脚本核对角色后生成草稿",
+    "cold_backup": [
+      "SQLite 一致性备份",
+      "新草稿自己的原始 WAV",
+      "原归属登记",
+      "原转写"
+    ],
+    "full_wav_sha256_verified_before_and_after": true,
+    "original_wav_bytes": 1102544,
+    "duration_seconds": 25,
+    "doctor_workbench_playback_advanced_seconds": {
+      "before": 0.418382,
+      "restored": 0.408815
+    },
+    "registered_owner_unchanged": true,
+    "current_transcript_http": 200,
+    "current_transcript_segments": 6,
+    "current_transcript_digest_unchanged": true,
+    "media_http": 200,
+    "partial_media_http": 206,
+    "content_range": "bytes 0-127/1102544",
+    "permission_statuses": {
+      "其他普通医生": {
+        "媒体": 403,
+        "转写": 403,
+        "登记": 403
+      },
+      "未登录": {
+        "媒体": 401,
+        "转写": 401,
+        "登记": 401
+      }
+    },
+    "ready_for_export": false,
+    "source_issue_code": null,
+    "unsigned_export_http": 400,
+    "unchanged_counts": {
+      "record_revision": 1,
+      "approval": 0,
+      "export_event": 0
+    },
+    "revision_digest_preserved": true,
+    "isolated_services_removed": true
+  }
+}

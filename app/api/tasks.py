@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
-from pathlib import Path
+import re
+from datetime import UTC, datetime
+from pathlib import Path, PureWindowsPath
 from typing import Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 
 from app.api.auth import assert_owner_or_admin, current_user_from_request, require_current_user
+from app.api.audio import audio_source_issue, checked_audio_signoff
+from app.api.audio_source_revisions import recoverable_source
 from app.db import (
     StaleRecordRevisionError,
     apply_review_revision_transaction,
@@ -19,33 +24,39 @@ from app.db import (
     create_export_event_for_task,
     get_active_approval_for_task,
     get_audit_logs,
+    get_encounter,
     get_record_revision,
     get_task,
     get_task_encounter,
     get_task_steps,
-    json_dumps,
+    get_user_by_id,
     list_approval_items_for_approval,
+    latest_export_for_approval,
     record_content_hash,
-    update_task,
 )
 from app.schemas import MedicalRecordFields, SafetyCheckResult
-from app.services import LLMProviderUnavailableError, create_llm_record_generator, export_record
+from app.schemas.auth import AuthenticatedUser
+from app.schemas.clinician_assessment import ClinicianAssessment, ClinicianAssessmentInput
+from app.schemas.clinician_draft import ClinicianDraftOrigin
+from app.services.clinician_draft import render_manual_draft
+from app.db.sqlite import manual_first_task_metadata
+from app.services import export_record
 from app.services.agent_trace import build_agent_trace, load_asr_result_for_audio
+from app.services.asr.signoff_source import bound_recording
+from app.services.clinical_codes import icd10_errors
 from app.services.exporter import DEFAULT_OUTPUT_DIR
+from app.services.episode_medication_coverage import has_episode_medication_gap, refresh_episode_medication
+from app.services.llm.factory import STRICT_RECORD_PROVIDER_MODES, _record_provider_mode
+from app.services.record_rules import allergy_treatment_errors, check_draft_safety, render_draft
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"], dependencies=[Depends(require_current_user)])
 TERMINAL_EVENTS = {"WAITING_DOCTOR_REVIEW", "FAILED"}
 EXPORT_DOWNLOADS = {
-    "markdown": {
-        "path_key": "markdown_path",
-        "extension": "md",
-        "media_type": "text/markdown; charset=utf-8",
-    },
-    "docx": {
-        "path_key": "word_path",
-        "extension": "docx",
-        "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "pdf": {
+        "path_key": "pdf_path",
+        "extension": "pdf",
+        "media_type": "application/pdf",
     },
 }
 
@@ -56,6 +67,7 @@ class ReviewRequest(BaseModel):
     expected_content_hash: str
     manual_takeover_fields: list[str] = Field(default_factory=list)
     source_corrected_fields: list[str] = Field(default_factory=list)
+    clinician_assessment: ClinicianAssessmentInput | None = None
 
 
 class FieldApprovalItem(BaseModel):
@@ -104,6 +116,9 @@ class ExportReadinessResponse(BaseModel):
     content_hash: str | None = None
     approval_id: int | None = None
     pending_review_count: int = 0
+    audio_source_issue: dict[str, str] | None = None
+    can_create_export: bool = False
+    can_recover_audio_source: bool = False
 
 
 def _decode_result_json(task: dict[str, Any]) -> dict[str, Any]:
@@ -206,35 +221,28 @@ def _load_task_result(
     return decoded_task, result
 
 
-def _save_task_result(
-    task_id: int,
-    result: dict[str, Any],
-    *,
-    current_stage: str,
-    event_type: str,
-    event_detail: dict[str, Any],
-    request: Request | None = None,
-) -> None:
-    update_task(
-        task_id,
-        current_stage=current_stage,
-        result_json=json_dumps(result),
-    )
-    create_audit_log(task_id, event_type, {**event_detail, **_actor_detail(request)})
-
-
-def _record_generator_or_503():
+def _requires_strict_review(prior_trace: dict) -> bool:
     try:
-        return create_llm_record_generator()
-    except LLMProviderUnavailableError as exc:
+        mode = _record_provider_mode()
+    except ValueError as exc:
         raise HTTPException(
             status_code=503,
             detail={
-                "message": "Requested record generation provider is unavailable.",
+                "message": "Cannot determine the evidence policy for this review.",
                 "fallback": False,
-                "fallback_reason": str(exc),
+                "fallback_reason": "Unsupported RECORD_PROVIDER_MODE",
             },
         ) from exc
+    previous_review = prior_trace.get("review_components")
+    if not isinstance(previous_review, dict):
+        previous_review = {}
+    # A deployment changing to demo must not relax a previously strict record.
+    # Older records without a saved mode use today's policy. An unrecognized
+    # nonempty historical mode gets strict grounding instead of guessing demo.
+    saved_modes = (prior_trace.get("mode"), previous_review.get("mode"))
+    return (mode in STRICT_RECORD_PROVIDER_MODES
+            or previous_review.get("strict_grounding") is True
+            or any(str(value).strip().lower() != "demo" for value in saved_modes if value))
 
 
 FIELD_LABELS = {
@@ -245,21 +253,40 @@ FIELD_LABELS = {
     "past_history": "既往史",
     "allergy_history": "过敏史",
     "physical_exam": "查体",
+    "personal_history": "个人史",
+    "marital_history": "婚育史",
+    "family_history": "家族史",
+    "auxiliary_exam": "辅助检查",
+    "treatment_notes": "医生处理意见",
+    "treatment_plan": "处理建议",
+    "visit_type": "就诊类型",
+    "patient_sex": "性别",
+    "patient_birth_date": "出生日期",
+    "patient_ethnicity": "民族",
+    "patient_marital_status": "婚姻状况",
+    "patient_occupation": "职业",
+    "patient_work_unit": "工作单位",
+    "patient_address": "住址",
+    "patient_contact": "联系方式",
 }
 
 MANUAL_DOCTOR_EDIT_NOTE = "manual_doctor_edit_v1: 医生手工修改；原始转写证据仅供对照，不作为该修改的自动证据。"
+REQUIRED_FIELD_DECISIONS = {
+    "chief_complaint", "present_illness", "previous_treatment", "accompanying_symptoms",
+    "past_history", "allergy_history", "physical_exam",
+}
 
 
 def _field_items(fields: MedicalRecordFields) -> list[tuple[str, str, Any]]:
-    return [
-        ("chief_complaint", "主诉", fields.chief_complaint),
-        ("present_illness", "现病史", fields.present_illness),
-        ("previous_treatment", "既往处理", fields.previous_treatment),
-        ("accompanying_symptoms", "伴随症状", fields.accompanying_symptoms),
-        ("past_history", "既往史", fields.past_history),
-        ("allergy_history", "过敏史", fields.allergy_history),
-        ("physical_exam", "查体", fields.physical_exam),
-    ]
+    return [(key, label, getattr(fields, key)) for key, label in FIELD_LABELS.items()]
+
+
+def _signoff_fields(fields: MedicalRecordFields) -> list[tuple[str, str, Any]]:
+    # Only the seven core fields require an explicit decision when empty.
+    # Populated optional fields join the ordinary content review in one action.
+    return [(key, label, field) for key, label, field in _field_items(fields)
+            if key != "treatment_plan" and (key in REQUIRED_FIELD_DECISIONS
+                or field.status == "conflicting" or _has_confirmable_content(field))]
 
 
 def _field_by_key(fields: MedicalRecordFields, key: str):
@@ -269,7 +296,8 @@ def _field_by_key(fields: MedicalRecordFields, key: str):
 
 
 def _has_confirmable_content(field: Any) -> bool:
-    return bool(field and not field.missing and field.value)
+    text = str(field.value or "").strip() if field and not field.missing else ""
+    return bool(text) and text.lower() not in {"null", "undefined"}
 
 
 def _reset_review_state(fields: MedicalRecordFields) -> MedicalRecordFields:
@@ -376,6 +404,8 @@ def _validate_field_resolutions(payload: ReviewRequest, previous: MedicalRecordF
         raise HTTPException(status_code=422, detail="字段处置声明包含未知、重复或相互冲突的字段。")
     if not manual and not corrected:
         return
+    if set(corrected) - REQUIRED_FIELD_DECISIONS:
+        raise HTTPException(status_code=422, detail="该扩展字段尚不支持原文自动校验，请用医生补录保存实际修正。")
     if previous is None:
         raise HTTPException(status_code=422, detail="没有可核对的原病历版本，不能声明字段处置。")
     for key in manual + corrected:
@@ -396,6 +426,29 @@ def _current_revision_or_error(task: dict[str, Any]) -> dict[str, Any]:
     if revision is None:
         raise HTTPException(status_code=409, detail="当前病历版本不存在，请刷新后重试。")
     return revision
+
+
+def _revision_audio_evidence(result: dict, revision: dict | None) -> dict:
+    """Use the source frozen with this revision; old revisions may only have the task's copy."""
+    encoded = (revision or {}).get("result_json")
+    if not encoded:
+        return result
+    try:
+        stored = json.loads(encoded) if isinstance(encoded, str) else encoded
+    except (ValueError, TypeError):
+        return result
+    source = bound_recording(stored) if isinstance(stored, dict) else None
+    if source is None:
+        return result
+    proof = stored.get("audio_source_revision")
+    if source == result.get("asr_source") and proof == result.get("audio_source_revision"):
+        return result
+    restored = {**result, "asr_source": source}
+    if proof is not None:
+        restored["audio_source_revision"] = proof
+    else:
+        restored.pop("audio_source_revision", None)
+    return restored
 
 
 def _revision_content_hash(revision: dict[str, Any]) -> str:
@@ -449,7 +502,7 @@ def _apply_field_approval(fields: MedicalRecordFields, item: FieldApprovalItem) 
         field.confirmed_by_doctor = True
         field.doctor_review_status = "missing_accepted"
     source_note = str(field.doctor_review_note or "")
-    if source_note.startswith(("manual_doctor_edit_v1:", "doctor_source_correction_v1:")):
+    if source_note.startswith(("manual_doctor_edit_v1:", "doctor_source_correction_v1:", "医生手录首稿")):
         # Approval must not erase the server-established source of a doctor's
         # correction, otherwise a later revision loses its provenance.
         if item.note:
@@ -522,7 +575,7 @@ def _approval_completion_errors(fields: MedicalRecordFields) -> list[str]:
     errors: list[str] = []
     unconfirmed_fields: list[str] = []
     unresolved_missing: list[str] = []
-    for key, label, field in _field_items(fields):
+    for key, label, field in _signoff_fields(fields):
         if _has_confirmable_content(field):
             if field.doctor_review_status != "content_confirmed" or not field.confirmed_by_doctor:
                 unconfirmed_fields.append(label)
@@ -531,6 +584,8 @@ def _approval_completion_errors(fields: MedicalRecordFields) -> list[str]:
                 unresolved_missing.append(label)
         if field.status == "conflicting":
             errors.append(f"{label}存在证据冲突，必须先修正内容和证据。")
+        if key == "present_illness" and has_episode_medication_gap(field):
+            errors.append("现病史漏记了本次病程中的用药，请核对原文并保存修改后再审核。")
     if unconfirmed_fields:
         errors.append(f"存在未显式确认的普通字段：{'、'.join(unconfirmed_fields)}。")
     if unresolved_missing:
@@ -585,7 +640,11 @@ def read_task(task_id: int, request: Request = None) -> dict[str, Any]:
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     _assert_task_access(task, request)
-    return _decode_result_json(task)
+    user = current_user_from_request(request)
+    decoded = _decode_result_json(task)
+    return {**decoded, "supports_clinician_assessment": True,
+            **manual_first_task_metadata(task_id, task.get("encounter_id"), task.get("status"), decoded.get("result_json"),
+                                         doctor_id=user.id if user and user.role == "doctor" else None)}
 
 
 @router.get("/{task_id}/steps")
@@ -618,6 +677,30 @@ def read_task_agent_trace(
     )
 
 
+def _update_clinician_assessment(
+    result: dict[str, Any], payload: ReviewRequest, actor: AuthenticatedUser | None, owner_id: int | None,
+) -> str | None:
+    if "clinician_assessment" not in payload.model_fields_set:
+        return None
+    entry = payload.clinician_assessment
+    previous = result.get("clinician_assessment")
+    if not previous and entry is None:
+        return None
+    if actor is None or actor.role != "doctor" or actor.id != owner_id:
+        raise HTTPException(status_code=403, detail="仅经治医生可修改本次医生评估。")
+    if entry is None:
+        del result["clinician_assessment"]
+        return "cleared"
+    if previous and all(previous.get(k) == v for k, v in entry.model_dump().items()):
+        return None
+    assessment = ClinicianAssessment(
+        **entry.model_dump(), recorded_by=actor.id, recorder_name=actor.display_name,
+        recorded_at=datetime.now(UTC).isoformat(),
+    )
+    result["clinician_assessment"] = assessment.model_dump()
+    return "revised" if previous else "entered"
+
+
 @router.post("/{task_id}/review")
 def review_task(
     task_id: int,
@@ -625,6 +708,8 @@ def review_task(
     request: Request = None,
 ) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
+    if payload and "clinician_draft_origin" in payload:
+        raise HTTPException(422, "首稿来源由服务保存。")
     try:
         review_payload = ReviewRequest.model_validate(payload or {})
     except ValidationError as exc:
@@ -640,6 +725,7 @@ def review_task(
             "current_content_hash": _revision_content_hash(revision),
             "message": "病历版本已更新，请加载最新版本后保存；本地修改仍保留。",
         })
+    result = _revision_audio_evidence(result, revision)
     # The transaction below repeats this check atomically against concurrent
     # saves. This early check prevents stale resolution declarations from
     # being judged against a different doctor's revision.
@@ -647,24 +733,49 @@ def review_task(
         previous_fields = MedicalRecordFields.model_validate(result.get("fields") or {})
     except ValidationError:
         previous_fields = None
+    actor = current_user_from_request(request)
+    assessment_action = _update_clinician_assessment(result, review_payload, actor, task.get("owner_user_id"))
     _validate_field_resolutions(review_payload, previous_fields)
     fields = _reset_review_state(review_payload.fields)
+    prior_trace = result.get("llm_trace") or {}
     trusted_source_corrections = set(review_payload.source_corrected_fields) | _retained_source_corrections(
-        fields, previous_fields, result.get("llm_trace") or {},
+        fields, previous_fields, prior_trace,
     )
     manual_edited_fields = _mark_manual_doctor_edits(
         fields, previous_fields,
         manual_takeover_fields=review_payload.manual_takeover_fields,
         source_corrected_fields=review_payload.source_corrected_fields,
     )
-    coverage_source = None
-    if os.getenv("RECORD_PROVIDER_MODE", "demo") in {"live", "edge"}:
+    from app.services.field_alignment import refresh_existing_coverage_hints
+    from app.services.privacy import anonymize_text
+    coverage_source = anonymize_text(task.get("input_text") or result.get("conversation_text") or "")
+    origin = result.get("clinician_draft_origin")
+    if origin and previous_fields:
+        for key in set(manual_edited_fields) - set(review_payload.source_corrected_fields):
+            # Only the explicit source-correction operation can attach a new citation to a handwritten record.
+            field = getattr(fields, key)
+            field.confidence = None
+            field.fact_ids = []
+            if key not in review_payload.manual_takeover_fields:
+                field.source_spans = [s.model_copy(deep=True) for s in getattr(previous_fields, key).source_spans]
+    live_review = not origin and _requires_strict_review(prior_trace)
+    if live_review or trusted_source_corrections:
         from app.services.field_grounding import ground_fields
-        from app.services.privacy import anonymize_text
-        coverage_source = anonymize_text(task.get("input_text") or result.get("conversation_text") or "")
-        fields = ground_fields(fields, coverage_source,
-                               (result.get("asr_source") or {}).get("segments"),
-                               source_corrected_fields=trusted_source_corrections)
+        saved_asr = result.get("asr_source")
+        asr = saved_asr if isinstance(saved_asr, dict) else {}
+        text_import = asr.get("audio_id") == "text-import" or asr.get("engine") == "text-import"
+        audio_origin = not text_import and (task.get("input_type") == "audio" or bool(saved_asr))
+        if origin and audio_origin:
+            quality = asr.get("role_quality")
+            if (not isinstance(quality, dict) or quality.get("status") != "passed"
+                    or asr.get("reviewed_by_doctor") is not True or asr.get("needs_review") is True
+                    or not isinstance(asr.get("segments"), list)
+                    or not all(isinstance(s, dict) for s in asr["segments"])):
+                raise HTTPException(409, "原录音角色尚未核对，不能把该转写选为病历证据。")
+        # An empty list marks an audio source lacking its saved turns. None is plain text.
+        turns = (asr.get("segments") or []) if audio_origin else None
+        fields = ground_fields(fields, coverage_source, turns,
+                               source_corrected_fields=trusted_source_corrections, only_corrected=not live_review)
     if previous_fields:
         resolved = set(review_payload.manual_takeover_fields + review_payload.source_corrected_fields)
         for key, _label, field in _field_items(fields):
@@ -672,23 +783,39 @@ def review_task(
                 field.status = "conflicting"
                 field.hint = "原模型冲突尚未处置，请选择根据原文修正或医生补录后保存。"
     for key in review_payload.source_corrected_fields:
-        getattr(fields, key).doctor_review_note = "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。"
-    from app.services.field_alignment import refresh_existing_coverage_hints
-    fields = refresh_existing_coverage_hints(fields, source=coverage_source)
-    generator = _record_generator_or_503()
-    draft = generator.generate_draft(fields)
-    safety_check = generator.safety_check(draft, fields)
+        field = getattr(fields, key)
+        field.doctor_review_note = ("医生根据原文修正，所选证据存在冲突，需重新核对。" if field.status == "conflicting"
+                                    else "doctor_source_correction_v1: 医生根据原文修正，已重新校验证据；需审核当前版本。")
+    fields = refresh_existing_coverage_hints(fields, source=coverage_source if live_review else None)
+    if not live_review and not origin:
+        # A doctor can remove a previously covered medication on a later edit.
+        # Recompute this narrow finding from the saved input, even in a demo replay.
+        refresh_episode_medication(fields.present_illness, coverage_source)
+    if origin:
+        draft, safety_check = render_manual_draft(fields, ClinicianDraftOrigin.model_validate(origin))
+    else:
+        draft = render_draft(fields)
+        safety_check = check_draft_safety(draft, fields)
+    review_trace = {"actual_provider": "local_rules", "operation": "doctor_review",
+                    "strict_grounding": live_review,
+                    "operations": {"draft_generation": {"actual_provider": "deterministic_renderer_v1"},
+                                   "safety_check": {"actual_provider": "deterministic_safety_v1"}}}
 
     result["fields"] = fields.model_dump()
     result["draft"] = draft
+    if result.get("clinician_assessment"):
+        entry = ClinicianAssessment.model_validate(result["clinician_assessment"])
+        result["draft"] += f"\n\n本次医生评估（手录）\n{entry.status_label}：{entry.statement}"
     result["safety_check"] = safety_check.model_dump()
-    prior_trace = result.get("llm_trace") or {}
-    review_trace = generator.get_trace()
     result["llm_trace"] = {**prior_trace, "review_components": review_trace}
-    if not prior_trace:
+    if origin and not prior_trace:
         result["llm_trace"].update(review_trace)
     result["reviewed"] = True
     result["approved"] = False
+    # The new draft has no signature or export. Previous receipts remain on
+    # their revision and in the audit tables, not in this revision's task payload.
+    for key in ("approval", "approval_summary", "export_event", "exports", "record_revision"):
+        result.pop(key, None)
     if manual_edited_fields:
         result["llm_trace"]["manual_edited_fields"] = manual_edited_fields
     resolutions = [
@@ -705,9 +832,8 @@ def review_task(
             *(prior_trace.get("field_resolution_history") or []), *resolutions,
         ]
     from app.services.record_quality import build_record_quality_report
-    result["quality_report"] = build_record_quality_report(fields, safety_check, draft=draft)
+    result["quality_report"] = build_record_quality_report(fields, safety_check, draft=draft, clinician_authored=bool(origin))
 
-    actor = current_user_from_request(request)
     try:
         updated_task = apply_review_revision_transaction(
             task_id,
@@ -721,6 +847,7 @@ def review_task(
             workflow_status="waiting_review",
             event_type="doctor_review_saved",
             event_detail={"task_id": task_id, "manual_edited_fields": manual_edited_fields,
+                          **({"clinician_assessment_action": assessment_action} if assessment_action else {}),
                           "field_resolutions": [{"field": r["field"], "method": r["method"]} for r in resolutions],
                           **_actor_detail(request)},
         )
@@ -736,6 +863,7 @@ def review_task(
             },
         ) from exc
     updated_task["result_json"] = result
+    updated_task["supports_clinician_assessment"] = True
     return updated_task
 
 
@@ -752,12 +880,22 @@ def approve_task(
         raise HTTPException(status_code=409, detail="Current record revision is already approved")
     revision = _current_revision_or_error(task)
     content_hash = _assert_approval_matches_revision(payload, revision)
+    result = _revision_audio_evidence(result, revision)
+    issue = audio_source_issue(result)
+    if issue:
+        raise HTTPException(status_code=409, detail=issue)
     fields = MedicalRecordFields.model_validate(result["fields"])
+    # Older unsigned revisions predate this marker. Recheck the saved source
+    # in memory before signing; a rejection must not rewrite that revision.
+    from app.services.privacy import anonymize_text
+    refresh_episode_medication(fields.present_illness,
+        anonymize_text(task.get("input_text") or result.get("conversation_text") or ""))
 
     approval_items: list[dict[str, Any]] = []
     if payload.confirm_all_regular_fields:
-        for key, _label, field in _field_items(fields):
-            if _has_confirmable_content(field) and field.status != "conflicting":
+        for key, _label, field in _signoff_fields(fields):
+            if (_has_confirmable_content(field) and field.status != "conflicting"
+                    and not (key == "present_illness" and has_episode_medication_gap(field))):
                 field.confirmed_by_doctor = True
                 field.doctor_review_status = "content_confirmed"
                 approval_items.append(
@@ -781,7 +919,7 @@ def approve_task(
         if applied:
             approval_items.append(applied)
 
-    errors = _approval_completion_errors(fields)
+    errors = _approval_completion_errors(fields) + icd10_errors(fields)
     if errors:
         raise HTTPException(
             status_code=409,
@@ -794,63 +932,86 @@ def approve_task(
         )
 
     result["fields"] = fields.model_dump()
-    result["approved"] = True
+    actor = current_user_from_request(request)
     try:
-        approval = create_approval_for_task(
-            task_id,
-            actor_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
-            content_hash=content_hash,
-            approval_items=approval_items,
-        )
+        with checked_audio_signoff(result):
+            create_approval_for_task(
+                task_id,
+                actor_user_id=actor.id if actor else None,
+                expected_revision_id=payload.revision_id,
+                content_hash=content_hash,
+                approval_items=approval_items,
+                result=result,
+                actor_detail=_actor_detail(request),
+            )
+    except StaleRecordRevisionError as exc:
+        raise HTTPException(status_code=409, detail={
+            "message": "病历版本已变化，请刷新后重新审核。",
+            "current_revision_id": exc.current_revision_id,
+            "submitted_revision_id": exc.expected_revision_id,
+        }) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    result["record_revision"] = {
-        "id": revision["id"],
-        "revision_no": revision["revision_no"],
-        "source": revision["source"],
-        "content_hash": content_hash,
-    }
-    result["approval"] = {
-        "id": approval["id"],
-        "revision_id": approval["revision_id"],
-        "content_hash": approval.get("content_hash"),
-        "approved_by_user_id": approval["approved_by_user_id"],
-        "created_at": approval["created_at"],
-    }
-    result["approval_summary"] = {
-        "item_count": len(approval_items),
-        "items": approval_items,
-    }
-
-    _save_task_result(
-        task_id,
-        result,
-        current_stage="approved",
-        event_type="doctor_approved",
-        event_detail={"task_id": task_id},
-        request=request,
-    )
     task["result_json"] = result
     task["current_stage"] = "approved"
     return task
 
 
+def _export_doctor_name(task: dict[str, Any], encounter: dict[str, Any]) -> str | None:
+    """Return a real doctor's display name for the printed record.
+
+    A task owner or encounter creator may be an admin/front-desk account; only
+    accounts with the doctor role may be printed as 接诊医师.
+    """
+    for user_id in (task.get("owner_user_id"), encounter.get("doctor_user_id")):
+        if user_id is None:
+            continue
+        user = get_user_by_id(int(user_id))
+        if not user or user.get("role") != "doctor":
+            continue
+        name = str(user.get("display_name") or "").strip()
+        if name:
+            return name
+    return None
+
+
 @router.post("/{task_id}/export")
-def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
+def export_task(
+    task_id: int,
+    request: Request = None,
+    expected_revision_id: int | None = None,
+    expected_approval_id: int | None = None,
+) -> dict[str, Any]:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
     approval = get_active_approval_for_task(task_id)
+    revision = _current_revision_or_error(task)
+    result = _revision_audio_evidence(result, revision)
     readiness = _build_export_readiness(
         task_id,
         result,
         current_stage=task.get("current_stage"),
         active_approval=approval,
-        current_revision=_current_revision_or_error(task),
+        current_revision=revision,
     )
+    if ((expected_revision_id is not None and expected_revision_id != readiness["revision_id"])
+            or (expected_approval_id is not None and expected_approval_id != readiness["approval_id"])):
+        raise HTTPException(status_code=409, detail="病历版本或审核记录已更新，请重新查看当前病历后导出。")
+    if readiness["audio_source_issue"]:
+        raise HTTPException(status_code=409, detail=readiness["audio_source_issue"])
     if readiness["errors"]:
         raise HTTPException(status_code=400, detail=readiness)
 
     try:
-        exports = export_record(task_id, result)
+        encounter = get_task_encounter(task_id) or {}
+        encounter_detail = get_encounter(encounter["id"]) if encounter.get("id") else {}
+        result["encounter_id"] = task.get("encounter_id") or encounter.get("id")
+        result["encounter_department"] = encounter.get("department_id")
+        result["encounter_created_at"] = encounter.get("created_at")
+        result["patient_deidentified_id"] = encounter_detail.get("patient_deidentified_id")
+        result["patient_display_name"] = encounter_detail.get("patient_display_name")
+        doctor_name = _export_doctor_name(task, encounter)
+        exports = export_record(task_id, result, doctor_name=doctor_name,
+                                revision_id=readiness["revision_id"], approval_id=int(approval["id"]))
     except Exception as exc:
         create_audit_log(
             task_id,
@@ -859,69 +1020,70 @@ def export_task(task_id: int, request: Request = None) -> dict[str, Any]:
         )
         raise HTTPException(status_code=500, detail=f"导出失败：{exc}") from exc
 
-    result["exports"] = exports
-    export_event = create_export_event_for_task(
-        task_id,
-        approval_id=int(approval["id"]),
-        actor_user_id=current_user_from_request(request).id if current_user_from_request(request) else None,
-        exports=exports,
-    )
-    result["export_event"] = {
-        "id": export_event["id"],
-        "revision_id": export_event["revision_id"],
-        "approval_id": export_event["approval_id"],
-        "exported_by_user_id": export_event["exported_by_user_id"],
-        "created_at": export_event["created_at"],
-    }
-    _save_task_result(
-        task_id,
-        result,
-        current_stage="exported",
-        event_type="export_completed",
-        event_detail={"task_id": task_id, **exports},
-        request=request,
-    )
-    task["result_json"] = result
-    task["current_stage"] = "exported"
-    export_readiness = _build_export_readiness(
-        task_id,
-        result,
-        current_stage="exported",
-        active_approval=approval,
-        current_revision=_current_revision_or_error(task),
-    )
-    return {"task_id": task_id, "exports": exports, "export_readiness": export_readiness}
+    try:
+        actor = current_user_from_request(request)
+        with checked_audio_signoff(result):
+            create_export_event_for_task(
+                task_id, revision_id=readiness["revision_id"], approval_id=int(approval["id"]),
+                actor_user_id=actor.id if actor else None, exports=exports, result=result,
+                actor_detail=_actor_detail(request),
+            )
+    except Exception as exc:
+        # The receipt transaction did not commit. Only this request owns this file.
+        Path(exports["pdf_path"]).unlink(missing_ok=True)
+        if isinstance(exc, ValueError):
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise
+    return {"task_id": task_id, "exports": exports,
+            "export_readiness": {**readiness, "current_stage": "exported", "exports": exports}}
 
 
 @router.get("/{task_id}/export-readiness", response_model=ExportReadinessResponse)
 def read_export_readiness(task_id: int, request: Request = None) -> ExportReadinessResponse:
     task, result = _load_task_result(task_id, request, high_risk_operation=True)
-    return ExportReadinessResponse(
-        **_build_export_readiness(
-            task_id,
-            result,
-            current_stage=task.get("current_stage"),
-            active_approval=get_active_approval_for_task(task_id),
-            current_revision=_current_revision_or_error(task),
-        )
+    revision = _current_revision_or_error(task)
+    readiness = _build_export_readiness(
+        task_id, _revision_audio_evidence(result, revision),
+        current_stage=task.get("current_stage"),
+        active_approval=get_active_approval_for_task(task_id), current_revision=revision,
     )
+    issue = readiness.get("audio_source_issue") or {}
+    if issue.get("reason_code") == "audio_source_changed":
+        readiness["can_recover_audio_source"] = recoverable_source(task_id, current_user_from_request(request))
+    return ExportReadinessResponse(**readiness)
 
 
 def _export_output_root() -> Path:
     return Path(os.environ.get("MEDICAL_RECORD_AGENT_OUTPUT_DIR", DEFAULT_OUTPUT_DIR)).resolve()
 
 
-def _resolve_export_download_path(exports: dict[str, str], export_format: str) -> tuple[Path, str, str]:
+def _resolve_export_download_path(
+    exports: dict[str, str], export_format: str, *, task_id: int, revision_id: int, approval_id: int,
+) -> tuple[Path, str, str]:
     config = EXPORT_DOWNLOADS.get(export_format)
     if config is None:
-        raise HTTPException(status_code=404, detail="Export format not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": "unsupported_export_format",
+                "message": "仅支持 PDF 导出，请使用 /api/tasks/{task_id}/exports/pdf",
+                "format": export_format,
+            },
+        )
 
     raw_path = exports.get(config["path_key"])
     if not raw_path:
         raise HTTPException(status_code=404, detail="Export file not found")
 
     output_root = _export_output_root()
-    export_path = Path(raw_path).resolve()
+    # Signed files live directly under the output root. Their stored absolute
+    # path can refer to a different machine after restoring a complete backup.
+    filename = PureWindowsPath(raw_path).name
+    signed_filename = rf"task_{task_id}_r{revision_id}_a{approval_id}_[a-z0-9_]+_medical_record\.pdf"
+    if exports.get("pdf_sha256") and re.fullmatch(signed_filename, filename):
+        export_path = (output_root / filename).resolve()
+    else:
+        export_path = Path(raw_path).resolve()
     try:
         export_path.relative_to(output_root)
     except ValueError as exc:
@@ -934,30 +1096,42 @@ def _resolve_export_download_path(exports: dict[str, str], export_format: str) -
 
 
 @router.get("/{task_id}/exports/{export_format}")
-def download_task_export(task_id: int, export_format: str, request: Request = None) -> FileResponse:
-    task, result = _load_task_result(task_id, request, high_risk_operation=True)
+def download_task_export(task_id: int, export_format: str, request: Request = None, sha256: str | None = None) -> Response:
+    task, _ = _load_task_result(task_id, request, high_risk_operation=True)
     approval = get_active_approval_for_task(task_id)
-    readiness = _build_export_readiness(
-        task_id,
-        result,
-        current_stage=task.get("current_stage"),
-        active_approval=approval,
-        current_revision=_current_revision_or_error(task),
+    revision = _current_revision_or_error(task)
+    # An existing signed file is not a request to generate a new export under today's policy.
+    binding_error = _approval_binding_error(approval, revision)
+    if binding_error:
+        raise HTTPException(status_code=409, detail=binding_error)
+    if sha256 is not None and (len(sha256) != 64 or any(c not in "0123456789abcdef" for c in sha256)):
+        raise HTTPException(status_code=422, detail="导出文件的SHA256校验值无效。")
+    event = latest_export_for_approval(task_id, int(approval["id"]), pdf_sha256=sha256)
+    if event is None or event["revision_id"] != revision["id"]:
+        raise HTTPException(status_code=404 if sha256 is not None else 409, detail="当前批准版本没有对应的导出记录。")
+    exports = json.loads(event["exports_json"])
+    export_path, extension, media_type = _resolve_export_download_path(
+        exports, export_format.lower(), task_id=task_id, revision_id=int(revision["id"]),
+        approval_id=int(approval["id"]),
     )
-    exports = result.get("exports")
-    if readiness["errors"] or not isinstance(exports, dict):
-        raise HTTPException(status_code=409, detail=readiness)
-
-    export_path, extension, media_type = _resolve_export_download_path(exports, export_format.lower())
+    pdf_bytes = export_path.read_bytes()
+    expected = exports.get("pdf_sha256")
+    # Legacy event files used this one fixed name and did not record a digest.
+    if (expected != hashlib.sha256(pdf_bytes).hexdigest()
+            and not (expected is None and export_path.name == f"task_{task_id}_medical_record.pdf")):
+        raise HTTPException(status_code=409, detail={
+            "error": "export_integrity_mismatch", "message": "导出文件与批准时记录的校验值不一致。",
+        })
     create_audit_log(
         task_id,
         "export_downloaded",
-        {"task_id": task_id, "format": export_format.lower(), **_actor_detail(request)},
+        {"task_id": task_id, "format": export_format.lower(), "export_event_id": event["id"],
+         "revision_id": revision["id"], "approval_id": approval["id"], **_actor_detail(request)},
     )
-    return FileResponse(
-        export_path,
-        media_type=media_type,
-        filename=f"task_{task_id}_medical_record.{extension}",
+    return Response(
+        content=pdf_bytes, media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="task_{task_id}_R{revision["revision_no"]}_export_{event["id"]}_medical_record.{extension}"',
+                 "Cache-Control": "private, no-store"},
     )
 
 
@@ -983,6 +1157,8 @@ def _validate_export_ready(result: dict[str, Any]) -> list[str]:
         errors.append("安全校验未通过，禁止导出。")
 
     errors.extend(_approval_completion_errors(fields))
+    errors.extend(icd10_errors(fields))
+    errors.extend(allergy_treatment_errors(fields))
 
     return errors
 
@@ -998,6 +1174,18 @@ def _trace_has_fallback(trace: Any) -> bool:
     return False
 
 
+def _approval_binding_error(active_approval: dict[str, Any] | None, current_revision: dict[str, Any] | None) -> str | None:
+    if active_approval is None:
+        return "病历尚未完成医生批准，禁止导出。"
+    if current_revision is None:
+        return "当前病历版本不存在，禁止导出。"
+    if int(active_approval["revision_id"]) != int(current_revision["id"]):
+        return "医生批准不属于当前病历版本，禁止导出。"
+    if active_approval.get("content_hash") != _revision_content_hash(current_revision):
+        return "医生批准的内容哈希与当前病历不一致，禁止导出。"
+    return None
+
+
 def _build_export_readiness(
     task_id: int,
     result: dict[str, Any],
@@ -1010,30 +1198,40 @@ def _build_export_readiness(
     revision_id = int(current_revision["id"]) if current_revision else None
     revision_number = int(current_revision["revision_no"]) if current_revision else None
     content_hash = _revision_content_hash(current_revision) if current_revision else None
-    if active_approval is None:
-        errors.append("病历尚未完成医生批准，禁止导出。")
-    elif current_revision is None:
-        errors.append("当前病历版本不存在，禁止导出。")
-    elif int(active_approval["revision_id"]) != int(current_revision["id"]):
-        errors.append("医生批准不属于当前病历版本，禁止导出。")
-    elif active_approval.get("content_hash") != content_hash:
-        errors.append("医生批准的内容哈希与当前病历不一致，禁止导出。")
+    binding_error = _approval_binding_error(active_approval, current_revision)
+    if binding_error:
+        errors.append(binding_error)
+    approval_id = int(active_approval["id"]) if active_approval and not errors else None
     exports = result.get("exports")
     if not isinstance(exports, dict):
         exports = None
+    issue = audio_source_issue(result)
+    can_create_export = not errors and issue is None
+    next_action = "可以导出。" if not errors else "请先完成医生确认和安全校验，再导出。"
+    if issue:
+        # A previously signed receipt can still be downloaded by its own digest.
+        original = latest_export_for_approval(task_id, approval_id) if approval_id is not None else None
+        if original and original["revision_id"] == revision_id:
+            exports = json.loads(original["exports_json"])
+            next_action = "可取回本版已签原件。" + issue["message"]
+        else:
+            errors.append(issue["message"])
+            next_action = issue["message"]
 
     return {
         "task_id": task_id,
         "ready": not errors,
         "blocked": bool(errors),
         "errors": errors,
-        "next_action": "可以导出。" if not errors else "请先完成医生确认和安全校验，再导出。",
+        "next_action": next_action,
+        "audio_source_issue": issue,
+        "can_create_export": can_create_export,
         "current_stage": current_stage,
         "exports": exports,
         "revision_id": revision_id,
         "revision_number": revision_number,
         "content_hash": content_hash,
-        "approval_id": int(active_approval["id"]) if active_approval and not errors else None,
+        "approval_id": approval_id,
         "pending_review_count": len(errors),
     }
 

@@ -146,10 +146,13 @@ def test_backend_aliases_drive_one_consistent_doctor_workflow_state() -> None:
                     "current_stage": "approved",
                     "encounter_status": "approved",
                     "with_fields": True,
-                    "state": "approved",
+                    # This old task only has a stage token. It has no signed
+                    # record revision or receipt in the server database.
+                    "worklist_state": "approved",
+                    "state": "checking_export",
                     "phase": "病历已审核",
-                    "next_action": "病历审核已完成，可以导出",
-                    "step": "导出完成",
+                    "next_action": "核对导出状态",
+                    "step": "导出 PDF",
                 },
                 {
                     "task_status": "FAILED",
@@ -175,7 +178,7 @@ def test_backend_aliases_drive_one_consistent_doctor_workflow_state() -> None:
                 )
                 observed = _observed_workflow(page, encounter_id)
                 assert observed["displayState"] == case["state"], observed
-                assert observed["worklistState"] == case["state"], observed
+                assert observed["worklistState"] == case.get("worklist_state", case["state"]), observed
                 assert case["phase"] in observed["phase"], observed
                 assert observed["nextAction"] == case["next_action"], observed
                 assert observed["activeStep"] == case["step"], observed

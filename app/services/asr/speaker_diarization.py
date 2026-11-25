@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections import Counter, defaultdict
+from collections import defaultdict
 from dataclasses import dataclass
 
 from app.schemas.asr import (
@@ -109,6 +109,7 @@ def enhance_speaker_diarization(result: ASRResult) -> ASRResult:
         updated.diarization_turns = []
         updated.conversation_text = ""
         updated.needs_review = True
+        updated.reviewed_by_doctor = False
         return updated
 
     boundary_segments = _split_segments_by_diarization_turns(stable_segments, updated.diarization_turns)
@@ -149,9 +150,7 @@ def enhance_speaker_diarization(result: ASRResult) -> ASRResult:
     updated.text = "\n".join(segment.text for segment in enhanced if segment.text.strip())
     updated.conversation_text = _conversation_with_speaker_fallback(enhanced)
     updated.needs_review = any(item.requires_confirmation for item in assignments)
-    updated.reviewed_by_doctor = bool(assignments) and all(
-        not item.requires_confirmation for item in assignments
-    )
+    updated.reviewed_by_doctor = updated.all_segments_reviewed()
     updated.role_strategy = "global_speaker_role_assignment"
     if updated.needs_review and GLOBAL_REVIEW_WARNING not in updated.warnings:
         updated.warnings.append(GLOBAL_REVIEW_WARNING)
@@ -171,7 +170,7 @@ def _split_segments_by_diarization_turns(
 
     split_segments: list[ASRSegment] = []
     for segment_index, segment in enumerate(segments):
-        if segment.start_time is None or segment.end_time is None or segment.end_time <= segment.start_time:
+        if segment.reviewed_by_doctor or segment.start_time is None or segment.end_time is None or segment.end_time <= segment.start_time:
             split_segments.append(segment)
             continue
 
@@ -346,6 +345,7 @@ def _merge_short_speaker_clusters(segments: list[ASRSegment]) -> list[ASRSegment
         speaker
         for speaker, item in stats.items()
         if _is_mergeable_low_information_cluster(item)
+        and not any(segments[i].reviewed_by_doctor for i in groups[speaker])
     }
     substantial = set(groups) - short_speakers
     if not substantial:
@@ -406,6 +406,7 @@ def _merge_stable_utterances(segments: list[ASRSegment]) -> list[ASRSegment]:
         combined_text = _join_utterance_text(previous.text, segment.text)
         should_merge = (
             same_speaker
+            and not (previous.reviewed_by_doctor or segment.reviewed_by_doctor)
             and not previous.overlap
             and not segment.overlap
             and 0.0 <= gap <= 1.2
@@ -475,8 +476,8 @@ def _assign_roles_by_speaker(segments: list[ASRSegment]) -> list[SpeakerRoleAssi
             for segment in speaker_segments
             if segment.reviewed_by_doctor and segment.role in FINAL_ROLES
         ]
-        if reviewed:
-            manual_roles[speaker] = Counter(reviewed).most_common(1)[0][0]
+        if len(reviewed) == len(speaker_segments) and len(set(reviewed)) == 1:
+            manual_roles[speaker] = reviewed[0]
 
     if len(groups) == 1:
         speaker = ordered_speakers[0]

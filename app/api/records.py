@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import os
-import re
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -14,6 +13,7 @@ from app.db import bind_task_to_encounter, can_retry_failed_encounter, get_encou
 from app.schemas import ASRResult, ASRSegment, MedicalRecordFields, SafetyCheckResult, SourceSpan
 from app.services import LLMProviderUnavailableError, create_llm_record_generator
 from app.services.asr.role_quality import build_speaker_role_quality
+from app.services.audio_citations import AudioCitationIndex
 from app.services.record_quality import build_record_quality_report
 
 
@@ -180,135 +180,28 @@ def _treatment_plan(fields: MedicalRecordFields) -> dict[str, list[str]]:
     }
 
 
-def _matching_source_segments(
-    source_text: str,
-    segments: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    def normalize(value: str) -> str:
-        without_role = re.sub(r"^\s*\[[^\]]+\]\s*", "", value or "")
-        return re.sub(r"[\s，。！？!?、,]+", "", without_role)
+class _AudioCitations(AudioCitationIndex):
+    def bind(self, span: SourceSpan) -> SourceSpan:
+        validated = self.resolve(span)
+        return validated or span.model_copy(update={"segment_id": None, "start_time": None, "end_time": None})
 
-    normalized_source = normalize(source_text)
-    if not normalized_source:
-        return []
-    matches: list[dict[str, Any]] = []
-    for index, segment in enumerate(segments):
-        segment_text = normalize(str(segment.get("text") or ""))
-        if not segment_text:
-            continue
-        overlap = (
-            normalized_source in segment_text
-            or segment_text in normalized_source
-            or (len(normalized_source) >= 6 and normalized_source[:6] in segment_text)
-        )
-        if not overlap:
-            continue
-        matches.append(
-            {
-                "segment_id": segment.get("segment_id") or f"segment-{index}",
-                "index": index,
-                "start_time": segment.get("start_time"),
-                "end_time": segment.get("end_time"),
-                "speaker_id": segment.get("speaker_id") or segment.get("speaker"),
-                "role": segment.get("role"),
-                "text": segment.get("text") or "",
-            }
-        )
-    return matches
+    def enrich(self, fields: MedicalRecordFields) -> MedicalRecordFields:
+        enriched = fields.model_copy(deep=True)
+        for key in FIELD_LABELS:
+            field = getattr(enriched, key)
+            field.source_spans = [self.bind(span) for span in field.source_spans]
+        for diagnosis in enriched.candidate_diagnoses:
+            diagnosis.evidence = [self.bind(span) for span in diagnosis.evidence]
+        return enriched
 
 
-def _segment_lookup(segments: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    return {
-        str(segment.get("segment_id") or f"segment-{index}"): {
-            "segment_id": segment.get("segment_id") or f"segment-{index}",
-            "index": index,
-            "start_time": segment.get("start_time"),
-            "end_time": segment.get("end_time"),
-            "speaker_id": segment.get("speaker_id") or segment.get("speaker"),
-            "role": segment.get("role"),
-            "text": segment.get("text") or "",
-        }
-        for index, segment in enumerate(segments)
-    }
-
-
-def _matches_for_span(
-    span: SourceSpan,
-    segments: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    if span.segment_id:
-        match = _segment_lookup(segments).get(str(span.segment_id))
-        if match:
-            return [match]
-    return _matching_source_segments(span.text, segments)
-
-
-def _source_segment_ids_for_span(span: SourceSpan, segments: list[dict[str, Any]]) -> list[str]:
-    return [
-        str(item["segment_id"])
-        for item in _matches_for_span(span, segments)
-        if item.get("segment_id")
-    ]
-
-
-def _source_segment_ids(source_text: str, segments: list[dict[str, Any]]) -> list[str]:
-    return [
-        str(item["segment_id"])
-        for item in _matching_source_segments(source_text, segments)
-        if item.get("segment_id")
-    ]
-
-
-def _enrich_span(span: SourceSpan, segments: list[dict[str, Any]]) -> SourceSpan:
-    if span.segment_id:
-        return span
-    matches = _matching_source_segments(span.text, segments)
-    if not matches:
-        return span
-    match = matches[0]
-    return span.model_copy(
-        update={
-            "segment_id": match.get("segment_id"),
-            "index": span.index if span.index is not None else match.get("index"),
-            "start_time": span.start_time if span.start_time is not None else match.get("start_time"),
-            "end_time": span.end_time if span.end_time is not None else match.get("end_time"),
-        }
-    )
-
-
-def _enrich_spans(spans: list[SourceSpan], segments: list[dict[str, Any]]) -> list[SourceSpan]:
-    return [_enrich_span(span, segments) for span in spans]
-
-
-def _enrich_field_evidence(
-    fields: MedicalRecordFields,
-    segments: list[dict[str, Any]],
-) -> MedicalRecordFields:
-    if not segments:
-        return fields
-    enriched = fields.model_copy(deep=True)
-    for key in FIELD_LABELS:
-        field = getattr(enriched, key)
-        field.source_spans = _enrich_spans(field.source_spans, segments)
-    for diagnosis in enriched.candidate_diagnoses:
-        diagnosis.evidence = _enrich_spans(diagnosis.evidence, segments)
-    return enriched
-
-
-def _structured_updates(
-    fields: MedicalRecordFields,
-    segments: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
+def _structured_updates(fields: MedicalRecordFields) -> list[dict[str, Any]]:
     updates: list[dict[str, Any]] = []
     for key, label in FIELD_LABELS.items():
         field = getattr(fields, key)
         value = field.value or ""
         source_text = field.source_spans[0].text if field.source_spans else ""
-        source_segment_ids = (
-            _source_segment_ids_for_span(field.source_spans[0], segments)
-            if field.source_spans
-            else []
-        )
+        source_segment_ids = [span.segment_id for span in field.source_spans[:1] if span.segment_id]
         updates.append(
             {
                 "key": key,
@@ -321,7 +214,7 @@ def _structured_updates(
                 "value_preview": value[:120],
                 "confidence": field.confidence,
                 "source_text": source_text,
-                "source_segment_ids": source_segment_ids or _source_segment_ids(source_text, segments),
+                "source_segment_ids": source_segment_ids,
                 "notice": "实时预览，需医生确认",
             }
         )
@@ -342,7 +235,7 @@ def _structured_updates(
                     default=None,
                 ),
                 "source_text": diagnosis_source,
-                "source_segment_ids": _source_segment_ids(diagnosis_source, segments),
+                "source_segment_ids": [span.segment_id for span in fields.candidate_diagnoses[0].evidence[:1] if span.segment_id],
                 "notice": "候选结果，需医生确认",
             }
         )
@@ -351,28 +244,19 @@ def _structured_updates(
 
 def _evidence_links(
     fields: MedicalRecordFields,
-    segments: list[dict[str, Any]],
+    citations: _AudioCitations,
 ) -> list[dict[str, Any]]:
     links: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
-    for key, label in FIELD_LABELS.items():
-        field = getattr(fields, key)
-        for span in field.source_spans:
-            for match in _matches_for_span(span, segments):
-                identity = (label, str(match.get("segment_id") or ""))
-                if identity in seen:
-                    continue
+    groups = [(label, getattr(fields, key).source_spans) for key, label in FIELD_LABELS.items()]
+    groups.extend((f"候选诊断：{d.name}", d.evidence) for d in fields.candidate_diagnoses)
+    for label, spans in groups:
+        for span in spans:
+            row = citations.by_id.get(span.segment_id)
+            identity = (label, span.segment_id)
+            if row is not None and identity not in seen:
                 seen.add(identity)
-                links.append({"label": label, "evidence": span.text, **match})
-    for diagnosis in fields.candidate_diagnoses:
-        for span in diagnosis.evidence:
-            for match in _matches_for_span(span, segments):
-                label = f"候选诊断：{diagnosis.name}"
-                identity = (label, str(match.get("segment_id") or ""))
-                if identity in seen:
-                    continue
-                seen.add(identity)
-                links.append({"label": label, "evidence": span.text, **match})
+                links.append({"label": label, "evidence": span.text, **row})
     return links[:12]
 
 
@@ -510,14 +394,14 @@ def _generation_owner_for_encounter(encounter_id: int, request: Request | None) 
 def _extract_fields_for_service(
     conversation_text: str,
     segments: list[dict[str, Any]],
-) -> tuple[MedicalRecordFields, dict[str, Any]]:
+) -> tuple[MedicalRecordFields, dict[str, Any], _AudioCitations]:
     generator = _record_generator_or_503()
     try:
         fields = generator.extract_fields(conversation_text)
     except LLMProviderUnavailableError as exc:
         raise _provider_unavailable_http(str(exc), generator.get_trace()) from exc
-    fields = _enrich_field_evidence(fields, _stable_segments_for_external_api(segments))
-    return fields, _extraction_info(generator.get_trace())
+    citations = _AudioCitations(conversation_text, segments)
+    return citations.enrich(fields), _extraction_info(generator.get_trace()), citations
 
 
 def _extraction_info(trace: dict[str, Any] | None) -> dict[str, Any]:
@@ -539,7 +423,7 @@ def _extraction_info(trace: dict[str, Any] | None) -> dict[str, Any]:
 def extract_fields(payload: ExtractFieldsRequest) -> ExtractFieldsResponse:
     stable_segments = _stable_segments_for_external_api(payload.segments)
     _require_segments_role_quality(payload.conversation_text, stable_segments)
-    fields, extraction_info = _extract_fields_for_service(payload.conversation_text, stable_segments)
+    fields, extraction_info, citations = _extract_fields_for_service(payload.conversation_text, stable_segments)
     quality_report = build_record_quality_report(fields)
     return ExtractFieldsResponse(
         status="fields_extracted",
@@ -553,7 +437,7 @@ def extract_fields(payload: ExtractFieldsRequest) -> ExtractFieldsResponse:
         ],
         treatment_plan=_treatment_plan(fields),
         diagnosis_evidence=_diagnosis_evidence(fields),
-        evidence_links=_evidence_links(fields, stable_segments),
+        evidence_links=_evidence_links(fields, citations),
         quality_report=quality_report,
         extraction_info=extraction_info,
     )
@@ -644,7 +528,8 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
         fields = generator.extract_fields(conversation_text)
     except LLMProviderUnavailableError as exc:
         raise _provider_unavailable_http(str(exc), generator.get_trace()) from exc
-    fields = _enrich_field_evidence(fields, stable_segments)
+    citations = _AudioCitations(conversation_text, stable_segments)
+    fields = citations.enrich(fields)
     extraction_info = _extraction_info(generator.get_trace())
     draft = generator.generate_draft(fields)
     draft_info = _extraction_info(generator.get_trace())
@@ -652,7 +537,7 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
     safety_info = _extraction_info(generator.get_trace())
     extraction_info["draft_generation"] = draft_info
     extraction_info["safety_check"] = safety_info
-    updates = _structured_updates(fields, stable_segments)
+    updates = _structured_updates(fields)
     quality_preview = build_record_quality_report(fields, safety, draft=draft)
 
     return PreviewRecordResponse(
@@ -672,7 +557,7 @@ def preview_record(payload: PreviewRecordRequest) -> PreviewRecordResponse:
         ],
         treatment_plan=_treatment_plan(fields),
         diagnosis_evidence=_diagnosis_evidence(fields),
-        evidence_links=_evidence_links(fields, stable_segments),
+        evidence_links=_evidence_links(fields, citations),
         structured_updates=updates,
         missing_items=_missing_items(fields),
         safety_preview=safety.model_dump(mode="json"),

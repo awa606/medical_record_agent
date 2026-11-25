@@ -1,0 +1,116 @@
+--- a/experiments/frontend-reference-workbench-20261106/app.mjs
++++ b/experiments/frontend-reference-workbench-20261106/app.mjs
+@@ -2,8 +2,10 @@
+ import {createCapture,captureReducer,captureSnapshot,captureHasPending,serializeCaptures,restoreCaptures} from './capture.mjs';
+
++const brandImage = document.querySelector('link[rel="icon"]').href;
+ const STORAGE='medilisten-reference-workbench-v1';
+ const CAPTURE_STORAGE=STORAGE+'-capture';
+ const root=document.querySelector('#app'),dialogs=document.querySelector('#dialogs'),toast=document.querySelector('#toast');
+-const split=()=>window.matchMedia('(min-width: 900px)').matches;
++const desktopQuery=window.matchMedia('(min-width: 900px)');
++const split=()=>desktopQuery.matches;
+ let storageOK=true,initial;
+ let captures=Object.fromEntries(CASES.map(c=>[c.id,createCapture(c.id)]));
+@@ -41,8 +43,10 @@
+ function focusSnapshot(){const a=document.activeElement;return a&&{key:a.dataset.focus,start:a.selectionStart,end:a.selectionEnd};}
+ function focusRestore(saved){if(!saved?.key)return;const scope=ui.modal?dialogs:root;const target=[...scope.querySelectorAll('[data-focus]')].find(el=>el.dataset.focus===saved.key&&el.getClientRects().length&&!el.disabled);if(target){target.focus({preventScroll:true});if(saved.start!=null&&target.setSelectionRange)target.setSelectionRange(saved.start,saved.end);}else{(ui.modal?dialogs.querySelector('#dialog-title'):(root.querySelector('.action-buttons .primary:not(:disabled)')||root.querySelector('#main')))?.focus({preventScroll:true});}}
++let composingElement=null;
+ function render(){
++ if (composingElement?.isConnected) return;
+  const saved=focusSnapshot();const openedDetails=new Set([...document.querySelectorAll('details[open]')].map(d=>d.querySelector('summary')?.dataset.focus||d.querySelector('summary')?.textContent));const scrolls=Object.fromEntries(['.record-scroll','.modal-body','.source-panel .source-lines','.assistant-body','.modal .source-lines'].map(selector=>[selector,document.querySelector(selector)?.scrollTop||0]));
+  const s=store.getState(),e=eNow();
+- root.innerHTML='<div class="app-shell reference-workbench"><header class="topbar"><a class="brand" href="#" data-action="home" data-focus="brand"><img src="./assets/medilisten.png" alt=""><span>MediListen</span></a><nav class="global-nav" aria-label="主要导航">'+btn('今日接诊','home',ui.view==='home'?'nav-item active':'nav-item')+btn('当前接诊','encounter',ui.view==='encounter'?'nav-item active':'nav-item')+'</nav><div class="top-actions"><a class="reference-link" data-focus="design-reference" href="./references.html" target="_blank" rel="noopener noreferrer">设计参考</a>'+btn('试用说明','help','text-button')+btn('演示控制','scenarios','text-button')+'</div></header><main id="main" data-focus="main" class="main '+(ui.view==='home'?'queue-main':'encounter-main')+'" tabindex="-1">'+(!storageOK?'<div class="recovery-banner" role="alert">演示暂存不可用，请保留页面。刷新后未保存内容可能无法恢复。</div>':'')+(ui.view==='home'?home(s):encounter(e))+'</main></div>';
++ root.innerHTML='<div class="app-shell reference-workbench"><header class="topbar"><a class="brand" href="#" data-action="home" data-focus="brand"><img src="'+brandImage+'" alt=""><span>MediListen</span></a><nav class="global-nav" aria-label="主要导航">'+btn('今日接诊','home',ui.view==='home'?'nav-item active':'nav-item')+btn('当前接诊','encounter',ui.view==='encounter'?'nav-item active':'nav-item')+'</nav><div class="top-actions">'+btn('试用说明','help','text-button')+btn('演示控制','scenarios','text-button')+'</div></header><main id="main" data-focus="main" class="main '+(ui.view==='home'?'queue-main':'encounter-main')+'" tabindex="-1">'+(!storageOK?'<div class="recovery-banner" role="alert">演示暂存不可用，请保留页面。刷新后未保存内容可能无法恢复。</div>':'')+(ui.view==='home'?home(s):encounter(e))+'</main></div>';
+  root.inert=!!ui.modal;dialogs.innerHTML=ui.modal?modalContent(e):'';for(const d of document.querySelectorAll('details'))if(openedDetails.has(d.querySelector('summary')?.dataset.focus||d.querySelector('summary')?.textContent))d.open=true;focusRestore(saved);
+  for(const [selector,v]of Object.entries(scrolls)){const el=document.querySelector(selector);if(el)el.scrollTop=v;}
+@@ -54,5 +58,5 @@
+  const encounters=Object.values(s.encounters),visible=encounters.filter(e=>(ui.filter==='all'||e.status===ui.filter)&&(e.patient.name+e.id).includes(ui.search));
+  const active=s.encounters[s.currentId]?.status==='active'?s.encounters[s.currentId]:encounters.find(e=>e.status==='active');
+- return '<section class="queue-page"><div class="page-header"><div class="title-line"><h1>今日接诊</h1><span class="muted">'+new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'})+'</span></div>'+btn('登记演示患者','register','secondary')+'</div>'+(active&&!ui.empty?'<div class="continue-strip"><span class="strip-label">当前接诊</span><strong>'+esc(active.patient.name)+'</strong><span>'+esc(active.patient.sex)+' · '+active.patient.age+'岁</span><span class="muted">'+phase(active)+'</span>'+btn('继续接诊','select','primary','data-id="'+active.id+'"')+'</div>':'<div class="welcome-line"><p>选择患者，开始本次问诊。</p><span class="muted">两份固定合成病例，可放心试用交互</span></div>')+'<div class="toolbar"><label class="search-label"><span class="sr-only">查找患者</span><input type="search" data-input="search" data-focus="search" value="'+esc(ui.search)+'" placeholder="搜索姓名或就诊编号"></label><div class="filters" aria-label="就诊状态">'+[['all','全部'],['waiting','待接诊'],['active','接诊中'],['completed','已完成']].map(([id,title])=>btn(title+' <span>'+(ui.empty?0:encounters.filter(e=>id==='all'||e.status===id).length)+'</span>','filter','filter '+(ui.filter===id?'active':''),'data-value="'+id+'" aria-pressed="'+(ui.filter===id)+'" data-focus="filter-'+id+'"')).join('')+'</div>'+btn('刷新','refresh','text-button')+'</div>'+(ui.empty||!visible.length?'<section class="empty-state"><h2>暂时没有匹配的就诊</h2><p class="muted">'+(ui.empty?'载入演示患者，开始体验采集与核对。':'调整搜索条件，或查看全部就诊。')+'</p>'+btn(ui.empty?'载入演示患者':'查看全部就诊',ui.empty?'load-cases':'all','primary')+'</section>':'<div class="table-wrap"><table class="encounter-table"><thead><tr><th>患者</th><th>就诊编号</th><th>状态</th><th>当前进度</th><th>操作</th></tr></thead><tbody>'+visible.map((e,i)=>'<tr class="'+(e.status==='active'?'current-row':'')+'"><td><strong>'+esc(e.patient.name)+'</strong><span class="patient-detail">'+e.patient.sex+' · '+e.patient.age+'岁</span></td><td>'+e.id+'</td><td>'+({waiting:'待接诊',active:'接诊中',completed:'已完成'}[e.status])+'</td><td>'+phase(e)+(e.revision?'<span class="patient-detail">第'+e.revision+'版 · '+(e.dirty?'未保存修改':'已保存')+'</span>':'')+'</td><td>'+btn(e.status==='completed'?'查看病历':e.status==='waiting'?'开始接诊':'查看','select',!active&&i===0?'primary':'text-button','data-id="'+e.id+'" data-focus="select-'+e.id+'"')+'</td></tr>').join('')+'</tbody></table></div>')+'<div class="list-footer"><span>共 '+(ui.empty?0:visible.length)+' 次就诊</span><span>固定合成病例 · 不用于诊疗</span></div></section>';
++ return '<section class="queue-page"><div class="page-header"><div class="title-line"><h1>今日接诊</h1><span class="muted">'+new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'})+'</span></div>'+btn('登记演示患者','register','secondary')+'</div>'+(active&&!ui.empty?'<div class="continue-strip"><span class="strip-label">当前接诊</span><strong>'+esc(active.patient.name)+'</strong><span>'+esc(active.patient.sex)+' · '+active.patient.age+'岁</span><span class="muted">'+phase(active)+'</span>'+btn('继续接诊','select','primary','data-id="'+active.id+'"')+'</div>':'')+'<div class="toolbar"><label class="search-label"><span class="sr-only">查找患者</span><input type="search" data-input="search" data-focus="search" value="'+esc(ui.search)+'" placeholder="搜索姓名或就诊编号"></label><div class="filters" aria-label="就诊状态">'+[['all','全部'],['waiting','待接诊'],['active','接诊中'],['completed','已完成']].map(([id,title])=>btn(title+' <span>'+(ui.empty?0:encounters.filter(e=>id==='all'||e.status===id).length)+'</span>','filter','filter '+(ui.filter===id?'active':''),'data-value="'+id+'" aria-pressed="'+(ui.filter===id)+'" data-focus="filter-'+id+'"')).join('')+'</div>'+btn('刷新','refresh','text-button')+'</div>'+(ui.empty||!visible.length?'<section class="empty-state"><h2>暂时没有匹配的就诊</h2><p class="muted">'+(ui.empty?'载入演示患者，开始体验采集与核对。':'调整搜索条件，或查看全部就诊。')+'</p>'+btn(ui.empty?'载入演示患者':'查看全部就诊',ui.empty?'load-cases':'all','primary')+'</section>':'<div class="table-wrap"><table class="encounter-table"><thead><tr><th>患者</th><th>就诊编号</th><th>就诊原因</th><th>状态</th><th>当前进度</th><th>操作</th></tr></thead><tbody>'+visible.map((e,i)=>'<tr class="'+(e.status==='active'?'current-row':'')+'"><td><strong>'+esc(e.patient.name)+'</strong><span class="patient-detail">'+e.patient.sex+' · '+e.patient.age+'岁</span></td><td>'+e.id+'</td><td>'+esc(caseFor(e).visitReason)+'</td><td><span class="queue-status" data-state="'+e.status+'">'+({waiting:'待接诊',active:'接诊中',completed:'已完成'}[e.status])+'</span></td><td>'+phase(e)+(e.revision?'<span class="patient-detail">第'+e.revision+'版 · '+(e.dirty?'未保存修改':'已保存')+'</span>':'')+'</td><td>'+btn(e.status==='completed'?'查看病历':e.status==='waiting'?'开始接诊':'查看','select',!active&&i===0?'primary':'text-button','data-id="'+e.id+'" data-focus="select-'+e.id+'"')+'</td></tr>').join('')+'</tbody></table></div>')+'<div class="list-footer"><span>共 '+(ui.empty?0:visible.length)+' 次就诊</span><span>固定合成病例 · 不用于诊疗</span></div></section>';
+ }
+ function hasVisibleDraft(e){const v=cap(e);return !e.revision&&v.roleConfirmed&&Object.values(v.fields).some(value=>String(value||'').trim());}
+@@ -293,10 +297,20 @@
+   }
+ });
+-document.addEventListener('input',event=>{
+-  const el=event.target;
++function commitInput(el) {
+   if(el.dataset.input==='search'){ui.search=el.value;render();}
+   if(el.dataset.input==='conversation')store.dispatch({type:'SET_INPUT',kind:'text',text:el.value});
+   if(el.dataset.input==='field')store.dispatch({type:'EDIT_FIELD',key:el.dataset.key,value:el.value});
+   if(el.dataset.input==='capture-field')sendCapture('EDIT_FIELD',{key:el.dataset.key,value:el.value});
++}
++document.addEventListener('compositionstart', event => {
++  if (event.target.matches('[data-input]')) composingElement = event.target;
++});
++document.addEventListener('compositionend', event => {
++  if (event.target !== composingElement) return;
++  composingElement = null;
++  commitInput(event.target);
++});
++document.addEventListener('input', event => {
++  if (!event.isComposing && event.target !== composingElement) commitInput(event.target);
+ });
+ document.addEventListener('change',event=>{
+@@ -315,6 +329,5 @@
+   }
+ });
+-let resizeTimer;
+-window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(render,100);});
++desktopQuery.addEventListener('change',render);
+ window.addEventListener('beforeunload',event=>{
+   persist();if(Object.values(store.getState().encounters).some(e=>hasPending(e)&&(!e.recovery||!storageOK))){event.preventDefault();event.returnValue='';}
+--- a/experiments/frontend-reference-workbench-20261106/model.mjs
++++ b/experiments/frontend-reference-workbench-20261106/model.mjs
+@@ -9,5 +9,5 @@
+ export const CASES = Object.freeze([
+   {
+-    id: 'syn-001', patient: { name: '合成患者甲', age: 32, sex: '女' },
++    id: 'syn-001', visitReason: '咳嗽伴发热', patient: { name: '合成患者甲', age: 32, sex: '女' },
+     text: `【医生】今天哪里不舒服？
+ 【患者】我咳嗽两天了，没有胸痛。
+@@ -21,5 +21,5 @@
+   },
+   {
+-    id: 'syn-002', patient: { name: '合成患者乙', age: 46, sex: '男' },
++    id: 'syn-002', visitReason: '右膝活动后疼痛', patient: { name: '合成患者乙', age: 46, sex: '男' },
+     text: `【医生】今天哪里不舒服？
+ 【患者】右膝走路后疼痛一周了。
+--- a/experiments/frontend-reference-workbench-20261106/style.css
++++ b/experiments/frontend-reference-workbench-20261106/style.css
+@@ -419,2 +419,33 @@
+ .panel-caution { color: var(--muted); font-size: 13px; white-space: nowrap; }
+ .download-state { margin: 0 0 16px; padding: 12px 16px; border: 1px solid var(--panel-border); border-radius: 4px; background: var(--selected); }
++
++/* Projection layout. Keep working status visible on the visit list and note. */
++:root {
++  --canvas: #edf3f4;
++  --text: #183341;
++  --muted: #506975;
++  --primary: #076b6b;
++  --hover: #075655;
++  --selected: #e1f1ee;
++  --panel-border: #c6d8d9;
++  font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
++}
++.topbar { background: #12363f; color: #fff; border-bottom-color: #12363f; }
++.topbar .brand, .topbar .nav-item, .topbar .text-button { color: #e8f5f1; }
++.topbar .brand img { background: #fff; border-radius: 5px; }
++.topbar .nav-item.active, .topbar .nav-item:hover, .topbar .text-button:hover { color: #fff; background: #20505a; border-bottom-color: #73d4bd; }
++.queue-page .page-header { padding: 22px 24px; border-radius: 10px; background: #184851; color: white; }
++.queue-page .title-line h1 { font-size: 30px; line-height: 1.35; }
++.queue-page .page-header .muted { color: #daeeeb; }
++.encounter-table thead th { background: #e4ecec; color: #365661; font-size: 14px; }
++.encounter-table td { font-size: 16px; }
++.encounter-table tbody tr:hover { background: #f5faf9; }
++.queue-status { display: inline-block; border-radius: 20px; padding: 2px 10px; font-size: 14px; white-space: nowrap; background: #e8eff4; color: #334f63; }
++.queue-status[data-state="active"] { background: #d7efe6; color: #164f46; }
++.queue-status[data-state="completed"] { background: #ebeeee; color: #46595b; }
++.record-header { box-shadow: inset 4px 0 #16786f; }
++.panel-header { background: #eef5f4; }
++@media (max-width: 700px) {
++  .queue-page .page-header { padding: 14px; }
++  .queue-page .title-line h1 { font-size: 24px; }
++}

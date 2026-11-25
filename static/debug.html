@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>开发调试页 - AI生成式电子病历辅助系统</title>
     <link rel="stylesheet" href="./style.css?v=2026060602" />
+    <link rel="stylesheet" href="./debug-visual.css?v=20261102-debug" />
   </head>
-  <body>
+  <body class="debug-mode">
     <main class="app-shell">
       <header class="topbar">
         <div class="brand">
@@ -30,7 +31,7 @@
         aria-label="调试页用途说明"
         style="border: 1px solid #bfdbfe; border-radius: 14px; padding: 12px 16px; background: #eff6ff; color: #1e40af; font-weight: 800; line-height: 1.6;"
       >
-        本页面用于课程调试与评分证据展示，不面向真实医生使用；正式医生端请使用 doctor.html 工作台。
+        本页面用于内部开发、接口与 ASR 验证，不面向医生使用；医生工作台请使用 doctor.html。
       </section>
 
       <nav class="tool-strip" aria-label="工作台工具栏">
@@ -44,7 +45,7 @@
       </nav>
 
       <section class="workflow" aria-label="流程步骤">
-        <ol id="workflowSteps" class="steps"></ol>
+        <ol id="workflowSteps" class="steps" tabindex="0" aria-label="流程步骤"></ol>
       </section>
 
       <section class="workspace" aria-label="医生工作台">
@@ -87,7 +88,7 @@
     </main>
 
     <div id="drawerBackdrop" class="drawer-backdrop" onclick="closeDrawer()"></div>
-    <aside id="drawer" class="drawer" aria-hidden="true">
+    <aside id="drawer" class="drawer" aria-hidden="true" inert>
       <header class="drawer-header">
         <h2 id="drawerTitle">抽屉</h2>
         <button type="button" class="ghost-button" onclick="closeDrawer()">关闭</button>

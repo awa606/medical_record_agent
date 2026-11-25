@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-25T01:44:55.240Z`
-- Source hash: `15ecffb718214068199e6c36a52987a5a9c76526323f4f33d3d75d7e87ef8595`
+- Updated at: `2026-11-25T01:55:07.484Z`
+- Source hash: `42dacd7ad21bb8d949827123a218ba4227f11d95894379ded1301f5766988df1`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@d7dc88e86bfcba6682067c100c4ddeed8ee4f6c0`
+- Repo: `codex/ui-hospital-record-v1@99eeacb6aaca35f0ddc83ba479370d426e2ac58b`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -55,7 +55,7 @@
 ## Next
 
 - Single next task: 用既有四题资料判读包开展 5.1 的合成场景临床评阅，按独立判据记录医师能否区分患者原话、文书规定及两者均缺证据的情况。
-- Parallel waiting task: r4.3 的远端全套回归另行跟踪。读屏软件真实发音、授课教师现场评分、目标医生评阅和院方部署条件待核。
+- Parallel waiting task: 合成初复诊资料的远端回归由本轮推送后核验。读屏软件真实发音、授课教师现场评分、目标医生评阅和院方部署条件待核。
 
 ## Manual Actions
 

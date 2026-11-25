@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-25T09:14:21.399Z`
-- Source hash: `92885881fce78558592c45a9c68334379745ec5b5ff90121ff33b278ba3d37db`
+- Updated at: `2026-11-25T09:24:22.836Z`
+- Source hash: `4eb56a68108d80ef0200e774a370b4503e5030f7ed64cc5123ff7ebb3da2b47c`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@b2f6fc97cd0e0e5a89d87fce60e944286ae7f1f5`
+- Repo: `codex/ui-hospital-record-v1@b1d1b85b1e35720bb0bee8d55e2a2f2c87aaef59`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -55,7 +55,7 @@
 ## Next
 
 - Single next task: 用既有四题资料判读包开展 5.1 的合成场景临床评阅，按独立判据记录医师能否区分患者原话、文书规定及两者均缺证据的情况。
-- Parallel waiting task: r4.5 国内门诊对照、隔离摆位和合成音频恢复已实测。目标科室医生独立判读、获权配对、教室现场表现与学校评分、院方部署及放行仍待回执。
+- Parallel waiting task: A/D 两轮合成试用已可离线操作并在本机下载观察记录，真实科室医生回卷为 0。获权门诊配对、教室现场与学校评分、院方部署及放行仍待回执。
 
 ## Manual Actions
 

@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-25T08:41:17.479Z`
-- Source hash: `b662d8c9cc6f7ba3140ab7cf74256357344cb56eccd1b6c4fe82d318a716a9b1`
+- Updated at: `2026-11-25T09:14:21.399Z`
+- Source hash: `92885881fce78558592c45a9c68334379745ec5b5ff90121ff33b278ba3d37db`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@434cb7c44bdbfe748ef6d368c17ae9f8dcb5a5d3`
+- Repo: `codex/ui-hospital-record-v1@b2f6fc97cd0e0e5a89d87fce60e944286ae7f1f5`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -55,7 +55,7 @@
 ## Next
 
 - Single next task: 用既有四题资料判读包开展 5.1 的合成场景临床评阅，按独立判据记录医师能否区分患者原话、文书规定及两者均缺证据的情况。
-- Parallel waiting task: r4.5 医生冲突文字与三宽交付已实测。十二页结课包固定 r4.4；现场投影、教师评分、目标医生评阅和医院部署条件仍待回执。
+- Parallel waiting task: r4.5 国内门诊对照、隔离摆位和合成音频恢复已实测。目标科室医生独立判读、获权配对、教室现场表现与学校评分、院方部署及放行仍待回执。
 
 ## Manual Actions
 

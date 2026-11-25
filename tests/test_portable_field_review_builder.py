@@ -10,7 +10,7 @@ import pytest
 BUILDER = Path(__file__).resolve().parents[1] / "experiments/course-defense-20261118/field-review-trial/build.py"
 
 
-@pytest.mark.parametrize("edition", ["r4_2", "r4_3", "r4_4"])
+@pytest.mark.parametrize("edition", ["r4_2", "r4_3", "r4_4", "r4_5"])
 def test_keeps_existing_release_manifest(tmp_path, edition):
     manifest = tmp_path / "发布指纹.json"
     manifest.write_bytes(b"previous edition")
@@ -161,3 +161,41 @@ def test_r44_freezes_application_help_and_knowledge_changes(tmp_path, monkeypatc
         later = commit_files(tmp_path, {backend: "value = 3"})
         with pytest.raises(ValueError, match="r4.4"):
             check(later)
+
+
+@pytest.mark.parametrize("failure", [None, "app/services/knowledge_store.py", "docs/pilot/doctor-v1/manual.html",
+                                     "extra_html", "stale_js_stamp"])
+def test_r45_freezes_only_the_doctor_script_and_its_stamp(tmp_path, monkeypatch, failure):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=tmp_path, check=True)
+    css = "main { margin: 0; }"
+    previous = commit_files(tmp_path, {
+        "static/doctor.js": "old()", "static/doctor.html": html_for("old()", css),
+        "scripts/package_help.py": 'ALLOWLIST = ["manual.html"]', "docs/pilot/doctor-v1/manual.html": "manual",
+        "app/services/knowledge_store.py": "value = 1",
+    })
+    changed = {"static/doctor.js": "new()", "static/doctor.html": html_for("new()", css)}
+    if failure == "extra_html":
+        changed["static/doctor.html"] += "unreviewed markup"
+    elif failure == "stale_js_stamp":
+        changed["static/doctor.html"] = html_for("wrong()", css)
+    elif failure:
+        changed[failure] = "unreviewed"
+    current = commit_files(tmp_path, changed)
+    functions = runpy.run_path(str(BUILDER))
+    verify = functions["verify_r45_changes"]
+    for key, value in (("REPO", tmp_path), ("R44_COMMIT", previous), ("R45_COMMIT", current)):
+        monkeypatch.setitem(verify.__globals__, key, value)
+    with pytest.raises(ValueError, match="r4.5"):
+        verify(previous)
+    with pytest.raises(ValueError, match="r4.4"):
+        functions["verify_r44_changes"](current)
+    if failure:
+        with pytest.raises(ValueError, match="r4.5"):
+            verify(current)
+    else:
+        assert verify(current) == ["static/doctor.html", "static/doctor.js"]
+        descendant = commit_files(tmp_path, {"static/doctor.js": "another()",
+                                              "static/doctor.html": html_for("another()", css)})
+        with pytest.raises(ValueError, match="r4.5"):
+            verify(descendant)

@@ -18,7 +18,7 @@ R42_COMMIT = "963439b389e07cf31791dbfac030f825ab951a35"
 R43_COMMIT = "bfc6779c5bd3d9f546b1f7669e2c32eb6bde1f96"
 R44_COMMIT = "40747b6381c0c03506dc6fb059a4f4a0c118c6a0"
 R45_COMMIT = "a2f6c3120eb82d36eceeaa53b3fffc0ef5d1e20a"
-R46_COMMIT = "74e4215ad5636cc16934fb201e5a7483c4b60dea"
+R46_COMMIT = "ad645bc38d8bbb042e4318d1ca5196144ac446d3"
 R44_CONTENT_PATHS = (
     "app/services/knowledge_store.py",
     "static/help/index.html",

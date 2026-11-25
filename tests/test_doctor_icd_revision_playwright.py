@@ -75,6 +75,7 @@ def test_code_edit_requires_saved_revision_before_approval_and_pdf():
             if artifacts:
                 if page.locator("#closeDrawerButton").is_visible():
                     page.locator("#closeDrawerButton").click()
+                page.locator(".chart-chapters summary").click()
                 page.locator('[data-record-anchor="management"]').click()
                 page.screenshot(path=str(Path(artifacts) / "revised-icd-approved.png"))
             browser.close()

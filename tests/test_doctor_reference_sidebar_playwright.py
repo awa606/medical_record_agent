@@ -58,13 +58,14 @@ def test_reference_names_open_full_details_without_losing_edits(page):
     prepare_reference_fixture(page)
     panel = page.locator('#assistPanels')
     expect(panel.locator('.clinical-reference-section')).to_have_count(2)
-    expect(panel.get_by_role('button')).to_have_count(4)
     expect(panel).not_to_contain_text('合成依据')
     expect(panel).not_to_contain_text('合成处理建议')
     expect(panel).not_to_contain_text('证据匹配')
     page.locator('#editRecordButton').click()
     editor = page.locator('[data-record-field-input="chief_complaint"]')
     editor.fill('未保存的合成修改')
+    page.locator('#showReferenceButton').click()
+    expect(panel.get_by_role('button')).to_have_count(4)
     row = panel.get_by_role('button', name='上呼吸道感染', exact=True)
     row.click()
     drawer = page.locator('#drawer')
@@ -83,13 +84,14 @@ def test_reference_names_open_full_details_without_losing_edits(page):
     assert page.evaluate('document.querySelector("#drawer").contains(document.activeElement)')
     page.keyboard.press('Escape')
     expect(drawer).to_have_attribute('aria-hidden', 'true')
-    expect(row).to_be_focused()
+    expect(page.locator('#showReferenceButton')).to_be_focused()
     expect(editor).to_have_value('未保存的合成修改')
+    page.locator('#showReferenceButton').click()
     panel.get_by_role('button', name='查看处理建议', exact=True).click()
     expect(drawer).to_contain_text('合成处理建议')
     expect(drawer).to_contain_text('合成用药提示')
     page.locator('#closeDrawerButton').click()
-    expect(panel.get_by_role('button', name='查看处理建议', exact=True)).to_be_focused()
+    expect(page.locator('#showReferenceButton')).to_be_focused()
     expect(editor).to_have_value('未保存的合成修改')
     expect(page.locator('#exportButton')).to_be_disabled()
 
@@ -187,12 +189,12 @@ def test_reference_layout_on_real_page(page, width, height):
           font: parseFloat(getComputedStyle(x).fontSize), height: x.getBoundingClientRect().height}))};
     }""")
     assert layout['width'] <= width + 1, layout
-    assert layout['nav'] == 16 and layout['title'] == 20 and layout['heading'] == 18, layout
+    assert 14 <= layout['nav'] < layout['heading'], layout
+    assert layout['title'] == 20 and layout['heading'] == 19, layout
     assert layout['field'] == 17 and layout['transcript'] == 16, layout
     visible_headers = [h for h in layout['headers'] if h > 0]
     assert max(visible_headers) - min(visible_headers) <= 1, layout
-    if width < 900:
-        page.locator('#showReferenceButton').click()
+    page.locator('#showReferenceButton').click()
     names = page.locator('.clinical-reference-link').evaluate_all("els => els.map(x => ({font: parseFloat(getComputedStyle(x).fontSize), height: x.getBoundingClientRect().height}))")
     assert all(x['font'] == 16 and x['height'] >= 44 for x in names), names
     page.get_by_role('button', name='上呼吸道感染', exact=True).click()

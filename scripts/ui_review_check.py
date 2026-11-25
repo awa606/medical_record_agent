@@ -379,11 +379,15 @@ def run() -> dict:
             page.wait_for_timeout(400)
             page.locator('textarea[data-record-field-input="present_illness"]').evaluate("el => { el.focus(); el.scrollIntoView({ block: 'center' }); }")
             page.wait_for_timeout(300)
-            nav_bottom = page.locator("#recordNavigation").bounding_box()
+            chapters = page.locator(".chart-chapters summary")
+            chapters.click()
+            page.locator('#recordNavigation [data-record-anchor]').first.click()
+            nav_bottom = chapters.bounding_box()
             body_top = page.locator("#recordFields").bounding_box()
             steps.append({
                 "step": "chapter_navigation_clear_of_editor",
-                "ok": nav_bottom["y"] + nav_bottom["height"] <= body_top["y"] + 1,
+                "ok": not page.locator("#recordNavigation").is_visible()
+                      and nav_bottom["y"] + nav_bottom["height"] <= body_top["y"] + 1,
                 "detail": [nav_bottom, body_top],
             })
             audit(page, "record_edit_mode", steps)

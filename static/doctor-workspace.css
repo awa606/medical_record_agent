@@ -573,3 +573,206 @@ body.doctor-mode [data-open-detail="assist:live-clinical"] { min-height: 32px; f
 .audio-revision-proof { margin-block: 6px 12px; overflow-wrap: anywhere; }
 .audio-revision-proof summary { cursor: pointer; font-weight: 600; }
 .audio-revision-proof dd { margin-inline: 0; font-family: monospace; }
+
+/* The saved chart is a reading surface. Recording and review tools retain their
+   original DOM nodes when opened, including their input state and focus return. */
+.chart-context, #encounterSourceTools:empty, .chart-chapters:has(#recordNavigation[hidden]) { display: none; }
+.chart-chapters { font-size: 14px; }
+.chart-chapters > summary { cursor: pointer; min-height: 32px; padding: 6px 5px; color: #225c9d; }
+.field-column > .panel-header:has(.chart-chapters) { flex-wrap: wrap; }
+.field-column > .panel-header:has(.chart-chapters) > div:first-child { margin-right: auto; }
+.chart-chapters[open] { flex-basis: 100%; }
+.chart-document-tools .partial-draft-summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px;
+  margin: 0; padding: 3px 8px; border-width: 2px;
+}
+.chart-document-tools .partial-draft-summary button {
+  min-height: 30px; padding: 2px 3px; border: 0; color: #85430b; background: transparent; text-align: start;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.settings-deployment { margin: 8px 0; color: var(--ws-muted); font-size: 13px; }
+body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) {
+  --chart-ink: #203347;
+  --chart-muted: #506477;
+  --chart-line: #dde4eb;
+  --chart-blue: #225c9d;
+  --ws-bg: #edf1f5;
+  background: var(--ws-bg);
+}
+body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) :is(.deployment-badge, .auth-role) { display: none; }
+body.doctor-mode .alpha51-workspace.has-record {
+  gap: 7px;
+  padding: 10px 16px;
+  color: var(--chart-ink);
+}
+body.doctor-mode .alpha51-workspace.has-record .encounter-patient-banner {
+  min-height: 48px;
+  border: 0;
+  border-radius: 7px;
+}
+body.doctor-mode .alpha51-workspace.has-record .workflow-panel {
+  padding: 0;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+}
+body.doctor-mode .alpha51-workspace.has-record .workflow-step {
+  min-height: 32px;
+  color: var(--chart-muted);
+  font-size: 14px;
+}
+body.doctor-mode .alpha51-workspace.has-record .workflow-step.active { color: var(--chart-blue); background: #dce8f5; }
+body.doctor-mode .alpha51-workspace.has-record .workflow-index { width: 18px; height: 18px; background: transparent; }
+body.doctor-mode .alpha51-workspace.has-record .chart-context,
+body.doctor-mode .alpha51-workspace.has-record .field-column {
+  border: 1px solid var(--chart-line);
+  border-radius: 7px;
+  background: #fff;
+}
+body.doctor-mode .alpha51-workspace.has-record .chart-context {
+  grid-area: context;
+  display: block;
+  min-width: 0;
+  overflow: auto;
+  padding: 18px 18px 20px;
+}
+.chart-context summary {
+  cursor: pointer;
+  min-height: 32px;
+  color: var(--chart-ink);
+  font-size: 17px;
+  font-weight: 650;
+}
+.chart-context-facts dl { margin: 10px 0 0; }
+#chartContextStatus { color: var(--chart-muted); font-size: 13px; font-weight: 500; margin-left: 4px; }
+.chart-context-facts dt { margin-top: 16px; color: var(--chart-muted); font-size: 14px; font-weight: 600; }
+.chart-context-facts dd { margin: 4px 0 0; color: var(--chart-ink); font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
+.chart-context-facts .chart-context-conflict { color: #9c342e; font-weight: 600; }
+#chartContextTools:not(:empty) { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--chart-line); }
+#chartContextTools .workspace-panel-switches { display: grid; gap: 4px; }
+#chartContextTools .workspace-panel-switches button {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  padding: 9px 0; color: var(--chart-blue); border: 0; border-radius: 3px;
+  text-align: start; font-weight: 600;
+}
+#chartContextTools .workspace-panel-switches button::after { content: "›"; font-size: 20px; }
+body.doctor-mode .alpha51-workspace.has-record .field-column { grid-area: record; }
+body.doctor-mode .alpha51-workspace.has-record .field-column > .panel-header { padding: 8px 16px; min-height: 40px; }
+body.doctor-mode .alpha51-workspace.has-record .field-column > .panel-header h2 { font-size: 19px; }
+body.doctor-mode .alpha51-workspace.has-record .record-navigation { margin-inline: 16px; padding: 4px 0; gap: 1px 6px; }
+body.doctor-mode .alpha51-workspace.has-record .record-navigation button { min-height: 32px; padding: 3px 5px; background: transparent; font-weight: 500; }
+body.doctor-mode .alpha51-workspace.has-record .record-navigation .record-next-issue { margin-left: auto; color: #80520b; }
+body.doctor-mode .alpha51-workspace.has-record .record-review-toolbar { margin: 0; align-items: center; gap: 0 8px; border: 0; }
+body.doctor-mode .alpha51-workspace.has-record .chart-document-tools {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 10px;
+  margin-bottom: 6px; padding-block: 3px; border-bottom: 1px solid var(--chart-line); flex: none;
+}
+body.doctor-mode .alpha51-workspace.has-record .chart-document-tools .partial-draft-summary { margin-right: auto; }
+body.doctor-mode .alpha51-workspace.has-record .chart-document-tools:has(.approval-disclosure[open]) .record-review-toolbar { width: 100%; }
+body.doctor-mode .alpha51-workspace.has-record .record-version { gap: 2px; padding: 0; }
+body.doctor-mode .alpha51-workspace.has-record .approval-checklist { flex: auto; }
+body.doctor-mode .alpha51-workspace.has-record .approval-checklist-head { padding: 3px 5px; gap: 6px; min-height: 32px; }
+body.doctor-mode .alpha51-workspace.has-record .approval-checklist-head strong { color: var(--chart-blue); font-size: 14px; font-weight: 600; }
+body.doctor-mode .alpha51-workspace.has-record .approval-checklist-head::after { content: "▾"; color: var(--chart-blue); }
+body.doctor-mode .alpha51-workspace.has-record .approval-checklist-head .approval-entry-label { display: none; }
+body.doctor-mode .alpha51-workspace.has-record .approval-disclosure[open] .approval-entry-label { display: inline; }
+body.doctor-mode .alpha51-workspace.has-record .record-section { margin-bottom: 12px; }
+body.doctor-mode .alpha51-workspace.has-record .record-section-head {
+  padding: 4px 8px; min-height: 28px; background: #f3f6f9; border-radius: 3px;
+}
+body.doctor-mode .alpha51-workspace.has-record .record-section-head h3 { font-size: 14px; font-weight: 600; color: var(--chart-muted); }
+body.doctor-mode .alpha51-workspace.has-record .record-section-status { min-height: 26px; padding: 2px 6px; font-size: 13px; }
+body.doctor-mode .alpha51-workspace.has-record .record-section .field-card { padding-block: 9px; }
+body.doctor-mode .alpha51-workspace.has-record .record-section .field-title { color: var(--chart-ink); font-size: 17px; line-height: 1.45; }
+body.doctor-mode .alpha51-workspace.has-record .record-section .field-value { color: #263a4d; font-size: 17px; line-height: 1.6; overflow-wrap: anywhere; }
+body.doctor-mode .alpha51-workspace.has-record .record-section .compact-field-meta button {
+  background: transparent; color: var(--chart-blue); border: 0; border-radius: 3px; padding: 4px 6px; font-weight: 500;
+}
+body.doctor-mode .alpha51-workspace.has-record button:focus-visible { outline: 2px solid #165d9c; outline-offset: 2px; }
+body.doctor-mode .alpha51-workspace.has-record :is(#editRecordButton, #saveDraftButton, #confirmFieldsButton, #exportButton):enabled {
+  background: var(--chart-blue); color: #fff; border-color: var(--chart-blue);
+}
+@media (min-width: 900px) {
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .doctor-app {
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
+    grid-template-rows: 48px minmax(0, 1fr);
+    background: #fff;
+  }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .topbar { display: contents; }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .brand-block { grid-area: 1 / 1; align-self: center; padding-inline: 16px; }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .top-actions {
+    grid-area: 1 / 3; align-self: center; padding-right: 16px;
+  }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .top-actions > button,
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) #displaySettingsButton {
+    border-color: transparent; color: var(--chart-muted); font-size: 14px;
+  }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .product-nav {
+    grid-area: 1 / 2; position: static; min-height: 0; height: auto; padding: 0 8px;
+    display: flex; flex-direction: row; gap: 4px; align-items: center; justify-content: start;
+    border: 0; background: #fff;
+  }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .product-nav :is(.product-nav-heading,.product-nav-foot,small,.product-nav-short) { display: none; }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .product-nav .product-nav-full { display: inline; }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .product-nav-item {
+    display: inline-flex; width: auto; min-height: 34px; padding: 5px 10px; border: 0;
+    background: transparent; box-shadow: none; color: var(--chart-muted);
+  }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .product-nav-item span { font-size: 14px; }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .product-nav-item.active { color: var(--chart-blue); background: #eaf1f9; }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .product-main { grid-area: 2 / 1 / 3 / -1; }
+  body.doctor-mode .alpha51-workspace.has-record .workbench {
+    grid-template-columns: minmax(205px, 24%) minmax(0, 1fr); grid-template-areas: "context record"; gap: 12px;
+  }
+  body.doctor-mode .alpha51-workspace.has-record .workbench > :is(.assist-column,.transcript-column) { display: none; }
+  body.doctor-mode .alpha51-workspace.has-record .record-section .field-card:has(.field-value) {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; align-items: start;
+  }
+  body.doctor-mode .alpha51-workspace.has-record .record-section .field-card:has(.field-value) > * { grid-column: 1 / -1; }
+  body.doctor-mode .alpha51-workspace.has-record .record-section .field-card:has(.field-value) > .field-head {
+    grid-area: 1 / 1; align-self: center; margin: 0; gap: 8px;
+  }
+  body.doctor-mode .alpha51-workspace.has-record .record-section .field-status-inline { margin: 0; }
+  body.doctor-mode .alpha51-workspace.has-record .record-section .field-card:has(.field-value) > .compact-field-meta {
+    grid-area: 1 / 2; margin: 0; gap: 2px;
+  }
+  body.doctor-mode .alpha51-workspace.has-record .record-section .field-meta button { min-height: 30px; }
+  body.doctor-mode .alpha51-workspace.has-record .record-section .compact-field-meta button { color: #506275; }
+  body.doctor-mode .alpha51-workspace.has-record .record-section .field-card:is(:hover,:focus-within) .compact-field-meta button { color: #164f87; }
+}
+@media (max-width: 899px) {
+  body.doctor-mode .alpha51-workspace.has-record .workbench { grid-template-areas: "record" "context"; grid-template-rows: minmax(0,1fr) auto; }
+  body.doctor-mode .alpha51-workspace.has-record .chart-context { padding: 6px 12px; max-height: 30vh; }
+  body.doctor-mode .alpha51-workspace.has-record .chart-context summary { min-height: 40px; padding-top: 7px; font-size: 15px; }
+  body.doctor-mode .alpha51-workspace.has-record .workspace-panel-switches button { min-height: 40px; }
+  body.doctor-mode .alpha51-workspace.has-record .record-section .compact-field-meta button { min-height: 44px; }
+}
+@media (max-width: 680px) {
+  body.doctor-mode .alpha51-workspace.has-record { padding: 6px 8px; }
+  body.doctor-mode .alpha51-workspace.has-record .workbench { grid-template-rows: auto auto; }
+  body.doctor-mode .alpha51-workspace.has-record .record-navigation { margin-inline: 10px; }
+  body.doctor-mode .alpha51-workspace.has-record .record-navigation button { min-height: 36px; }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .product-nav {
+    background: #fff; border-block: 1px solid var(--chart-line);
+  }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .product-nav-item {
+    min-height: 40px; color: var(--chart-muted); background: transparent; border: 0; box-shadow: none;
+  }
+  body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .product-nav-item.active {
+    color: var(--chart-blue); background: #eaf1f9;
+  }
+  body.doctor-mode .alpha51-workspace.has-record .encounter-command-center { gap: 4px; align-items: center; }
+  body.doctor-mode .alpha51-workspace.has-record .workflow-panel { flex: 1 1 auto; }
+  body.doctor-mode .alpha51-workspace.has-record .workflow-panel:not(:focus-within) .workflow-steps:has(.active) { display: flex; }
+  body.doctor-mode .alpha51-workspace.has-record .workflow-panel:not(:focus-within) .workflow-steps:has(.active) .workflow-step:not(.active) { display: none; }
+  body.doctor-mode .alpha51-workspace.has-record .workflow-panel:focus-within { flex-basis: 100%; }
+  body.doctor-mode .alpha51-workspace.has-record .workflow-step.active {
+    flex-direction: row; min-height: 30px; background: transparent; color: var(--chart-blue); white-space: nowrap;
+  }
+  body.doctor-mode .alpha51-workspace.has-record #encounterSourceTools .workspace-panel-switches { gap: 2px; }
+  body.doctor-mode .alpha51-workspace.has-record #encounterSourceTools button { padding-inline: 5px; border: 0; background: transparent; color: var(--chart-blue); }
+  body.doctor-mode .alpha51-workspace.has-record .record-navigation {
+    flex-wrap: nowrap; overflow-x: auto; min-width: 0; margin-inline: 8px;
+  }
+  body.doctor-mode .alpha51-workspace.has-record .record-navigation button { flex: none; }
+}

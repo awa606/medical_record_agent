@@ -522,6 +522,7 @@ async function loadDeployment() {
     deployment = { mode: "development", label: "环境未登记", version: "unknown" };
   }
   $("deploymentBadge").textContent = `${deployment.label} · ${String(deployment.version).slice(0, 8)}`;
+  $("settingsDeployment").textContent = `运行环境 · ${$("deploymentBadge").textContent}`;
   $("deploymentBadge").title = "功能测试候选；模型质量与独立医生试用尚未放行";
   if (deployment.mode === "test") {
     $("localRegistrationTitle").textContent = "新建匿名就诊";
@@ -744,9 +745,14 @@ function renderAuthPanel() {
   const logoutButton = $("logoutButton");
   const message = $("loginMessage");
   if (label) {
-    label.textContent = appState.authUser
-      ? `${friendlyUserName(appState.authUser)} · ${appState.authUser.role}`
-      : "未登录";
+    label.textContent = appState.authUser ? friendlyUserName(appState.authUser) : "未登录";
+    if (appState.authUser) {
+      const role = document.createElement("span");
+      role.className = "auth-role";
+      role.textContent = ` · ${appState.authUser.role}`;
+      label.append(role);
+      label.title = appState.authUser.role === "doctor" ? "普通医生" : appState.authUser.role;
+    }
   }
   if (logoutButton) logoutButton.hidden = !appState.authUser;
   const authenticated = appState.authStatus === "authenticated";
@@ -5497,6 +5503,54 @@ function renderRecoveryFieldChanges(recovery, savedFields) {
   }).join("");
 }
 
+const chartDesktop = window.matchMedia?.("(min-width: 900px)");
+
+function positionChartTools() {
+  const desktopRecord = chartDesktop.matches && appState.viewMode === "doctor" && Boolean(appState.currentRecordFields);
+  const tools = document.querySelector(".workspace-panel-switches");
+  const host = $(desktopRecord ? "chartContextTools" : "encounterSourceTools");
+  if (tools.parentElement !== host) host.append(tools);
+}
+
+function chartContextValue(field, status) {
+  if (status.key === "conflicting") return status.label;
+  const value = readableStoredText(field?.value);
+  if (value && !field.missing) {
+    return ["low", "partial"].includes(status.key) ? `${value}（${status.label}）` : value;
+  }
+  if (field?.doctor_review_status === "not_asked_confirmed") return "本次未询问（医生已确认）";
+  if (field?.doctor_review_status === "missing_accepted") return "本次资料缺失（医生已接受）";
+  return "本次未记录";
+}
+
+function renderChartContext(fields, signed) {
+  if (!chartDesktop) return;
+  positionChartTools();
+  const content = $("chartContextFacts");
+  content.replaceChildren();
+  if (!fields || appState.viewMode !== "doctor") return;
+  $("chartContextStatus").textContent = signed ? "已签署" : appState.recordEditMode ? "编辑中" : "待审核";
+  const rows = [
+    ["chief_complaint", "就诊原因"],
+    ["past_history", "既往史"],
+    ["allergy_history", "过敏史"],
+    ["auxiliary_exam", "辅助检查"],
+  ];
+  const list = document.createElement("dl");
+  for (const [key, name] of rows) {
+    const field = fields[key];
+    const status = fieldReviewPresentation(fields, key, signed);
+    const term = document.createElement("dt");
+    term.textContent = name;
+    const entry = document.createElement("dd");
+    // A quarantined statement must never be repeated as a known patient fact.
+    entry.textContent = chartContextValue(field, status);
+    if (status.key === "conflicting") entry.className = "chart-context-conflict";
+    list.append(term, entry);
+  }
+  content.append(list);
+}
+
 function renderFields() {
   const origin = manualOrigin();
   if (origin && appState.authUser?.id === origin.recorded_by && selectedEncounterId()) {
@@ -5514,6 +5568,7 @@ function renderFields() {
   const isEditing = Boolean(appState.recordEditMode && appState.currentRecordFields && !isPreview);
   const displayState = doctorDisplayState();
   const isApprovedDisplay = currentRevisionIsSigned();
+  renderChartContext(fields, isApprovedDisplay);
   const highlightClass = appState.recordHighlightUntil > Date.now() ? "record-field-updated" : "";
   if (!fields) {
     $("recordNavigation").hidden = true;
@@ -5628,16 +5683,16 @@ function renderFields() {
         : historicalRecordQuality(fields).incomplete ? "内容不完整" : issueCount ? `${issueCount}项待核对` : "待医生确认";
     $("fieldCountBadge").className = `status-badge ${isApprovedDisplay ? "confirmed" : isPreview || isEditing ? "info" : issueCount ? "missing" : "info"}`;
   }
-  const supportedCount = EDITABLE_FIELD_DEFS.filter(([key]) => fields?.[key]?.value && !fields[key].missing && fields[key].status !== "conflicting").length;
   const conflictCount = EDITABLE_FIELD_DEFS.filter(([key]) => fields?.[key]?.status === "conflicting").length;
+  const firstConflict = EDITABLE_FIELD_DEFS.find(([key]) => fields?.[key]?.status === "conflicting");
   const partialNotice = fields && !isPreview && !isApprovedDisplay && conflictCount
-    ? `<div class="partial-draft-summary">${supportedCount}项已有可核对内容，${conflictCount}项证据冲突已隔离。可继续编辑和保存；冲突处理后才能批准导出。</div>` : "";
+    ? `<div class="partial-draft-summary"><button type="button" data-record-section-focus="${escapeHtml(firstConflict[0])}">${escapeHtml(firstConflict[1])}${conflictCount > 1 ? `等${conflictCount}项` : ""}证据冲突 · 定位修正</button><span>修正后方可审核导出</span></div>` : "";
   const quality = historicalRecordQuality(fields);
   const historicalNotice = !isPreview && !isEditing && quality.affected
     ? `<p class="historical-record-notice" role="status">${quality.incomplete ? "历史病历内容不完整" : "部分历史字段无可用内容"}，原因未记录。${isApprovedDisplay ? "历史审核记录保留；这项提示不表示旧字段已经补全。" : "请核对保存的原文；不会据此推断未询问或否认。"}</p>` : "";
   const previewNotice = isPreview
     ? `<div class="preview-notice">${escapeHtml(previewNoticeText())}；正式生成病历后会替换为审核版结果。</div>`
-    : partialNotice;
+    : "";
   const editNotice = isEditing ? `
     <div class="record-edit-notice ${appState.recordEditConflict ? "conflict" : ""}">
       <div>
@@ -5696,7 +5751,7 @@ function renderFields() {
   const restoreLookupFocus = Boolean(document.activeElement?.dataset.knowledgeField)
     && document.activeElement === currentFieldKnowledgeOpener();
   $("recordFields").innerHTML = previewNotice + historicalNotice + manualOriginMarkup(manualOrigin()) + audioRevisionOriginMarkup(audioRevisionOrigin())
-    + `<div class="record-review-toolbar">${versionNotice}${isEditing ? "" : renderApprovalChecklist(fields)}</div>`
+    + `<div class="chart-document-tools">${partialNotice}<div class="record-review-toolbar">${versionNotice}${isEditing ? "" : renderApprovalChecklist(fields)}</div></div>`
     + editNotice + recoveryNotice + sections + leftover + summaryFooter + draftLegend;
   if (restoreLookupFocus) currentFieldKnowledgeOpener()?.focus({ preventScroll: true });
 }
@@ -11229,8 +11284,14 @@ function bindEvents() {
   });
   $("closeWorkspaceAuxButton").addEventListener("click", closeWorkspaceAuxiliary);
   $("workspaceAuxDialog").addEventListener("cancel", event => { event.preventDefault(); closeWorkspaceAuxiliary(); });
+  $("workflowSteps").addEventListener("click", () => $("workflowSteps").focus({ preventScroll: true }));
+  $("chartContextDetails").open = chartDesktop.matches;
+  chartDesktop.addEventListener("change", () => {
+    $("chartContextDetails").open = chartDesktop.matches;
+    positionChartTools();
+  });
   window.addEventListener("resize", () => {
-    if (workspaceAuxiliary && window.innerWidth >= 900) closeWorkspaceAuxiliary();
+    if (workspaceAuxiliary && !workspaceAuxiliary.trigger.getClientRects().length) closeWorkspaceAuxiliary();
   });
   const consultationAudio = $("consultationAudio");
   $("doctorModeButton").addEventListener("click", () => setViewMode("doctor"));
@@ -11528,6 +11589,7 @@ function bindEvents() {
     }
   }, true);
   $("recordNavigation").addEventListener("click", (event) => {
+    if (event.target.closest("button")) event.currentTarget.closest("details").open = false;
     const anchor = event.target.closest("[data-record-anchor]");
     if (anchor) { focusRecordTarget(anchor.dataset.recordAnchor, true); return; }
     const nextIssue = event.target.closest("[data-record-next-issue]");
@@ -11666,6 +11728,7 @@ function bindEvents() {
     const editor = event.target.closest("[data-record-field-input]");
     if (!editor) return;
     updateRecordFieldValue(editor.dataset.recordFieldInput, editor.value);
+    renderChartContext(activeRecordFields(), false);
     refreshFieldEvidenceAction(editor, editor.dataset.recordFieldInput);
   });
   $("recordFields").addEventListener("input", (event) => {

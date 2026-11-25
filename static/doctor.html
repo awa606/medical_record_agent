@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="./brand/medilisten-v1.png" />
     <link rel="stylesheet" href="./doctor.css?v=0a613f8edbc66aa5" />
     <link rel="stylesheet" href="./doctor-ui-v2.css?v=e54cc5c3d1902782" />
-    <link rel="stylesheet" href="./doctor-workspace.css?v=80a5e3ddc17d7fd3" />
+    <link rel="stylesheet" href="./doctor-workspace.css?v=95ce408d20af2143" />
   </head>
   <body class="doctor-mode standard-mode">
 <a class="skip-link" href="#mainContent" inert>跳到主要内容</a>
@@ -44,6 +44,7 @@
                   <button type="button" id="debugModeButton">调试模式</button>
                 </div>
               </section>
+              <p id="settingsDeployment" class="settings-deployment"></p>
               <section>
                 <span class="settings-label">截图显示</span>
                 <div class="settings-button-row capture-switch" aria-label="截图显示模式">
@@ -223,10 +224,10 @@
             请上传问诊音频或粘贴问诊文本开始。
           </section>
 
-          <div class="workspace-panel-switches" aria-label="辅助工作区">
+          <div id="encounterSourceTools"><div class="workspace-panel-switches" aria-label="辅助工作区">
             <button type="button" id="showTranscriptButton" data-workspace-panel="transcript">转写与录音</button>
             <button type="button" id="showReferenceButton" data-workspace-panel="assist">诊疗参考</button>
-          </div>
+          </div></div>
         </section>
 
         <section id="transcriptionFailurePanel" class="failure-recovery-panel" hidden aria-live="polite">
@@ -290,6 +291,13 @@
       </section>
 
       <div class="workbench" aria-label="医生工作台主体">
+        <aside class="chart-context" aria-label="本次就诊资料">
+          <details id="chartContextDetails" open>
+            <summary>本次病历摘要 <span id="chartContextStatus"></span></summary>
+            <div id="chartContextFacts" class="chart-context-facts"></div>
+          </details>
+          <div id="chartContextTools"></div>
+        </aside>
         <aside class="column field-column">
           <div class="panel-header">
             <div>
@@ -297,9 +305,12 @@
               <p id="recordFieldsHelp">核对 AI 提取字段，缺失和低置信内容会单独标记。</p>
             </div>
             <span id="fieldCountBadge" class="status-badge neutral">-</span>
+            <details class="chart-chapters">
+              <summary>病历目录</summary>
+              <nav id="recordNavigation" class="record-navigation" aria-label="病历章节定位" hidden></nav>
+            </details>
           </div>
           <div id="reviewBoundaryNotice" class="review-boundary-notice" hidden></div>
-          <nav id="recordNavigation" class="record-navigation" aria-label="病历章节定位" hidden></nav>
           <div id="recordFields" class="field-list"></div>
         </aside>
 
@@ -701,6 +712,6 @@
       <iframe id="embeddedHelpFrame" title="MediListen使用帮助正文"></iframe>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./doctor.js?v=4585b555f04a7976"></script>
+    <script src="./doctor.js?v=d2c6e66671b7ee10"></script>
   </body>
 </html>

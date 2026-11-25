@@ -8,10 +8,10 @@
 >
 > **DO NOT EDIT MANUALLY**
 
-- Updated at: `2026-11-24T18:54:28.056Z`
-- Source hash: `6e926a9af7ef01e4fa1912bff8ca8eb0e756f909458d96a205a6e6cbb166b9c6`
+- Updated at: `2026-11-25T01:44:55.240Z`
+- Source hash: `15ecffb718214068199e6c36a52987a5a9c76526323f4f33d3d75d7e87ef8595`
 - Phase: **Alpha**
-- Repo: `codex/ui-hospital-record-v1@9b3828c5ebfd27fa9479d1a5be79fd299c79c4d4`
+- Repo: `codex/ui-hospital-record-v1@d7dc88e86bfcba6682067c100c4ddeed8ee4f6c0`
 - Base main: `a1f38cd1b5601e624a7dc22bc3462664951a8238`
 - Active PR: [#115](https://github.com/awa606/medical_record_agent/pull/115) · DRAFT
 - Last merged PR: [#112](https://github.com/awa606/medical_record_agent/pull/112) · MERGED · `a1f38cd1b5601e624a7dc22bc3462664951a8238`
@@ -54,8 +54,8 @@
 
 ## Next
 
-- Single next task: 在 5.1 的普通医生工作台，用合成盲例核对陪同者的报告与患者本人明确未做的检查能否区分，记录医生查错和修订结果。
-- Parallel waiting task: 修订测试的第二次远端全套回归待验。授课教师、目标医生和院方接口仍待现场核验。
+- Single next task: 用既有四题资料判读包开展 5.1 的合成场景临床评阅，按独立判据记录医师能否区分患者原话、文书规定及两者均缺证据的情况。
+- Parallel waiting task: r4.3 的远端全套回归另行跟踪。读屏软件真实发音、授课教师现场评分、目标医生评阅和院方部署条件待核。
 
 ## Manual Actions
 

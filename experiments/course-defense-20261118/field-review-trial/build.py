@@ -18,6 +18,7 @@ R42_COMMIT = "963439b389e07cf31791dbfac030f825ab951a35"
 R43_COMMIT = "bfc6779c5bd3d9f546b1f7669e2c32eb6bde1f96"
 R44_COMMIT = "40747b6381c0c03506dc6fb059a4f4a0c118c6a0"
 R45_COMMIT = "a2f6c3120eb82d36eceeaa53b3fffc0ef5d1e20a"
+R46_COMMIT = "fd1404e2866828c91b730cf70672553a115322e6"
 R44_CONTENT_PATHS = (
     "app/services/knowledge_store.py",
     "static/help/index.html",
@@ -105,6 +106,23 @@ def verify_r45_changes(commit: str) -> list[str]:
     return verify_release_changes(R44_COMMIT, commit, "r4.5", ("doctor.js",))
 
 
+def verify_r46_changes(commit: str) -> list[str]:
+    if commit != R46_COMMIT:
+        raise ValueError("r4.6 需要已冻结的完整工作台应用提交")
+    require_ancestor(R45_COMMIT, commit, "r4.6")
+    packaged = ["app", "assets", "config", "static", *approved_help_inputs(R45_COMMIT)]
+    changed = git_bytes("diff", "--name-only", R45_COMMIT, commit, "--", *packaged).decode().splitlines()
+    assets = ("doctor-workspace.css", "doctor.js")
+    if set(changed) != {"static/doctor.html", *("static/" + name for name in assets)}:
+        raise ValueError(f"r4.6 的运行文件或内置帮助超出已核验范围：{changed}")
+    entry = git_bytes("show", f"{commit}:static/doctor.html").decode()
+    for name in assets:
+        stamp = digest(git_bytes("show", f"{commit}:static/{name}"))[:16]
+        if entry.count(f"./{name}?v=") != 1 or f'./{name}?v={stamp}"' not in entry:
+            raise ValueError(f"r4.6 的医生入口未使用本次 {name} 实际内容指纹")
+    return sorted(changed)
+
+
 def update_launcher(data: bytes, commit: str, with_help: bool) -> bytes:
     text = data.decode("utf8")
     if text.count(BASE_COMMIT[:12]) != 3:
@@ -123,12 +141,12 @@ def update_launcher(data: bytes, commit: str, with_help: bool) -> bytes:
     return text.encode()
 
 def build(base: Path, output: Path, commit: str, *, with_help: bool = False, r4_2: bool = False,
-          r4_3: bool = False, r4_4: bool = False, r4_5: bool = False) -> Path:
+          r4_3: bool = False, r4_4: bool = False, r4_5: bool = False, r4_6: bool = False) -> Path:
     if not re.fullmatch("[0-9a-f]{40}", commit):
         raise ValueError("请使用完整的应用提交 SHA")
-    if sum((with_help, r4_2, r4_3, r4_4, r4_5)) > 1:
+    if sum((with_help, r4_2, r4_3, r4_4, r4_5, r4_6)) > 1:
         raise ValueError("只能选择一个随身包版本")
-    if (r4_2 or r4_3 or r4_4 or r4_5) and output.exists() and any(output.iterdir()):
+    if (r4_2 or r4_3 or r4_4 or r4_5 or r4_6) and output.exists() and any(output.iterdir()):
         raise ValueError("请使用全新的输出目录，以保留已有发行物和指纹")
     if digest(base.read_bytes()) != BASE_SHA256:
         raise ValueError("基础 ZIP 与已验收的 r3 不符")
@@ -145,12 +163,15 @@ def build(base: Path, output: Path, commit: str, *, with_help: bool = False, r4_
     if r4_5:
         edition = "r4.5"
         changes_since_previous = verify_r45_changes(commit)
-    with_help = with_help or r4_2 or r4_3 or r4_4 or r4_5
+    if r4_6:
+        edition = "r4.6"
+        changes_since_previous = verify_r46_changes(commit)
+    with_help = with_help or r4_2 or r4_3 or r4_4 or r4_5 or r4_6
     changed = set(git_bytes("diff", "--name-only", BASE_COMMIT, commit, "--", "app", "assets", "config", "static").decode().splitlines())
     expected = {"static/doctor.js", "static/doctor.html", "static/doctor-workspace.css"}
     if with_help:
         expected.update({"static/doctor.css", "static/help/index.html"})
-    if r4_4 or r4_5:
+    if r4_4 or r4_5 or r4_6:
         expected.add("app/services/knowledge_store.py")
     if changed != expected:
         raise ValueError(f"本配方只适用于已验收的字段界面差异：{sorted(changed)}")
@@ -207,9 +228,14 @@ def build(base: Path, output: Path, commit: str, *, with_help: bool = False, r4_
     if r4_3:
         report["previous_application_commit"] = R42_COMMIT
         report["changed_since_r4_2"] = changes_since_previous
-    if r4_4 or r4_5:
-        report["previous_application_commit"] = R44_COMMIT if r4_5 else R43_COMMIT
-        report["changed_since_r4_4" if r4_5 else "changed_since_r4_3"] = changes_since_previous
+    if r4_4 or r4_5 or r4_6:
+        previous, change_key = {
+            "r4.4": (R43_COMMIT, "changed_since_r4_3"),
+            "r4.5": (R44_COMMIT, "changed_since_r4_4"),
+            "r4.6": (R45_COMMIT, "changed_since_r4_5"),
+        }[edition]
+        report["previous_application_commit"] = previous
+        report[change_key] = changes_since_previous
         report["changed_source_sha256"] = {
             name: digest(git_bytes("show", f"{commit}:{name}")) for name in changes_since_previous
         }
@@ -228,6 +254,7 @@ if __name__ == "__main__":
     edition.add_argument("--r4-3", action="store_true", help="构建含字段操作完整可访问名称的 r4.3")
     edition.add_argument("--r4-4", action="store_true", help="构建标明参考资料性质与用途的 r4.4")
     edition.add_argument("--r4-5", action="store_true", help="构建显示中文字段冲突提示的 r4.5")
+    edition.add_argument("--r4-6", action="store_true", help="构建以连续病历正文为主的普通医生工作台 r4.6")
     args = parser.parse_args()
     print(build(args.base, args.output, args.commit, with_help=args.with_help,
-                r4_2=args.r4_2, r4_3=args.r4_3, r4_4=args.r4_4, r4_5=args.r4_5))
+                r4_2=args.r4_2, r4_3=args.r4_3, r4_4=args.r4_4, r4_5=args.r4_5, r4_6=args.r4_6))

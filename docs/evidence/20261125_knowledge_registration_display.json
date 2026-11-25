@@ -1,0 +1,281 @@
+{
+  "范围": "合成腕痛病例与初复诊工程用例；实际医生答卷=0",
+  "应用": "40747b6381c0c03506dc6fb059a4f4a0c118c6a0",
+  "配方": "a98d23a0c6769cb1724703afc717fbf858e4e7ed",
+  "zip": "3b44759ef4cccc8637fb1ca359e7d0e73f66bde4624cc207ec42083aaa43056b",
+  "卡片": {
+    "r43-逐版-chief_complaint": {
+      "卡片观察数": 6,
+      "用途完整可读": 6,
+      "类别可读": 0,
+      "主题可读": 0
+    },
+    "r43-逐版-allergy_history": {
+      "卡片观察数": 6,
+      "用途完整可读": 6,
+      "类别可读": 0,
+      "主题可读": 0
+    },
+    "r43-逐版-未关联": {
+      "卡片观察数": 6,
+      "用途完整可读": 0,
+      "类别可读": 0,
+      "主题可读": 0
+    },
+    "r43-旧库-chief_complaint": {
+      "卡片观察数": 6,
+      "用途完整可读": 6,
+      "类别可读": 0,
+      "主题可读": 0
+    },
+    "r43-旧库-allergy_history": {
+      "卡片观察数": 6,
+      "用途完整可读": 6,
+      "类别可读": 0,
+      "主题可读": 0
+    },
+    "r43-旧库-未关联": {
+      "卡片观察数": 6,
+      "用途完整可读": 0,
+      "类别可读": 0,
+      "主题可读": 0
+    },
+    "r44-逐版-chief_complaint": {
+      "卡片观察数": 6,
+      "用途完整可读": 6,
+      "类别可读": 6,
+      "主题可读": 6
+    },
+    "r44-逐版-allergy_history": {
+      "卡片观察数": 6,
+      "用途完整可读": 6,
+      "类别可读": 6,
+      "主题可读": 6
+    },
+    "r44-逐版-未关联": {
+      "卡片观察数": 6,
+      "用途完整可读": 6,
+      "类别可读": 6,
+      "主题可读": 6
+    },
+    "r44-旧库-chief_complaint": {
+      "卡片观察数": 6,
+      "用途完整可读": 6,
+      "类别可读": 6,
+      "主题可读": 6
+    },
+    "r44-旧库-allergy_history": {
+      "卡片观察数": 6,
+      "用途完整可读": 6,
+      "类别可读": 6,
+      "主题可读": 6
+    },
+    "r44-旧库-未关联": {
+      "卡片观察数": 6,
+      "用途完整可读": 6,
+      "类别可读": 6,
+      "主题可读": 6
+    }
+  },
+  "原始浏览器回执SHA256": {
+    "r43-逐版": "bc19fb77c3f513f673271a9d957b91f0e52f4461c356fbef42c5c5a0c39466f1",
+    "r43-旧库": "b8557869f0b9661f207e74d3ddd234e5dd7839a6e378a76e66391af91c01244e",
+    "r43-已关联": "6190af617c3a4b888da44914e701854896bd527311a3c04354ba7b0acba6f449",
+    "r44-逐版": "df356b921a4438c12b27979b1980578fa745ad288057a4d92a6ebe8856a51b92",
+    "r44-旧库": "7f7ce44eaa4c61aaeea5aba6637e06165e0393ab770a32dadc6292c273897329",
+    "r44-已关联": "eadbc2da8447525ac6b2664d8eae4b241a68fd75ff7c2d8fd54e79dcd1cc4e0a"
+  },
+  "初复诊查询": {
+    "comparison": "两个真正的临时回环HTTP服务，演示角色普通医生，独立空库。A=原应用，B=相同源码仅替换已封存候选服务。",
+    "app": "99eeacb6aaca35f0ddc83ba479370d426e2ac58b",
+    "new_service": "846d2dd33c8fd1b38c00541338010706f874b9443729400a93bb0383733d7f85",
+    "outcomes": {
+      "free": {
+        "I": {
+          "hits": 3,
+          "direct_section_rank": 2,
+          "individually_proven": null
+        },
+        "F": {
+          "hits": 4,
+          "direct_section_rank": 2,
+          "individually_proven": null
+        },
+        "T": {
+          "hits": 3,
+          "direct_section_rank": 1,
+          "individually_proven": null
+        },
+        "E": {
+          "hits": 4,
+          "direct_section_rank": 2,
+          "individually_proven": null
+        },
+        "D": {
+          "hits": 3,
+          "direct_section_rank": null,
+          "individually_proven": false
+        },
+        "A": {
+          "hits": 4,
+          "direct_section_rank": null,
+          "individually_proven": false
+        },
+        "O": {
+          "hits": 3,
+          "direct_section_rank": null,
+          "individually_proven": false
+        },
+        "U": {
+          "hits": 3,
+          "direct_section_rank": null,
+          "individually_proven": false
+        }
+      },
+      "V1": {
+        "I": {
+          "hits": 3,
+          "direct_section_rank": 2,
+          "individually_proven": null
+        },
+        "F": {
+          "hits": 4,
+          "direct_section_rank": 1,
+          "individually_proven": null
+        },
+        "T": {
+          "hits": 4,
+          "direct_section_rank": 1,
+          "individually_proven": null
+        },
+        "E": {
+          "hits": 4,
+          "direct_section_rank": 3,
+          "individually_proven": null
+        },
+        "D": {
+          "hits": 3,
+          "direct_section_rank": null,
+          "individually_proven": false
+        },
+        "A": {
+          "hits": 4,
+          "direct_section_rank": null,
+          "individually_proven": false
+        },
+        "O": {
+          "hits": 3,
+          "direct_section_rank": null,
+          "individually_proven": false
+        },
+        "U": {
+          "hits": 3,
+          "direct_section_rank": null,
+          "individually_proven": false
+        }
+      },
+      "V2": {
+        "I": {
+          "hits": 3,
+          "direct_section_rank": 2,
+          "individually_proven": null
+        },
+        "F": {
+          "hits": 4,
+          "direct_section_rank": 1,
+          "individually_proven": null
+        },
+        "T": {
+          "hits": 4,
+          "direct_section_rank": 1,
+          "individually_proven": null
+        },
+        "E": {
+          "hits": 4,
+          "direct_section_rank": 3,
+          "individually_proven": null
+        },
+        "D": {
+          "hits": 3,
+          "direct_section_rank": null,
+          "individually_proven": false
+        },
+        "A": {
+          "hits": 4,
+          "direct_section_rank": null,
+          "individually_proven": false
+        },
+        "O": {
+          "hits": 3,
+          "direct_section_rank": null,
+          "individually_proven": false
+        },
+        "U": {
+          "hits": 3,
+          "direct_section_rank": null,
+          "individually_proven": false
+        }
+      }
+    },
+    "responses_per_version": 104,
+    "returned_rows_per_version": 348,
+    "ranks_scores_excerpts_identical": true
+  },
+  "Windows与Debian": {
+    "应用": "40747b6381c0c03506dc6fb059a4f4a0c118c6a0",
+    "包SHA256": "3b44759ef4cccc8637fb1ca359e7d0e73f66bde4624cc207ec42083aaa43056b",
+    "两端R1前后全等": true,
+    "完全匹配的配对响应数_含预热": 70,
+    "Windows": {
+      "chief_complaint": {
+        "样本": 30,
+        "有效": 30,
+        "错误": 0,
+        "P50毫秒": 143.6174,
+        "P95毫秒": 161.9976,
+        "最大毫秒": 190.0916
+      },
+      "allergy_history": {
+        "样本": 30,
+        "有效": 30,
+        "错误": 0,
+        "P50毫秒": 142.6419,
+        "P95毫秒": 182.9563,
+        "最大毫秒": 198.5216
+      }
+    },
+    "Debian": {
+      "chief_complaint": {
+        "样本": 30,
+        "有效": 30,
+        "错误": 0,
+        "P50毫秒": 50.811946,
+        "P95毫秒": 67.566502,
+        "最大毫秒": 68.824334
+      },
+      "allergy_history": {
+        "样本": 30,
+        "有效": 30,
+        "错误": 0,
+        "P50毫秒": 47.717898,
+        "P95毫秒": 68.75187,
+        "最大毫秒": 68.908621
+      }
+    },
+    "正式样本数_两组合计": 120,
+    "每端每字段预热": 5,
+    "每端每字段正式": 30,
+    "额外客户端端口转发": false,
+    "试前约定SHA256": "315bd8f2309a0240d0de05d9b9d68229234ffe0f183a7a092dc7b672db76be69",
+    "正文顺序分数登记及所有计时回包全等": true,
+    "登记与使用范围": {
+      "document_type": "record-standard",
+      "disease_scope": "门急诊文书",
+      "usage_scope": "供病案部门核对信息页与病历对象、过敏栏目、医师已填写的诊断与用语及信息页保存期。适用于二级以上综合医院和专科医院，其他医院参照。院内模板及管理策略待确认。",
+      "source_id": "mra-review-outpatient-info-2024",
+      "version": "国卫办医政发〔2024〕16号 · 项目释义v2"
+    }
+  },
+  "课堂文件SHA256": "d7f574c3138552fb9d2ae0a2d5b481fd6d4ba9f4a265b683319a6c5ec7e3022c",
+  "试用首页SHA256": "8752f367c1b0535e7fdb97172c7c7378b066c43c02e7ec5278d2d2dad85edb7a"
+}

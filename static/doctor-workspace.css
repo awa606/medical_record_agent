@@ -692,6 +692,13 @@ body.doctor-mode .alpha51-workspace.has-record button:focus-visible { outline: 2
 body.doctor-mode .alpha51-workspace.has-record :is(#editRecordButton, #saveDraftButton, #confirmFieldsButton, #exportButton):enabled {
   background: var(--chart-blue); color: #fff; border-color: var(--chart-blue);
 }
+body.doctor-mode .alpha51-workspace.has-record .encounter-action-bar #exportButton:disabled {
+  color: #526479;
+  background: #f3f6fa;
+  border-color: #d0d9e3;
+  opacity: 1;
+  cursor: not-allowed;
+}
 @media (min-width: 900px) {
   body.doctor-mode[data-product-view="encounter"]:has(#encounterView.has-record) .doctor-app {
     grid-template-columns: max-content minmax(0, 1fr) max-content;

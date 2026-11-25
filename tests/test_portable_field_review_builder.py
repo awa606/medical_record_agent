@@ -10,7 +10,7 @@ import pytest
 BUILDER = Path(__file__).resolve().parents[1] / "experiments/course-defense-20261118/field-review-trial/build.py"
 
 
-@pytest.mark.parametrize("edition", ["r4_2", "r4_3"])
+@pytest.mark.parametrize("edition", ["r4_2", "r4_3", "r4_4"])
 def test_keeps_existing_release_manifest(tmp_path, edition):
     manifest = tmp_path / "发布指纹.json"
     manifest.write_bytes(b"previous edition")
@@ -100,6 +100,7 @@ def test_r43_excludes_new_app_from_old_edition_and_limits_changes(tmp_path, monk
     monkeypatch.setitem(r42_check.__globals__, "REPO", tmp_path)
     monkeypatch.setitem(r42_check.__globals__, "R41_COMMIT", r41)
     monkeypatch.setitem(r42_check.__globals__, "R42_COMMIT", r42)
+    monkeypatch.setitem(r43_check.__globals__, "R43_COMMIT", candidate)
     assert len(r42_check(prior_candidate)) == 3
     assert len(r42_check(r42)) == 3
     with pytest.raises(ValueError, match="r4.2"):
@@ -113,3 +114,50 @@ def test_r43_excludes_new_app_from_old_edition_and_limits_changes(tmp_path, monk
             r43_check(candidate)
     else:
         assert r43_check(candidate) == ["static/doctor.html", "static/doctor.js"]
+
+
+@pytest.mark.parametrize("failure", [None, "missing_backend", "missing_manual", "missing_index", "extra_html",
+                                     "stale_js_stamp", "app/main.py", "static/doctor-workspace.css",
+                                     "scripts/package_help.py", "docs/pilot/doctor-v1/other.html"])
+def test_r44_freezes_application_help_and_knowledge_changes(tmp_path, monkeypatch, failure):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=tmp_path, check=True)
+    css = "main { margin: 0; }"
+    backend, manual, index = "app/services/knowledge_store.py", "docs/pilot/doctor-v1/manual.html", "static/help/index.html"
+    r42 = commit_files(tmp_path, {
+        "static/doctor.js": "r42()", "static/doctor.html": html_for("r42()", css), "static/doctor-workspace.css": css,
+        backend: "value = 1", manual: "old manual", index: "old index",
+        "scripts/package_help.py": 'ALLOWLIST = ["manual.html", "other.html"]',
+        "docs/pilot/doctor-v1/other.html": "frozen help",
+    })
+    r43 = commit_files(tmp_path, {"static/doctor.js": "r43()", "static/doctor.html": html_for("r43()", css)})
+    changes = {"static/doctor.js": "r44()", "static/doctor.html": html_for("r44()", css),
+               backend: "value = 2", manual: "new manual", index: "new index"}
+    expected = sorted(changes)
+    missing = {"missing_backend": backend, "missing_manual": manual, "missing_index": index}
+    if failure in missing:
+        del changes[missing[failure]]
+    elif failure == "extra_html":
+        changes["static/doctor.html"] += "unapproved markup"
+    elif failure == "stale_js_stamp":
+        changes["static/doctor.html"] = html_for("r42()", css)
+    elif failure:
+        changes[failure] = "unapproved change"
+    r44 = commit_files(tmp_path, changes)
+    functions = runpy.run_path(str(BUILDER))
+    check = functions["verify_r44_changes"]
+    for key, value in (("REPO", tmp_path), ("R42_COMMIT", r42), ("R43_COMMIT", r43), ("R44_COMMIT", r44)):
+        monkeypatch.setitem(check.__globals__, key, value)
+    assert functions["verify_r43_changes"](r43) == ["static/doctor.html", "static/doctor.js"]
+    with pytest.raises(ValueError, match="r4.3"):
+        functions["verify_r43_changes"](r44)
+    with pytest.raises(ValueError, match="r4.4"):
+        check(r43)
+    if failure:
+        with pytest.raises(ValueError, match="r4.4"):
+            check(r44)
+    else:
+        assert check(r44) == expected
+        later = commit_files(tmp_path, {backend: "value = 3"})
+        with pytest.raises(ValueError, match="r4.4"):
+            check(later)

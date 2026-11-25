@@ -15,6 +15,13 @@ BASE_SHA256 = "6371cb8ee6a62609e9fc19656ad106e566302a3a45f74ba271a731f636a5da87"
 BASE_COMMIT = "d231e1c5f0c120fa15b3cc228cbfec12c345ecfd"
 R41_COMMIT = "ebece5c7ffb863f334034095e464d871561933e1"
 R42_COMMIT = "963439b389e07cf31791dbfac030f825ab951a35"
+R43_COMMIT = "bfc6779c5bd3d9f546b1f7669e2c32eb6bde1f96"
+R44_COMMIT = "40747b6381c0c03506dc6fb059a4f4a0c118c6a0"
+R44_CONTENT_PATHS = (
+    "app/services/knowledge_store.py",
+    "static/help/index.html",
+    "docs/pilot/doctor-v1/manual.html",
+)
 REFERENCE = "data/knowledge/review/outpatient-information-page/six-clauses.json"
 REFERENCE_SHA256 = "5d470b317685af7b30653ce65285d0392c3d6cf8b76f1e48b1dc46c73c30737d"
 REFERENCE_FILE = "六条文书释义.json"
@@ -54,10 +61,11 @@ def require_ancestor(ancestor: str, descendant: str, edition: str) -> None:
         raise ValueError(f"{edition} 的提交不在已核验的版本范围，或本地缺少所需提交历史")
 
 
-def verify_release_changes(previous: str, commit: str, edition: str, assets: tuple[str, ...]) -> list[str]:
+def verify_release_changes(previous: str, commit: str, edition: str, assets: tuple[str, ...],
+                           additional_paths: tuple[str, ...] = ()) -> list[str]:
     packaged = ["app", "assets", "config", "static", *approved_help_inputs(previous)]
     changed = git_bytes("diff", "--name-only", previous, commit, "--", *packaged).decode().splitlines()
-    expected = {"static/doctor.html", *("static/" + name for name in assets)}
+    expected = {"static/doctor.html", *("static/" + name for name in assets), *additional_paths}
     if set(changed) != expected:
         raise ValueError(f"{edition} 的运行文件或内置帮助超出已核验范围：{changed}")
     expected_html = git_bytes("show", f"{previous}:static/doctor.html").decode()
@@ -78,7 +86,15 @@ def verify_r42_changes(commit: str) -> list[str]:
 
 def verify_r43_changes(commit: str) -> list[str]:
     require_ancestor(R42_COMMIT, commit, "r4.3")
+    require_ancestor(commit, R43_COMMIT, "r4.3")
     return verify_release_changes(R42_COMMIT, commit, "r4.3", ("doctor.js",))
+
+
+def verify_r44_changes(commit: str) -> list[str]:
+    if commit != R44_COMMIT:
+        raise ValueError("r4.4 需要已冻结的完整应用提交")
+    require_ancestor(R43_COMMIT, commit, "r4.4")
+    return verify_release_changes(R43_COMMIT, commit, "r4.4", ("doctor.js",), R44_CONTENT_PATHS)
 
 
 def update_launcher(data: bytes, commit: str, with_help: bool) -> bytes:
@@ -98,12 +114,13 @@ def update_launcher(data: bytes, commit: str, with_help: bool) -> bytes:
     compile(text, "体验.py", "exec")
     return text.encode()
 
-def build(base: Path, output: Path, commit: str, *, with_help: bool = False, r4_2: bool = False, r4_3: bool = False) -> Path:
+def build(base: Path, output: Path, commit: str, *, with_help: bool = False, r4_2: bool = False,
+          r4_3: bool = False, r4_4: bool = False) -> Path:
     if not re.fullmatch("[0-9a-f]{40}", commit):
         raise ValueError("请使用完整的应用提交 SHA")
-    if sum((with_help, r4_2, r4_3)) > 1:
+    if sum((with_help, r4_2, r4_3, r4_4)) > 1:
         raise ValueError("只能选择一个随身包版本")
-    if (r4_2 or r4_3) and output.exists() and any(output.iterdir()):
+    if (r4_2 or r4_3 or r4_4) and output.exists() and any(output.iterdir()):
         raise ValueError("请使用全新的输出目录，以保留已有发行物和指纹")
     if digest(base.read_bytes()) != BASE_SHA256:
         raise ValueError("基础 ZIP 与已验收的 r3 不符")
@@ -114,11 +131,16 @@ def build(base: Path, output: Path, commit: str, *, with_help: bool = False, r4_
     if r4_3:
         edition = "r4.3"
         changes_since_previous = verify_r43_changes(commit)
-    with_help = with_help or r4_2 or r4_3
+    if r4_4:
+        edition = "r4.4"
+        changes_since_previous = verify_r44_changes(commit)
+    with_help = with_help or r4_2 or r4_3 or r4_4
     changed = set(git_bytes("diff", "--name-only", BASE_COMMIT, commit, "--", "app", "assets", "config", "static").decode().splitlines())
     expected = {"static/doctor.js", "static/doctor.html", "static/doctor-workspace.css"}
     if with_help:
         expected.update({"static/doctor.css", "static/help/index.html"})
+    if r4_4:
+        expected.add("app/services/knowledge_store.py")
     if changed != expected:
         raise ValueError(f"本配方只适用于已验收的字段界面差异：{sorted(changed)}")
     reference = git_bytes("show", f"{commit}:{REFERENCE}")
@@ -174,6 +196,12 @@ def build(base: Path, output: Path, commit: str, *, with_help: bool = False, r4_
     if r4_3:
         report["previous_application_commit"] = R42_COMMIT
         report["changed_since_r4_2"] = changes_since_previous
+    if r4_4:
+        report["previous_application_commit"] = R43_COMMIT
+        report["changed_since_r4_3"] = changes_since_previous
+        report["changed_source_sha256"] = {
+            name: digest(git_bytes("show", f"{commit}:{name}")) for name in changes_since_previous
+        }
     (output / "发布指纹.json").write_bytes(json_bytes(report))
     (output / (path.name+".sha256")).write_bytes((sha+"  "+path.name+"\n").encode())
     return path
@@ -187,5 +215,7 @@ if __name__ == "__main__":
     edition.add_argument("--with-help", action="store_true", help="构建含完整内置帮助的 r4.1")
     edition.add_argument("--r4-2", action="store_true", help="构建含完整内置帮助、可逐条查看出处的 r4.2")
     edition.add_argument("--r4-3", action="store_true", help="构建含字段操作完整可访问名称的 r4.3")
+    edition.add_argument("--r4-4", action="store_true", help="构建标明参考资料性质与用途的 r4.4")
     args = parser.parse_args()
-    print(build(args.base, args.output, args.commit, with_help=args.with_help, r4_2=args.r4_2, r4_3=args.r4_3))
+    print(build(args.base, args.output, args.commit, with_help=args.with_help,
+                r4_2=args.r4_2, r4_3=args.r4_3, r4_4=args.r4_4))

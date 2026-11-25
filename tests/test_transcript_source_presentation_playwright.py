@@ -224,7 +224,19 @@ def _open_from_workbench(page, encounter_id):
     expect(page.locator("#patientProfile")).to_contain_text(f"E-{encounter_id}")
 
 
+def _open_transcript_source(page):
+    page.locator("#showTranscriptButton").click()
+    expect(page.locator("#workspaceAuxDialog #transcriptList")).to_be_visible()
+
+
+def _return_to_record(page):
+    page.locator("#closeWorkspaceAuxButton").click()
+    expect(page.locator("#workspaceAuxDialog")).not_to_be_visible()
+    expect(page.locator("#showTranscriptButton")).to_be_focused()
+
+
 def _assert_text_source(page):
+    _open_transcript_source(page)
     expect(page.locator("#transcriptHeading")).to_have_text("输入原文")
     expect(page.locator("#transcriptSourceNotice")).to_be_visible()
     expect(page.locator("#transcriptSourceNotice")).to_have_text(
@@ -249,6 +261,7 @@ def _assert_text_detail(page):
     page.locator("#closeDrawerButton").click()
     expect(page.locator("#drawer")).to_have_attribute("aria-hidden", "true")
     assert page.locator("#drawer").evaluate("node => node.inert")
+    expect(page.locator("#showTranscriptButton")).to_be_focused()
 
 
 def _assert_player_controls_fit(page):
@@ -356,8 +369,10 @@ def test_persisted_text_and_audio_have_distinct_time_and_restore_without_stale_s
                 _assert_text_detail(page)
                 page.reload()
                 _assert_text_source(page)
+                _return_to_record(page)
 
                 _open_from_workbench(page, audio_id_encounter)
+                _open_transcript_source(page)
                 expect(page.locator("#transcriptHeading")).to_have_text("问诊转写")
                 expect(page.locator("#transcriptSourceNotice")).not_to_be_visible()
                 expect(page.locator("#consultationAudioPlayer")).to_be_visible()
@@ -378,6 +393,8 @@ def test_persisted_text_and_audio_have_distinct_time_and_restore_without_stale_s
                     ["00:00", "01:00", "时间未记录"]
                 )
                 page.locator("#closeDrawerButton").click()
+                expect(page.locator("#showTranscriptButton")).to_be_focused()
+                _open_transcript_source(page)
                 rows.nth(1).locator(".transcript-row-time").click()
                 page.wait_for_function(
                     "document.querySelector('#consultationAudio').currentTime >= 60"
@@ -388,10 +405,12 @@ def test_persisted_text_and_audio_have_distinct_time_and_restore_without_stale_s
 
                 # Audio's follow mode must not hide a subsequent text-only source.
                 page.locator('[data-transcript-pace="follow"]').click()
+                _return_to_record(page)
                 _open_from_workbench(page, text_id)
                 _assert_text_source(page)
                 page.reload()
                 _assert_text_source(page)
+                _return_to_record(page)
                 assert mutating_requests == []
             finally:
                 browser.close()

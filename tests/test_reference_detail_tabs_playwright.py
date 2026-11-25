@@ -37,7 +37,7 @@ def test_detail_tabs_keyboard_traceability_score_and_edit_preservation(page):
     assert root.inner_text().count('证据匹配度') == 0
     root.get_by_role('tab', name='患者依据').focus()
     page.keyboard.press('ArrowRight')
-    expect(root.get_by_role('tab', name='指南资料')).to_be_focused()
+    expect(root.get_by_role('tab', name='参考资料')).to_be_focused()
     expect(root.locator('#reference-panel-guides')).to_be_visible()
     expect(root).to_contain_text('病例级资料 · 未关联当前项目')
     root.locator('summary', has_text='来源详情').click()
@@ -82,8 +82,8 @@ def test_unlinked_no_results_and_failure_are_distinct(page, status, message):
       s.currentKnowledgeEvidence={results:[]};s.knowledgeEvidenceStatus=status;
     }""", status)
     page.get_by_role('button', name='上呼吸道感染', exact=True).click()
-    page.get_by_role('tab', name='指南资料').click()
-    expect(page.locator('#reference-panel-guides')).to_contain_text('当前项目未关联指南')
+    page.get_by_role('tab', name='参考资料').click()
+    expect(page.locator('#reference-panel-guides')).to_contain_text('当前项目未关联参考资料')
     expect(page.locator('#reference-panel-guides')).to_contain_text(message)
 
 
@@ -95,7 +95,7 @@ def test_conflicts_remain_visible_on_every_tab_and_sources_escape_html(page):
       r.title='<img src=x onerror=alert(1)>';r.url='javascript:alert(1)';
     }""")
     page.get_by_role('button', name='上呼吸道感染', exact=True).click()
-    for label in ['患者依据','指南资料','待核对事项']:
+    for label in ['患者依据','参考资料','待核对事项']:
         page.get_by_role('tab',name=label).click()
         expect(page.locator('.reference-summary')).to_contain_text('病历版本冲突')
     expect(page.locator('.reference-detail img')).to_have_count(0)
@@ -114,7 +114,7 @@ def test_conflicts_remain_visible_on_every_tab_and_sources_escape_html(page):
 def test_reference_drawer_readability_and_single_scroll(page, width, height):
     page.set_viewport_size({'width':width,'height':height})
     root=open_reference(page)
-    for label in ['患者依据','指南资料','待核对事项']:
+    for label in ['患者依据','参考资料','待核对事项']:
         root.get_by_role('tab',name=label).click()
         metrics=root.evaluate("""el => {
           const body=el.querySelector('.reference-body'), r=el.getBoundingClientRect();
@@ -139,8 +139,44 @@ def test_reference_status_uses_existing_schema_enums(page):
     assert page.evaluate('referenceStatusLabel({verification_status:"source_verified",clinical_review_status:"reviewed"})') == '来源已核验，临床映射已复核'
     page.evaluate("window.__MRA_APP_STATE__.currentRecordFields.candidate_diagnoses[0].references[0].evidence_scope='合成适用限制'")
     page.get_by_role('button', name='上呼吸道感染', exact=True).click()
-    page.get_by_role('tab', name='指南资料').click()
+    page.get_by_role('tab', name='参考资料').click()
     expect(page.locator('#reference-panel-guides')).to_contain_text('适用范围：合成适用限制')
+
+
+def test_registration_purpose_and_clinical_scope_stay_with_their_own_source(page):
+    prepare_reference_fixture(page)
+    page.evaluate("""() => {
+      const state = window.__MRA_APP_STATE__;
+      state.currentRecordFields.candidate_diagnoses[0].references = [{
+        title: '合成的已关联资料', document_type: 'record-standard', metadata_origin: 'version_import',
+        usage_scope: '用于核对书写项目', evidence_scope: '仅限合成记录第一段',
+        disease_scope: '<em>初诊书写</em>', excerpt: '合成摘录'
+      }];
+      state.currentKnowledgeEvidence.results = [{
+        title: '合成的病例资料', document_type: 'clinical-reference', metadata_origin: 'legacy_observed',
+        usage_scope: '旧库用途文字'
+      }, {title: '未登记示例', usage_scope: '  '}];
+    }""")
+    page.get_by_role('button', name='上呼吸道感染', exact=True).click()
+    patient = page.locator('#reference-panel-patient')
+    expect(patient).not_to_contain_text('用于核对书写项目')
+    page.get_by_role('tab', name='参考资料').click()
+    panel = page.locator('#reference-panel-guides')
+    linked = panel.locator('section').filter(has=page.get_by_role('heading', name='已关联参考资料', exact=True))
+    expect(linked).to_contain_text('登记类别：病历规范')
+    expect(linked).to_contain_text('适用范围：仅限合成记录第一段')
+    expect(linked).to_contain_text('登记用途：用于核对书写项目')
+    topic = linked.get_by_text('<em>初诊书写</em>', exact=True)
+    expect(topic).to_be_hidden()
+    linked.locator('summary').press('Enter')
+    expect(topic).to_be_visible()
+    expect(linked.locator('em')).to_have_count(0)
+    other = panel.locator('section').filter(has=page.get_by_role('heading', name='病例级资料 · 未关联当前项目'))
+    expect(other.locator('article h4')).to_have_text(['合成的病例资料', '未登记示例'])
+    expect(other.locator('article').first).to_contain_text('旧库共用类别：临床参考（通用分类）')
+    expect(other.locator('article').first).to_contain_text('旧库共用用途登记：旧库用途文字')
+    expect(other.locator('article').last).to_contain_text('本条资料未提供登记用途。')
+    expect(other).not_to_contain_text('仅限合成记录第一段')
 
 
 def test_demo_identity_and_runtime_modes_do_not_claim_unverified_hybrid(page):

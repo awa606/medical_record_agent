@@ -626,7 +626,8 @@ def retrieve_knowledge(
         params.append(max(limit * 8, 20))
         rows = conn.execute(f"""
             SELECT c.chunk_id, c.document_id, c.section, c.page, c.content, c.content_sha256,
-                   d.version, d.source_id, s.title, s.publisher, s.source_url, s.metadata_origin, s.usage_scope,
+                   d.version, d.source_id, s.title, s.publisher, s.source_url, s.metadata_origin,
+                   s.usage_scope, s.document_type, s.disease_scope,
                    {rank} AS bm25_score
             FROM {from_chunks}
             JOIN knowledge_document d ON d.document_id=c.document_id
@@ -684,6 +685,8 @@ def retrieve_knowledge(
                     "publisher": row["publisher"],
                     "metadata_origin": row["metadata_origin"],
                     "usage_scope": row["usage_scope"],
+                    "document_type": row["document_type"],
+                    "disease_scope": row["disease_scope"],
                     "version": row["version"],
                     "section": row["section"],
                     "page": row["page"],

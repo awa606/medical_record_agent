@@ -284,11 +284,13 @@ def test_whole_page_edit_save_reload_and_active_knowledge_query() -> None:
             expect(detail.get_by_text("选择来源核对原文", exact=False)).to_have_count(0)
             first_card = detail.locator(".detail-section").first
             expect(first_card.locator(".detail-kv").first).to_contain_text("章节 / 页码")
+            expect(first_card.locator(".detail-kv").first).to_contain_text("登记类别：病历规范")
             expect(first_card.locator(".detail-kv + .detail-text")).to_be_visible()
             identifiers = first_card.locator("details").filter(has_text="文档编号与校验值")
             expect(identifiers.locator(".hash-value")).to_be_hidden()
             identifiers.locator("summary").press("Enter")
             expect(identifiers.locator(".hash-value")).to_be_visible()
+            expect(identifiers.get_by_text("发热/呼吸", exact=True)).to_be_visible()
             expect(identifiers).to_contain_text(document_id)
             identifiers.locator("summary").press("Space")
             expect(identifiers.locator(".hash-value")).to_be_hidden()

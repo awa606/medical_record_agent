@@ -77,7 +77,7 @@ def test_admin_import_test_search_and_enable_use_live_api() -> None:
                 page.set_viewport_size({"width": 1440, "height": 1000})
                 row.locator('[data-knowledge-action="detail"]').click()
                 expect(page.locator("#knowledgeDetailDialog")).to_contain_text("使用 / 索引范围")
-                expect(page.locator("#knowledgeDetailDialog")).to_contain_text("导入此版本时单独登记")
+                expect(page.locator("#knowledgeDetailDialog")).to_contain_text("按此文档版本登记")
                 page.keyboard.press("Escape")
                 expect(row.locator('[data-knowledge-action="detail"]')).to_be_focused()
 

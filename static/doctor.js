@@ -2041,7 +2041,7 @@ function knowledgeDocumentEnabled(doc) {
   return Boolean(doc.is_active && doc.is_current);
 }
 function knowledgeMetadataDescription(origin) {
-  if (origin === "version_import") return "导入此版本时单独登记";
+  if (origin === "version_import") return "按此文档版本登记";
   if (origin === "legacy_observed") return "取自旧库共用登记，原版本出处待核对";
   return "缺少逐版本登记记录，请核对原始资料";
 }
@@ -4190,27 +4190,45 @@ function safeKnowledgeUrl(value) {
   }
 }
 
+function knowledgeRegistration(result) {
+  const text = value => typeof value === "string" ? value.trim() : "";
+  const type = text(result.document_type);
+  const legacy = result.metadata_origin === "legacy_observed";
+  const versioned = result.metadata_origin === "version_import";
+  const origin = legacy ? "旧库共用" : versioned ? "登记" : "资料所列";
+  const name = type === "record-standard" ? "病历规范"
+    : type === "clinical-reference" ? "临床参考（通用分类）"
+    : type === "clinical_guideline" ? "临床指南" : type;
+  return {
+    category: name ? `${origin}类别：${name}` : "",
+    scope: text(result.usage_scope),
+    scopeLabel: legacy ? "旧库共用用途登记" : versioned ? "登记用途" : "资料所列用途（出处待核对）",
+    topic: text(result.disease_scope),
+    topicLabel: `${origin}主题与范围`,
+  };
+}
+
 function renderKnowledgeResultDetails(result = {}) {
   const sourceUrl = safeKnowledgeUrl(result.source_url || result.url);
-  const scope = typeof result.usage_scope === "string" ? result.usage_scope.trim() : "";
-  const scopeLabel = result.metadata_origin === "legacy_observed" ? "旧库共用用途登记" : "登记用途";
+  const registration = knowledgeRegistration(result);
   const [documentId, chunkId, checksum] = [result.document_id, result.chunk_id, result.content_sha256].map(value => {
     const id = readableStoredText(value).trim();
     return id === "-" ? "" : id;
   });
-  const identifiers = documentId || chunkId || checksum
-    ? `<details class="reference-metadata"><summary>文档编号与校验值</summary>
+  const identifiers = documentId || chunkId || checksum || registration.topic
+    ? `<details class="reference-metadata"><summary>${registration.topic ? "资料主题、文档编号与校验值" : "文档编号与校验值"}</summary>
+        ${registration.topic ? `<div class="detail-kv"><span>${registration.topicLabel}</span><strong>${escapeHtml(registration.topic)}</strong></div>` : ""}
         <div class="detail-kv"><span>文档 / 片段</span><strong>${escapeHtml(documentId || "未登记")} / ${escapeHtml(chunkId || "未登记")}</strong></div>
         <div class="detail-kv"><span>内容校验值（SHA256）</span><strong class="hash-value">${escapeHtml(checksum || "未登记")}</strong></div>
       </details>`
     : '<p class="reference-meta">此片段未登记文档编号、片段编号和校验值。</p>';
   return `
-    <div class="detail-kv"><span>章节 / 页码</span><strong>${escapeHtml(result.section || "-")} / ${escapeHtml(result.page ?? "-")}</strong></div>
+    <div class="detail-kv"><span>章节 / 页码</span><strong>${escapeHtml(result.section || "-")} / ${escapeHtml(result.page ?? "-")}${registration.category ? ` · ${escapeHtml(registration.category)}` : ""}</strong></div>
     <div class="detail-text">${escapeHtml(result.excerpt || result.match_reason || "暂无摘要。")}</div>
+    ${registration.scope ? `<div class="detail-kv"><span>${registration.scopeLabel}</span><strong>${escapeHtml(registration.scope)}</strong></div>` : '<p class="reference-meta">本片段未提供登记用途。</p>'}
     <div class="detail-kv"><span>发布机构</span><strong>${escapeHtml(result.publisher || "未标注")}</strong></div>
     <div class="detail-kv"><span>版本</span><strong>${escapeHtml(result.version || "-")}</strong></div>
     <div class="detail-kv"><span>出处登记</span><strong>${knowledgeMetadataDescription(result.metadata_origin)}</strong></div>
-    ${scope ? `<div class="detail-kv"><span>${scopeLabel}</span><strong>${escapeHtml(scope)}</strong></div>` : ""}
     ${identifiers}
     ${sourceUrl ? `<a class="knowledge-source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">打开登记来源（需联网）</a>` : ""}
   `;
@@ -4578,15 +4596,17 @@ function renderReferenceSources(references = []) {
   return references.map(raw => {
     const r = typeof raw === 'string' ? {title: raw} : raw;
     const url = safeKnowledgeUrl(r.source_url || r.url || r.link);
-    const meta = [r.publisher || r.organization || r.institution || r.source, r.version || r.year || r.published_at,
+    const registration = knowledgeRegistration(r);
+    const meta = [registration.category, r.publisher || r.organization || r.institution || r.source, r.version || r.year || r.published_at,
       r.section, r.page != null ? `第${r.page}页` : ''].filter(Boolean);
-    const ids = [['文档ID', r.document_id], ['片段ID', r.chunk_id], ['内容校验值（SHA256）', r.content_sha256]];
+    const ids = [[registration.topicLabel, registration.topic], ['文档ID', r.document_id], ['片段ID', r.chunk_id], ['内容校验值（SHA256）', r.content_sha256]];
     return `<article class="reference-source">
       <h4>${escapeHtml(r.title || r.name || r.source_id || '未命名来源')}</h4>
       ${meta.length ? `<p class="reference-meta">${escapeHtml(meta.join(' · '))}</p>` : ''}
       <p class="reference-meta">${escapeHtml(referenceStatusLabel(r))}</p>
       ${r.evidence_scope ? referenceText(`适用范围：${r.evidence_scope}`) : ''}
       ${r.excerpt || r.summary || r.match_reason ? referenceText(r.excerpt || r.summary || r.match_reason) : ''}
+      ${registration.scope ? referenceText(`${registration.scopeLabel}：${registration.scope}`) : '<p class="reference-meta">本条资料未提供登记用途。</p>'}
       ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">打开来源（需联网）</a>` : '<p class="reference-meta">未提供来源链接</p>'}
       ${ids.some(([,v]) => v) ? `<details class="reference-metadata"><summary>来源详情</summary><dl>${ids.filter(([,v]) => v).map(([k,v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl></details>` : ''}
     </article>`;
@@ -4601,7 +4621,7 @@ function renderReferenceGuides(item, supplementary = '') {
     : state === 'loading' ? '正在加载病例级知识资料。'
     : state === 'ready' && !caseResults.length ? '本次知识检索无结果。'
     : !caseResults.length ? '尚未加载病例级知识检索结果。' : '';
-  return referenceSection('已关联指南', linked.length ? renderReferenceSources(linked) : referenceText('当前项目未关联指南；这不代表知识库为空。'))
+  return referenceSection('已关联参考资料', linked.length ? renderReferenceSources(linked) : referenceText('当前项目未关联参考资料。'))
     + supplementary
     + referenceSection('病例级资料 · 未关联当前项目', referenceText('以下资料仅供本次就诊参考，不能视为当前诊断或治疗的直接依据。')
       + (caseStatus ? `<p class="reference-notice" role="status">${escapeHtml(caseStatus)}</p>` : '')
@@ -4629,7 +4649,7 @@ function renderReferenceTabs({title, item = {}, patient, checks, quality = null,
     + (quality.suggested_action ? referenceText(quality.suggested_action) : '')) : '';
   const panels = [
     ['patient', '患者依据', patient],
-    ['guides', '指南资料', renderReferenceGuides(item, supplementary)],
+    ['guides', '参考资料', renderReferenceGuides(item, supplementary)],
     ['checks', '待核对事项', checks + integrity + referenceSection('使用边界', referenceText('仅供医生核对，不自动形成已审核诊断、处方或医嘱。'))
       + (technical ? `<details class="reference-metadata"><summary>技术说明</summary>${referenceText(technical)}</details>` : '')],
   ];

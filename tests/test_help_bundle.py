@@ -38,7 +38,7 @@ def test_public_manual_distinguishes_field_actions_from_reference_tabs(tmp_path)
     field = manual.split('id="field-knowledge"', 1)[1].split("</li>", 1)[0]
     reference = manual.split('id="reference-detail"', 1)[1].split("</li>", 1)[0]
     assert "查知识资料" in field and "登记用途" in field
-    for tab in ("患者依据", "指南资料", "待核对事项"):
+    for tab in ("患者依据", "参考资料", "待核对事项"):
         assert tab in reference and tab not in field
 
     role = manual.split('<section id="role">', 1)[1].split("</section>", 1)[0]

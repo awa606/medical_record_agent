@@ -2446,12 +2446,18 @@ function previewNoticeText() {
   return `实时预览，需医生确认 · ${stageLabel}${recognized}${extractionText}`;
 }
 
+function doctorSafetyMessage(message) {
+  const suffix = "存在证据冲突，必须先修正。";
+  const field = FIELD_DEFS.find(([key]) => message === key + suffix);
+  return field ? field[1] + suffix : message;
+}
+
 function riskSummary() {
   const missing = missingItems();
   const diagnoses = activeRecordFields()?.candidate_diagnoses || [];
   const safety = activeSafetyCheck();
   const warnings = [...(appState.currentAsrResult?.warnings || []), ...(safety?.warnings || [])];
-  const errors = safety?.errors || [];
+  const errors = (safety?.errors || []).map(doctorSafetyMessage);
   const evaluationMissing = appState.currentEvaluation?.medical_keywords?.missing || [];
   const roleNeedsReview = appState.currentAsrResult?.role_strategy === "single_segment_needs_review";
   return {
@@ -4597,6 +4603,7 @@ function renderReferenceSources(references = []) {
     const r = typeof raw === 'string' ? {title: raw} : raw;
     const url = safeKnowledgeUrl(r.source_url || r.url || r.link);
     const registration = knowledgeRegistration(r);
+    const evidenceScope = typeof r.evidence_scope === 'string' ? r.evidence_scope.trim() : '';
     const meta = [registration.category, r.publisher || r.organization || r.institution || r.source, r.version || r.year || r.published_at,
       r.section, r.page != null ? `第${r.page}页` : ''].filter(Boolean);
     const ids = [[registration.topicLabel, registration.topic], ['文档ID', r.document_id], ['片段ID', r.chunk_id], ['内容校验值（SHA256）', r.content_sha256]];
@@ -4604,7 +4611,7 @@ function renderReferenceSources(references = []) {
       <h4>${escapeHtml(r.title || r.name || r.source_id || '未命名来源')}</h4>
       ${meta.length ? `<p class="reference-meta">${escapeHtml(meta.join(' · '))}</p>` : ''}
       <p class="reference-meta">${escapeHtml(referenceStatusLabel(r))}</p>
-      ${r.evidence_scope ? referenceText(`适用范围：${r.evidence_scope}`) : ''}
+      ${evidenceScope ? referenceText(`适用范围：${evidenceScope}`) : ''}
       ${r.excerpt || r.summary || r.match_reason ? referenceText(r.excerpt || r.summary || r.match_reason) : ''}
       ${registration.scope ? referenceText(`${registration.scopeLabel}：${registration.scope}`) : '<p class="reference-meta">本条资料未提供登记用途。</p>'}
       ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">打开来源（需联网）</a>` : '<p class="reference-meta">未提供来源链接</p>'}

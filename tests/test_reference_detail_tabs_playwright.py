@@ -1,9 +1,11 @@
 """Reference presentation contracts on the real doctor page, no model evidence."""
 import os
+import secrets
 from pathlib import Path
 import pytest
 from playwright.sync_api import expect
 from tests.test_doctor_reference_sidebar_playwright import page, server, prepare_reference_fixture
+from tests.test_manual_first_draft_playwright import login_doctor
 
 
 def open_reference(page):
@@ -143,6 +145,36 @@ def test_reference_status_uses_existing_schema_enums(page):
     expect(page.locator('#reference-panel-guides')).to_contain_text('适用范围：合成适用限制')
 
 
+def test_doctor_conflict_alerts_identify_the_field_without_editing_other_messages(page, server):
+    password = secrets.token_urlsafe(24)
+    account = page.request.post(server.base_url + '/api/auth/users', data={
+        'username': 'reference-test-doctor', 'password': password, 'display_name': '参考资料测试', 'role': 'doctor'})
+    assert account.status == 201
+    page.locator('#logoutButton').click()
+    login_doctor(page, 'reference-test-doctor', password)
+    prepare_reference_fixture(page)
+    # The review API already returned a physical-exam conflict for this revision.
+    physical_conflict = 'physical_exam存在证据冲突，必须先修正。'
+    known_conflict = 'past_history存在证据冲突，必须先修正。'
+    unchanged = ['unknown_field存在证据冲突，必须先修正。',
+                 '原话提到“past_history存在证据冲突，必须先修正。”，请核对。']
+    errors = page.evaluate('window.__MRA_APP_STATE__.currentSafetyCheck.errors')
+    assert physical_conflict in errors
+    page.evaluate('extras => window.__MRA_APP_STATE__.currentSafetyCheck.errors.push(...extras)',
+                  [known_conflict, *unchanged])
+    for name in ('上呼吸道感染', '查看处理建议'):
+        page.get_by_role('button', name=name, exact=True).click()
+        summary = page.locator('.reference-summary')
+        for expected in ('查体存在证据冲突，必须先修正。', '既往史存在证据冲突，必须先修正。',
+                         '安全校验尚未通过，审核及导出限制保持生效。', *unchanged):
+            expect(summary.get_by_text(expected, exact=True)).to_be_visible()
+        expect(summary.get_by_text(known_conflict, exact=True)).to_have_count(0)
+        page.keyboard.press('Escape')
+    expect(page.locator('#exportButton')).to_be_disabled()
+    assert page.evaluate('window.__MRA_APP_STATE__.currentSafetyCheck.errors') == [
+        *errors, known_conflict, *unchanged]
+
+
 def test_registration_purpose_and_clinical_scope_stay_with_their_own_source(page):
     prepare_reference_fixture(page)
     page.evaluate("""() => {
@@ -154,8 +186,8 @@ def test_registration_purpose_and_clinical_scope_stay_with_their_own_source(page
       }];
       state.currentKnowledgeEvidence.results = [{
         title: '合成的病例资料', document_type: 'clinical-reference', metadata_origin: 'legacy_observed',
-        usage_scope: '旧库用途文字'
-      }, {title: '未登记示例', usage_scope: '  '}];
+        usage_scope: '旧库用途文字', evidence_scope: ' 　'
+      }, {title: '未登记示例', usage_scope: '  ', evidence_scope: {}}];
     }""")
     page.get_by_role('button', name='上呼吸道感染', exact=True).click()
     patient = page.locator('#reference-panel-patient')
@@ -176,6 +208,7 @@ def test_registration_purpose_and_clinical_scope_stay_with_their_own_source(page
     expect(other.locator('article').first).to_contain_text('旧库共用类别：临床参考（通用分类）')
     expect(other.locator('article').first).to_contain_text('旧库共用用途登记：旧库用途文字')
     expect(other.locator('article').last).to_contain_text('本条资料未提供登记用途。')
+    expect(other).not_to_contain_text('适用范围：')
     expect(other).not_to_contain_text('仅限合成记录第一段')
 
 
